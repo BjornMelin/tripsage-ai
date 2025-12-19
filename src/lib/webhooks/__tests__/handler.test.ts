@@ -369,7 +369,10 @@ describe("createWebhookHandler", () => {
     const body = (await res.json()) as Record<string, unknown>;
 
     expect(body).toEqual({ ok: true, skipped: true });
-    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key", 300);
+    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key", {
+      degradedMode: "fail_closed",
+      ttlSeconds: 300,
+    });
     const scope = spanAttributes.find(([k]) => k === "webhook.idempotency_scope");
     expect(scope?.[1]).toBe("global");
     const skipped = spanAttributes.find(([k]) => k === "webhook.skipped");

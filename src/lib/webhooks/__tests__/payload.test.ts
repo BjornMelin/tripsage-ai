@@ -104,7 +104,8 @@ describe("parseAndVerify", () => {
     if (result.ok) throw new Error("Expected parseAndVerify to fail");
     expect(result.reason).toBe("missing_secret_env");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
-      attributes: { reason: "missing_secret_env" },
+      attributes: { reason: "missing_secret_env", route: "/api/hooks/trips" },
+      severity: "warning",
     });
   });
 
@@ -119,7 +120,8 @@ describe("parseAndVerify", () => {
     if (result.ok) throw new Error("Expected parseAndVerify to fail");
     expect(result.reason).toBe("missing_signature");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
-      attributes: { reason: "missing_signature" },
+      attributes: { reason: "missing_signature", route: "/api/hooks/trips" },
+      severity: "warning",
     });
   });
 
@@ -137,7 +139,8 @@ describe("parseAndVerify", () => {
     if (result.ok) throw new Error("Expected parseAndVerify to fail");
     expect(result.reason).toBe("invalid_signature");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
-      attributes: { reason: "invalid_signature" },
+      attributes: { reason: "invalid_signature", route: "/api/hooks/trips" },
+      severity: "warning",
     });
   });
 
@@ -156,7 +159,8 @@ describe("parseAndVerify", () => {
     if (result.ok) throw new Error("Expected parseAndVerify to fail");
     expect(result.reason).toBe("invalid_json");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
-      attributes: { reason: "invalid_json" },
+      attributes: { reason: "invalid_json", route: "/api/hooks/trips" },
+      severity: "warning",
     });
   });
 
@@ -175,7 +179,8 @@ describe("parseAndVerify", () => {
     if (result.ok) throw new Error("Expected parseAndVerify to fail");
     expect(result.reason).toBe("invalid_payload_shape");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
-      attributes: { reason: "invalid_payload_shape" },
+      attributes: { reason: "invalid_payload_shape", route: "/api/hooks/trips" },
+      severity: "warning",
     });
   });
 
@@ -195,7 +200,8 @@ describe("parseAndVerify", () => {
     if (result.ok) throw new Error("Expected parseAndVerify to fail");
     expect(result.reason).toBe("payload_too_large");
     expect(EMIT_ALERT).toHaveBeenCalledWith("webhook.verification_failed", {
-      attributes: { reason: "payload_too_large" },
+      attributes: { reason: "payload_too_large", route: "/api/hooks/trips" },
+      severity: "warning",
     });
   });
 

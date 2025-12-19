@@ -163,10 +163,22 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           return response;
         };
         if (!rateLimitResult.success) {
+          if (rateLimitResult.reason === "limiter_unavailable") {
+            span.setAttribute("webhook.rate_limit_unavailable", true);
+            return attachRateLimitHeaders(
+              NextResponse.json(
+                { code: "SERVICE_UNAVAILABLE", error: "internal_error" },
+                { status: 503 }
+              )
+            );
+          }
+
           span.setAttribute("webhook.rate_limited", true);
-          return NextResponse.json(
-            { code: "RATE_LIMITED", error: "rate_limit_exceeded" },
-            { headers: createRateLimitHeaders(rateLimitResult), status: 429 }
+          return attachRateLimitHeaders(
+            NextResponse.json(
+              { code: "RATE_LIMITED", error: "rate_limit_exceeded" },
+              { status: 429 }
+            )
           );
         }
 
@@ -257,7 +269,10 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           // 5. Idempotency check (global)
           if (enableIdempotency) {
             span.setAttribute("webhook.idempotency_scope", "global");
-            const unique = await tryReserveKey(eventKey, idempotencyTTL);
+            const unique = await tryReserveKey(eventKey, {
+              degradedMode: "fail_closed",
+              ttlSeconds: idempotencyTTL,
+            });
             if (!unique) {
               span.setAttribute("webhook.duplicate", true);
               return attachRateLimitHeaders(

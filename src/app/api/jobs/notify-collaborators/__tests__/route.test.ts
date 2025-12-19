@@ -10,7 +10,7 @@ const {
   beforeEachHook: upstashBeforeEachHook,
   mocks: upstashMocks,
 } = setupUpstashTestEnvironment();
-type TryReserveKey = (key: string, ttlSeconds?: number) => Promise<boolean>;
+type TryReserveKey = (key: string, ttlSecondsOrOptions?: unknown) => Promise<boolean>;
 type SendNotifications = (
   payload: NotifyJob["payload"],
   eventKey: string
@@ -50,7 +50,8 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 vi.mock("@/lib/idempotency/redis", () => ({
-  tryReserveKey: (key: string, ttl?: number) => tryReserveKeyMock(key, ttl),
+  tryReserveKey: (key: string, ttlSecondsOrOptions?: unknown) =>
+    tryReserveKeyMock(key, ttlSecondsOrOptions),
 }));
 
 vi.mock("@/lib/notifications/collaborators", () => ({

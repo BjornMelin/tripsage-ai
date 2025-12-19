@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const warnRedisUnavailableMock = vi.fn();
+const emitOperationalAlertOncePerWindowMock = vi.fn();
 
 // Mock redis client and factories
 const existsMock = vi.fn(async (_key: string) => 0);
@@ -28,6 +29,11 @@ vi.mock("@/lib/telemetry/redis", () => ({
   warnRedisUnavailable: (...args: unknown[]) => warnRedisUnavailableMock(...args),
 }));
 
+vi.mock("@/lib/telemetry/degraded-mode", () => ({
+  emitOperationalAlertOncePerWindow: (...args: unknown[]) =>
+    emitOperationalAlertOncePerWindowMock(...args),
+}));
+
 describe("idempotency redis helpers", () => {
   beforeEach(() => {
     existsMock.mockReset();
@@ -36,6 +42,7 @@ describe("idempotency redis helpers", () => {
     redisClient = { del: delMock, exists: existsMock, set: setMock };
     getRedisMock.mockReset();
     warnRedisUnavailableMock.mockReset();
+    emitOperationalAlertOncePerWindowMock.mockReset();
   });
 
   describe("hasKey", () => {

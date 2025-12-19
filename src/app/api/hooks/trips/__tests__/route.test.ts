@@ -10,7 +10,11 @@ const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook
 
 type ParseAndVerify = (req: Request) => Promise<ParseResult>;
 type BuildEventKey = (payload: WebhookPayload) => string;
-type TryReserveKey = (key: string, ttlSeconds?: number) => Promise<boolean>;
+type TryReserveKeyOptions = { degradedMode?: string; ttlSeconds?: number };
+type TryReserveKey = (
+  key: string,
+  ttlSecondsOrOptions?: number | TryReserveKeyOptions
+) => Promise<boolean>;
 type SendNotifications = (
   payload: WebhookPayload,
   eventKey: string
@@ -63,7 +67,8 @@ vi.mock("@/lib/idempotency/redis", () => ({
       this.name = "IdempotencyServiceUnavailableError";
     }
   },
-  tryReserveKey: (key: string, ttl?: number) => tryReserveKeyMock(key, ttl),
+  tryReserveKey: (key: string, ttlSecondsOrOptions?: number | TryReserveKeyOptions) =>
+    tryReserveKeyMock(key, ttlSecondsOrOptions),
 }));
 
 vi.mock("@/lib/notifications/collaborators", () => ({
@@ -238,7 +243,10 @@ describe("POST /api/hooks/trips", () => {
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.duplicate).toBe(true);
-    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key-1", 300);
+    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key-1", {
+      degradedMode: "fail_closed",
+      ttlSeconds: 300,
+    });
   });
 
   it("enqueues to QStash when configured", async () => {

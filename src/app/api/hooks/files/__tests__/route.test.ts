@@ -1,12 +1,16 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReserveKeyOptions } from "@/lib/idempotency/redis";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
 
 type ParseAndVerify = (req: Request) => Promise<ParseResult>;
 type BuildEventKey = (payload: WebhookPayload) => string;
-type TryReserveKey = (key: string, ttlSeconds?: number) => Promise<boolean>;
+type TryReserveKey = (
+  key: string,
+  ttlSecondsOrOptions?: number | ReserveKeyOptions
+) => Promise<boolean>;
 
 type ParseResult = { ok: boolean; payload?: WebhookPayload };
 type FilesRouteModule = typeof import("../route");
@@ -50,7 +54,8 @@ vi.mock("@/lib/idempotency/redis", () => ({
       this.name = "IdempotencyServiceUnavailableError";
     }
   },
-  tryReserveKey: (key: string, ttl?: number) => tryReserveKeyMock(key, ttl),
+  tryReserveKey: (key: string, ttlSecondsOrOptions?: number | ReserveKeyOptions) =>
+    tryReserveKeyMock(key, ttlSecondsOrOptions),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -162,7 +167,10 @@ describe("POST /api/hooks/files", () => {
     expect(res.status).toBe(200);
     expect(json.duplicate).toBe(true);
     expect(json.ok).toBe(true);
-    expect(tryReserveKeyMock).toHaveBeenCalledWith("file-event-key-1", 300);
+    expect(tryReserveKeyMock).toHaveBeenCalledWith("file-event-key-1", {
+      degradedMode: "fail_closed",
+      ttlSeconds: 300,
+    });
   });
 
   it("processes INSERT with uploading status successfully", async () => {

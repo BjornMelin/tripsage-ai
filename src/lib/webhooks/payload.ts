@@ -7,8 +7,10 @@ import { createHash } from "node:crypto";
 import type { WebhookPayload } from "@schemas/webhooks";
 import { webhookPayloadSchema } from "@schemas/webhooks";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { PayloadTooLargeError, readRequestBodyBytesWithLimit } from "@/lib/http/body";
 import { computeHmacSha256Hex, timingSafeEqualHex } from "@/lib/security/webhook";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
+import { sanitizePathnameForTelemetry } from "@/lib/telemetry/route-key";
 import { addEventToActiveSpan } from "@/lib/telemetry/span";
 
 const OLD_RECORD_KEY = "old_record" as const;
@@ -47,10 +49,16 @@ function normalizeWebhookPayload(raw: RawWebhookPayload): WebhookPayload {
   return webhookPayloadSchema.parse(normalized);
 }
 
-function recordVerificationFailure(reason: string): void {
+function recordVerificationFailure(req: Request, reason: string): void {
   addEventToActiveSpan("webhook_verification_failed", { reason });
-  emitOperationalAlert("webhook.verification_failed", {
-    attributes: { reason },
+  emitOperationalAlertOncePerWindow({
+    attributes: {
+      reason,
+      route: sanitizePathnameForTelemetry(new URL(req.url).pathname),
+    },
+    event: "webhook.verification_failed",
+    severity: "warning",
+    windowMs: 60_000,
   });
 }
 
@@ -66,44 +74,6 @@ export type ParseAndVerifyFailureReason =
 export type ParseAndVerifyResult =
   | { ok: true; payload: WebhookPayload }
   | { ok: false; reason: ParseAndVerifyFailureReason };
-
-async function readBodyBytesWithLimit(
-  req: Request,
-  maxBytes: number
-): Promise<
-  { ok: true; bytes: Uint8Array } | { ok: false; reason: "payload_too_large" }
-> {
-  if (!req.body) {
-    return { bytes: new Uint8Array(), ok: true };
-  }
-
-  const reader = req.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-
-    const nextTotal = total + value.byteLength;
-    if (nextTotal > maxBytes) {
-      await reader.cancel();
-      return { ok: false, reason: "payload_too_large" };
-    }
-
-    chunks.push(value);
-    total = nextTotal;
-  }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return { bytes, ok: true };
-}
 
 /**
  * Parses and verifies a webhook request with HMAC signature.
@@ -124,34 +94,33 @@ export async function parseAndVerify(
   const { maxBytes = 65536 } = options;
   const secret = getServerEnvVarWithFallback("HMAC_SECRET", "");
   if (!secret) {
-    recordVerificationFailure("missing_secret_env");
+    recordVerificationFailure(req, "missing_secret_env");
     return { ok: false, reason: "missing_secret_env" };
   }
 
   // Get signature from header
   const sig = req.headers.get("x-signature-hmac");
   if (!sig) {
-    recordVerificationFailure("missing_signature");
+    recordVerificationFailure(req, "missing_signature");
     return { ok: false, reason: "missing_signature" };
   }
 
   let rawBytes: Uint8Array;
   try {
-    const bodyRead = await readBodyBytesWithLimit(req, maxBytes);
-    if (!bodyRead.ok) {
-      recordVerificationFailure("payload_too_large");
+    rawBytes = await readRequestBodyBytesWithLimit(req, maxBytes);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      recordVerificationFailure(req, "payload_too_large");
       return { ok: false, reason: "payload_too_large" };
     }
-    rawBytes = bodyRead.bytes;
-  } catch {
-    recordVerificationFailure("body_read_error");
+    recordVerificationFailure(req, "body_read_error");
     return { ok: false, reason: "body_read_error" };
   }
 
   // Verify HMAC on raw bytes
   const expected = computeHmacSha256Hex(rawBytes, secret);
   if (!timingSafeEqualHex(expected, sig)) {
-    recordVerificationFailure("invalid_signature");
+    recordVerificationFailure(req, "invalid_signature");
     return { ok: false, reason: "invalid_signature" };
   }
 
@@ -162,7 +131,7 @@ export async function parseAndVerify(
   try {
     raw = JSON.parse(rawBody) as RawWebhookPayload;
   } catch {
-    recordVerificationFailure("invalid_json");
+    recordVerificationFailure(req, "invalid_json");
     return { ok: false, reason: "invalid_json" };
   }
 
@@ -171,7 +140,7 @@ export async function parseAndVerify(
   try {
     payload = normalizeWebhookPayload(raw);
   } catch {
-    recordVerificationFailure("invalid_payload_shape");
+    recordVerificationFailure(req, "invalid_payload_shape");
     return { ok: false, reason: "invalid_payload_shape" };
   }
 
