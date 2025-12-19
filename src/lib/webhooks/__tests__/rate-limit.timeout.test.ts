@@ -23,7 +23,7 @@ vi.mock("@/lib/telemetry/redis", () => ({
 }));
 
 const limitMock = vi.hoisted(() =>
-  vi.fn(async (_identifier: string) => ({
+  vi.fn(async () => ({
     limit: 0,
     pending: Promise.resolve(),
     reason: "timeout",
@@ -35,12 +35,12 @@ const limitMock = vi.hoisted(() =>
 
 vi.mock("@upstash/ratelimit", () => {
   class Ratelimit {
-    static slidingWindow(_limit: number, _window: string) {
+    static slidingWindow() {
       return () => ({});
     }
 
-    limit(identifier: string) {
-      return limitMock(identifier);
+    limit() {
+      return limitMock();
     }
   }
 

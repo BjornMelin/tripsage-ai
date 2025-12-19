@@ -143,7 +143,7 @@ export async function tryReserveKey(
   try {
     const result = await redis.set(namespaced, "1", { ex: ttlSeconds, nx: true });
     return result === "OK";
-  } catch (_error) {
+  } catch {
     warnRedisUnavailable(REDIS_FEATURE);
     if (!failOpen) {
       throw new IdempotencyServiceUnavailableError();
@@ -187,7 +187,7 @@ export async function hasKey(
   try {
     const result = await redis.exists(namespaced);
     return result > 0;
-  } catch (_error) {
+  } catch {
     warnRedisUnavailable(REDIS_FEATURE);
     if (!failOpen) {
       emitOperationalAlertOncePerWindow({
@@ -240,7 +240,7 @@ export async function releaseKey(
   try {
     const result = await redis.del(namespaced);
     return result > 0;
-  } catch (_error) {
+  } catch {
     warnRedisUnavailable(REDIS_FEATURE);
     if (!failOpen) {
       throw new IdempotencyServiceUnavailableError();

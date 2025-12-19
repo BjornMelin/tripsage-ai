@@ -399,7 +399,7 @@ Generic AI streaming endpoint for testing and demo purposes. Disabled by default
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `prompt` | string | No | Prompt to send when `messages` is omitted (max 4000 chars) |
-| `messages` | array | No | Message array (max 32) with `{ role: one of system, user, assistant; content: string }` |
+| `messages` | array | No | Message array (max 16) with `{ role: one of system, user, assistant; content: string (max 2000 chars) }` |
 | `model` | string | No | One of `gpt-4o` or `gpt-4o-mini` (default: `gpt-4o`) |
 | `desiredMaxTokens` | number | No | Desired output token budget (1–4096, default: 512) |
 

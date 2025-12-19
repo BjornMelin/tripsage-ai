@@ -7,18 +7,18 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 
+const mockStartTotpEnrollment = vi.hoisted(() => vi.fn());
+const mockGetAdminSupabase = vi.hoisted(() => vi.fn(() => ({ from: vi.fn() })));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminSupabase: mockGetAdminSupabase,
+}));
+
+vi.mock("@/lib/security/mfa", () => ({
+  startTotpEnrollment: mockStartTotpEnrollment,
+}));
+
 describe("POST /api/auth/mfa/setup", () => {
-  const mockStartTotpEnrollment = vi.hoisted(() => vi.fn());
-  const mockGetAdminSupabase = vi.hoisted(() => vi.fn(() => ({ from: vi.fn() })));
-
-  vi.mock("@/lib/supabase/admin", () => ({
-    getAdminSupabase: mockGetAdminSupabase,
-  }));
-
-  vi.mock("@/lib/security/mfa", () => ({
-    startTotpEnrollment: mockStartTotpEnrollment,
-  }));
-
   beforeEach(() => {
     resetApiRouteMocks();
     mockStartTotpEnrollment.mockReset();

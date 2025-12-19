@@ -6,7 +6,7 @@ const warnRedisUnavailableMock = vi.fn();
 const emitOperationalAlertOncePerWindowMock = vi.fn();
 
 // Mock redis client and factories
-const existsMock = vi.fn(async (_key: string) => 0);
+const existsMock = vi.fn(async () => 0);
 const setMock = vi.fn(async () => "OK");
 const delMock = vi.fn(async () => 1);
 type RedisClient = {
