@@ -386,9 +386,10 @@ curl -N -X POST "http://localhost:3000/api/agents/router" \
 
 ## `POST /api/ai/stream`
 
-Generic AI streaming endpoint for testing and demo purposes. Provides a simple streaming chat interface without specialized agent logic.
+Generic AI streaming endpoint for testing and demo purposes. Disabled by default to avoid exposing a cost-bearing route.
 
 **Authentication**: Required
+**Enabled**: Requires `ENABLE_AI_DEMO="true"` (otherwise `404`)
 **Rate Limit Key**: `ai:stream`
 **Content-Type**: `application/json`
 **Response**: `text/event-stream` (SSE)
@@ -397,11 +398,10 @@ Generic AI streaming endpoint for testing and demo purposes. Provides a simple s
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `messages` | array | Yes | Array of messages {role: string, content: string} |
-| `model` | string | No | Model name (default: system default) |
-| `temperature` | number | No | Temperature 0-2 (default: 0.7) |
-| `maxTokens` | number | No | Maximum tokens to generate |
-| `stream` | boolean | No | Enable streaming (default: true) |
+| `prompt` | string | No | Prompt to send when `messages` is omitted (max 4000 chars) |
+| `messages` | array | No | Message array (max 16) with `{ role: one of system, user, assistant; content: string (max 2000 chars) }` |
+| `model` | string | No | One of `gpt-4o` or `gpt-4o-mini` (default: `gpt-4o`) |
+| `desiredMaxTokens` | number | No | Desired output token budget (1–4096, default: 512) |
 
 ### Response
 
@@ -409,9 +409,12 @@ Generic AI streaming endpoint for testing and demo purposes. Provides a simple s
 
 ### Errors
 
-- `400` - Invalid request parameters (missing messages, invalid temperature range, malformed message objects)
+- `400` - Invalid request parameters (invalid shape, prompt exceeds context window, etc.)
 - `401` - Not authenticated
+- `404` - Endpoint disabled
+- `413` - Request body too large
 - `429` - Rate limit exceeded
+- `503` - Rate limiter unavailable (fail-closed)
 
 ### Example
 
@@ -420,9 +423,8 @@ curl -N -X POST "http://localhost:3000/api/ai/stream" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "messages": [
-      {"role": "user", "content": "Hello, how are you?"}
-    ],
-    "temperature": 0.7
+    "prompt": "Hello from AI demo",
+    "model": "gpt-4o-mini",
+    "desiredMaxTokens": 256
   }'
 ```

@@ -44,6 +44,7 @@ describe("/api/keys routes", () => {
     vi.clearAllMocks();
     unstubAllEnvs();
     mockApiRouteAuthUser({ id: "test-user" });
+    enableApiRouteRateLimit();
   });
 
   it("POST /api/keys returns 400 on invalid body", async () => {
@@ -71,7 +72,6 @@ describe("/api/keys routes", () => {
   });
 
   it("POST /api/keys enforces rate limits per user id", async () => {
-    enableApiRouteRateLimit();
     mockApiRouteRateLimitOnce({
       limit: 5,
       remaining: 0,
@@ -123,7 +123,6 @@ describe("/api/keys routes", () => {
   });
 
   it("DELETE /api/keys/[service] enforces rate limits", async () => {
-    enableApiRouteRateLimit();
     mockApiRouteRateLimitOnce({ remaining: 0, reset: 123, success: false });
     const route = await import("@/app/api/keys/[service]/route");
     const req = createMockNextRequest({

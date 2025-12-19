@@ -9,25 +9,34 @@ import { recordErrorOnSpan, withTelemetrySpanSync } from "@/lib/telemetry/span";
 const warnedFeatures = new Set<string>();
 
 /**
- * Emits a telemetry span once per feature when Redis is not configured.
+ * Emits a telemetry span once per feature when Redis is not configured or encounters an error.
+ *
+ * @param feature - Feature name for categorization
+ * @param errorDetails - Optional error details for debugging (logged with telemetry)
  */
-export function warnRedisUnavailable(feature: string): void {
+export function warnRedisUnavailable(
+  feature: string,
+  errorDetails?: { errorName?: string; errorMessage?: string }
+): void {
   if (warnedFeatures.has(feature)) return;
   warnedFeatures.add(feature);
+
+  const errorName = errorDetails?.errorName ?? "RedisUnavailable";
+  const errorMessage = errorDetails?.errorMessage ?? "Redis client not configured";
 
   withTelemetrySpanSync(
     "redis.unavailable",
     {
-      attributes: { feature },
+      attributes: { "error.name": errorName, feature },
     },
     (span) => {
-      span.addEvent("redis_unavailable", { feature });
-      recordErrorOnSpan(span, new Error("Redis client not configured"));
+      span.addEvent("redis_unavailable", { errorMessage, errorName, feature });
+      recordErrorOnSpan(span, new Error(errorMessage));
     }
   );
 
   emitOperationalAlert("redis.unavailable", {
-    attributes: { feature },
+    attributes: { errorMessage, errorName, feature },
   });
 }
 

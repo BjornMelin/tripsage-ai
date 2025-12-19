@@ -12,6 +12,7 @@ import "server-only";
 import { z } from "zod";
 
 import { getRedis } from "@/lib/redis";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { warnRedisUnavailable } from "@/lib/telemetry/redis";
 
 const REDIS_FEATURE = "idempotency.keys";
@@ -61,6 +62,28 @@ export interface ReserveKeyOptions {
    * Can also be set globally via IDEMPOTENCY_FAIL_OPEN env var (read at module load).
    */
   failOpen?: boolean;
+
+  /**
+   * Alias for fail-open behavior with explicit naming.
+   * When set, overrides failOpen.
+   */
+  degradedMode?: "fail_closed" | "fail_open";
+}
+
+function resolveDegradedMode(options: {
+  degradedMode?: "fail_closed" | "fail_open";
+  failOpen?: boolean;
+}): "fail_closed" | "fail_open" {
+  if (options.degradedMode) return options.degradedMode;
+  if (options.failOpen === true) return "fail_open";
+  if (options.failOpen === false) return "fail_closed";
+  return DEFAULT_FAIL_OPEN ? "fail_open" : "fail_closed";
+}
+
+function getIdempotencyNamespace(key: string): string {
+  const idx = key.indexOf(":");
+  const namespace = idx === -1 ? key : key.slice(0, idx);
+  return namespace.trim().slice(0, 64) || "unknown";
 }
 
 /**
@@ -91,7 +114,8 @@ export async function tryReserveKey(
       : ttlSecondsOrOptions;
 
   const ttlSeconds = options.ttlSeconds ?? 300;
-  const failOpen = options.failOpen ?? DEFAULT_FAIL_OPEN;
+  const degradedMode = resolveDegradedMode(options);
+  const failOpen = degradedMode === "fail_open";
 
   const redis = getRedis();
   if (!redis) {
@@ -101,27 +125,75 @@ export async function tryReserveKey(
       throw new IdempotencyServiceUnavailableError();
     }
 
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        namespace: getIdempotencyNamespace(key),
+        reason: "redis_unavailable",
+      },
+      event: "idempotency.degraded",
+      windowMs: 60_000,
+    });
+
     // Fail open: allow processing (may cause duplicates during Redis outage)
     return true;
   }
 
   const namespaced = `idemp:${key}`;
-  const result = await redis.set(namespaced, "1", { ex: ttlSeconds, nx: true });
-  return result === "OK";
+  try {
+    const result = await redis.set(namespaced, "1", { ex: ttlSeconds, nx: true });
+    return result === "OK";
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : "UnknownError";
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    warnRedisUnavailable(REDIS_FEATURE, { errorMessage, errorName });
+    if (!failOpen) {
+      throw new IdempotencyServiceUnavailableError();
+    }
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        errorMessage,
+        errorName,
+        namespace: getIdempotencyNamespace(key),
+        reason: "redis_error",
+      },
+      event: "idempotency.degraded",
+      windowMs: 60_000,
+    });
+    return true;
+  }
 }
 
 /**
  * Check if an idempotency key exists without reserving it.
  *
+ * Unlike `tryReserveKey`, this function returns a boolean even on Redis errors
+ * rather than throwing `IdempotencyServiceUnavailableError`. This asymmetry
+ * is intentional:
+ *
+ * - **hasKey** is for read-only duplicate detection where callers need a simple
+ *   boolean answer. Return values map to fail modes:
+ *   - `fail_closed` → returns `true` (treat as duplicate, deny processing)
+ *   - `fail_open` → returns `false` (treat as new, allow processing)
+ *
+ * - **tryReserveKey** must atomically reserve the key or fail explicitly for
+ *   strict lock-acquisition semantics. Throwing on `fail_closed` forces callers
+ *   to handle the outage scenario rather than silently proceeding.
+ *
+ * Operational alerts are emitted on Redis errors, so callers can rely on
+ * centralized logging/monitoring rather than catching exceptions.
+ *
  * @param key - Unique key to check
- * @param options - Optional overrides (failOpen only)
+ * @param options - Optional overrides for fail mode
  * @returns true if key exists (is a duplicate), false if new
  */
 export async function hasKey(
   key: string,
-  options?: { failOpen?: boolean }
+  options?: Pick<ReserveKeyOptions, "degradedMode" | "failOpen">
 ): Promise<boolean> {
-  const failOpen = options?.failOpen ?? DEFAULT_FAIL_OPEN;
+  const degradedMode = resolveDegradedMode(options ?? {});
+  const failOpen = degradedMode === "fail_open";
 
   const redis = getRedis();
   if (!redis) {
@@ -132,32 +204,87 @@ export async function hasKey(
   }
 
   const namespaced = `idemp:${key}`;
-  const result = await redis.exists(namespaced);
-  return result > 0;
+  try {
+    const result = await redis.exists(namespaced);
+    return result > 0;
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : "UnknownError";
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    warnRedisUnavailable(REDIS_FEATURE, { errorMessage, errorName });
+    if (!failOpen) {
+      emitOperationalAlertOncePerWindow({
+        attributes: {
+          degradedMode: "fail_closed",
+          errorMessage,
+          errorName,
+          namespace: getIdempotencyNamespace(key),
+          reason: "redis_error",
+        },
+        event: "idempotency.degraded",
+        windowMs: 60_000,
+      });
+      return true;
+    }
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        errorMessage,
+        errorName,
+        namespace: getIdempotencyNamespace(key),
+        reason: "redis_error",
+      },
+      event: "idempotency.degraded",
+      windowMs: 60_000,
+    });
+    return false;
+  }
 }
 
 /**
  * Release an idempotency key (for rollback scenarios).
  *
  * @param key - Unique key to release
+ * @param options - Optional overrides for fail mode
  * @returns true if key was released, false if not found or Redis unavailable
  */
 export async function releaseKey(
   key: string,
-  options?: { failOpen?: boolean }
+  options?: Pick<ReserveKeyOptions, "degradedMode" | "failOpen">
 ): Promise<boolean> {
-  const failOpen = options?.failOpen ?? DEFAULT_FAIL_OPEN;
+  const degradedMode = resolveDegradedMode(options ?? {});
+  const failOpen = degradedMode === "fail_open";
 
   const redis = getRedis();
   if (!redis) {
     warnRedisUnavailable(REDIS_FEATURE);
-    if (failOpen === false) {
+    if (!failOpen) {
       throw new IdempotencyServiceUnavailableError();
     }
     return false;
   }
 
   const namespaced = `idemp:${key}`;
-  const result = await redis.del(namespaced);
-  return result > 0;
+  try {
+    const result = await redis.del(namespaced);
+    return result > 0;
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : "UnknownError";
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    warnRedisUnavailable(REDIS_FEATURE, { errorMessage, errorName });
+    if (!failOpen) {
+      throw new IdempotencyServiceUnavailableError();
+    }
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        degradedMode: "fail_open",
+        errorMessage,
+        errorName,
+        namespace: getIdempotencyNamespace(key),
+        reason: "redis_error",
+      },
+      event: "idempotency.degraded",
+      windowMs: 60_000,
+    });
+    return false;
+  }
 }

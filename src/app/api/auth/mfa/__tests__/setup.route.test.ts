@@ -1,18 +1,29 @@
 /** @vitest-environment node */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRouteParamsContext,
   makeJsonRequest,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 
-describe("POST /api/auth/mfa/setup", () => {
-  const mockStartTotpEnrollment = vi.fn();
+const mockStartTotpEnrollment = vi.hoisted(() => vi.fn());
+const mockGetAdminSupabase = vi.hoisted(() => vi.fn(() => ({ from: vi.fn() })));
 
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminSupabase: mockGetAdminSupabase,
+}));
+
+vi.mock("@/lib/security/mfa", () => ({
+  startTotpEnrollment: mockStartTotpEnrollment,
+}));
+
+describe("POST /api/auth/mfa/setup", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     mockStartTotpEnrollment.mockReset();
+    // Use mockClear to preserve implementation while clearing call history
+    mockGetAdminSupabase.mockClear();
     mockStartTotpEnrollment.mockResolvedValue({
       challengeId: "challenge-1",
       expiresAt: new Date(Date.now() + 900_000).toISOString(),
@@ -23,16 +34,6 @@ describe("POST /api/auth/mfa/setup", () => {
       ttlSeconds: 900,
       uri: "otpauth://totp/TripSage:test@example.com?secret=SECRET-KEY",
     });
-    vi.doMock("@/lib/supabase/admin", () => ({
-      getAdminSupabase: vi.fn(() => ({ from: vi.fn() })),
-    }));
-    vi.doMock("@/lib/security/mfa", () => ({
-      startTotpEnrollment: mockStartTotpEnrollment,
-    }));
-  });
-
-  afterEach(() => {
-    vi.resetModules();
   });
 
   it("returns enrollment payload without secret and with ttlSeconds", async () => {
@@ -43,6 +44,7 @@ describe("POST /api/auth/mfa/setup", () => {
     );
     const json = await res.json();
     expect(res.status).toBe(200);
+    expect(mockStartTotpEnrollment).toHaveBeenCalledTimes(1);
     expect(json.data.factorId).toBe("factor-1");
     expect(json.data.challengeId).toBe("challenge-1");
     expect(json.data.secret).toBeUndefined();

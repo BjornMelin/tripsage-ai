@@ -1,11 +1,13 @@
 /** @vitest-environment node */
 
+import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import {
   buildRateLimitKey,
   forbiddenResponse,
   getClientIpFromHeaders,
   notFoundResponse,
+  parseJsonBody,
   parseNumericId,
   parseStringId,
   unauthorizedResponse,
@@ -96,6 +98,74 @@ describe("route-helpers", () => {
       const response = forbiddenResponse("Admin privileges required");
       const body = await response.json();
       expect(body.reason).toBe("Admin privileges required");
+    });
+  });
+
+  describe("parseJsonBody", () => {
+    it("returns 413 and cancels stream when body exceeds maxBytes", async () => {
+      let pulls = 0;
+      let cancelled = false;
+
+      const stream = new ReadableStream<Uint8Array>({
+        cancel() {
+          cancelled = true;
+        },
+        pull(controller) {
+          pulls += 1;
+          controller.enqueue(new TextEncoder().encode("aaaa"));
+        },
+      });
+
+      const req = new NextRequest("https://example.com/api/test", {
+        body: stream,
+        // Required by Node's fetch when using a streaming request body.
+        duplex: "half",
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+
+      const parsed = await parseJsonBody(req, { maxBytes: 10 });
+      expect("error" in parsed).toBe(true);
+      if ("error" in parsed) {
+        expect(parsed.error.status).toBe(413);
+        const body = await parsed.error.json();
+        expect(body).toMatchObject({ error: "payload_too_large" });
+      }
+
+      expect(cancelled).toBe(true);
+      expect(pulls).toBeLessThan(10);
+    });
+
+    it("returns 400 when request body has already been read", async () => {
+      const json = JSON.stringify({ ok: true });
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(json));
+          controller.close();
+        },
+      });
+
+      const req = new NextRequest("https://example.com/api/test", {
+        body: stream,
+        // Required by Node's fetch when using a streaming request body.
+        duplex: "half",
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+
+      const first = await parseJsonBody(req);
+      expect("body" in first).toBe(true);
+
+      const second = await parseJsonBody(req);
+      expect("error" in second).toBe(true);
+      if ("error" in second) {
+        expect(second.error.status).toBe(400);
+        const body = await second.error.json();
+        expect(body).toMatchObject({
+          error: "invalid_request",
+          reason: "Request body has already been read",
+        });
+      }
     });
   });
 

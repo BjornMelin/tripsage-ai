@@ -11,8 +11,17 @@ import "server-only";
 import { changePasswordFormSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { parseJsonBody } from "@/lib/api/route-helpers";
 import { requireUser } from "@/lib/auth/server";
+import {
+  getAuthErrorCode,
+  getAuthErrorStatus,
+  isMfaRequiredError,
+} from "@/lib/auth/supabase-errors";
 import { ROUTES } from "@/lib/routes";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
+import { createServerLogger } from "@/lib/telemetry/logger";
+import { isPlainObject } from "@/lib/utils/type-guards";
 
 interface ChangePasswordPayload {
   confirmPassword?: unknown;
@@ -20,16 +29,29 @@ interface ChangePasswordPayload {
   newPassword?: unknown;
 }
 
+// Password change payloads are tiny; keep a tight limit to reduce DoS surface.
+const MAX_BODY_BYTES = 4 * 1024;
+
+const logger = createServerLogger("auth.password.change");
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  let payload: ChangePasswordPayload;
-  try {
-    payload = (await request.json()) as ChangePasswordPayload;
-  } catch {
+  const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
+  if ("error" in parsedBody) {
+    if (parsedBody.error.status === 413) {
+      return NextResponse.json(
+        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
+        { status: 413 }
+      );
+    }
     return NextResponse.json(
       { code: "BAD_REQUEST", message: "Malformed JSON" },
       { status: 400 }
     );
   }
+
+  const payload: ChangePasswordPayload = isPlainObject(parsedBody.body)
+    ? parsedBody.body
+    : {};
 
   const parsed = changePasswordFormSchema.safeParse({
     confirmPassword: payload.confirmPassword,
@@ -63,7 +85,44 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     password: parsed.data.currentPassword,
   });
 
+  if (isMfaRequiredError(signInError)) {
+    return NextResponse.json(
+      {
+        code: signInError.code ?? "mfa_required",
+        message: "Multi-factor authentication required",
+      },
+      { status: 403 }
+    );
+  }
+
   if (signInError) {
+    const status = getAuthErrorStatus(signInError) ?? 500;
+    const errorCode = getAuthErrorCode(signInError);
+
+    if (status === 429 || status >= 500) {
+      emitOperationalAlertOncePerWindow({
+        attributes: {
+          errorCode,
+          reason: "supabase_error",
+          status,
+        },
+        event: "auth.password.change.upstream_error",
+        severity: "warning",
+        windowMs: 60_000,
+      });
+      logger.error("password change auth verification failed", {
+        errorCode,
+        status,
+      });
+      return NextResponse.json(
+        {
+          code: "AUTH_UPSTREAM_ERROR",
+          message: "Password verification temporarily unavailable",
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { code: "INVALID_CREDENTIALS", message: "Current password is incorrect" },
       { status: 400 }
@@ -75,8 +134,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   if (updateError) {
+    const upstreamStatus = getAuthErrorStatus(updateError) ?? 500;
+    const errorCode = getAuthErrorCode(updateError);
+
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        errorCode: errorCode ?? null,
+        reason: "update_failed",
+        status: upstreamStatus,
+      },
+      event: "auth.password.change.update_failed",
+      severity: "warning",
+      windowMs: 60_000,
+    });
+    logger.error("password change update failed", {
+      errorCode,
+      status: upstreamStatus,
+    });
+
+    // Distinguish upstream service errors from validation failures
+    if (upstreamStatus >= 500 || upstreamStatus === 429) {
+      return NextResponse.json(
+        {
+          code: "AUTH_UPSTREAM_ERROR",
+          message: "Password update temporarily unavailable",
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { code: "UPDATE_FAILED", message: updateError.message },
+      { code: "UPDATE_FAILED", message: "Password update failed" },
       { status: 400 }
     );
   }

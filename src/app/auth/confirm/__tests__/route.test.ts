@@ -47,11 +47,51 @@ describe("auth/confirm route", () => {
   it("verifies token and redirects to next path", async () => {
     const req = createMockNextRequest({
       method: "GET",
-      url: "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2F",
+      url: "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2Fdashboard%2Ftrips%3Ftab%3Dmine",
     });
     await GET(req);
     expect(VERIFY_MOCK).toHaveBeenCalledWith({ token_hash: "thash", type: "email" });
-    expect(REDIRECT_MOCK).toHaveBeenCalledWith("/");
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith("/dashboard/trips?tab=mine");
+  });
+
+  it.each([
+    [
+      "//evil",
+      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=//evil",
+    ],
+    [
+      "%2F%2Fevil",
+      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2F%2Fevil",
+    ],
+    [
+      "%252F%252Fevil",
+      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%252F%252Fevil",
+    ],
+    [
+      "\\\\evil",
+      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%5C%5Cevil",
+    ],
+    [
+      "http://evil.example",
+      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=http://evil.example",
+    ],
+    [
+      "/dashboard\\r\\n",
+      "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2Fdashboard%0D%0A",
+    ],
+  ])("rejects open redirect next=%s", async (_label, url) => {
+    const req = createMockNextRequest({ method: "GET", url });
+    await GET(req);
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("falls back to safe default when next is internal but not allowlisted", async () => {
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?token_hash=thash&type=email&next=%2Fwelcome",
+    });
+    await GET(req);
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith("/dashboard");
   });
 
   it("redirects to error on verify failure", async () => {

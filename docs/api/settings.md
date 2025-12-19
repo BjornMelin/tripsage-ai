@@ -76,17 +76,34 @@ Returns all settings fields with current values.
 
 ### `POST /api/embeddings`
 
-Generate embeddings.
+Generate and (optionally) persist embeddings for internal ingestion workflows.
 
-**Authentication**: Required  
+**Authentication**: Internal key (`x-internal-key`)  
+**Enabled**: Requires `EMBEDDINGS_API_KEY` (otherwise `503`)  
 **Rate Limit Key**: `embeddings`
+
+#### Headers (POST /api/embeddings)
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-internal-key` | Yes | Must match `EMBEDDINGS_API_KEY` |
 
 #### Request Body (POST /api/embeddings)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `text` | string | Yes | Text to embed |
-| `model` | string | No | Embedding model |
+| `text` | string | No | Text to embed (max 8000 characters) |
+| `property` | object | No | Optional property payload used to derive text |
+| `property.id` | string | No | When present, embedding is upserted to `accommodation_embeddings` |
+| `property.name` | string | No | Property name (included in derived text) |
+| `property.description` | string | No | Description (included in derived text) |
+| `property.amenities` | string\|string[] | No | Amenities (included in derived text) |
+| `property.source` | string | No | Source label (`hotel`/`vrbo`), used when persisting |
+
+#### Notes
+
+- The embedding model is currently fixed to `text-embedding-3-small` (1536 dimensions).
+- The endpoint is disabled unless `EMBEDDINGS_API_KEY` is set.
 
 #### Response (POST /api/embeddings)
 
@@ -94,15 +111,12 @@ Generate embeddings.
 
 ```json
 {
-  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, 0.0178],
-  "modelId": "text-embedding-3-small",
   "success": true,
-  "usage": {
-    "promptTokens": 12,
-    "totalTokens": 12
-  },
+  "modelId": "text-embedding-3-small",
+  "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, 0.0178],
   "id": "property-123",
-  "persisted": true
+  "persisted": true,
+  "usage": { "tokens": 12 }
 }
 ```
 
@@ -111,8 +125,10 @@ The `embedding` array continues to 1536 numeric values.
 #### Errors (POST /api/embeddings)
 
 - `400` - Invalid request
-- `401` - Not authenticated
+- `401` - Missing/invalid internal key
+- `413` - Request body too large
 - `429` - Rate limit exceeded
+- `503` - Endpoint disabled or rate limiter unavailable
 
 ---
 
@@ -217,22 +233,25 @@ List user files.
 
 ### `POST /api/telemetry/ai-demo`
 
-Demo/observability endpoint for telemetry.
+Privileged endpoint to emit an operational alert for AI demo events (disabled by default).
 
-**Authentication**: Required  
+**Authentication**: Internal key (`x-internal-key`)  
+**Enabled**: `ENABLE_AI_DEMO="true"` is required (otherwise `404`). `TELEMETRY_AI_DEMO_KEY` and the rate limiter must be available (otherwise `503`).  
 **Rate Limit Key**: `telemetry:ai-demo`
+**Body Limit**: 16KB (rejects with `413`)
+
+#### Headers (POST /api/telemetry/ai-demo)
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-internal-key` | Yes | Must match `TELEMETRY_AI_DEMO_KEY` |
 
 #### Request Body (POST /api/telemetry/ai-demo)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `modelName` | string | Yes | AI model (e.g., "gpt-4", "claude-3-opus") |
-| `prompt` | string | Yes | Input prompt for the AI model |
-| `temperature` | number | No | Temperature for sampling (0-2, default: 1) |
-| `maxTokens` | number | No | Maximum response tokens (default: 256) |
-| `userId` | string | No | User ID for telemetry tracking |
-| `sessionId` | string | No | Session ID for tracking related requests |
-| `metadata` | object | No | Additional metadata for observability |
+| `status` | string | Yes | One of `success` or `error` |
+| `detail` | string | No | Detail string (max 2000 characters) |
 
 #### Response (POST /api/telemetry/ai-demo)
 
@@ -240,24 +259,18 @@ Demo/observability endpoint for telemetry.
 
 ```json
 {
-  "id": "demo-request-uuid",
-  "model": "gpt-4",
-  "response": "The AI model response text here...",
-  "tokensUsed": {
-    "prompt": 15,
-    "completion": 42,
-    "total": 57
-  },
-  "processingTime": 325,
-  "timestamp": "2025-01-20T15:30:00Z"
+  "ok": true
 }
 ```
 
 #### Errors (POST /api/telemetry/ai-demo)
 
 - `400` - Invalid request parameters
-- `401` - Not authenticated
+- `401` - Missing/invalid internal key
+- `404` - Feature flag disabled (`ENABLE_AI_DEMO !== "true"`)
+- `413` - Request body too large
 - `429` - Rate limit exceeded
+- `503` - Endpoint enabled but missing `TELEMETRY_AI_DEMO_KEY` or rate limiter unavailable
 
 ---
 

@@ -5,6 +5,7 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { readRequestBodyBytesWithLimit } from "@/lib/http/body";
 
 /**
  * Computes hex-encoded HMAC-SHA256 for a payload using a secret.
@@ -59,11 +60,17 @@ export function timingSafeEqualHex(a: string, b: string): boolean {
  */
 export async function verifyRequestHmac(
   req: Request,
-  secret: string
+  secret: string,
+  options: { maxBytes?: number } = {}
 ): Promise<boolean> {
   const sig = req.headers.get("x-signature-hmac");
   if (!secret || !sig) return false;
-  const raw = await req.clone().text();
-  const expected = computeHmacSha256Hex(raw, secret);
-  return timingSafeEqualHex(expected, sig);
+  const { maxBytes = 64 * 1024 } = options;
+  try {
+    const rawBytes = await readRequestBodyBytesWithLimit(req.clone(), maxBytes);
+    const expected = computeHmacSha256Hex(rawBytes, secret);
+    return timingSafeEqualHex(expected, sig);
+  } catch {
+    return false;
+  }
 }

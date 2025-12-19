@@ -11,6 +11,7 @@ import { loginFormSchema } from "@schemas/auth";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
+import { isMfaRequiredError } from "@/lib/auth/supabase-errors";
 
 /**
  * POST /api/auth/login
@@ -53,28 +54,3 @@ export const POST = withApiGuards({
 
   return NextResponse.json({ success: true });
 });
-
-function isMfaRequiredError(
-  err: unknown
-): err is { code?: string; message?: string; status?: number } {
-  if (!err || typeof err !== "object") {
-    return false;
-  }
-
-  const { code, message, status } = err as {
-    code?: string;
-    message?: string;
-    status?: number;
-  };
-
-  if (code === "insufficient_aal" || code === "mfa_required") {
-    return true;
-  }
-
-  if (status === 403) {
-    const normalized = message?.toLowerCase() ?? "";
-    return normalized.includes("mfa") || normalized.includes("aal");
-  }
-
-  return false;
-}

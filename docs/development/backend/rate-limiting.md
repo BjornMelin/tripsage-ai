@@ -6,6 +6,32 @@ TripSage uses Upstash Redis + `@upstash/ratelimit` for server-side throttling:
 - **Webhooks**: enforced in `src/lib/webhooks/rate-limit.ts` and applied by `src/lib/webhooks/handler.ts`.
 - **AI tools**: enforced in `src/ai/lib/tool-factory.ts` (`createAiTool({ guardrails: { rateLimit: ... } })`).
 
+## Degraded-mode policy (fail-open vs fail-closed)
+
+Some endpoints are privileged or cost-bearing and must **fail closed** if rate limiting cannot be enforced (missing Redis config, Redis unavailable, enforcement errors).
+
+- Route handlers (`withApiGuards`) support `degradedMode: "fail_closed" | "fail_open"`.
+  - `fail_closed`: deny the request with `503 rate_limit_unavailable`
+  - `fail_open`: allow the request, but emit a deduped operational alert (`ratelimit.degraded`)
+- Default policy:
+  - `fail_closed` for `embeddings`, `ai:stream`, `telemetry:ai-demo`, and `keys:*`
+  - `fail_open` for non-privileged routes unless explicitly overridden
+- Webhooks (`src/lib/webhooks/rate-limit.ts`) default to `fail_closed`.
+
+### Upstash timeout behavior (important)
+
+`@upstash/ratelimit` supports a `timeout` option (default: **5000ms**) where the request is allowed to pass on timeout (`success: true`, `reason: "timeout"`).
+
+TripSage treats `reason: "timeout"` as **degraded infrastructure** and applies the same `degradedMode` policy:
+
+- `fail_closed`: deny with `503 rate_limit_unavailable`
+- `fail_open`: allow but emit `ratelimit.degraded` (deduped)
+
+References:
+
+- <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
+- <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
+
 ## Redis access (canonical)
 
 Always obtain Redis via `getRedis()`:

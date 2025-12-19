@@ -36,11 +36,11 @@ describe("getClientIp", () => {
       "webhook.ip_missing",
       expect.objectContaining({
         attributes: expect.objectContaining({
-          "request.cf_connecting_ip": "missing",
+          "request.cf_connecting_ip_present": false,
           "request.method": "GET",
           "request.url": "/api",
-          "request.user_agent": "unknown",
-          "request.x_forwarded_for": "missing",
+          "request.x_forwarded_for_present": false,
+          "request.x_real_ip_present": false,
         }),
         level: "warning",
       })

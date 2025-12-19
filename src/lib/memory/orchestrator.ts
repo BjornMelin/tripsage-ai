@@ -9,6 +9,7 @@
 import "server-only";
 
 import type { MemoryContextResponse, Message } from "@schemas/chat";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { createMem0Adapter } from "./mem0-adapter";
 import { createSupabaseMemoryAdapter } from "./supabase-adapter";
@@ -201,16 +202,17 @@ export function runMemoryOrchestrator(
   const clock = options.clock ?? Date.now;
 
   const { canonical, sanitizedForSecondary } = buildSanitizedIntent(intent);
+  const sessionIdHash = hashTelemetryIdentifier(canonical.sessionId);
+  const userIdHash = hashTelemetryIdentifier(canonical.userId);
 
   return withTelemetrySpan<MemoryOrchestratorResult>(
     "memory.orchestrator",
     {
       attributes: {
         "memory.intent.type": canonical.type,
-        "memory.session.id": canonical.sessionId,
-        "memory.user.id": canonical.userId,
+        ...(sessionIdHash ? { "session.id_hash": sessionIdHash } : {}),
+        ...(userIdHash ? { "user.id_hash": userIdHash } : {}),
       },
-      redactKeys: ["memory.user.id"],
     },
     async () => {
       const ctx: MemoryAdapterContext = { now: clock };

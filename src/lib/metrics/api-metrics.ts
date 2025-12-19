@@ -20,7 +20,7 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 export interface ApiMetric {
   /** Request duration in milliseconds */
   durationMs: number;
-  /** API route pathname (e.g., /api/dashboard) */
+  /** Low-cardinality route key (e.g., a stable telemetry name or rateLimit key) */
   endpoint: string;
   /** Error class name for failed requests */
   errorType?: string;

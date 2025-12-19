@@ -218,7 +218,10 @@ const monitoringEnvSchema = z.object({
 });
 
 // Feature flags and configuration (empty - not used in frontend)
-const featureEnvSchema = z.object({});
+const featureEnvSchema = z.object({
+  // Coerce to boolean for type safety; avoids string comparison pitfalls ("true" vs "TRUE")
+  ENABLE_AI_DEMO: z.coerce.boolean().default(false),
+});
 
 // Security configuration
 const securityEnvSchema = z.object({
@@ -227,6 +230,8 @@ const securityEnvSchema = z.object({
   // HMAC secret for verifying Supabase Database Webhooks
   HMAC_SECRET: hmacSecretSchema,
   MFA_BACKUP_CODE_PEPPER: secretSchema("MFA_BACKUP_CODE_PEPPER", 16),
+  TELEMETRY_AI_DEMO_KEY: apiKeySchema("TELEMETRY_AI_DEMO_KEY", 32),
+  TELEMETRY_HASH_SECRET: secretSchema("TELEMETRY_HASH_SECRET"),
 });
 
 // Development and debugging (minimal - only ANALYZE and DEBUG used)
@@ -259,6 +264,7 @@ export const envSchema = z
         const requiredInProduction = [
           "NEXT_PUBLIC_SUPABASE_URL",
           "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "TELEMETRY_HASH_SECRET",
         ];
 
         for (const key of requiredInProduction) {

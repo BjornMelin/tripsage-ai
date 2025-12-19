@@ -279,7 +279,6 @@ describe("lib/security/sessions", () => {
     });
     expect(mockLogger.warn).toHaveBeenCalledWith("session_missing_activity_timestamp", {
       observedAt: "2025-01-01T03:00:00Z",
-      sessionId: "sess-unknown",
     });
     expect(mockNowIso).toHaveBeenCalled();
   });

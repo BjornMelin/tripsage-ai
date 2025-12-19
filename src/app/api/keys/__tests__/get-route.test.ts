@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setRateLimitFactoryForTests } from "@/lib/api/factory";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMockNextRequest,
@@ -39,6 +40,16 @@ vi.mock("@/lib/api/route-helpers", async () => {
 describe("GET /api/keys route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
   });
 
   it("returns key metadata for authenticated user", async () => {

@@ -40,7 +40,18 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
   - `XAI_API_KEY` — <https://console.x.ai>
   - `OPENROUTER_API_KEY` — <https://openrouter.ai/keys>
 - Optional:
-  - `EMBEDDINGS_API_KEY` (internal/private embeddings route)
+  - `EMBEDDINGS_API_KEY` (internal key for `/api/embeddings`; required, otherwise the endpoint is disabled)
+
+## AI demo (disabled by default)
+
+These routes are cost-bearing/privileged and are disabled unless explicitly enabled:
+
+- `ENABLE_AI_DEMO` (set to `"true"` to enable `/api/ai/stream` and `/api/telemetry/ai-demo`)
+- `TELEMETRY_AI_DEMO_KEY` (internal key for `/api/telemetry/ai-demo`)
+
+## Telemetry privacy (required in production)
+
+- `TELEMETRY_HASH_SECRET` (≥32 chars): required in production. Enables stable hashed identifiers in telemetry spans (e.g., `user.id_hash`, `session.id_hash`) and optional HMAC fingerprints on privileged alerts (e.g., `ai_demo.stream.detail_hash`). In non-production, if unset, identifier/fingerprint attributes are omitted by default.
 
 ## Search / crawling
 

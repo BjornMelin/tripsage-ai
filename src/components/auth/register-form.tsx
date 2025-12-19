@@ -44,6 +44,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const targetPath = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
   const targetUrl = useMemo(
     () => resolveRedirectUrl(redirectTo, { absolute: true }),
     [redirectTo]
@@ -83,7 +84,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
       typeof window === "undefined"
         ? undefined
         : new URL("/auth/confirm", window.location.origin).toString() +
-          `?type=email&next=${encodeURIComponent(targetUrl)}`;
+          `?type=email&next=${encodeURIComponent(targetPath)}`;
 
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({

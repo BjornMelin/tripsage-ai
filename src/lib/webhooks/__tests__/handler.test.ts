@@ -66,10 +66,14 @@ vi.mock("@/lib/idempotency/redis", () => ({
   tryReserveKey: tryReserveKeyMock,
 }));
 
-vi.mock("../rate-limit", () => ({
-  checkWebhookRateLimit: checkRateLimitMock,
-  createRateLimitHeaders: () => ({}),
-}));
+vi.mock("../rate-limit", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../rate-limit")>();
+  return {
+    ...original,
+    checkWebhookRateLimit: checkRateLimitMock,
+    createRateLimitHeaders: () => ({}),
+  };
+});
 
 vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: async (
@@ -369,7 +373,10 @@ describe("createWebhookHandler", () => {
     const body = (await res.json()) as Record<string, unknown>;
 
     expect(body).toEqual({ ok: true, skipped: true });
-    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key", 300);
+    expect(tryReserveKeyMock).toHaveBeenCalledWith("event-key", {
+      degradedMode: "fail_closed",
+      ttlSeconds: 300,
+    });
     const scope = spanAttributes.find(([k]) => k === "webhook.idempotency_scope");
     expect(scope?.[1]).toBe("global");
     const skipped = spanAttributes.find(([k]) => k === "webhook.skipped");

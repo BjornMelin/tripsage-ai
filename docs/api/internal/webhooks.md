@@ -17,7 +17,16 @@ Invalid signatures return `401 Unauthorized` with `{error, reason}` response.
 
 ## Rate Limiting
 
-Webhook endpoints are **not rate-limited**. They are called by Supabase Postgres triggers and should be trusted once signature verification passes.
+Webhook endpoints are rate-limited to protect against abuse and misconfiguration:
+
+- Policy: 100 requests per minute per IP (sliding window)
+- `429` on rate limit exceeded (standard `X-RateLimit-*` headers + `Retry-After`)
+- `503` when rate limiting cannot be enforced (Upstash unavailable) — fail-closed
+
+## Body size limits
+
+- Default maximum request body size is 64KB per webhook endpoint.
+- Requests exceeding the limit return `413 Payload Too Large` before JSON parsing.
 
 ---
 
@@ -26,7 +35,7 @@ Webhook endpoints are **not rate-limited**. They are called by Supabase Postgres
 Cache invalidation webhook for database changes.
 
 **Authentication**: HMAC signature verification (`X-Signature-HMAC` header)  
-**Rate Limit**: Not rate-limited
+**Rate Limit**: Enforced (100/min per IP; fail-closed if limiter unavailable)
 
 ### Request Body
 
@@ -113,7 +122,7 @@ This webhook is called by Supabase Postgres triggers when database records chang
 Trip collaborator webhook for handling `trip_collaborators` table changes.
 
 **Authentication**: HMAC signature verification (`X-Signature-HMAC` header)  
-**Rate Limit**: Not rate-limited
+**Rate Limit**: Enforced (100/min per IP; fail-closed if limiter unavailable)
 
 ### Request Body
 
@@ -246,7 +255,7 @@ Events for other tables are silently skipped with `{ok: true, skipped: true}`.
 File attachment webhook for handling `file_attachments` table changes.
 
 **Authentication**: HMAC signature verification (`X-Signature-HMAC` header)  
-**Rate Limit**: Not rate-limited
+**Rate Limit**: Enforced (100/min per IP; fail-closed if limiter unavailable)
 
 ### Request Body
 
@@ -368,6 +377,6 @@ These endpoints receive Postgres change event payloads from Supabase triggers, n
 All endpoints:
 
 - Use HMAC-SHA256 signature verification via `X-Signature-HMAC` header
-- Are not rate-limited (trusted after signature verification)
+- Are rate-limited (100/min per IP; fail-closed if limiter unavailable)
 - Enforce idempotency using Upstash Redis event keys
 - Return standardized success/error responses matching the actual handler implementations

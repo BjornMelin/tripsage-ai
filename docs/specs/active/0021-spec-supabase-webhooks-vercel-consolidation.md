@@ -77,9 +77,10 @@ Decommission Supabase Edge Functions and related CLI deploy steps after dual-run
 - Headers: `X-Event-Type`, `X-Table`, `X-Signature-HMAC`
 - Body: `{ type, table, schema, record, old_record, occurred_at }`
 - Behavior:
+  - Enforce rate limiting (100/min per IP). If rate limiting cannot be enforced, fail closed (`503`).
   - Validate signature and known table (e.g., `trip_collaborators`).
   - Compute a stable event key from table, type, occurred_at, and record hash.
-  - Enforce idempotency via Upstash Redis (`SET NX` with TTL) using the event key.
+  - Enforce idempotency via Upstash Redis (`SET NX` with TTL) using the event key (fail closed if Redis is unavailable).
   - For `trip_collaborators`, enqueue a job to the QStash-backed notification worker
     (see SPEC-0025). The worker rejects requests unless `QSTASH_CURRENT_SIGNING_KEY`
     is configured and the `Upstash-Signature` header verifies. The route only falls
@@ -110,6 +111,7 @@ Decommission Supabase Edge Functions and related CLI deploy steps after dual-run
   - Accept `{ text }` or `{ property }` payload
   - Use provider embeddings via AI SDK (OpenAI/Gateway)
   - Optionally upsert vector into target table
+  - Require `x-internal-key` to match `EMBEDDINGS_API_KEY` (disabled unless configured)
 
 ## Database (SQL)
 
@@ -235,7 +237,8 @@ Implementation detail: handler code can throw typed errors from `src/lib/webhook
 | `QSTASH_CURRENT_SIGNING_KEY` | Yes | QStash signature verification |
 | `QSTASH_NEXT_SIGNING_KEY` | No | Key rotation support |
 | `RESEND_API_KEY` | No | Email notifications |
-| `IDEMPOTENCY_FAIL_OPEN` | No | Controls fail-open vs fail-closed when Redis is unavailable for idempotency keys |
+| `EMBEDDINGS_API_KEY` | No | Internal key to enable `/api/embeddings` (disabled unless configured) |
+| `IDEMPOTENCY_FAIL_OPEN` | No | Global default for non-privileged idempotency; webhook/job handlers must fail closed |
 | `COLLAB_WEBHOOK_URL` | No | Downstream webhook URL |
 
 ### Supabase Database Configuration

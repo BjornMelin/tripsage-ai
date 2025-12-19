@@ -186,7 +186,9 @@ export function resetApiRouteMocks(): void {
   setSupabaseFactoryForTests(async () => client as TypedServerSupabase);
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });
-  setRateLimitFactoryForTests(null);
+  // Most API route tests should not depend on Redis/Upstash availability.
+  // Default to a deterministic allow response unless a test overrides this.
+  setRateLimitFactoryForTests(LIMIT_SPY);
   GET_REDIS_MOCK.mockReset();
   GET_REDIS_MOCK.mockImplementation(() =>
     STATE.rateLimitEnabled ? REDIS_MOCK : undefined

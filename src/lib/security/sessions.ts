@@ -9,6 +9,7 @@ import { nowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -108,9 +109,10 @@ export function mapSessionRow(
 ): ActiveSession {
   const lastActivity = row.refreshed_at ?? row.updated_at ?? row.created_at;
   if (!lastActivity) {
+    const sessionIdHash = hashTelemetryIdentifier(row.id);
     logger.warn("session_missing_activity_timestamp", {
       observedAt: nowIso(),
-      sessionId: row.id,
+      ...(sessionIdHash ? { sessionIdHash } : {}),
     });
   }
   return {
@@ -138,10 +140,11 @@ export async function listActiveSessions(
   opts: { currentSessionId?: string | null } = {}
 ): Promise<ActiveSession[]> {
   const currentSessionId = opts.currentSessionId ?? null;
+  const userIdHash = hashTelemetryIdentifier(userId);
 
   return await withTelemetrySpan(
     "security.sessions.list",
-    { attributes: { userId } },
+    { attributes: userIdHash ? { "user.id_hash": userIdHash } : {} },
     async (span) => {
       const query = adminSupabase
         .schema("auth")
@@ -157,7 +160,10 @@ export async function listActiveSessions(
       const { data, error } = await query;
       if (error) {
         span.setAttribute("security.sessions.list.error", true);
-        logger.error("sessions_list_failed", { error: error.message, userId });
+        logger.error("sessions_list_failed", {
+          error: error.message,
+          userIdHash: userIdHash ?? undefined,
+        });
         throw new SessionsListError("sessions_list_failed", error);
       }
 
@@ -167,7 +173,7 @@ export async function listActiveSessions(
         span.setAttribute("security.sessions.list.invalid_shape", true);
         logger.error("sessions_list_invalid_shape", {
           issues: parsed.error.issues,
-          userId,
+          userIdHash: userIdHash ?? undefined,
         });
         throw new SessionsListError("invalid_sessions_shape", parsed.error);
       }

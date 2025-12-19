@@ -2,6 +2,8 @@
  * @fileoverview Amadeus provider adapter with retry and telemetry.
  */
 
+import "server-only";
+
 import { ProviderError } from "@domain/accommodations/errors";
 import {
   bookHotelOffer,
@@ -21,6 +23,7 @@ import type {
   AccommodationSearchParams,
 } from "@schemas/accommodations";
 import { retryWithBackoff } from "@/lib/http/retry";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type {
   AccommodationProviderAdapter,
@@ -318,12 +321,17 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     ctx: ProviderContext | undefined,
     fn: () => Promise<T>
   ): Promise<ProviderResult<T>> {
+    const sessionIdHash = ctx?.sessionId
+      ? hashTelemetryIdentifier(ctx.sessionId)
+      : null;
+    const userIdHash = ctx?.userId ? hashTelemetryIdentifier(ctx.userId) : null;
+
     return withTelemetrySpan(
       `provider.amadeus.${operation}`,
       {
         attributes: {
-          ...(ctx?.sessionId ? { "provider.session_id": ctx.sessionId } : {}),
-          ...(ctx?.userId ? { "provider.user_id": ctx.userId } : {}),
+          ...(sessionIdHash ? { "session.id_hash": sessionIdHash } : {}),
+          ...(userIdHash ? { "user.id_hash": userIdHash } : {}),
           "provider.name": this.name,
           "provider.operation": operation,
         },

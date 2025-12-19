@@ -7,11 +7,11 @@ import "server-only";
 import { notifyJobSchema } from "@schemas/webhooks";
 import { NextResponse } from "next/server";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
-import { getClientIpFromHeaders } from "@/lib/http/ip";
 import { tryReserveKey } from "@/lib/idempotency/redis";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { pushToDLQ } from "@/lib/qstash/dlq";
 import { getQstashReceiver, verifyQstashRequest } from "@/lib/qstash/receiver";
+import { getTrustedRateLimitIdentifierFromHeaders } from "@/lib/ratelimit/identifier";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Max retries configured for QStash (per ADR-0048) */
@@ -70,12 +70,13 @@ export async function POST(req: Request) {
         const verified = await verifyQstashRequest(req, receiver);
         if (!verified.ok) {
           try {
-            const ip = getClientIpFromHeaders(req.headers);
+            const ipHash = getTrustedRateLimitIdentifierFromHeaders(req.headers);
+            const pathname = new URL(req.url).pathname;
             span.addEvent("unauthorized_attempt", {
               hasSignature: verified.reason !== "missing_signature",
-              ip: ip === "unknown" ? undefined : ip,
+              ipHash: ipHash === "unknown" ? undefined : ipHash,
+              path: pathname,
               reason: verified.reason,
-              url: req.url,
             });
           } catch (spanError) {
             span.recordException(spanError as Error);
@@ -97,7 +98,10 @@ export async function POST(req: Request) {
         span.setAttribute("op", payload.type);
 
         // De-duplicate at worker level as well to avoid double-send on retries
-        const unique = await tryReserveKey(`notify:${eventKey}`, 300);
+        const unique = await tryReserveKey(`notify:${eventKey}`, {
+          degradedMode: "fail_closed",
+          ttlSeconds: 300,
+        });
         if (!unique) {
           span.setAttribute("event.duplicate", true);
           return NextResponse.json({ duplicate: true, ok: true });

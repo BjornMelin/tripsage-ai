@@ -8,7 +8,8 @@ import { mfaSessionRevokeInputSchema } from "@schemas/mfa";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
-import { MfaRequiredError, requireAal2, revokeSessions } from "@/lib/security/mfa";
+import { isMfaRequiredError } from "@/lib/auth/supabase-errors";
+import { requireAal2, revokeSessions } from "@/lib/security/mfa";
 import { classifyMfaError, logMfaError } from "@/lib/security/mfa-error";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -29,10 +30,7 @@ export const POST = withApiGuards({
     logger.info("mfa sessions revoked", { scope: data.scope });
     return NextResponse.json({ data: { status: "revoked" } });
   } catch (error) {
-    if (
-      error instanceof MfaRequiredError ||
-      (error as { code?: string } | null)?.code === "MFA_REQUIRED"
-    ) {
+    if (isMfaRequiredError(error)) {
       return errorResponse({
         err: error,
         error: "mfa_required",

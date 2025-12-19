@@ -333,15 +333,21 @@
 
 **Acceptance criteria:**  
 
-- [ ] Oversized JSON requests to guarded routes return `413` without fully buffering the payload.  
+- [x] Oversized JSON requests to guarded routes return `413` without fully buffering the payload.  
 - [x] Webhook signature verification reads the body with a hard limit (not just `Content-Length`), returning `413` when exceeded.  
-- [ ] Tests cover the size limit behavior for at least one JSON route and one webhook route.
+- [x] Tests cover the size limit behavior for at least one JSON route and one webhook/QStash verification path.
 
 **Implementation (2025-12-17):**
 
-- `src/lib/webhooks/payload.ts` now reads the request body with an explicit byte limit before signature verification (single-pass, bounded).
-- `src/lib/webhooks/handler.ts` returns `413 Payload Too Large` when the body exceeds `maxBodySize`, even if `Content-Length` is missing or misleading.
-- Added unit tests covering the 413 behavior for webhook payload parsing and handler responses.
+- Added `readRequestBodyBytesWithLimit()` + `PayloadTooLargeError` in `src/lib/http/body.ts` (Content-Length precheck + streaming bounded read + cancel-on-exceed).
+- `parseJsonBody()` in `src/lib/api/route-helpers.ts` now uses the bounded reader (no `req.json()` / `req.text()` buffering) and returns `413 payload_too_large` when exceeded.
+- Auth JSON route handlers under `src/app/auth/**` now parse request bodies via the bounded reader and return `413` on exceed (example test: `src/app/auth/email/verify/__tests__/route.test.ts`).
+- Webhook HMAC verification (`src/lib/webhooks/payload.ts`) and handler (`src/lib/webhooks/handler.ts`) read/verify using the bounded reader and return `413` even when `Content-Length` is missing/misleading.
+- QStash verification (`src/lib/qstash/receiver.ts`) reads the raw body with an explicit byte limit and returns `413` on exceed.
+- Tests:
+  - `src/lib/api/__tests__/route-helpers.test.ts` (oversized JSON returns 413 and cancels stream)
+  - `src/lib/qstash/__tests__/receiver.test.ts` (oversized QStash payload returns 413)
+  - Webhook tests under `src/lib/webhooks/__tests__/*` and `src/app/api/hooks/*/__tests__/*` (handler returns 413 for oversized payloads)
 
 **References:**  
 
@@ -379,14 +385,27 @@
 
 **Acceptance criteria:**  
 
-- [ ] Critical endpoints (webhooks, jobs, keys) have an explicit fail-closed mode when Redis is unavailable.  
-- [ ] Fail-open incidents emit an operational alert with route/feature context.  
-- [ ] Tests cover both modes (redis available vs unavailable) for one representative route/handler.
+- [x] Critical endpoints (webhooks, jobs, keys, cost-bearing AI routes) have an explicit fail-closed mode when Redis is unavailable.  
+- [x] Fail-open fallbacks (where explicitly configured) emit a deduped operational alert with stable route/feature context (avoid high-cardinality path params).  
+- [x] Tests cover both modes (fail-closed vs fail-open) for a representative route.
+
+**Implementation (2025-12-17):**
+
+- `src/lib/api/factory.ts` adds `degradedMode: "fail_closed" | "fail_open"` and defaults fail-closed for privileged/cost-bearing endpoints (`embeddings`, `ai:stream`, `telemetry:ai-demo`, `keys:*`).
+- Fail-open fallbacks emit deduped alerts (`ratelimit.degraded`, `idempotency.degraded`) via `src/lib/telemetry/degraded-mode.ts` (with periodic cleanup to avoid unbounded dedupe state growth).
+- Upstash timeouts (`success: true`, `reason: "timeout"`) are treated as degraded infrastructure and follow the same policy (fail-closed denies; fail-open alerts + allows).
+- Webhooks rate limiting supports explicit policy and defaults to fail-closed (`src/lib/webhooks/rate-limit.ts`); webhook handlers return `503` when the limiter is unavailable.
+- Idempotency supports the same degraded-mode policy (`src/lib/idempotency/redis.ts`) and is set to fail-closed for jobs/webhooks.
+- Tests:
+  - `src/lib/api/__tests__/factory.degraded-mode.test.ts` (fail-closed denies, fail-open allows + emits deduped alert)
+  - `src/lib/idempotency/__tests__/redis.test.ts` (degraded-mode behaviors)
 
 **References:**  
 
 - <https://owasp.org/www-project-code-review-guide/assets/OWASP_Code_Review_Guide_v2.pdf>  
 - <https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html>
+- <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>  
+- <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
 
 ### SEC-003 - Major - Security - QStash signature header logged on verification failure
 
@@ -414,13 +433,20 @@
 
 **Acceptance criteria:**  
 
-- [ ] No logs contain the raw QStash signature header.  
-- [ ] A failing signature verification still produces enough context to debug (route + reason + request id).  
-- [ ] Tests/linters prevent reintroducing raw secret logging.
+- [x] No logs contain the raw QStash signature header.  
+- [x] A failing signature verification still produces enough context to debug (path + reason + fingerprint).  
+- [x] Tests prevent reintroducing raw signature logging.
+
+**Implementation (2025-12-17):**
+
+- `src/lib/qstash/receiver.ts` no longer logs the raw signature header on verification failures.
+- When verification throws, it logs a short fingerprint (`signatureHash`) derived from `sha256(signature).slice(0, 8)` for correlation.
+- QStash verification reads the raw body with a hard max byte limit and returns `413 payload_too_large` before signature verification when exceeded.
+- Tests: `src/lib/qstash/__tests__/receiver.test.ts`.
 
 **References:**  
 
-- <https://upstash.com/docs/qstash/howto/signature-validation>
+- <https://upstash.com/docs/qstash/howto/signature>
 
 ### SEC-004 - Minor - Security - Raw user/session identifiers recorded in telemetry attributes
 
@@ -448,9 +474,24 @@
 
 **Acceptance criteria:**  
 
-- [ ] No new telemetry spans record raw user/session identifiers without explicit justification.  
-- [ ] Existing span attributes are migrated to hashed/redacted forms.  
-- [ ] A documented policy exists for what identifiers can be emitted (and where).
+- [x] No new telemetry spans record raw user/session identifiers without explicit justification (helper + guidance provided).  
+- [x] Existing span attributes are migrated to hashed/redacted forms.  
+- [x] A documented policy exists for what identifiers can be emitted (and where).
+
+**Implementation (2025-12-17):**
+
+- Added `hashTelemetryIdentifier()` (`src/lib/telemetry/identifiers.ts`) which returns a stable HMAC-SHA256 hash only when `TELEMETRY_HASH_SECRET` is configured; safe default is to omit identifiers.
+- `src/app/api/jobs/memory-sync/route.ts` now emits `user.id_hash` / `session.id_hash` only, and avoids embedding raw identifiers in exception messages.
+- Removed remaining raw user/session identifiers from span attributes in:
+  - `src/lib/supabase/factory.ts`
+  - `src/app/api/keys/_telemetry.ts`
+  - `src/lib/security/sessions.ts`
+  - `src/app/api/security/sessions/_handlers.ts`
+  - `src/app/api/itineraries/_handler.ts`
+  - `src/lib/memory/orchestrator.ts`
+  - `src/domain/accommodations/providers/amadeus-adapter.ts`
+- `src/lib/api/factory.ts` no longer emits raw request paths in metrics/spans by default; it records a stable, low-cardinality `routeKey` (telemetry name or rateLimit key, else sanitized path) to avoid leaking IDs from dynamic routes.
+- Added policy doc: `docs/development/security/telemetry-data-classification.md`.
 
 **References:**  
 
@@ -602,9 +643,16 @@
 
 **Acceptance criteria:**  
 
-- [ ] `next=http://evil.example` does not redirect externally; route falls back to a safe internal default.  
-- [ ] Unit test covers common bypass encodings (e.g., `//evil`, `%2F%2Fevil`, `\\evil`).  
-- [ ] Documentation states the allowed redirect destinations and why.
+- [x] `next=http://evil.example` does not redirect externally; route falls back to a safe internal default.  
+- [x] Unit test covers common bypass encodings (e.g., `//evil`, `%2F%2Fevil`, `\\evil`).  
+- [x] The allowed redirect shape is documented (internal app-relative paths only; default `/dashboard`).
+
+**Implementation (2025-12-17):**
+
+- `src/app/auth/confirm/route.ts` sanitizes `next` by decoding once and requiring an internal path that starts with `/` but not `//`; backslashes are rejected to prevent `\\evil` bypasses.
+- `next` destinations are allowlisted to `/dashboard` and subpaths; other internal paths fall back to `/dashboard`.
+- Invalid `next` values fall back to `/dashboard` (`SAFE_DEFAULT_NEXT`).
+- Tests: `src/app/auth/confirm/__tests__/route.test.ts` covers `//evil`, `%2F%2Fevil`, `%252F%252Fevil`, `\\evil`, and `http://evil.example`.
 
 **References:**  
 
@@ -643,9 +691,16 @@
 
 **Acceptance criteria:**  
 
-- [ ] Requests without a valid internal key (or without user auth, depending on design) always return `401/403` even when `EMBEDDINGS_API_KEY` is unset.  
-- [ ] Persistence (admin Supabase writes) is only possible from authenticated/authorized contexts with tests proving it.  
-- [ ] A deliberate “abuse” test (looped requests) is blocked by fail-closed rate limiting or explicit disabled-state behavior.
+- [x] The route is never public under env misconfig: when `EMBEDDINGS_API_KEY` is unset it returns `503` (disabled), and when set it requires `x-internal-key` (401 on missing/invalid).  
+- [x] Persistence (admin Supabase writes) is only possible after internal-key verification (no admin writes prior to auth boundary).  
+- [x] Abuse is mitigated via explicit disabled-state behavior and fail-closed rate limiting for this cost-bearing endpoint.
+
+**Implementation (2025-12-17):**
+
+- `src/app/api/embeddings/route.ts` returns `503 embeddings_disabled` when `EMBEDDINGS_API_KEY` is missing instead of becoming public.
+- When enabled, the route requires `x-internal-key` to match `EMBEDDINGS_API_KEY` before parsing, embedding generation, or any admin Supabase writes.
+- Rate limiting is configured `degradedMode: "fail_closed"` per SEC-002 degraded-mode policy (see “SEC-002 - Rate limiting + idempotency…”) to avoid silent bypass under Redis/limiter degradation.
+- Tests: `src/app/api/embeddings/__tests__/route.test.ts` (disabled-state and internal-key auth).
 
 **References:**  
 
@@ -681,9 +736,15 @@
 
 **Acceptance criteria:**  
 
-- [ ] In production configuration, `/api/ai/stream` is unreachable (404) or requires auth + internal gating.  
-- [ ] Rate limiting fails closed (or the route is disabled) when Redis is unavailable.  
-- [ ] A test asserts the route is disabled unless explicitly enabled.
+- [x] In production configuration, `/api/ai/stream` is unreachable (404) unless explicitly enabled.  
+- [x] When enabled, the route requires auth and rate-limiting fails-closed when Redis is unavailable.  
+- [x] A test asserts the route is disabled unless explicitly enabled.
+
+**Implementation (2025-12-17):**
+
+- `src/app/api/ai/stream/route.ts` now returns `404` unless `ENABLE_AI_DEMO === "true"`.
+- When enabled, it requires auth (`withApiGuards({ auth: true })`) and configures fail-closed rate limiting (`degradedMode: "fail_closed"`).
+- Tests: `src/app/api/ai/stream/__tests__/route.integration.test.ts` (disabled-by-default and unauthenticated behavior).
 
 **References:**  
 
@@ -717,8 +778,12 @@
 
 **Acceptance criteria:**  
 
-- [ ] `dangerouslyAllowSVG` is `false` OR config includes both strict CSP and `contentDispositionType: "attachment"`.  
-- [ ] A security review documents where SVGs come from and why this is safe.  
+- [x] `dangerouslyAllowSVG` is `false` OR config includes both strict CSP and `contentDispositionType: "attachment"`.  
+- [x] SVG serving through the Image Optimization pipeline is disabled (no additional provenance review required unless re-enabled).  
+
+**Implementation (2025-12-17):**
+
+- `next.config.ts` now sets `images.dangerouslyAllowSVG = false` (preferred safe default).
 
 **References:**  
 
@@ -753,9 +818,17 @@
 
 **Acceptance criteria:**  
 
-- [ ] Unauthenticated requests cannot trigger operational alerts.  
-- [ ] Alerts have dedupe/limits to prevent a single key/user from spamming.  
-- [ ] Tests cover “unauthenticated cannot emit alert” behavior.
+- [x] Unauthenticated/unauthorized requests cannot trigger operational alerts.  
+- [x] Alerts have caps (body-size, detail length, strict rate limiting) to prevent spam, and fail closed when limiter infra is degraded.  
+- [x] Tests cover “unauthorized cannot emit alert” and oversized payload behavior.
+
+**Implementation (2025-12-17):**
+
+- `src/app/api/telemetry/ai-demo/route.ts` is demo-gated (`ENABLE_AI_DEMO === "true"` else `404`) and privileged (`TELEMETRY_AI_DEMO_KEY` required else `503`, plus `x-internal-key` verification).
+- It enforces hard caps: 16KB max body and `detail` length max 2000 chars.
+- Rate limiting is configured `degradedMode: "fail_closed"` so alerts are not emitted when limiter infra is unavailable.
+- Operational alert attributes avoid raw user-provided `detail`; they emit only low-risk metadata (`has_detail`, `detail_length`) and an optional HMAC `detail_hash` fingerprint when `TELEMETRY_HASH_SECRET` is configured.
+- Tests: `src/app/api/telemetry/ai-demo/__tests__/route.test.ts`.
 
 **References:**  
 

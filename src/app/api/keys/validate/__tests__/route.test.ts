@@ -148,6 +148,7 @@ describe("/api/keys/validate route", () => {
         success: true,
       });
     });
+    setRateLimitFactoryForTests(RATE_LIMIT_FACTORY);
     LIMIT_SPY.mockReset();
     LIMIT_SPY.mockResolvedValue({
       limit: 20,

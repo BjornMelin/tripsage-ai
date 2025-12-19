@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +28,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getClientEnv } from "@/lib/env/client";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
+
+/** Schema for validating password reset response payload. */
+const ResetResponseSchema = z.looseObject({
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
 
 /**
  * Props for the ResetPasswordForm component.
@@ -38,6 +46,8 @@ interface ResetPasswordFormProps {
   className?: string;
 }
 
+const DEFAULT_SUCCESS_MESSAGE =
+  "Password reset instructions have been sent to your email";
 /**
  * Password reset form component.
  *
@@ -56,28 +66,52 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const emailFieldId = React.useId();
 
+  // Memoize path calculations since they depend only on static env config
+  const { resetRequestPath, loginPath, supportPath } = React.useMemo(() => {
+    const basePath = (getClientEnv().NEXT_PUBLIC_BASE_PATH ?? "").trim();
+    const normalizedBasePath = basePath ? `/${basePath.replace(/^\/+|\/+$/g, "")}` : "";
+    return {
+      loginPath: `${normalizedBasePath}/login`,
+      resetRequestPath: `${normalizedBasePath}/auth/password/reset-request`,
+      supportPath: `${normalizedBasePath}/support`,
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (isLoading) return;
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
 
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch("/auth/password/reset-request", {
-        body: JSON.stringify({ email }),
+      const response = await fetch(resetRequestPath, {
+        body: JSON.stringify({ email: trimmedEmail }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
+      // Parse and validate response with Zod for runtime guarantees
+      const rawData = await response.json().catch(() => ({}));
+      const parseResult = ResetResponseSchema.safeParse(rawData);
+      const data = parseResult.success
+        ? parseResult.data
+        : { error: undefined, message: undefined };
+      if (!parseResult.success && process.env.NODE_ENV === "development") {
+        console.warn(
+          "Reset password response validation failed:",
+          parseResult.error.issues
+        );
+      }
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        setError(data.error ?? "Failed to send reset email");
+        setError(data.message ?? data.error ?? "Failed to send reset email");
         setIsLoading(false);
         return;
       }
       setIsSuccess(true);
-      setMessage("Password reset instructions have been sent to your email");
+      setMessage(
+        typeof data.message === "string" ? data.message : DEFAULT_SUCCESS_MESSAGE
+      );
       setIsLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send reset email");
@@ -89,12 +123,12 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
     if (isSuccess) {
       const timer = setTimeout(() => {
         // Redirect back to login after a short delay for convenience.
-        window.location.assign("/login");
+        window.location.assign(loginPath);
       }, 5000);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [isSuccess]);
+  }, [isSuccess, loginPath]);
 
   return (
     <Card className={className}>
@@ -131,7 +165,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             </div>
 
             <Button className="w-full" variant="outline" asChild>
-              <Link href="/login">
+              <Link href={loginPath}>
                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                 Return to Sign In
               </Link>
@@ -198,7 +232,10 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
 
             <div className="flex items-center justify-center space-x-1 text-sm text-muted-foreground">
               <ArrowLeftIcon className="h-3 w-3" />
-              <Link href="/login" className="text-primary hover:underline font-medium">
+              <Link
+                href={loginPath}
+                className="text-primary hover:underline font-medium"
+              >
                 Back to sign in
               </Link>
             </div>
@@ -208,7 +245,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
         <div className="mt-6 text-center text-xs text-muted-foreground">
           <p>
             Having trouble?{" "}
-            <Link href="/support" className="text-primary hover:underline">
+            <Link href={supportPath} className="text-primary hover:underline">
               Contact support
             </Link>
           </p>

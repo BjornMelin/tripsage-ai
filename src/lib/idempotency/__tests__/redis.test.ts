@@ -3,9 +3,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const warnRedisUnavailableMock = vi.fn();
+const emitOperationalAlertOncePerWindowMock = vi.fn();
 
 // Mock redis client and factories
-const existsMock = vi.fn(async (_key: string) => 0);
+const existsMock = vi.fn(async () => 0);
 const setMock = vi.fn(async () => "OK");
 const delMock = vi.fn(async () => 1);
 type RedisClient = {
@@ -28,6 +29,11 @@ vi.mock("@/lib/telemetry/redis", () => ({
   warnRedisUnavailable: (...args: unknown[]) => warnRedisUnavailableMock(...args),
 }));
 
+vi.mock("@/lib/telemetry/degraded-mode", () => ({
+  emitOperationalAlertOncePerWindow: (...args: unknown[]) =>
+    emitOperationalAlertOncePerWindowMock(...args),
+}));
+
 describe("idempotency redis helpers", () => {
   beforeEach(() => {
     existsMock.mockReset();
@@ -36,6 +42,7 @@ describe("idempotency redis helpers", () => {
     redisClient = { del: delMock, exists: existsMock, set: setMock };
     getRedisMock.mockReset();
     warnRedisUnavailableMock.mockReset();
+    emitOperationalAlertOncePerWindowMock.mockReset();
   });
 
   describe("hasKey", () => {
@@ -70,6 +77,53 @@ describe("idempotency redis helpers", () => {
 
       expect(result).toBe(true);
       expect(warnRedisUnavailableMock).toHaveBeenCalled();
+      // Note: no operational alert when Redis is unavailable, only on Redis errors
+      expect(emitOperationalAlertOncePerWindowMock).not.toHaveBeenCalled();
+    });
+
+    it("returns false and emits degraded alert when redis throws error with failOpen=true", async () => {
+      existsMock.mockRejectedValueOnce(new Error("Timeout"));
+
+      const { hasKey } = await import("../redis");
+
+      const result = await hasKey("test");
+
+      expect(result).toBe(false);
+      expect(warnRedisUnavailableMock).toHaveBeenCalledWith(
+        "idempotency.keys",
+        expect.objectContaining({ errorMessage: "Timeout" })
+      );
+      expect(emitOperationalAlertOncePerWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            degradedMode: "fail_open",
+            errorMessage: "Timeout",
+            reason: "redis_error",
+          }),
+          event: "idempotency.degraded",
+        })
+      );
+    });
+
+    it("returns true and emits degraded alert when redis throws error with failOpen=false (fail-closed)", async () => {
+      existsMock.mockRejectedValueOnce(new Error("Timeout"));
+
+      const { hasKey } = await import("../redis");
+
+      const result = await hasKey("test", { failOpen: false });
+
+      expect(result).toBe(true);
+      expect(warnRedisUnavailableMock).toHaveBeenCalled();
+      expect(emitOperationalAlertOncePerWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            degradedMode: "fail_closed",
+            errorMessage: "Timeout",
+            reason: "redis_error",
+          }),
+          event: "idempotency.degraded",
+        })
+      );
     });
   });
 
@@ -106,7 +160,7 @@ describe("idempotency redis helpers", () => {
       expect(warnRedisUnavailableMock).toHaveBeenCalled();
     });
 
-    it("returns true when redis unavailable and failOpen=true", async () => {
+    it("returns true when redis unavailable and failOpen=true and emits degraded alert", async () => {
       redisClient = undefined;
       const { tryReserveKey } = await import("../redis");
 
@@ -114,6 +168,49 @@ describe("idempotency redis helpers", () => {
 
       expect(result).toBe(true);
       expect(warnRedisUnavailableMock).toHaveBeenCalled();
+      expect(emitOperationalAlertOncePerWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            degradedMode: "fail_open",
+            reason: "redis_unavailable",
+          }),
+          event: "idempotency.degraded",
+        })
+      );
+    });
+
+    it("returns true and emits degraded alert when redis throws error with failOpen=true", async () => {
+      setMock.mockRejectedValueOnce(new Error("Connection refused"));
+      const { tryReserveKey } = await import("../redis");
+
+      const result = await tryReserveKey("abc", { failOpen: true, ttlSeconds: 10 });
+
+      expect(result).toBe(true);
+      expect(warnRedisUnavailableMock).toHaveBeenCalledWith(
+        "idempotency.keys",
+        expect.objectContaining({ errorMessage: "Connection refused" })
+      );
+      expect(emitOperationalAlertOncePerWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            degradedMode: "fail_open",
+            errorMessage: "Connection refused",
+            reason: "redis_error",
+          }),
+          event: "idempotency.degraded",
+        })
+      );
+    });
+
+    it("throws and does not emit alert when redis throws error with failOpen=false", async () => {
+      setMock.mockRejectedValueOnce(new Error("Connection refused"));
+      const { tryReserveKey } = await import("../redis");
+
+      await expect(
+        tryReserveKey("abc", { failOpen: false, ttlSeconds: 10 })
+      ).rejects.toThrow("Idempotency service unavailable");
+      expect(warnRedisUnavailableMock).toHaveBeenCalled();
+      expect(emitOperationalAlertOncePerWindowMock).not.toHaveBeenCalled();
     });
 
     it("passes ttlSeconds from options", async () => {
@@ -168,6 +265,40 @@ describe("idempotency redis helpers", () => {
       const result = await releaseKey("abc");
 
       expect(result).toBe(false);
+    });
+
+    it("returns false and emits degraded alert when redis throws error with failOpen=true", async () => {
+      delMock.mockRejectedValueOnce(new Error("Network error"));
+      const { releaseKey } = await import("../redis");
+
+      const result = await releaseKey("abc");
+
+      expect(result).toBe(false);
+      expect(warnRedisUnavailableMock).toHaveBeenCalledWith(
+        "idempotency.keys",
+        expect.objectContaining({ errorMessage: "Network error" })
+      );
+      expect(emitOperationalAlertOncePerWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            degradedMode: "fail_open",
+            errorMessage: "Network error",
+            reason: "redis_error",
+          }),
+          event: "idempotency.degraded",
+        })
+      );
+    });
+
+    it("throws and does not emit alert when redis throws error with failOpen=false", async () => {
+      delMock.mockRejectedValueOnce(new Error("Network error"));
+      const { releaseKey } = await import("../redis");
+
+      await expect(releaseKey("abc", { failOpen: false })).rejects.toThrow(
+        "Idempotency service unavailable"
+      );
+      expect(warnRedisUnavailableMock).toHaveBeenCalled();
+      expect(emitOperationalAlertOncePerWindowMock).not.toHaveBeenCalled();
     });
   });
 });

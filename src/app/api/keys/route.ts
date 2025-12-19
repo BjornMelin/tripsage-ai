@@ -10,9 +10,9 @@ import type { NextRequest } from "next/server";
 import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
-import { API_CONSTANTS, errorResponse, requireUserId } from "@/lib/api/route-helpers";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { insertUserApiKey, upsertUserGatewayBaseUrl } from "@/lib/supabase/rpc";
-import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { getKeys, postKey } from "./_handlers";
 
 type IdentifierType = "user" | "ip";
@@ -29,35 +29,13 @@ export const POST = withApiGuards({
   rateLimit: "keys:create",
   schema: postKeyBodySchema,
   // Custom telemetry handled below, factory telemetry disabled
-})(async (req: NextRequest, { user, supabase }, validated: PostKeyBody) => {
+})(async (_req: NextRequest, { user, supabase }, validated: PostKeyBody) => {
   const userResult = requireUserId(user);
   if ("error" in userResult) return userResult.error;
   const { userId } = userResult;
   const identifierType: IdentifierType = "user";
   // Rate limit metadata not available from factory, using undefined for custom telemetry
   const rateLimitMeta: RateLimitResult | undefined = undefined;
-
-  // Check Content-Length before parsing to prevent memory exhaustion
-  // Note: This check happens after withApiGuards has already parsed the body,
-  // but we keep it for defense-in-depth and telemetry.
-  const contentLength = req.headers.get("content-length");
-  if (contentLength) {
-    const size = Number.parseInt(contentLength, 10);
-    if (Number.isNaN(size) || size > API_CONSTANTS.maxBodySizeBytes) {
-      recordTelemetryEvent("api.keys.size_limit", {
-        attributes: {
-          limit_bytes: API_CONSTANTS.maxBodySizeBytes,
-          size_bytes: size,
-        },
-        level: "warning",
-      });
-      return errorResponse({
-        error: "bad_request",
-        reason: `Request body too large (max ${API_CONSTANTS.maxBodySizeBytes} bytes)`,
-        status: 400,
-      });
-    }
-  }
 
   const instrumentedInsert = (u: string, s: string, k: string) =>
     withTelemetrySpan(
