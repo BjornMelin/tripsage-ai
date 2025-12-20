@@ -1,3 +1,13 @@
+## [1.22.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.1...v1.22.2) (2025-12-20)
+
+### Bug Fixes
+
+* **charts:** address Recharts lazy-load review ([ff5b735](https://github.com/BjornMelin/tripsage-ai/commit/ff5b735962bfed57b09dca016fe9398dfaeaa542))
+
+### Performance Improvements
+
+* **charts:** lazy-load recharts in dashboard metrics chart ([01cdf0c](https://github.com/BjornMelin/tripsage-ai/commit/01cdf0cd0d2839ad516ccc2daea688767f814028))
+
 ## [1.22.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.0...v1.22.1) (2025-12-20)
 
 ### Bug Fixes
