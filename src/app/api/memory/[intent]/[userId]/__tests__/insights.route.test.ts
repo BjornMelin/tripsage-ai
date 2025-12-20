@@ -46,10 +46,14 @@ vi.mock("@ai/models/registry", () => ({
   resolveProvider: mockResolveProvider,
 }));
 
-vi.mock("ai", () => ({
-  generateText: mockGenerateText,
-  Output: { object: vi.fn((value) => value) },
-}));
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("ai")>();
+  return {
+    ...actual,
+    generateText: mockGenerateText,
+    Output: { object: vi.fn((value) => value) },
+  };
+});
 
 vi.mock("@/lib/security/random", () => ({
   nowIso: mockNowIso,
@@ -141,7 +145,7 @@ const aiInsightsFixture: MemoryInsightsResponse = {
 };
 
 async function importRoute() {
-  const mod = await import("../[userId]/route");
+  const mod = await import("../route");
   return mod.GET;
 }
 
@@ -197,7 +201,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/user-123",
     });
 
-    const res = await Get(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+    );
     expect(res.status).toBe(401);
     expect(mockHandleMemoryIntent).not.toHaveBeenCalled();
   });
@@ -209,7 +216,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/other-user",
     });
 
-    const res = await Get(req, createRouteParamsContext({ userId: "other-user" }));
+    const res = await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "other-user" })
+    );
     expect(res.status).toBe(403);
     const body = (await res.json()) as { error: string; reason: string };
     expect(body.error).toBe("forbidden");
@@ -226,7 +236,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/user-123",
     });
 
-    const res = await Get(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+    );
     const body = (await res.json()) as MemoryInsightsResponse;
 
     expect(res.status).toBe(200);
@@ -243,7 +256,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/user-123",
     });
 
-    const res = await Get(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+    );
     const body = (await res.json()) as MemoryInsightsResponse;
 
     expect(res.status).toBe(200);
@@ -272,7 +288,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/user-123",
     });
 
-    const res = await Get(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+    );
     const body = (await res.json()) as MemoryInsightsResponse;
 
     expect(res.status).toBe(200);
@@ -316,7 +335,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/user-123",
     });
 
-    await Get(req, createRouteParamsContext({ userId: "user-123" }));
+    await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+    );
 
     const call = mockGenerateText.mock.calls[0]?.[0];
     expect(call?.prompt).toContain("Analyze 20 memory snippets");
@@ -356,7 +378,10 @@ describe("/api/memory/insights/[userId] route", () => {
       url: "http://localhost/api/memory/insights/user-123",
     });
 
-    await Get(req, createRouteParamsContext({ userId: "user-123" }));
+    await Get(
+      req,
+      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+    );
 
     const call = mockGenerateText.mock.calls[0]?.[0];
     // Injection patterns should be filtered from memory context

@@ -79,7 +79,12 @@ async function importRoute() {
   return mod.POST;
 }
 
-describe("POST /api/memory/user/[userId] (delete memories)", () => {
+async function importDeleteRoute() {
+  const mod = await import("../route");
+  return mod.DELETE;
+}
+
+describe("/api/memory/user/[userId] (delete memories)", () => {
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
@@ -128,7 +133,10 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/user-123",
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await post(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "user-123" })
+    );
     expect(res.status).toBe(401);
   });
 
@@ -144,7 +152,10 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/user-123",
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await post(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "user-123" })
+    );
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(401);
@@ -158,7 +169,7 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/",
     });
 
-    const res = await post(req, createRouteParamsContext({}));
+    const res = await post(req, createRouteParamsContext({ intent: "user" }));
     const body = (await res.json()) as { error: string; reason: string };
 
     expect(res.status).toBe(400);
@@ -173,7 +184,10 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/other-user-id",
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "other-user-id" }));
+    const res = await post(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "other-user-id" })
+    );
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(403);
@@ -187,11 +201,19 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/user-123",
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
-    const body = (await res.json()) as { deleted: boolean };
+    const res = await post(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "user-123" })
+    );
+    const body = (await res.json()) as {
+      deletedCount: number;
+      metadata: { deletionTime: string; userId: string };
+      success: boolean;
+    };
 
     expect(res.status).toBe(200);
-    expect(body.deleted).toBe(true);
+    expect(body.success).toBe(true);
+    expect(body.metadata.userId).toBe("user-123");
 
     // Verify both schema calls were made
     expect(mockSchema).toHaveBeenCalledWith("memories");
@@ -201,6 +223,23 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
     // Verify delete was called with correct user_id
     expect(mockDelete).toHaveBeenCalled();
     expect(mockEq).toHaveBeenCalledWith("user_id", "user-123");
+  });
+
+  it("supports DELETE for deleting all memories", async () => {
+    const del = await importDeleteRoute();
+    const req = createMockNextRequest({
+      method: "DELETE",
+      url: "http://localhost/api/memory/user/user-123",
+    });
+
+    const res = await del(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "user-123" })
+    );
+    const body = (await res.json()) as { success: boolean };
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
   });
 
   it("returns 500 when turns deletion fails", async () => {
@@ -214,7 +253,10 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/user-123",
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await post(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "user-123" })
+    );
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(500);
@@ -234,7 +276,10 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       url: "http://localhost/api/memory/user/user-123",
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await post(
+      req,
+      createRouteParamsContext({ intent: "user", userId: "user-123" })
+    );
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(500);
