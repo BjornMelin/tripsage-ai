@@ -72,16 +72,17 @@ const guardedPOST = withApiGuards({
   const modelLimit = getModelContextLimit(model);
   const promptTokens = countPromptTokens(finalMessages, model);
   if (modelLimit - promptTokens <= 0) {
-    return new Response(
-      JSON.stringify({
-        error: "No output tokens available for the given prompt and model.",
+    return errorResponse({
+      error: "token_budget_exceeded",
+      extras: {
         model,
         modelContextLimit: modelLimit,
-        promptTokens: promptTokens,
+        promptTokens,
         reasons,
-      }),
-      { headers: { "content-type": "application/json" }, status: 400 }
-    );
+      },
+      reason: "No output tokens available for the given prompt and model.",
+      status: 400,
+    });
   }
 
   const result = streamText({

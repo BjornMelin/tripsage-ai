@@ -33,14 +33,12 @@ export const POST = withApiGuards({
   });
 
   if (isMfaRequiredError(error)) {
-    return NextResponse.json(
-      {
-        code: error.code,
-        error: "mfa_required",
-        reason: "Multi-factor authentication required",
-      },
-      { status: 403 }
-    );
+    return errorResponse({
+      error: "mfa_required",
+      extras: error.code ? { code: error.code } : undefined,
+      reason: "Multi-factor authentication required",
+      status: 403,
+    });
   }
 
   if (error) {
