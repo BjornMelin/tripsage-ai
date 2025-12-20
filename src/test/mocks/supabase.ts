@@ -6,49 +6,11 @@
  * and optional insert capture for testing.
  */
 
-import type {
-  Session,
-  Subscription,
-  SupabaseClient,
-  User,
-} from "@supabase/supabase-js";
-import type { MockInstance } from "vitest";
+import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
+import { AuthError, createClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
+import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
-
-/** Generic record type for unknown database row structures. */
-type UnknownRecord = Record<string, unknown>;
-
-/** Type alias for Supabase auth client methods. */
-type AuthClient = SupabaseClient<UnknownRecord>["auth"];
-
-/** Supported authentication methods that can be mocked. */
-type SupportedAuthMethod =
-  | "getSession"
-  | "onAuthStateChange"
-  | "signUp"
-  | "signInWithPassword"
-  | "signOut"
-  | "resetPasswordForEmail"
-  | "updateUser"
-  | "getUser"
-  | "signInWithOAuth"
-  | "refreshSession";
-
-/**
- * Mock type that combines Vitest MockInstance with the original function type.
- * This allows mocks to be used as both spies and the original function signature.
- */
-type AuthMethodMock<T extends (...args: never[]) => unknown> = MockInstance<T> & T;
-
-/**
- * Type definition for a complete Supabase auth client mock.
- * All supported auth methods are mocked with their original signatures.
- */
-export type SupabaseAuthMock = {
-  [K in SupportedAuthMethod]: AuthMethodMock<AuthClient[K]>;
-};
 
 /**
  * Configuration for Supabase mock factory with insert capture support.
@@ -65,208 +27,349 @@ export interface SupabaseMockConfig {
    * Supports async single() queries that return { data, error }.
    */
   selectResult?: {
+    count?: number | null;
     data: unknown;
     error: unknown;
   };
 
   /**
+   * Table-specific select responses keyed by table/view name.
+   *
+   * When set, these take precedence over `selectResult`.
+   */
+  selectResults?: Record<
+    string,
+    { count?: number | null; data: unknown; error: unknown }
+  >;
+
+  /**
+   * RPC results keyed by function name.
+   *
+   * If a function is not present, calls return `{ data: null, error: null }`.
+   */
+  rpcResults?: Record<string, { data: unknown; error: unknown; count?: number | null }>;
+
+  /**
+   * Force insert errors for specific tables (keyed by table name).
+   */
+  insertErrors?: Record<string, unknown>;
+
+  /**
+   * Optional fixed token used for storage signed URL generation.
+   */
+  storageToken?: string;
+
+  /**
    * Optional user to return from auth.getUser().
    */
-  user?: User | null;
+  user?: User | null | Partial<User>;
 }
-
-/**
- * Creates a mocked function that combines Vitest MockInstance with the original type.
- */
-const CREATE_MOCK_FN = <T extends (...args: never[]) => unknown>(
-  implementation: T
-): AuthMethodMock<T> => vi.fn(implementation) as AuthMethodMock<T>;
 
 /**
  * Creates a mock User object with default test values.
  */
-const CREATE_MOCK_USER = (): User =>
-  ({
-    app_metadata: {},
-    aud: "authenticated",
-    created_at: new Date(0).toISOString(),
-    email: "mock-user@example.com",
-    id: "mock-user-id",
-    user_metadata: {},
-  }) as User;
+const CREATE_MOCK_USER = (overrides?: Partial<User>): User => ({
+  app_metadata: {},
+  aud: "authenticated",
+  created_at: new Date(0).toISOString(),
+  email: "mock-user@example.com",
+  id: "mock-user-id",
+  user_metadata: {},
+  ...overrides,
+});
 
 /**
  * Creates a mock Session object for a given user.
  */
-const CREATE_MOCK_SESSION = (user: User): Session =>
-  ({
-    access_token: "mock-access-token",
-    expires_in: 3_600,
-    refresh_token: "mock-refresh-token",
-    token_type: "bearer",
-    user,
-  }) as Session;
-
-/**
- * Creates a mock Subscription object with a callback function.
- */
-const CREATE_MOCK_SUBSCRIPTION = (
-  callback: Subscription["callback"]
-): Subscription => ({
-  callback,
-  id: "mock-subscription-id",
-  unsubscribe: vi.fn(),
+const CREATE_MOCK_SESSION = (user: User): Session => ({
+  access_token: "mock-access-token",
+  expires_in: 3_600,
+  refresh_token: "mock-refresh-token",
+  token_type: "bearer",
+  user,
 });
 
 /**
- * Creates a complete Supabase auth client mock with all supported methods.
- * Each auth method returns sensible default values for testing purposes.
- *
- * @param user Optional user to return from getUser().
- * @returns A fully mocked Supabase auth client with type-safe method signatures
+ * Mutable state backing a mock Supabase client.
  */
-export const createMockSupabaseAuthClient = (user?: User | null): SupabaseAuthMock => {
-  const mockUser = user ?? CREATE_MOCK_USER();
-  const session = CREATE_MOCK_SESSION(mockUser);
-
-  const getSession = CREATE_MOCK_FN<AuthClient["getSession"]>(() => {
-    if (mockUser) {
-      return Promise.resolve({ data: { session }, error: null });
-    }
-    return Promise.resolve({ data: { session: null }, error: null });
-  });
-
-  const onAuthStateChange = CREATE_MOCK_FN<AuthClient["onAuthStateChange"]>(
-    (callback) => ({
-      data: { subscription: CREATE_MOCK_SUBSCRIPTION(callback) },
-    })
-  );
-
-  const signUp = CREATE_MOCK_FN<AuthClient["signUp"]>(async () => ({
-    data: { session, user: mockUser },
-    error: null,
-  }));
-
-  const signInWithPassword = CREATE_MOCK_FN<AuthClient["signInWithPassword"]>(
-    async () => ({
-      data: { session, user: mockUser, weakPassword: undefined },
-      error: null,
-    })
-  );
-
-  const signOut = CREATE_MOCK_FN<AuthClient["signOut"]>(async () => ({
-    error: null,
-  }));
-
-  const resetPasswordForEmail = CREATE_MOCK_FN<AuthClient["resetPasswordForEmail"]>(
-    async () => ({
-      data: {},
-      error: null,
-    })
-  );
-
-  const updateUser = CREATE_MOCK_FN<AuthClient["updateUser"]>(async () => ({
-    data: { user: mockUser },
-    error: null,
-  }));
-
-  const getUser = CREATE_MOCK_FN<AuthClient["getUser"]>(async () => ({
-    data: { user: mockUser },
-    error: null,
-  }));
-
-  const signInWithOauth = CREATE_MOCK_FN<AuthClient["signInWithOAuth"]>(async () => ({
-    data: { provider: "github", url: "" },
-    error: null,
-  }));
-
-  const refreshSession = CREATE_MOCK_FN<AuthClient["refreshSession"]>(async () => ({
-    data: { session, user: mockUser },
-    error: null,
-  }));
-
-  const result = {
-    getSession,
-    getUser,
-    onAuthStateChange,
-    refreshSession,
-    resetPasswordForEmail,
-    signInWithPassword,
-    signOut,
-    signUp,
-    updateUser,
-  };
-  (result as Record<string, unknown>).signInWithOAuth = signInWithOauth;
-  return result as SupabaseAuthMock;
+export type SupabaseMockState = {
+  insertCapture: unknown[];
+  insertByTable: Map<string, unknown[]>;
+  insertErrorsByTable: Map<string, unknown>;
+  requests: Array<{ body?: unknown | null; method: string; url: string }>;
+  rpcResults: Map<string, { count?: number | null; data: unknown; error: unknown }>;
+  selectByTable: Map<string, { count?: number | null; data: unknown; error: unknown }>;
+  selectResult: { count?: number | null; data: unknown; error: unknown };
+  storageToken: string;
+  user: User | null;
 };
 
-/**
- * Mock implementation of Supabase's PostgrestFilterBuilder for testing.
- * Provides chainable query methods that return mock data.
- */
-class MockQueryBuilder<T, S = T> {
-  /** Mock data returned by single() and maybeSingle() methods. */
-  singleData: S;
-  /** Mock error returned by query methods. */
-  error: unknown;
-  /** Optional insert capture array. */
-  insertCapture?: unknown[];
+const STATE = new WeakMap<SupabaseClient<Database>, SupabaseMockState>();
 
-  /** Mock select method - chains to allow further filtering. */
-  readonly select = vi.fn(() => this);
-  /** Mock insert method - updates singleData with transformed input and captures payloads. */
-  readonly insert = vi.fn((rows: T) => {
-    this.singleData = this.toSingle(rows);
-    if (this.insertCapture) {
-      this.insertCapture.push(rows);
-    }
-    return this;
+function jsonResponse(
+  body: unknown,
+  init?: { headers?: HeadersInit; status?: number }
+): Response {
+  return new Response(JSON.stringify(body), {
+    headers: {
+      "content-type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    status: init?.status ?? 200,
   });
-  /** Mock update method - chains to allow further filtering. */
-  readonly update = vi.fn(() => this);
-  /** Mock delete method - chains to allow further filtering. */
-  readonly delete = vi.fn(() => this);
-  /** Mock eq method - chains to allow further filtering. */
-  readonly eq = vi.fn(() => this);
-  /** Mock gte method - chains to allow further filtering. */
-  readonly gte = vi.fn(() => this);
-  /** Mock lte method - chains to allow further filtering. */
-  readonly lte = vi.fn(() => this);
-  /** Mock order method - chains to allow further filtering. */
-  readonly order = vi.fn(() => this);
-  /** Mock limit method - chains to allow further filtering. */
-  readonly limit = vi.fn(() => this);
-  /** Mock range method - chains to allow further filtering. */
-  readonly range = vi.fn(() => this);
-  /** Mock single method - returns single data result. */
-  readonly single = vi.fn(async () => ({
-    data: this.singleData,
-    error: this.error,
-  }));
-  /** Mock maybeSingle method - returns single data result (nullable). */
-  readonly maybeSingle = vi.fn(async () => ({
-    data: this.singleData,
-    error: this.error,
-  }));
+}
 
-  /**
-   * Creates a new MockQueryBuilder instance.
-   *
-   * @param initialData Initial data for the mock
-   * @param toSingle Function to transform array data to single result
-   * @param error Optional error to return from queries
-   * @param insertCapture Optional array to capture insert payloads
-   */
-  constructor(
-    initialData: T,
-    readonly toSingle: (data: T) => S,
-    error: unknown = null,
-    insertCapture?: unknown[]
-  ) {
-    this.singleData = toSingle(initialData);
-    this.error = error;
-    this.insertCapture = insertCapture;
+function makeContentRange(
+  count: number | null | undefined,
+  rows: unknown
+): string | null {
+  if (typeof count !== "number") return null;
+  const len = Array.isArray(rows) ? rows.length : rows ? 1 : 0;
+  const end = Math.max(0, len - 1);
+  return `0-${end}/${count}`;
+}
+
+function makePostgrestErrorPayload(error: unknown) {
+  if (error instanceof Error) {
+    return { code: "MOCK", details: null, hint: null, message: error.message };
   }
+  if (typeof error === "string") {
+    return { code: "MOCK", details: null, hint: null, message: error };
+  }
+  return { code: "MOCK", details: error ?? null, hint: null, message: "Mock error" };
+}
+
+function parseJsonBody(body: BodyInit | null | undefined): unknown | null {
+  if (!body || typeof body !== "string") return null;
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function flattenInsertedRows(value: unknown): unknown[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "object") return [value];
+  return [];
+}
+
+function applyEqFilters(rows: unknown, searchParams: URLSearchParams): unknown {
+  if (!Array.isArray(rows)) return rows;
+
+  const filterEntries = Array.from(searchParams.entries()).filter(([key, value]) => {
+    if (key === "select" || key === "limit" || key === "offset" || key === "order") {
+      return false;
+    }
+    return value.startsWith("eq.");
+  });
+
+  if (filterEntries.length === 0) return rows;
+
+  return rows.filter((row) => {
+    if (!row || typeof row !== "object") return false;
+    return filterEntries.every(([key, value]) => {
+      const expectedRaw = value.slice("eq.".length);
+      if (!(key in row)) return true;
+      const actual = (row as Record<string, unknown>)[key];
+      if (actual === undefined) return true;
+      if (typeof actual === "number") {
+        const expectedNum = Number(expectedRaw);
+        return Number.isNaN(expectedNum) ? false : actual === expectedNum;
+      }
+      if (typeof actual === "boolean") {
+        if (expectedRaw === "true") return actual === true;
+        if (expectedRaw === "false") return actual === false;
+        return false;
+      }
+      if (typeof actual === "string") return actual === expectedRaw;
+      return actual === expectedRaw;
+    });
+  });
+}
+
+function createMockFetch(state: SupabaseMockState): typeof fetch {
+  return async (input, init) => {
+    await Promise.resolve();
+    const method = (
+      init?.method ?? (input instanceof Request ? input.method : "GET")
+    ).toUpperCase();
+    const urlStr =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    const url = new URL(urlStr);
+    state.requests.push({
+      body: parseJsonBody(init?.body ?? null),
+      method,
+      url: `${url.pathname}${url.search}`,
+    });
+
+    if (url.pathname.startsWith("/rest/v1/")) {
+      const headers = new Headers(init?.headers);
+      const accept = headers.get("accept") ?? "";
+      const wantsSingle = accept.includes("application/vnd.pgrst.object+json");
+      const prefer = headers.get("prefer") ?? "";
+      const resource = decodeURIComponent(url.pathname.replace("/rest/v1/", ""));
+
+      if (resource.startsWith("rpc/")) {
+        const fn = resource.slice("rpc/".length);
+        const result = state.rpcResults.get(fn) ?? { data: null, error: null };
+        if (result.error) {
+          return jsonResponse(makePostgrestErrorPayload(result.error), { status: 400 });
+        }
+        const filtered = applyEqFilters(result.data, url.searchParams);
+        const rows = wantsSingle
+          ? Array.isArray(filtered)
+            ? (filtered[0] ?? null)
+            : filtered
+          : filtered;
+        const contentRange = makeContentRange(result.count, rows);
+        return jsonResponse(rows ?? null, {
+          headers: contentRange ? { "content-range": contentRange } : undefined,
+          status: 200,
+        });
+      }
+
+      if (method === "POST") {
+        const forcedError = state.insertErrorsByTable.get(resource);
+        if (forcedError) {
+          return jsonResponse(makePostgrestErrorPayload(forcedError), { status: 400 });
+        }
+        const parsed = parseJsonBody(init?.body ?? null);
+        if (parsed != null) {
+          const byTable = state.insertByTable.get(resource) ?? [];
+          byTable.push(parsed);
+          state.insertByTable.set(resource, byTable);
+          state.insertCapture.push(parsed);
+        }
+        if (prefer.includes("return=representation")) {
+          const rows = flattenInsertedRows(parsed);
+          return jsonResponse(wantsSingle ? (rows[0] ?? null) : rows, { status: 201 });
+        }
+        return jsonResponse([], { status: 201 });
+      }
+
+      if (method === "PATCH") {
+        const parsed = parseJsonBody(init?.body ?? null);
+        if (prefer.includes("return=representation")) {
+          const rows = flattenInsertedRows(parsed);
+          return jsonResponse(wantsSingle ? (rows[0] ?? null) : rows, { status: 200 });
+        }
+        return jsonResponse([], { status: 200 });
+      }
+
+      const select = state.selectByTable.get(resource) ?? state.selectResult;
+
+      if (select.error) {
+        return jsonResponse(makePostgrestErrorPayload(select.error), {
+          status: 400,
+        });
+      }
+
+      const limitParam = url.searchParams.get("limit");
+      const offsetParam = url.searchParams.get("offset");
+      const offset = offsetParam ? Number.parseInt(offsetParam, 10) : 0;
+      const limit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
+
+      let resolvedData = select.data;
+      if (select === state.selectResult) {
+        const inserted = state.insertByTable.get(resource) ?? [];
+        const insertedRows = inserted.flatMap(flattenInsertedRows);
+        if (
+          Array.isArray(resolvedData) &&
+          resolvedData.length === 0 &&
+          insertedRows.length > 0
+        ) {
+          resolvedData = insertedRows;
+        }
+      }
+
+      resolvedData = applyEqFilters(resolvedData, url.searchParams);
+
+      const slicedData =
+        Array.isArray(resolvedData) && typeof limit === "number"
+          ? resolvedData.slice(offset, offset + limit)
+          : resolvedData;
+
+      const rows = wantsSingle
+        ? Array.isArray(slicedData)
+          ? (slicedData[0] ?? null)
+          : slicedData
+        : slicedData;
+
+      const contentRange = makeContentRange(select.count, rows);
+      return jsonResponse(rows ?? null, {
+        headers: contentRange ? { "content-range": contentRange } : undefined,
+        status: 200,
+      });
+    }
+
+    if (url.pathname.startsWith("/storage/v1/object/sign/")) {
+      const parts = decodeURIComponent(
+        url.pathname.replace("/storage/v1/object/sign/", "")
+      )
+        .split("/")
+        .filter(Boolean);
+      const bucket = parts[0] ?? "bucket";
+      const token = state.storageToken;
+
+      if (parts.length === 1) {
+        const parsed = parseJsonBody(init?.body ?? null);
+        const paths =
+          parsed &&
+          typeof parsed === "object" &&
+          "paths" in parsed &&
+          Array.isArray(parsed.paths)
+            ? (parsed.paths as unknown[]).filter(
+                (p): p is string => typeof p === "string"
+              )
+            : [];
+        const payload = paths.map((path) => ({
+          error: null,
+          path,
+          signedURL: `/object/sign/${bucket}/${path}?token=${token}`,
+        }));
+        return jsonResponse(payload, { status: 200 });
+      }
+
+      const path = parts.slice(1).join("/");
+      return jsonResponse(
+        { signedURL: `/object/sign/${bucket}/${path}?token=${token}` },
+        {
+          status: 200,
+        }
+      );
+    }
+
+    if (url.pathname.startsWith("/storage/v1/object/")) {
+      const parts = decodeURIComponent(url.pathname.replace("/storage/v1/object/", ""))
+        .split("/")
+        .filter(Boolean);
+      const bucket = parts[0] ?? "bucket";
+      const path = parts.slice(1).join("/");
+      return jsonResponse(
+        { Id: "mock-storage-id", Key: `${bucket}/${path}` },
+        { status: 200 }
+      );
+    }
+
+    return jsonResponse({ message: "Mock endpoint not implemented" }, { status: 404 });
+  };
+}
+
+export function getSupabaseMockState(
+  client: SupabaseClient<Database>
+): SupabaseMockState {
+  const state = STATE.get(client);
+  if (!state) {
+    throw new Error("Supabase mock state not found for client instance");
+  }
+  return state;
 }
 
 /**
@@ -278,66 +381,139 @@ class MockQueryBuilder<T, S = T> {
  */
 export const createMockSupabaseClient = (
   config?: SupabaseMockConfig
-): SupabaseClient<UnknownRecord> => {
-  const { insertCapture, selectResult, user } = config ?? {};
-  const auth = createMockSupabaseAuthClient(user);
+): SupabaseClient<Database> => {
+  const selectResult = config?.selectResult ?? { count: null, data: [], error: null };
+  const normalizedUser =
+    config?.user === undefined
+      ? CREATE_MOCK_USER()
+      : config.user
+        ? CREATE_MOCK_USER(config.user)
+        : null;
 
-  const from = vi.fn((_table: string) => {
-    return new MockQueryBuilder<UnknownRecord[], UnknownRecord | null>(
-      [],
-      (rows: UnknownRecord[]) => rows[0] ?? null,
-      selectResult?.error ?? null,
-      insertCapture
-    );
+  const state: SupabaseMockState = {
+    insertByTable: new Map(),
+    insertCapture: config?.insertCapture ?? [],
+    insertErrorsByTable: new Map(Object.entries(config?.insertErrors ?? {})),
+    requests: [],
+    rpcResults: new Map(Object.entries(config?.rpcResults ?? {})),
+    selectByTable: new Map(Object.entries(config?.selectResults ?? {})),
+    selectResult,
+    storageToken: config?.storageToken ?? "abc",
+    user: normalizedUser,
+  };
+
+  const supabaseUrl = "http://localhost:54321";
+  const supabaseKey = "test-anon-key";
+
+  const client = createClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false,
+    },
+    global: {
+      fetch: createMockFetch(state),
+    },
+    realtime: {
+      params: { apikey: supabaseKey },
+    },
   });
 
-  // Override single() if selectResult is provided
-  if (selectResult) {
-    from.mockImplementation((_table: string) => {
-      const builder = new MockQueryBuilder<UnknownRecord[], UnknownRecord | null>(
-        [],
-        () => selectResult.data as UnknownRecord | null,
-        selectResult.error ?? null,
-        insertCapture
-      );
-      // Override single method using Object.defineProperty to bypass readonly
-      Object.defineProperty(builder, "single", {
-        configurable: true,
-        value: vi.fn(async () => ({
-          data: selectResult.data,
-          error: selectResult.error,
-        })),
-        writable: true,
+  STATE.set(client, state);
+
+  vi.spyOn(client.auth, "getSession").mockImplementation(() => {
+    if (state.user) {
+      return Promise.resolve({
+        data: { session: CREATE_MOCK_SESSION(state.user) },
+        error: null,
       });
-      return builder;
+    }
+    return Promise.resolve({ data: { session: null }, error: null });
+  });
+
+  vi.spyOn(client.auth, "getUser").mockImplementation(() => {
+    if (state.user) return Promise.resolve({ data: { user: state.user }, error: null });
+    return Promise.resolve({
+      data: { user: null },
+      error: new AuthError("Not authenticated", 401, "no_authorization"),
     });
-  }
-
-  const channel = vi.fn(() => ({
-    on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
-  }));
-
-  const storageFrom = vi.fn(() => ({
-    download: vi.fn(async () => ({ data: null, error: null })),
-    list: vi.fn(async () => ({ data: [], error: null })),
-    remove: vi.fn(async () => ({ data: null, error: null })),
-    upload: vi.fn(async () => ({ data: null, error: null })),
-  }));
-
-  const storage = unsafeCast<SupabaseClient<UnknownRecord>["storage"]>({
-    from: storageFrom,
-    getBucket: vi.fn(async () => ({ data: null, error: null })),
-    getBucketId: vi.fn(() => "attachments"),
   });
 
-  return unsafeCast<SupabaseClient<UnknownRecord>>({
-    auth,
-    channel,
-    from,
-    removeChannel: vi.fn(),
-    storage,
+  vi.spyOn(client.auth, "onAuthStateChange").mockImplementation((callback) => ({
+    data: {
+      subscription: {
+        callback,
+        id: "mock-subscription-id",
+        unsubscribe: vi.fn(),
+      },
+    },
+  }));
+
+  vi.spyOn(client.auth, "signUp").mockImplementation(() => {
+    if (state.user) {
+      const nextSession = CREATE_MOCK_SESSION(state.user);
+      return Promise.resolve({
+        data: { session: nextSession, user: state.user },
+        error: null,
+      });
+    }
+    return Promise.resolve({ data: { session: null, user: null }, error: null });
   });
+
+  vi.spyOn(client.auth, "signInWithPassword").mockImplementation(() => {
+    if (state.user) {
+      const nextSession = CREATE_MOCK_SESSION(state.user);
+      return Promise.resolve({
+        data: { session: nextSession, user: state.user },
+        error: null,
+      });
+    }
+    return Promise.resolve({
+      data: { session: null, user: null, weakPassword: null },
+      error: new AuthError("Invalid credentials", 400, "invalid_credentials"),
+    });
+  });
+
+  vi.spyOn(client.auth, "signOut").mockResolvedValue({ error: null });
+
+  vi.spyOn(client.auth, "resetPasswordForEmail").mockResolvedValue({
+    data: {},
+    error: null,
+  });
+
+  vi.spyOn(client.auth, "updateUser").mockImplementation(() => {
+    if (state.user) return Promise.resolve({ data: { user: state.user }, error: null });
+    return Promise.resolve({
+      data: { user: null },
+      error: new AuthError("Not authenticated", 401, "no_authorization"),
+    });
+  });
+
+  vi.spyOn(client.auth, "signInWithOAuth").mockResolvedValue({
+    data: { provider: "github", url: "" },
+    error: null,
+  });
+
+  vi.spyOn(client.auth, "refreshSession").mockImplementation(() => {
+    if (state.user) {
+      const nextSession = CREATE_MOCK_SESSION(state.user);
+      return Promise.resolve({
+        data: { session: nextSession, user: state.user },
+        error: null,
+      });
+    }
+    return Promise.resolve({ data: { session: null, user: null }, error: null });
+  });
+
+  const originalChannel = client.channel.bind(client);
+  vi.spyOn(client, "channel").mockImplementation((name, opts) => {
+    const channel = originalChannel(name, opts);
+    vi.spyOn(channel, "on").mockImplementation(() => channel);
+    vi.spyOn(channel, "subscribe").mockImplementation(() => channel);
+    return channel;
+  });
+
+  return client;
 };
 
 /**
@@ -372,7 +548,7 @@ export function createMockSupabaseFactory(
 
   return () => {
     const client = createMockSupabaseClient({ insertCapture, selectResult, user });
-    return Promise.resolve(client as TypedServerSupabase);
+    return Promise.resolve(client);
   };
 }
 

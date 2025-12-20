@@ -2,13 +2,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setRateLimitFactoryForTests } from "@/lib/api/factory";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
@@ -53,7 +52,9 @@ describe("GET /api/keys route", () => {
   });
 
   it("returns key metadata for authenticated user", async () => {
-    const order = vi.fn().mockResolvedValue({
+    const supabase = createMockSupabaseClient({ user: { id: "u1" } });
+    getSupabaseMockState(supabase).selectResult = {
+      count: null,
       data: [
         {
           created_at: "2025-11-01T00:00:00Z",
@@ -62,16 +63,8 @@ describe("GET /api/keys route", () => {
         },
       ],
       error: null,
-    });
-    const eq = vi.fn().mockReturnValue({ order });
-    const select = vi.fn().mockReturnValue({ eq });
-    const from = vi.fn().mockReturnValue({ select });
-    MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue(
-      unsafeCast<TypedServerSupabase>({
-        auth: { getUser: vi.fn(async () => ({ data: { user: { id: "u1" } } })) },
-        from,
-      })
-    );
+    };
+    MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue(supabase);
     const { GET } = await import("../route");
     const req = createMockNextRequest({
       method: "GET",
@@ -85,9 +78,7 @@ describe("GET /api/keys route", () => {
 
   it("returns 401 when not authenticated", async () => {
     MOCK_CREATE_SERVER_SUPABASE.mockResolvedValue(
-      unsafeCast<TypedServerSupabase>({
-        auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
-      })
+      createMockSupabaseClient({ user: null })
     );
     const { GET } = await import("../route");
     const req = createMockNextRequest({

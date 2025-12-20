@@ -8,17 +8,16 @@
  */
 
 import type { User } from "@supabase/supabase-js";
+import { AuthError } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { createMockSupabaseClient } from "@/test/mocks/supabase";
+import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
 import { getMockCookiesForTest } from "./route";
-import { unsafeCast } from "./unsafe-cast";
 
 registerUpstashMocksWithVitest();
 
@@ -132,12 +131,16 @@ let supabaseClient: ReturnType<typeof createMockSupabaseClient> | null = null;
 const getSupabaseClient = () => {
   if (!supabaseClient) {
     supabaseClient = ensureMfaMock(createMockSupabaseClient({ user: STATE.user }));
-    supabaseClient.auth.getUser = vi.fn(() => {
-      if (STATE.user) {
+    const mockState = getSupabaseMockState(supabaseClient);
+    mockState.user = STATE.user;
+    vi.spyOn(supabaseClient.auth, "getUser").mockImplementation(() => {
+      if (STATE.user)
         return Promise.resolve({ data: { user: STATE.user }, error: null });
-      }
-      return Promise.resolve({ data: { user: null }, error: null });
-    }) as typeof supabaseClient.auth.getUser;
+      return Promise.resolve({
+        data: { user: null },
+        error: new AuthError("Not authenticated", 401, "no_authorization"),
+      });
+    });
   }
   return supabaseClient;
 };
@@ -183,7 +186,7 @@ export function resetApiRouteMocks(): void {
   const client = getSupabaseClient();
   CREATE_SUPABASE_MOCK.mockReset();
   CREATE_SUPABASE_MOCK.mockResolvedValue(client);
-  setSupabaseFactoryForTests(async () => client as TypedServerSupabase);
+  setSupabaseFactoryForTests(async () => client);
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });
   // Most API route tests should not depend on Redis/Upstash availability.
@@ -210,6 +213,7 @@ export function resetApiRouteMocks(): void {
 export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
   if (!user) {
     STATE.user = null;
+    if (supabaseClient) getSupabaseMockState(supabaseClient).user = null;
     return;
   }
 
@@ -239,26 +243,77 @@ export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
   } as User;
 
   STATE.user = normalizedUser;
+  if (supabaseClient) getSupabaseMockState(supabaseClient).user = normalizedUser;
 }
 
 // Ensure mfa methods are available on the mocked supabase auth client
 const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
-  const mfa = {
-    challenge: vi.fn(async () => ({ data: { id: "challenge-mock" }, error: null })),
-    enroll: vi.fn(async () => ({ data: { id: "enroll-mock" }, error: null })),
-    getAuthenticatorAssuranceLevel: vi.fn(async () => ({
-      data: { currentLevel: "aal2" },
-      error: null,
-    })),
-    listFactors: vi.fn(async () => ({
-      data: { phone: [], totp: [], webauthn: [] },
-      error: null,
-    })),
-    unenroll: vi.fn(async () => ({ data: { id: "unenroll-mock" }, error: null })),
-    verify: vi.fn(async () => ({ data: {}, error: null })),
-  };
-  const authObj = unsafeCast<Record<string, unknown>>(client.auth);
-  authObj.mfa = mfa;
+  const mfaUser =
+    getSupabaseMockState(client).user ??
+    ({
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      app_metadata: {},
+      aud: "authenticated",
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      created_at: new Date(0).toISOString(),
+      email: "test@example.com",
+      id: "test-user",
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      user_metadata: {},
+    } as User);
+
+  vi.spyOn(client.auth.mfa, "challenge").mockResolvedValue({
+    data: {
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      expires_at: 0,
+      id: "challenge-mock",
+      type: "totp",
+    },
+    error: null,
+  });
+  vi.spyOn(client.auth.mfa, "enroll").mockResolvedValue({
+    data: {
+      id: "enroll-mock",
+      totp: {
+        // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+        qr_code: "",
+        secret: "",
+        uri: "",
+      },
+      type: "totp",
+    },
+    error: null,
+  });
+  vi.spyOn(client.auth.mfa, "getAuthenticatorAssuranceLevel").mockResolvedValue({
+    data: {
+      currentAuthenticationMethods: [],
+      currentLevel: "aal2",
+      nextLevel: "aal2",
+    },
+    error: null,
+  });
+  vi.spyOn(client.auth.mfa, "listFactors").mockResolvedValue({
+    data: { all: [], phone: [], totp: [], webauthn: [] },
+    error: null,
+  });
+  vi.spyOn(client.auth.mfa, "unenroll").mockResolvedValue({
+    data: { id: "unenroll-mock" },
+    error: null,
+  });
+  vi.spyOn(client.auth.mfa, "verify").mockResolvedValue({
+    data: {
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      access_token: "mock-access-token",
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      expires_in: 3_600,
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      refresh_token: "mock-refresh-token",
+      // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+      token_type: "bearer",
+      user: mfaUser,
+    },
+    error: null,
+  });
   return client;
 };
 
