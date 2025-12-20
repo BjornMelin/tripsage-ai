@@ -15,7 +15,9 @@ import { getKeys, postKey } from "../_handlers";
  */
 function makeSupabase(
   userId: string | null,
-  rows: Array<Pick<Tables<"api_keys">, "service" | "created_at" | "last_used">> = []
+  rows: Array<
+    Pick<Tables<"api_keys">, "service" | "created_at" | "last_used" | "user_id">
+  > = []
 ) {
   const supabase = createMockSupabaseClient({ user: userId ? { id: userId } : null });
   getSupabaseMockState(supabase).selectResult = {
@@ -64,7 +66,7 @@ describe("keys _handlers", () => {
 
   it("getKeys returns 200 for authenticated users", async () => {
     const supabase = makeSupabase("u3", [
-      { created_at: "2025-11-01", last_used: null, service: "openai" },
+      { created_at: "2025-11-01", last_used: null, service: "openai", user_id: "u3" },
     ]);
     const res = await getKeys({ supabase, userId: "u3" });
     expect(res.status).toBe(200);

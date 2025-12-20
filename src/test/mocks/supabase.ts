@@ -23,8 +23,22 @@ export interface SupabaseMockConfig {
   insertCapture?: unknown[];
 
   /**
+   * Array to capture update (PATCH) payloads.
+   * All update operations will push their payloads to this array.
+   */
+  updateCapture?: unknown[];
+
+  /**
    * Result to return from select queries.
    * Supports async single() queries that return { data, error }.
+   *
+   * Note: when `selectResult.data` is an empty array and the test has previously
+   * inserted rows into the same table via this mock, the mock will return those
+   * inserted rows on subsequent GETs. This supports common "insert then select"
+   * test patterns, but can mask mismatches when a test expects an empty result.
+   *
+   * To opt out for a specific table, provide an explicit `selectResults[table]`
+   * entry (even with `data: []`) so the mock does not fall back to inserted rows.
    */
   selectResult?: {
     count?: number | null;
@@ -68,7 +82,7 @@ export interface SupabaseMockConfig {
 /**
  * Creates a mock User object with default test values.
  */
-const CREATE_MOCK_USER = (overrides?: Partial<User>): User => ({
+const createMockUser = (overrides?: Partial<User>): User => ({
   app_metadata: {},
   aud: "authenticated",
   created_at: new Date(0).toISOString(),
@@ -81,7 +95,7 @@ const CREATE_MOCK_USER = (overrides?: Partial<User>): User => ({
 /**
  * Creates a mock Session object for a given user.
  */
-const CREATE_MOCK_SESSION = (user: User): Session => ({
+const createMockSession = (user: User): Session => ({
   access_token: "mock-access-token",
   expires_in: 3_600,
   refresh_token: "mock-refresh-token",
@@ -96,6 +110,8 @@ export type SupabaseMockState = {
   insertCapture: unknown[];
   insertByTable: Map<string, unknown[]>;
   insertErrorsByTable: Map<string, unknown>;
+  updateCapture: unknown[];
+  updateByTable: Map<string, unknown[]>;
   requests: Array<{ body?: unknown | null; method: string; url: string }>;
   rpcResults: Map<string, { count?: number | null; data: unknown; error: unknown }>;
   selectByTable: Map<string, { count?: number | null; data: unknown; error: unknown }>;
@@ -119,14 +135,24 @@ function jsonResponse(
   });
 }
 
+function emptyResponse(init?: { headers?: HeadersInit; status?: number }): Response {
+  return new Response(null, {
+    headers: init?.headers,
+    status: init?.status ?? 204,
+  });
+}
+
 function makeContentRange(
   count: number | null | undefined,
   rows: unknown
 ): string | null {
   if (typeof count !== "number") return null;
   const len = Array.isArray(rows) ? rows.length : rows ? 1 : 0;
-  const end = Math.max(0, len - 1);
-  return `0-${end}/${count}`;
+  if (len === 0) {
+    // PostgREST convention for empty result sets.
+    return `*/${count}`;
+  }
+  return `0-${len - 1}/${count}`;
 }
 
 function makePostgrestErrorPayload(error: unknown) {
@@ -140,12 +166,40 @@ function makePostgrestErrorPayload(error: unknown) {
 }
 
 function parseJsonBody(body: BodyInit | null | undefined): unknown | null {
-  if (!body || typeof body !== "string") return null;
-  try {
-    return JSON.parse(body) as unknown;
-  } catch {
-    return null;
+  if (body == null) return null;
+
+  if (typeof body === "string") {
+    try {
+      return JSON.parse(body) as unknown;
+    } catch {
+      return null;
+    }
   }
+
+  if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
+    try {
+      const view = body instanceof ArrayBuffer ? new Uint8Array(body) : body;
+      const bytes = ArrayBuffer.isView(view)
+        ? new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
+        : null;
+      if (!bytes) return null;
+      const text = new TextDecoder().decode(bytes);
+      return JSON.parse(text) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  if (body instanceof URLSearchParams) {
+    const text = body.toString();
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      return text;
+    }
+  }
+
+  return null;
 }
 
 function flattenInsertedRows(value: unknown): unknown[] {
@@ -171,9 +225,9 @@ function applyEqFilters(rows: unknown, searchParams: URLSearchParams): unknown {
     if (!row || typeof row !== "object") return false;
     return filterEntries.every(([key, value]) => {
       const expectedRaw = value.slice("eq.".length);
-      if (!(key in row)) return true;
+      if (!(key in row)) return false;
       const actual = (row as Record<string, unknown>)[key];
-      if (actual === undefined) return true;
+      if (actual === undefined) return false;
       if (typeof actual === "number") {
         const expectedNum = Number(expectedRaw);
         return Number.isNaN(expectedNum) ? false : actual === expectedNum;
@@ -256,11 +310,21 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
 
       if (method === "PATCH") {
         const parsed = parseJsonBody(init?.body ?? null);
+        if (parsed != null) {
+          const byTable = state.updateByTable.get(resource) ?? [];
+          byTable.push(parsed);
+          state.updateByTable.set(resource, byTable);
+          state.updateCapture.push(parsed);
+        }
         if (prefer.includes("return=representation")) {
           const rows = flattenInsertedRows(parsed);
           return jsonResponse(wantsSingle ? (rows[0] ?? null) : rows, { status: 200 });
         }
         return jsonResponse([], { status: 200 });
+      }
+
+      if (method === "DELETE") {
+        return emptyResponse({ status: 204 });
       }
 
       const select = state.selectByTable.get(resource) ?? state.selectResult;
@@ -372,6 +436,16 @@ export function getSupabaseMockState(
   return state;
 }
 
+export function resetSupabaseMockState(client: SupabaseClient<Database>): void {
+  const state = getSupabaseMockState(client);
+  state.insertCapture.length = 0;
+  state.insertByTable.clear();
+  state.insertErrorsByTable.clear();
+  state.updateCapture.length = 0;
+  state.updateByTable.clear();
+  state.requests.length = 0;
+}
+
 /**
  * Creates a complete Supabase client mock with auth, database, and storage methods.
  * Useful for testing components that interact with the full Supabase API.
@@ -385,9 +459,9 @@ export const createMockSupabaseClient = (
   const selectResult = config?.selectResult ?? { count: null, data: [], error: null };
   const normalizedUser =
     config?.user === undefined
-      ? CREATE_MOCK_USER()
+      ? createMockUser()
       : config.user
-        ? CREATE_MOCK_USER(config.user)
+        ? createMockUser(config.user)
         : null;
 
   const state: SupabaseMockState = {
@@ -399,6 +473,8 @@ export const createMockSupabaseClient = (
     selectByTable: new Map(Object.entries(config?.selectResults ?? {})),
     selectResult,
     storageToken: config?.storageToken ?? "abc",
+    updateByTable: new Map(),
+    updateCapture: config?.updateCapture ?? [],
     user: normalizedUser,
   };
 
@@ -424,7 +500,7 @@ export const createMockSupabaseClient = (
   vi.spyOn(client.auth, "getSession").mockImplementation(() => {
     if (state.user) {
       return Promise.resolve({
-        data: { session: CREATE_MOCK_SESSION(state.user) },
+        data: { session: createMockSession(state.user) },
         error: null,
       });
     }
@@ -451,7 +527,7 @@ export const createMockSupabaseClient = (
 
   vi.spyOn(client.auth, "signUp").mockImplementation(() => {
     if (state.user) {
-      const nextSession = CREATE_MOCK_SESSION(state.user);
+      const nextSession = createMockSession(state.user);
       return Promise.resolve({
         data: { session: nextSession, user: state.user },
         error: null,
@@ -462,7 +538,7 @@ export const createMockSupabaseClient = (
 
   vi.spyOn(client.auth, "signInWithPassword").mockImplementation(() => {
     if (state.user) {
-      const nextSession = CREATE_MOCK_SESSION(state.user);
+      const nextSession = createMockSession(state.user);
       return Promise.resolve({
         data: { session: nextSession, user: state.user },
         error: null,
@@ -496,7 +572,7 @@ export const createMockSupabaseClient = (
 
   vi.spyOn(client.auth, "refreshSession").mockImplementation(() => {
     if (state.user) {
-      const nextSession = CREATE_MOCK_SESSION(state.user);
+      const nextSession = createMockSession(state.user);
       return Promise.resolve({
         data: { session: nextSession, user: state.user },
         error: null,

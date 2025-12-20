@@ -8,7 +8,8 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { createRouteParamsContext } from "@/test/helpers/route";
-import { getSupabaseMockState } from "@/test/mocks/supabase";
+import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
+import { getSupabaseMockState, resetSupabaseMockState } from "@/test/mocks/supabase";
 
 // Mock file-type for magic byte verification
 vi.mock("file-type", () => ({
@@ -83,21 +84,13 @@ describe("/api/chat/attachments", () => {
 
     // Setup Supabase storage mock
     const supabase = getApiRouteSupabaseMock();
-    const state = getSupabaseMockState(supabase);
-    state.insertCapture.length = 0;
-    state.insertByTable.clear();
-    state.insertErrorsByTable.clear();
-    state.requests.length = 0;
+    resetSupabaseMockState(supabase);
 
     vi.spyOn(supabase, "from");
-
-    const originalFrom = supabase.storage.from.bind(supabase.storage);
-    vi.spyOn(supabase.storage, "from").mockImplementation((bucket) => {
-      const api = originalFrom(bucket);
-      vi.spyOn(api, "createSignedUrl").mockImplementation(mockCreateSignedUrl);
-      vi.spyOn(api, "remove").mockImplementation(mockRemove);
-      vi.spyOn(api, "upload").mockImplementation(mockUpload);
-      return api;
+    setupStorageFromMock(supabase, {
+      createSignedUrl: mockCreateSignedUrl,
+      remove: mockRemove,
+      upload: mockUpload,
     });
   });
 

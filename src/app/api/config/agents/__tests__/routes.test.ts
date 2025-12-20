@@ -36,6 +36,7 @@ vi.mock("@/lib/agents/config-resolver", () => ({
 }));
 
 const supabaseData = {
+  agent_type: "budgetAgent",
   config: {
     agentType: "budgetAgent",
     createdAt: new Date().toISOString(),
@@ -45,6 +46,7 @@ const supabaseData = {
     scope: "global",
     updatedAt: new Date().toISOString(),
   },
+  id: "11111111-1111-4111-8111-111111111111",
   version_id: "ver-1",
 };
 
@@ -194,6 +196,7 @@ describe("config routes", () => {
 
   it("versions returns list", async () => {
     const versionsRow = {
+      agent_type: "budgetAgent",
       created_at: "2025-12-01T00:00:00Z",
       created_by: "admin-user",
       id: "ver-1",

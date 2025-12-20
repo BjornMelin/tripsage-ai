@@ -55,7 +55,7 @@ describe("/api/agents/accommodations validation", () => {
       reset: Date.now() + 60000,
       success: true,
     });
-    setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
+    setRateLimitFactoryForTests(async () => mockLimitFn());
     setSupabaseFactoryForTests(async () =>
       createMockSupabaseClient({ user: { id: "user-1" } })
     );

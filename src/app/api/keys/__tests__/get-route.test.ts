@@ -60,6 +60,7 @@ describe("GET /api/keys route", () => {
           created_at: "2025-11-01T00:00:00Z",
           last_used: null,
           service: "openai",
+          user_id: "u1",
         },
       ],
       error: null,

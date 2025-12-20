@@ -133,6 +133,9 @@ const getSupabaseClient = () => {
     supabaseClient = ensureMfaMock(createMockSupabaseClient({ user: STATE.user }));
     const mockState = getSupabaseMockState(supabaseClient);
     mockState.user = STATE.user;
+    // createMockSupabaseClient installs a default getUser spy; this override is
+    // intentional so mockApiRouteAuthUser() can update STATE.user at runtime and
+    // have auth.getUser() reflect those dynamic changes.
     vi.spyOn(supabaseClient.auth, "getUser").mockImplementation(() => {
       if (STATE.user)
         return Promise.resolve({ data: { user: STATE.user }, error: null });
@@ -310,7 +313,7 @@ const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
       refresh_token: "mock-refresh-token",
       // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
       token_type: "bearer",
-      user: mfaUser,
+      user: getSupabaseMockState(client).user ?? mfaUser,
     },
     error: null,
   });

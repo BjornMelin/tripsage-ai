@@ -8,6 +8,7 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { createRouteParamsContext } from "@/test/helpers/route";
+import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
 import { getSupabaseMockState } from "@/test/mocks/supabase";
 
 // Mock cache functions to skip caching in tests
@@ -15,6 +16,22 @@ vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: vi.fn(() => Promise.resolve(null)),
   setCachedJson: vi.fn(() => Promise.resolve()),
 }));
+
+function hasRequest(
+  requests: Array<{ method: string; url: string }>,
+  method: string,
+  pathPrefix: string,
+  params: Record<string, string>
+): boolean {
+  return requests.some((r) => {
+    if (r.method !== method) return false;
+    if (!r.url.startsWith(pathPrefix)) return false;
+    const url = new URL(r.url, "http://localhost");
+    return Object.entries(params).every(
+      ([key, value]) => url.searchParams.get(key) === value
+    );
+  });
+}
 
 describe("/api/attachments/files", () => {
   // Storage mock for signed URL generation
@@ -29,12 +46,7 @@ describe("/api/attachments/files", () => {
     // Setup storage mock for signed URL generation
     const supabase = getApiRouteSupabaseMock();
     vi.spyOn(supabase, "from");
-    const originalFrom = supabase.storage.from.bind(supabase.storage);
-    vi.spyOn(supabase.storage, "from").mockImplementation((bucket) => {
-      const api = originalFrom(bucket);
-      vi.spyOn(api, "createSignedUrls").mockImplementation(mockCreateSignedUrls);
-      return api;
-    });
+    setupStorageFromMock(supabase, { createSignedUrls: mockCreateSignedUrls });
 
     // Default: return signed URLs matching file paths
     mockCreateSignedUrls.mockImplementation((paths: string[]) =>
@@ -91,14 +103,11 @@ describe("/api/attachments/files", () => {
     // Verify Supabase was called correctly
     expect(supabase.from).toHaveBeenCalledWith("file_attachments");
     expect(
-      state.requests.some(
-        (r) =>
-          r.method === "GET" &&
-          r.url.startsWith("/rest/v1/file_attachments") &&
-          r.url.includes("user_id=eq.user-1") &&
-          r.url.includes("offset=0") &&
-          r.url.includes("limit=20")
-      )
+      hasRequest(state.requests, "GET", "/rest/v1/file_attachments", {
+        limit: "20",
+        offset: "0",
+        user_id: "eq.user-1",
+      })
     ).toBe(true);
 
     // Verify storage signed URL generation was called

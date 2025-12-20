@@ -78,7 +78,7 @@ vi.mock("@/lib/api/route-helpers", async () => {
 describe("/api/agents/accommodations route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
+    setRateLimitFactoryForTests(async () => mockLimitFn());
     setSupabaseFactoryForTests(async () =>
       createMockSupabaseClient({ user: { id: "user-1" } })
     );
