@@ -392,10 +392,10 @@ export const createCalendarEventOutputSchema = z.discriminatedUnion("success", [
     success: z.literal(false),
   }),
   z.strictObject({
-    end: eventDateTimeSchema,
+    end: primitiveSchemas.isoDateTime,
     eventId: z.string(),
     htmlLink: primitiveSchemas.url.optional(),
-    start: eventDateTimeSchema,
+    start: primitiveSchemas.isoDateTime,
     success: z.literal(true),
     summary: z.string().optional(),
   }),

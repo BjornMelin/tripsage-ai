@@ -47,8 +47,12 @@ describe("ai-elements/response", () => {
     const wrapper = getByTestId("mock-streamdown");
     const rawProps = wrapper.getAttribute("data-props");
     expect(rawProps).toBeTruthy();
-    const propKeys = JSON.parse(rawProps ?? "[]") as string[];
-    expect(propKeys).toEqual(
+    const parsed = JSON.parse(rawProps ?? "null");
+    expect(Array.isArray(parsed)).toBe(true);
+    const propKeys = Array.isArray(parsed) ? parsed : [];
+    expect(propKeys.every((key) => typeof key === "string")).toBe(true);
+    const stringKeys = propKeys.filter((key): key is string => typeof key === "string");
+    expect(stringKeys).toEqual(
       expect.arrayContaining(["controls", "mode", "shikiTheme"])
     );
   });

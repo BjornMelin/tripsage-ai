@@ -14,6 +14,7 @@ import {
   type WebSearchBatchModelOutput,
   webSearchBatchInputSchema,
 } from "@ai/tools/schemas/web-search-batch";
+import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { ToolCallOptions } from "ai";
@@ -197,14 +198,34 @@ export const webSearchBatch = createAiTool({
             if (rest.tbs != null) body.tbs = rest.tbs;
             if (rest.timeoutMs != null) body.timeout = rest.timeoutMs;
             const startedAt = Date.now();
-            const res = await fetch(url, {
-              body: JSON.stringify(body),
-              headers: {
-                authorization: `Bearer ${apiKey}`,
-                "content-type": "application/json",
-              },
-              method: "POST",
-            });
+            const timeoutMs = Math.min(20000, Math.max(5000, rest.timeoutMs ?? 12000));
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            let res: Response;
+            try {
+              res = await fetch(url, {
+                body: JSON.stringify(body),
+                headers: {
+                  authorization: `Bearer ${apiKey}`,
+                  "content-type": "application/json",
+                },
+                method: "POST",
+                signal: controller.signal,
+              });
+            } catch (fetchError) {
+              if (fetchError instanceof Error && fetchError.name === "AbortError") {
+                throw createToolError(
+                  TOOL_ERROR_CODES.webSearchFailed,
+                  "web_search_timeout",
+                  {
+                    timeoutMs,
+                  }
+                );
+              }
+              throw fetchError;
+            } finally {
+              clearTimeout(timeoutId);
+            }
             if (!res.ok) {
               const text = await res.text();
               throw new Error(

@@ -12,6 +12,7 @@ import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import {
   createCalendarEventInputSchema,
   createCalendarEventOutputSchema,
+  type EventDateTime,
   exportItineraryToIcsInputSchema,
   exportItineraryToIcsOutputSchema,
   freeBusyRequestSchema,
@@ -27,16 +28,27 @@ export const createCalendarEvent = createAiTool({
   description: "Create a calendar event in the user's Google Calendar.",
   execute: async (params) => {
     try {
+      const toIsoDateTime = (value: EventDateTime): string => {
+        if (value.dateTime) {
+          return value.dateTime instanceof Date
+            ? value.dateTime.toISOString()
+            : value.dateTime;
+        }
+        if (value.date) {
+          return new Date(value.date).toISOString();
+        }
+        throw new Error("calendar_event_missing_datetime");
+      };
       const { calendarId, ...eventData } = params;
       const result = await createEvent(eventData, calendarId);
       if (!result.id) {
         return { error: "calendar_event_missing_id", success: false } as const;
       }
       return {
-        end: result.end,
+        end: toIsoDateTime(result.end),
         eventId: result.id,
         htmlLink: result.htmlLink,
-        start: result.start,
+        start: toIsoDateTime(result.start),
         success: true,
         summary: result.summary,
       } as const;
