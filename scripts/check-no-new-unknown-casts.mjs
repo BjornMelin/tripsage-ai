@@ -18,7 +18,7 @@ function isExcludedPath(filePath) {
 }
 
 function runGitDiff(range) {
-  return execFileSync("git", ["diff", "--unified=0", range], {
+  return execFileSync("git", ["diff", "--unified=0", range, "--", "src"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
