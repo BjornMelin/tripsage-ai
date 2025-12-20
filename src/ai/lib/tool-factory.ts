@@ -189,27 +189,13 @@ const MAX_RATE_LIMITER_CACHE_SIZE = 128;
  * @param lifecycle - Optional lifecycle hooks configuration.
  * @returns Object containing only the defined lifecycle hooks.
  */
-function buildLifecycleHooks<InputValue>(lifecycle?: LifecycleHooks<InputValue>): {
-  onInputStart?: () => void;
-  onInputDelta?: (delta: { inputTextDelta: string }) => void;
-  onInputAvailable?: (available: { input: InputValue }) => void;
-} {
+function buildLifecycleHooks<InputValue>(
+  lifecycle?: LifecycleHooks<InputValue>
+): Partial<LifecycleHooks<InputValue>> {
   if (!lifecycle) return {};
-  const hooks: {
-    onInputStart?: () => void;
-    onInputDelta?: (delta: { inputTextDelta: string }) => void;
-    onInputAvailable?: (available: { input: InputValue }) => void;
-  } = {};
-  if (lifecycle.onInputStart !== undefined) {
-    hooks.onInputStart = lifecycle.onInputStart;
-  }
-  if (lifecycle.onInputDelta !== undefined) {
-    hooks.onInputDelta = lifecycle.onInputDelta;
-  }
-  if (lifecycle.onInputAvailable !== undefined) {
-    hooks.onInputAvailable = lifecycle.onInputAvailable;
-  }
-  return hooks;
+  return Object.fromEntries(
+    Object.entries(lifecycle).filter(([, value]) => value !== undefined)
+  ) as Partial<LifecycleHooks<InputValue>>;
 }
 
 /**

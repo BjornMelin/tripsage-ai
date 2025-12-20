@@ -74,7 +74,7 @@ export const searchAccommodations = createAiTool<
   toModelOutput: (result): AccommodationModelOutput => ({
     avgPrice: result.avgPrice,
     fromCache: result.fromCache,
-    listingCount: result.listings.length,
+    listingCount: Math.min(result.listings.length, 10),
     listings: result.listings.slice(0, 10).map((listing) => ({
       amenities: listing.amenities?.slice(0, 5),
       geoCode: listing.geoCode,

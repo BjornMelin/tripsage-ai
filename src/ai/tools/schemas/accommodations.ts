@@ -14,7 +14,12 @@ const geoCodeModelOutputSchema = z
   })
   .optional();
 
-/** Accommodation listing entry for model consumption. */
+/**
+ * Accommodation listing entry for model consumption.
+ * Note: `id` and `lowestPrice` accept string | number unions because:
+ * - Amadeus API returns numeric IDs while cached results may have string IDs
+ * - Price totals can be numeric or formatted currency strings from different providers
+ */
 const accommodationListingModelOutputSchema = z.strictObject({
   amenities: z.array(z.string()).optional(),
   geoCode: geoCodeModelOutputSchema,

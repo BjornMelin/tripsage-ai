@@ -11,8 +11,24 @@ vi.mock("streamdown", () => ({
     raw: () => undefined,
   },
   defaultRemarkPlugins: {},
-  Streamdown: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="mock-streamdown">{children}</div>
+  Streamdown: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    className?: string;
+    controls?: boolean;
+    isAnimating?: boolean;
+    mermaid?: boolean;
+    mode?: string;
+    rehypePlugins?: unknown[];
+    remarkPlugins?: unknown[];
+    shikiTheme?: unknown;
+    [key: string]: unknown;
+  }) => (
+    <div data-testid="mock-streamdown" data-props={JSON.stringify(Object.keys(props))}>
+      {children}
+    </div>
   ),
 }));
 

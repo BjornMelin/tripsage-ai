@@ -210,10 +210,9 @@ export async function persistMemoryRecords(
       if (typeof memoryTool.execute !== "function") {
         throw new Error("Tool addConversationMemory missing execute binding");
       }
-      return (await memoryTool.execute(
-        params,
-        callOptions
-      )) as AddConversationMemoryOutput;
+      const result = await memoryTool.execute(params, callOptions);
+      // Output validation is enabled; type narrowing is safe after validation passes
+      return result as AddConversationMemoryOutput;
     },
     guardrails: {
       rateLimit: {
@@ -251,7 +250,9 @@ export async function persistMemoryRecords(
           toolCallId: `memory-add-${index}`,
         });
         if (isAsyncIterable(res)) {
-          throw new Error("memory_add_unexpected_stream");
+          throw new Error(
+            `${TOOL_ERROR_CODES.toolExecutionFailed}: unexpected streaming response from memory tool`
+          );
         }
         successes.push({
           category: normalizedCategory,

@@ -199,7 +199,7 @@ export const ragSearchToolResultSchema = z.object({
   content: z.string(),
   metadata: ragMetadataSchema,
   namespace: ragNamespaceSchema,
-  score: z.number(),
+  score: z.number().min(0).max(1),
   sourceId: z.string().nullable(),
 });
 

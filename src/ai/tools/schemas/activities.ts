@@ -6,15 +6,15 @@ import { z } from "zod";
 
 // ===== MODEL OUTPUT SCHEMAS =====
 
-/** Activity entry for model consumption. */
+/** Activity entry for model consumption. Fields match source activitySchema requirements. */
 const activityEntryModelOutputSchema = z.strictObject({
-  duration: z.number().optional(),
+  duration: z.number(),
   id: z.string(),
-  location: z.string().optional(),
+  location: z.string(),
   name: z.string(),
-  price: z.number().optional(),
-  rating: z.number().optional(),
-  type: z.string().optional(),
+  price: z.number(),
+  rating: z.number(),
+  type: z.string(),
 });
 
 /** Activity search result metadata for model consumption. */

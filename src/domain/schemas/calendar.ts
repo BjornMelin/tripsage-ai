@@ -387,11 +387,11 @@ export const exportItineraryToIcsInputSchema = z.strictObject({
  * Schema for createCalendarEvent tool output.
  */
 export const createCalendarEventOutputSchema = z.discriminatedUnion("success", [
-  z.object({
+  z.strictObject({
     error: z.string(),
     success: z.literal(false),
   }),
-  z.object({
+  z.strictObject({
     end: eventDateTimeSchema,
     eventId: z.string(),
     htmlLink: primitiveSchemas.url.optional(),
@@ -405,15 +405,15 @@ export const createCalendarEventOutputSchema = z.discriminatedUnion("success", [
  * Schema for getAvailability tool output.
  */
 export const getAvailabilityOutputSchema = z.discriminatedUnion("success", [
-  z.object({
+  z.strictObject({
     error: z.string(),
     success: z.literal(false),
   }),
-  z.object({
+  z.strictObject({
     calendars: z.array(
-      z.object({
+      z.strictObject({
         busy: z.array(
-          z.object({
+          z.strictObject({
             end: primitiveSchemas.isoDateTime,
             start: primitiveSchemas.isoDateTime,
           })
@@ -431,11 +431,11 @@ export const getAvailabilityOutputSchema = z.discriminatedUnion("success", [
  * Schema for exportItineraryToIcs tool output.
  */
 export const exportItineraryToIcsOutputSchema = z.discriminatedUnion("success", [
-  z.object({
+  z.strictObject({
     error: z.string(),
     success: z.literal(false),
   }),
-  z.object({
+  z.strictObject({
     calendarName: z.string(),
     eventCount: z.number().int().nonnegative(),
     icsContent: z.string(),

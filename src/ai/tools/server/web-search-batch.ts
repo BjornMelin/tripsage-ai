@@ -105,6 +105,10 @@ export const webSearchBatch = createAiTool({
     } catch (e) {
       if (e instanceof Error && e.message.startsWith("web_search_rate_limited"))
         throw e;
+      // Log unexpected rate-limiter errors but don't block execution
+      webSearchBatchLogger.error("rate_limiter_error", {
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
 
     // Bounded concurrency runner with pool size 5
@@ -176,7 +180,6 @@ export const webSearchBatch = createAiTool({
             } catch {
               throw new Error("web_search_not_configured");
             }
-            if (!apiKey) throw new Error("web_search_not_configured");
             const baseUrl = getServerEnvVarWithFallback(
               "FIRECRAWL_BASE_URL",
               "https://api.firecrawl.dev/v2"
@@ -253,7 +256,7 @@ export const webSearchBatch = createAiTool({
       }
     };
 
-    // Atomic fetch-and-increment to prevent race conditions
+    // Sequential index allocation (safe due to JS single-threaded event loop)
     let index = 0;
     const getNextIndex = (): number => index++;
     const workers: Promise<void>[] = [];
