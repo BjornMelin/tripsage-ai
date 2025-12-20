@@ -135,7 +135,7 @@ Testing focus is regression-oriented. We want to ensure everything passes as it 
   - Run `pnpm biome:check` after move. It should report no issues, except possibly some unused config references if any.
   - Run `pnpm type-check`. The TS compiler will reveal any import path mistakes.
   - Run `pnpm build` to ensure production build succeeds in root context.
-- Boundary check script: Execute `node scripts/check-boundaries.js` to ensure client vs server import rules still pass in the new setup, as they did before.
+- Boundary check script: Execute `node scripts/check-boundaries.mjs` to ensure client vs server import rules still pass in the new setup, as they did before.
 
 If tests reveal a severe problem that is not quickly fixable, the change can be reverted, since it is mostly a rename operation. Given thorough checking, we expect to fix forward any minor issues.
 

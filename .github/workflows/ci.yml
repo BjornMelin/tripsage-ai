@@ -102,6 +102,9 @@ jobs:
       - name: Reject new unknown casts
         run: pnpm check:no-new-unknown-casts
 
+      - name: Architecture boundary checks
+        run: pnpm boundary:check
+
       - name: Production build
         run: pnpm build
         env:

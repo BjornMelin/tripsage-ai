@@ -113,6 +113,8 @@ export type User = z.infer<typeof userSchema>;
 
 ## Architecture & Services
 
+- Layering policy: see [Layering Policy](../architecture/layering.md). Domain must not import
+  `next/*` or `src/app/**`; client components must not import server-only modules.
 - Keep business logic in service/handler functions, wrapped with `withTelemetrySpan`; avoid module-scope state in route handlers.
 - Example service pattern with DI + telemetry:
 
