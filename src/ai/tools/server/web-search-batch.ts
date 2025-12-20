@@ -109,7 +109,6 @@ export const webSearchBatch = createAiTool({
       webSearchBatchLogger.error("rate_limiter_error", {
         error: e instanceof Error ? e.message : String(e),
       });
-      throw e;
     }
 
     // Bounded concurrency runner with pool size 5
@@ -198,6 +197,7 @@ export const webSearchBatch = createAiTool({
             if (rest.tbs != null) body.tbs = rest.tbs;
             if (rest.timeoutMs != null) body.timeout = rest.timeoutMs;
             const startedAt = Date.now();
+            // Clamp timeouts to safe bounds to avoid too-short/unbounded requests and align with provider expectations.
             const timeoutMs = Math.min(20000, Math.max(5000, rest.timeoutMs ?? 12000));
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -326,6 +326,7 @@ export const webSearchBatch = createAiTool({
         r.ok && r.value
           ? {
               resultCount: r.value.results.length,
+              // Cap to 5 results per query to fit token budgets; raise/make configurable if higher recall is needed.
               results: r.value.results.slice(0, 5).map((res) => ({
                 title: res.title,
                 url: res.url,
