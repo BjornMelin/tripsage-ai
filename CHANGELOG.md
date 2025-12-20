@@ -1,3 +1,9 @@
+## [1.22.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.0...v1.22.1) (2025-12-20)
+
+### Bug Fixes
+
+* **scripts:** limit unknown cast diff to src ([535d82f](https://github.com/BjornMelin/tripsage-ai/commit/535d82f13c7ce8accec7b4fb3c6304b7eba781ad))
+
 ## [1.22.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.21.1...v1.22.0) (2025-12-20)
 
 ### Features
