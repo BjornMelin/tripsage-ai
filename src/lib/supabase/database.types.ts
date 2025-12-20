@@ -2187,6 +2187,13 @@ export type Database = {
         Args: { p_service: string; p_user_id: string };
         Returns: undefined;
       };
+      delete_user_memories: {
+        Args: { p_user_id: string };
+        Returns: {
+          deleted_sessions: number;
+          deleted_turns: number;
+        }[];
+      };
       delete_user_gateway_config: {
         Args: { p_user_id: string };
         Returns: undefined;

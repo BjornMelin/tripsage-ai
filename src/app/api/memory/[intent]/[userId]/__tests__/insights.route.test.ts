@@ -150,6 +150,8 @@ async function importRoute() {
 }
 
 describe("/api/memory/insights/[userId] route", () => {
+  const userId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
@@ -162,7 +164,7 @@ describe("/api/memory/insights/[userId] route", () => {
     }));
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-123" } },
+      data: { user: { id: userId } },
       error: null,
     });
     mockResolveProvider.mockResolvedValue({
@@ -176,7 +178,7 @@ describe("/api/memory/insights/[userId] route", () => {
         limit: 20,
         sessionId: "",
         type: "fetchContext",
-        userId: "user-123",
+        userId,
       },
       results: [],
       status: "ok",
@@ -198,12 +200,12 @@ describe("/api/memory/insights/[userId] route", () => {
     const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
-      url: "http://localhost/api/memory/insights/user-123",
+      url: `http://localhost/api/memory/insights/${userId}`,
     });
 
     const res = await Get(
       req,
-      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+      createRouteParamsContext({ intent: "insights", userId })
     );
     expect(res.status).toBe(401);
     expect(mockHandleMemoryIntent).not.toHaveBeenCalled();
@@ -228,17 +230,17 @@ describe("/api/memory/insights/[userId] route", () => {
   });
 
   it("serves cached insights without invoking AI generation", async () => {
-    await setCachedJson("memory:insights:user-123", aiInsightsFixture, 3600);
+    await setCachedJson(`memory:insights:${userId}`, aiInsightsFixture, 3600);
 
     const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
-      url: "http://localhost/api/memory/insights/user-123",
+      url: `http://localhost/api/memory/insights/${userId}`,
     });
 
     const res = await Get(
       req,
-      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+      createRouteParamsContext({ intent: "insights", userId })
     );
     const body = (await res.json()) as MemoryInsightsResponse;
 
@@ -253,12 +255,12 @@ describe("/api/memory/insights/[userId] route", () => {
     const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
-      url: "http://localhost/api/memory/insights/user-123",
+      url: `http://localhost/api/memory/insights/${userId}`,
     });
 
     const res = await Get(
       req,
-      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+      createRouteParamsContext({ intent: "insights", userId })
     );
     const body = (await res.json()) as MemoryInsightsResponse;
 
@@ -266,7 +268,7 @@ describe("/api/memory/insights/[userId] route", () => {
     expect(body.success).toBe(true);
     expect(body.metadata.analysisDate).toBe("2025-01-01T00:00:00.000Z");
     expect(body.metadata.dataCoverageMonths).toBe(1);
-    expect(mockResolveProvider).toHaveBeenCalledWith("user-123", "gpt-4o-mini");
+    expect(mockResolveProvider).toHaveBeenCalledWith(userId, "gpt-4o-mini");
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({
         output: expect.anything(),
@@ -274,7 +276,7 @@ describe("/api/memory/insights/[userId] route", () => {
       })
     );
     const cached = await getCachedJson<MemoryInsightsResponse>(
-      "memory:insights:user-123"
+      `memory:insights:${userId}`
     );
     expect(cached?.success).toBe(true);
   });
@@ -285,12 +287,12 @@ describe("/api/memory/insights/[userId] route", () => {
     const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
-      url: "http://localhost/api/memory/insights/user-123",
+      url: `http://localhost/api/memory/insights/${userId}`,
     });
 
     const res = await Get(
       req,
-      createRouteParamsContext({ intent: "insights", userId: "user-123" })
+      createRouteParamsContext({ intent: "insights", userId })
     );
     const body = (await res.json()) as MemoryInsightsResponse;
 
@@ -299,12 +301,12 @@ describe("/api/memory/insights/[userId] route", () => {
     expect(body.metadata.confidenceLevel).toBeCloseTo(0.35);
     expect(body.metadata.dataCoverageMonths).toBe(1);
     const cached = await getCachedJson<MemoryInsightsResponse>(
-      "memory:insights:user-123"
+      `memory:insights:${userId}`
     );
     expect(cached?.success).toBe(false);
     expect(mockLogger.error).toHaveBeenCalledWith(
       "memory.insights.ai_generation_failed",
-      expect.objectContaining({ userId: "user-123" })
+      expect.objectContaining({ userId })
     );
   });
 
@@ -322,7 +324,7 @@ describe("/api/memory/insights/[userId] route", () => {
         limit: 20,
         sessionId: "",
         type: "fetchContext",
-        userId: "user-123",
+        userId,
       },
       results: [],
       status: "ok",
@@ -332,13 +334,10 @@ describe("/api/memory/insights/[userId] route", () => {
     const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
-      url: "http://localhost/api/memory/insights/user-123",
+      url: `http://localhost/api/memory/insights/${userId}`,
     });
 
-    await Get(
-      req,
-      createRouteParamsContext({ intent: "insights", userId: "user-123" })
-    );
+    await Get(req, createRouteParamsContext({ intent: "insights", userId }));
 
     const call = mockGenerateText.mock.calls[0]?.[0];
     expect(call?.prompt).toContain("Analyze 20 memory snippets");
@@ -365,7 +364,7 @@ describe("/api/memory/insights/[userId] route", () => {
         limit: 20,
         sessionId: "",
         type: "fetchContext",
-        userId: "user-123",
+        userId,
       },
       results: [],
       status: "ok",
@@ -375,13 +374,10 @@ describe("/api/memory/insights/[userId] route", () => {
     const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
-      url: "http://localhost/api/memory/insights/user-123",
+      url: `http://localhost/api/memory/insights/${userId}`,
     });
 
-    await Get(
-      req,
-      createRouteParamsContext({ intent: "insights", userId: "user-123" })
-    );
+    await Get(req, createRouteParamsContext({ intent: "insights", userId }));
 
     const call = mockGenerateText.mock.calls[0]?.[0];
     // Injection patterns should be filtered from memory context

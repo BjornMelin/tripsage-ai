@@ -18,6 +18,10 @@ import {
   type MemorySearchRequest,
   memoryAddConversationSchema,
   memorySearchRequestSchema,
+  SEARCH_MEMORIES_REQUEST_SCHEMA,
+  SEARCH_MEMORIES_RESPONSE_SCHEMA,
+  type SearchMemoriesRequest,
+  type SearchMemoriesResponse,
 } from "@schemas/memory";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -28,55 +32,156 @@ import { errorResponse, parseStringId, requireUserId } from "@/lib/api/route-hel
 import { deleteCachedJson } from "@/lib/cache/upstash";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import { nowIso, secureUuid } from "@/lib/security/random";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const INTENT_SCHEMA = z.enum(["conversations", "search"]);
+const insightsCacheKey = (userId: string) => `memory:insights:${userId}`;
+const STRICT_MEMORY_SEARCH_REQUEST_SCHEMA = memorySearchRequestSchema.strict();
+const SEARCH_REQUEST_SCHEMA = z.union([
+  SEARCH_MEMORIES_REQUEST_SCHEMA,
+  STRICT_MEMORY_SEARCH_REQUEST_SCHEMA,
+]);
 
 const postSearch = withApiGuards({
   auth: true,
   rateLimit: "memory:search",
-  schema: memorySearchRequestSchema,
+  schema: SEARCH_REQUEST_SCHEMA,
   telemetry: "memory.search",
-})(async (_req: NextRequest, { user }, validated: MemorySearchRequest) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
-  const { filters, limit } = validated;
+})(
+  async (
+    _req: NextRequest,
+    { user },
+    validated: MemorySearchRequest | SearchMemoriesRequest
+  ) => {
+    const result = requireUserId(user);
+    if ("error" in result) return result.error;
+    const { userId } = result;
 
-  try {
-    const memoryResult = await handleMemoryIntent({
-      limit,
-      sessionId: "",
-      type: "fetchContext",
-      userId,
-    });
-
-    let results = memoryResult.context ?? [];
-
-    if (filters?.query) {
-      const queryLower = filters.query.toLowerCase();
-      results = results.filter((item) =>
-        item.context.toLowerCase().includes(queryLower)
-      );
+    const parsedUserId = z.uuid().safeParse(userId);
+    if (!parsedUserId.success) {
+      return errorResponse({
+        error: "invalid_request",
+        reason: "Authenticated userId must be a valid UUID",
+        status: 400,
+      });
     }
 
-    return NextResponse.json({
-      memories: results.map((item) => ({
-        content: item.context,
-        createdAt: item.createdAt ?? nowIso(),
-        id: item.id ?? secureUuid(),
-        source: item.source,
-      })),
-      total: results.length,
+    const startMs = Date.now();
+    const logger = createServerLogger("memory.search", {
+      redactKeys: ["error", "userId"],
     });
-  } catch (error) {
-    return errorResponse({
-      err: error,
-      error: "memory_search_failed",
-      reason: "Failed to search memories",
-      status: 500,
-    });
+
+    const requestUserId = "userId" in validated ? validated.userId : null;
+    if (requestUserId && requestUserId !== userId) {
+      return errorResponse({
+        error: "forbidden",
+        reason: "Cannot search memories for another user",
+        status: 403,
+      });
+    }
+
+    const rawLimit = typeof validated.limit === "number" ? validated.limit : 10;
+    const limit = Math.min(50, Math.max(1, rawLimit));
+
+    const rawThreshold =
+      "similarityThreshold" in validated &&
+      typeof validated.similarityThreshold === "number"
+        ? validated.similarityThreshold
+        : 0;
+    const similarityThresholdUsed = Math.min(1, Math.max(0, rawThreshold));
+
+    const query =
+      "query" in validated ? validated.query : (validated.filters?.query ?? "");
+
+    const processedQuery = query.trim();
+
+    try {
+      const memoryResult = await handleMemoryIntent({
+        limit,
+        sessionId: "",
+        type: "fetchContext",
+        userId,
+      });
+
+      let results = memoryResult.context ?? [];
+
+      if (similarityThresholdUsed > 0) {
+        results = results.filter((item) => item.score >= similarityThresholdUsed);
+      }
+
+      if (processedQuery.length > 0) {
+        const queryLower = processedQuery.toLowerCase();
+        results = results.filter((item) =>
+          item.context.toLowerCase().includes(queryLower)
+        );
+      }
+
+      let missingCreatedAtCount = 0;
+      let missingIdCount = 0;
+      let firstMissingIndex: number | null = null;
+
+      const memories: SearchMemoriesResponse["memories"] = results.map((item, idx) => {
+        const createdAt = item.createdAt ?? nowIso();
+        const id = item.id ?? secureUuid();
+
+        if (!item.createdAt) missingCreatedAtCount += 1;
+        if (!item.id) missingIdCount += 1;
+        if (firstMissingIndex === null && (!item.createdAt || !item.id)) {
+          firstMissingIndex = idx;
+        }
+
+        return {
+          memory: {
+            content: item.context,
+            createdAt,
+            id,
+            metadata: {
+              score: item.score,
+              ...(item.source ? { source: item.source } : {}),
+            },
+            type: item.source ?? "conversation_context",
+            updatedAt: createdAt,
+            userId,
+          },
+          relevanceReason:
+            processedQuery.length > 0
+              ? "Matched query substring"
+              : "Recent memory context",
+          similarityScore: item.score,
+        };
+      });
+
+      if (missingCreatedAtCount > 0 || missingIdCount > 0) {
+        logger.warn("memory.search.fallback_fields_used", {
+          firstMissingIndex,
+          intent: "search",
+          missingCreatedAtCount,
+          missingIdCount,
+        });
+      }
+
+      return NextResponse.json(
+        SEARCH_MEMORIES_RESPONSE_SCHEMA.parse({
+          memories,
+          searchMetadata: {
+            queryProcessed: processedQuery,
+            searchTimeMs: Date.now() - startMs,
+            similarityThresholdUsed,
+          },
+          success: true,
+          totalFound: results.length,
+        })
+      );
+    } catch (error) {
+      return errorResponse({
+        err: error,
+        error: "memory_search_failed",
+        reason: "Failed to search memories",
+        status: 500,
+      });
+    }
   }
-});
+);
 
 const postConversations = withApiGuards({
   auth: true,
@@ -88,6 +193,15 @@ const postConversations = withApiGuards({
   if ("error" in userResult) return userResult.error;
   const { userId } = userResult;
   const { category, content } = validated;
+
+  const parsedUserId = z.uuid().safeParse(userId);
+  if (!parsedUserId.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Authenticated userId must be a valid UUID",
+      status: 400,
+    });
+  }
 
   try {
     if (!addConversationMemory.execute) {
@@ -110,7 +224,7 @@ const postConversations = withApiGuards({
       "createdAt" in result &&
       "id" in result
     ) {
-      await deleteCachedJson(`memory:insights:${userId}`, { namespace: "memory" });
+      await deleteCachedJson(insightsCacheKey(userId), { namespace: "memory" });
       return NextResponse.json({
         createdAt: result.createdAt as string,
         id: result.id as string,
@@ -162,11 +276,5 @@ export async function POST(req: NextRequest, routeContext: RouteParamsContext) {
 
   const intent = parsedIntent.data;
   if (intent === "search") return postSearch(req, routeContext);
-  if (intent === "conversations") return postConversations(req, routeContext);
-
-  return errorResponse({
-    error: "not_found",
-    reason: `Unknown memory intent "${intent}"`,
-    status: 404,
-  });
+  return postConversations(req, routeContext);
 }

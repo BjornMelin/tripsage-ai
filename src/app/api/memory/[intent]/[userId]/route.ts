@@ -13,7 +13,6 @@
  * - `GET /api/memory/stats/:userId`
  * - `POST /api/memory/preferences/:userId`
  * - `GET /api/memory/insights/:userId`
- * - `POST /api/memory/user/:userId`
  * - `DELETE /api/memory/user/:userId`
  */
 
@@ -54,6 +53,8 @@ import { recordTelemetryEvent } from "@/lib/telemetry/span";
 const MEMORY_SANITIZE_MAX_CHARS = 500;
 const MAX_INSIGHT_ITEMS = 20;
 const INTENT_SCHEMA = z.enum(["context", "insights", "preferences", "stats", "user"]);
+const GET_INTENT_SCHEMA = z.enum(["context", "insights", "stats"]);
+const insightsCacheKey = (userId: string) => `memory:insights:${userId}`;
 
 const getContext = withApiGuards({
   auth: true,
@@ -63,6 +64,15 @@ const getContext = withApiGuards({
   const result = requireUserId(user);
   if ("error" in result) return result.error;
   const { userId } = result;
+
+  const parsedUserId = z.uuid().safeParse(userId);
+  if (!parsedUserId.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Authenticated userId must be a valid UUID",
+      status: 400,
+    });
+  }
 
   const userIdResult = await parseStringId(routeContext, "userId");
   if ("error" in userIdResult) return userIdResult.error;
@@ -99,6 +109,15 @@ const getStats = withApiGuards({
   const result = requireUserId(user);
   if ("error" in result) return result.error;
   const { userId } = result;
+
+  const parsedUserId = z.uuid().safeParse(userId);
+  if (!parsedUserId.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Authenticated userId must be a valid UUID",
+      status: 400,
+    });
+  }
 
   const userIdResult = await parseStringId(routeContext, "userId");
   if ("error" in userIdResult) return userIdResult.error;
@@ -156,6 +175,15 @@ const postPreferences = withApiGuards({
     const userResult = requireUserId(user);
     if ("error" in userResult) return userResult.error;
     const { userId } = userResult;
+
+    const parsedUserId = z.uuid().safeParse(userId);
+    if (!parsedUserId.success) {
+      return errorResponse({
+        error: "invalid_request",
+        reason: "Authenticated userId must be a valid UUID",
+        status: 400,
+      });
+    }
 
     const userIdResult = await parseStringId(routeContext, "userId");
     if ("error" in userIdResult) return userIdResult.error;
@@ -225,7 +253,7 @@ const postPreferences = withApiGuards({
         throw new Error("preferences_update_failed");
       }
 
-      await deleteCachedJson(`memory:insights:${userId}`, { namespace: "memory" });
+      await deleteCachedJson(insightsCacheKey(userId), { namespace: "memory" });
 
       return NextResponse.json(
         {
@@ -255,6 +283,15 @@ const getInsights = withApiGuards({
   if ("error" in result) return result.error;
   const { userId } = result;
 
+  const parsedUserId = z.uuid().safeParse(userId);
+  if (!parsedUserId.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Authenticated userId must be a valid UUID",
+      status: 400,
+    });
+  }
+
   const userIdResult = await parseStringId(routeContext, "userId");
   if ("error" in userIdResult) return userIdResult.error;
   const requestedUserId = userIdResult.id;
@@ -272,15 +309,7 @@ const getInsights = withApiGuards({
   });
 
   try {
-    const memoryResult = await handleMemoryIntent({
-      limit: MAX_INSIGHT_ITEMS,
-      sessionId: "",
-      type: "fetchContext",
-      userId,
-    });
-
-    const contextItems = memoryResult.context ?? [];
-    const cacheKey = `memory:insights:${userId}`;
+    const cacheKey = insightsCacheKey(userId);
     const cached = await getCachedJson<MemoryInsightsResponse>(cacheKey, {
       namespace: "memory",
     });
@@ -291,15 +320,23 @@ const getInsights = withApiGuards({
       return NextResponse.json(cached);
     }
 
+    recordTelemetryEvent("cache.memory_insights", {
+      attributes: { cache: "memory.insights", status: "miss" },
+    });
+
+    const memoryResult = await handleMemoryIntent({
+      limit: MAX_INSIGHT_ITEMS,
+      sessionId: "",
+      type: "fetchContext",
+      userId,
+    });
+
+    const contextItems = memoryResult.context ?? [];
     const limitedContext = contextItems.slice(0, MAX_INSIGHT_ITEMS);
     const contextSummary = buildContextSummary(limitedContext);
     const prompt = buildInsightsPrompt(contextSummary, limitedContext.length);
 
     try {
-      recordTelemetryEvent("cache.memory_insights", {
-        attributes: { cache: "memory.insights", status: "miss" },
-      });
-
       const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
 
       const result = await generateText({
@@ -317,7 +354,8 @@ const getInsights = withApiGuards({
         temperature: 0.3,
       });
 
-      const structured = result.output ?? ({} as MemoryInsightsResponse);
+      const structured = result.output;
+      if (!structured) throw new Error("memory_insights_missing_output");
       const insights: MemoryInsightsResponse = {
         ...structured,
         metadata: {
@@ -343,19 +381,13 @@ const getInsights = withApiGuards({
       return NextResponse.json(fallback, { status: 200 });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const safeError =
+      error instanceof Error
+        ? { message: error.message, name: error.name }
+        : { message: String(error) };
     scopedLogger.error("memory.insights.request_failed", {
       cacheKeyPrefix: "memory:insights",
-      error:
-        error instanceof Error
-          ? {
-              cause: error.cause,
-              message: error.message,
-              name: error.name,
-              stack: error.stack,
-            }
-          : error,
-      errorMessage,
+      error: safeError,
       userId,
     });
     return errorResponse({
@@ -434,7 +466,7 @@ function buildFallbackInsights(
   };
 }
 
-const postUserDelete = withApiGuards({
+const deleteUserMemories = withApiGuards({
   auth: true,
   rateLimit: "memory:delete",
   telemetry: "memory.delete",
@@ -443,9 +475,27 @@ const postUserDelete = withApiGuards({
   if ("error" in result) return result.error;
   const { userId: authenticatedUserId } = result;
 
+  const parsedAuthenticatedUserId = z.uuid().safeParse(authenticatedUserId);
+  if (!parsedAuthenticatedUserId.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "Authenticated userId must be a valid UUID",
+      status: 400,
+    });
+  }
+
   const userIdResult = await parseStringId(routeContext, "userId");
   if ("error" in userIdResult) return userIdResult.error;
   const targetUserId = userIdResult.id;
+
+  const parsedTargetUserId = z.uuid().safeParse(targetUserId);
+  if (!parsedTargetUserId.success) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "userId must be a valid UUID",
+      status: 400,
+    });
+  }
 
   if (targetUserId !== authenticatedUserId) {
     return forbiddenResponse("Cannot delete other user's memory");
@@ -456,32 +506,23 @@ const postUserDelete = withApiGuards({
   try {
     const supabase = createAdminSupabase();
 
-    const [turnsResult, sessionsResult] = await Promise.all([
-      supabase
-        .schema("memories")
-        .from("turns")
-        .delete({ count: "exact" })
-        .eq("user_id", userId),
-      supabase
-        .schema("memories")
-        .from("sessions")
-        .delete({ count: "exact" })
-        .eq("user_id", userId),
-    ]);
+    const { data, error } = await supabase.rpc("delete_user_memories", {
+      p_user_id: userId,
+    });
 
-    if (turnsResult.error) {
-      throw new Error(`turns_delete_failed:${turnsResult.error.message}`);
+    if (error) {
+      throw new Error(`delete_user_memories_failed:${error.message}`);
     }
 
-    if (sessionsResult.error) {
-      throw new Error(`sessions_delete_failed:${sessionsResult.error.message}`);
-    }
+    const resultRow = Array.isArray(data) ? data[0] : null;
+    const deletedCount =
+      (resultRow?.deleted_turns ?? 0) + (resultRow?.deleted_sessions ?? 0);
 
-    await deleteCachedJson(`memory:insights:${userId}`, { namespace: "memory" });
+    await deleteCachedJson(insightsCacheKey(userId), { namespace: "memory" });
 
     return NextResponse.json({
       backupCreated: false,
-      deletedCount: (turnsResult.count ?? 0) + (sessionsResult.count ?? 0),
+      deletedCount,
       metadata: {
         deletionTime: nowIso(),
         userId,
@@ -501,7 +542,7 @@ const postUserDelete = withApiGuards({
 export async function GET(req: NextRequest, routeContext: RouteParamsContext) {
   const intentResult = await parseStringId(routeContext, "intent");
   if ("error" in intentResult) return intentResult.error;
-  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.id);
+  const parsedIntent = GET_INTENT_SCHEMA.safeParse(intentResult.id);
   if (!parsedIntent.success) {
     return errorResponse({
       error: "not_found",
@@ -511,15 +552,14 @@ export async function GET(req: NextRequest, routeContext: RouteParamsContext) {
   }
 
   const intent = parsedIntent.data;
-  if (intent === "context") return getContext(req, routeContext);
-  if (intent === "stats") return getStats(req, routeContext);
-  if (intent === "insights") return getInsights(req, routeContext);
-
-  return errorResponse({
-    error: "method_not_allowed",
-    reason: `GET not supported for memory intent "${intent}"`,
-    status: 405,
-  });
+  switch (intent) {
+    case "context":
+      return getContext(req, routeContext);
+    case "stats":
+      return getStats(req, routeContext);
+    case "insights":
+      return getInsights(req, routeContext);
+  }
 }
 
 export async function POST(req: NextRequest, routeContext: RouteParamsContext) {
@@ -536,7 +576,13 @@ export async function POST(req: NextRequest, routeContext: RouteParamsContext) {
 
   const intent = parsedIntent.data;
   if (intent === "preferences") return postPreferences(req, routeContext);
-  if (intent === "user") return postUserDelete(req, routeContext);
+  if (intent === "user") {
+    return errorResponse({
+      error: "method_not_allowed",
+      reason: 'POST not supported for memory intent "user" (use DELETE)',
+      status: 405,
+    });
+  }
 
   return errorResponse({
     error: "method_not_allowed",
@@ -558,7 +604,7 @@ export async function DELETE(req: NextRequest, routeContext: RouteParamsContext)
   }
 
   const intent = parsedIntent.data;
-  if (intent === "user") return postUserDelete(req, routeContext);
+  if (intent === "user") return deleteUserMemories(req, routeContext);
 
   return errorResponse({
     error: "method_not_allowed",
