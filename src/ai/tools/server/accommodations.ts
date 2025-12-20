@@ -5,7 +5,10 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
-import type { AccommodationModelOutput } from "@ai/tools/schemas/accommodations";
+import {
+  type AccommodationModelOutput,
+  coerceToNumber,
+} from "@ai/tools/schemas/accommodations";
 import {
   createToolError,
   TOOL_ERROR_CODES,
@@ -73,16 +76,6 @@ export const searchAccommodations = createAiTool<
    */
   toModelOutput: (result): AccommodationModelOutput => {
     /**
-     * Coerce string or number to number, returning undefined for non-parseable values.
-     */
-    const coerceToNumber = (val: string | number | undefined): number | undefined => {
-      if (val === undefined || val === null) return undefined;
-      if (typeof val === "number") return val;
-      const parsed = Number(val);
-      return Number.isNaN(parsed) ? undefined : parsed;
-    };
-
-    /**
      * Compute the actual lowest price across all rooms and rates for a listing.
      * Falls back to undefined if no valid prices found.
      */
@@ -114,7 +107,7 @@ export const searchAccommodations = createAiTool<
       listings: slicedListings.map((listing) => ({
         amenities: listing.amenities?.slice(0, 5),
         geoCode: listing.geoCode,
-        id: coerceToNumber(listing.id),
+        id: coerceToNumber.parse(listing.id),
         lowestPrice: computeLowestPrice(listing.rooms),
         name: listing.name,
         rating: listing.place?.rating,

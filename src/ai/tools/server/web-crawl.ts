@@ -126,7 +126,13 @@ function crawlCacheKey(
           .join(",")
       : "";
     const parsersKey = so.parsers ? [...so.parsers].sort().join(",") : "";
-    parts.push(formatsKey, parsersKey, so.proxy ?? "basic");
+    parts.push(
+      formatsKey,
+      parsersKey,
+      so.proxy ?? "basic",
+      so.onlyMainContent ? "1" : "0",
+      so.maxAge?.toString() ?? ""
+    );
   }
   return parts.join(":");
 }

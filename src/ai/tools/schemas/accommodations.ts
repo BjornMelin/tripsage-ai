@@ -17,7 +17,7 @@ const geoCodeModelOutputSchema = z
 /**
  * Coerce string-or-number to number, returning undefined for non-parseable values.
  */
-const coerceToNumber = z
+export const coerceToNumber = z
   .union([z.string(), z.number()])
   .optional()
   .transform((val) => {
