@@ -11,7 +11,7 @@ import "server-only";
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { toolRegistry } from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
-import type { ModelMessage, SystemModelMessage, ToolSet, UIMessage } from "ai";
+import type { ModelMessage, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
 import { z } from "zod";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
@@ -21,37 +21,12 @@ import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
 
 import { createTripSageAgent } from "./agent-factory";
+import { extractTextFromContent, normalizeInstructions } from "./instructions";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
 
 const logger = createServerLogger("chat-agent");
 
-/** Extracts text from the content of a system model message. */
-export const extractTextFromContent = (
-  content: SystemModelMessage["content"]
-): string => {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
-
-  const parts = (content as unknown[])
-    .flatMap((part: unknown) => {
-      if (!part || typeof part !== "object") return [] as string[];
-      const maybeText = (part as { text?: unknown }).text;
-      const maybeContent = (part as { content?: unknown }).content;
-      const texts: string[] = [];
-      if (typeof maybeText === "string") texts.push(maybeText);
-      if (typeof maybeContent === "string") texts.push(maybeContent);
-      return texts;
-    })
-    .filter(Boolean);
-
-  return parts.length ? parts.join("\n") : "";
-};
-
-/** Normalizes the instructions for a system model message. */
-export const normalizeInstructions = (input: string | SystemModelMessage): string => {
-  if (typeof input === "string") return input;
-  return extractTextFromContent(input.content);
-};
+export { extractTextFromContent, normalizeInstructions };
 
 /**
  * Call options schema for the chat agent (AI SDK v6).
