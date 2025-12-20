@@ -90,10 +90,10 @@ describe("PRICE_RANGE_SCHEMA", () => {
   });
 
   describe("type inference", () => {
-    it.concurrent("should export PriceRange type", () => {
-      const range: PriceRange = { max: 100, min: 10 };
-      expect(typeof range.min).toBe("number");
-      expect(typeof range.max).toBe("number");
+    it("exports PriceRange type", () => {
+      // Compile-time type check only - TypeScript enforces the type
+      const _range: PriceRange = { max: 100, min: 10 };
+      expect(true).toBe(true);
     });
   });
 });
@@ -161,10 +161,10 @@ describe("DURATION_RANGE_SCHEMA", () => {
   });
 
   describe("type inference", () => {
-    it.concurrent("should export DurationRange type", () => {
-      const range: DurationRange = { max: 120, min: 30 };
-      expect(typeof range.min).toBe("number");
-      expect(typeof range.max).toBe("number");
+    it("exports DurationRange type", () => {
+      // Compile-time type check only - TypeScript enforces the type
+      const _range: DurationRange = { max: 120, min: 30 };
+      expect(true).toBe(true);
     });
   });
 });
@@ -209,9 +209,10 @@ describe("NUMERIC_RANGE_SCHEMA", () => {
   });
 
   describe("type inference", () => {
-    it.concurrent("should export NumericRange type", () => {
-      const range: NumericRange = { max: 10, min: -10 };
-      expect(typeof range.min).toBe("number");
+    it("exports NumericRange type", () => {
+      // Compile-time type check only - TypeScript enforces the type
+      const _range: NumericRange = { max: 10, min: -10 };
+      expect(true).toBe(true);
     });
   });
 });
