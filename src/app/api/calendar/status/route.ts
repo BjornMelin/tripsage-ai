@@ -11,26 +11,24 @@ import "server-only";
 // Using withApiGuards({ auth: true }) ensures this route uses cookies/headers,
 // making it dynamic and preventing caching of user-specific data.
 
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { hasGoogleCalendarScopes } from "@/lib/calendar/auth";
-import { listCalendars } from "@/lib/calendar/google";
+import { GoogleCalendarApiError, listCalendars } from "@/lib/calendar/google";
 
 /**
  * GET /api/calendar/status
  *
  * Get calendar connection status and list of calendars.
  *
- * @param req - Next.js request object
- * @param routeContext - Route context from withApiGuards
  * @returns JSON response with calendar status and list
  */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "calendar:status",
   telemetry: "calendar.status",
-})(async (_req: NextRequest) => {
+})(async () => {
   // Check if user has Google Calendar scopes
   const hasScopes = await hasGoogleCalendarScopes();
   if (!hasScopes) {
@@ -58,15 +56,40 @@ export const GET = withApiGuards({
       connected: true,
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("token")) {
-      return NextResponse.json(
-        {
-          connected: false,
-          message: "Google Calendar token expired. Please reconnect your account.",
-        },
-        { status: 200 }
-      );
+    // Use typed GoogleCalendarApiError for code-based handling
+    if (error instanceof GoogleCalendarApiError) {
+      // 401: Token expired or revoked
+      if (error.statusCode === 401) {
+        return NextResponse.json(
+          {
+            connected: false,
+            message: "Google Calendar token expired. Please reconnect your account.",
+          },
+          { status: 200 }
+        );
+      }
+
+      // 403: Insufficient scopes or access denied
+      if (error.statusCode === 403) {
+        return NextResponse.json(
+          {
+            connected: false,
+            message: "Insufficient permissions. Please reconnect with calendar access.",
+          },
+          { status: 200 }
+        );
+      }
+
+      // Other Google Calendar API errors
+      return errorResponse({
+        err: error,
+        error: "calendar_error",
+        reason: error.message,
+        status: (error.statusCode ?? 400) >= 500 ? 500 : (error.statusCode ?? 400),
+      });
     }
+
+    // Non-GoogleCalendarApiError - let withApiGuards handle it
     throw error;
   }
 });

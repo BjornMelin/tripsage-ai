@@ -48,6 +48,10 @@ export const TOOL_ERROR_CODES = {
   approvalMissingSession: "approval_missing_session",
   approvalRequired: "approval_required",
 
+  // Flight errors
+  flightNotConfigured: "flight_not_configured",
+  flightOfferFailed: "flight_offer_failed",
+
   // General tool errors
   invalidOutput: "invalid_output",
   invalidParams: "invalid_params",
