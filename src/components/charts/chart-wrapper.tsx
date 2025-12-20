@@ -8,6 +8,8 @@ import dynamic from "next/dynamic";
 import {
   type ComponentProps,
   type ComponentType,
+  cloneElement,
+  isValidElement,
   type ReactNode,
   useEffect,
   useState,
@@ -27,15 +29,11 @@ type RechartsModule = typeof import("recharts");
 
 let rechartsPromise: Promise<RechartsModule> | null = null;
 
-function LoadRecharts() {
-  rechartsPromise ??= import("recharts")
-    .then((mod) => {
-      return mod;
-    })
-    .catch((error) => {
-      rechartsPromise = null;
-      throw error;
-    });
+function LoadRecharts(): Promise<RechartsModule> {
+  rechartsPromise ??= import("recharts").catch((error) => {
+    rechartsPromise = null;
+    throw error;
+  });
 
   return rechartsPromise;
 }
@@ -51,21 +49,23 @@ function CreateDynamicComponent<P extends object>(
 export interface WithRechartsProps {
   children: (recharts: RechartsModule) => ReactNode;
   fallback?: ReactNode;
+  loadRecharts?: () => Promise<RechartsModule>;
 }
 
-export function WithRecharts({ children, fallback }: WithRechartsProps) {
+export function WithRecharts({ children, fallback, loadRecharts }: WithRechartsProps) {
   const [recharts, setRecharts] = useState<RechartsModule | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let isActive = true;
+    const loadRechartsModule = loadRecharts ?? LoadRecharts;
 
     if (retryCount > 0) {
       setLoadError(false);
     }
 
-    LoadRecharts()
+    loadRechartsModule()
       .then((mod) => {
         if (!isActive) return;
         setRecharts(mod);
@@ -78,10 +78,10 @@ export function WithRecharts({ children, fallback }: WithRechartsProps) {
     return () => {
       isActive = false;
     };
-  }, [retryCount]);
+  }, [loadRecharts, retryCount]);
 
   if (loadError) {
-    return (
+    const errorContent = (
       <div className="flex flex-col items-center justify-center gap-2">
         <p className="text-sm text-muted-foreground">Failed to load chart.</p>
         <Button
@@ -96,6 +96,12 @@ export function WithRecharts({ children, fallback }: WithRechartsProps) {
         </Button>
       </div>
     );
+
+    if (isValidElement(fallback) && typeof fallback.type === "string") {
+      return cloneElement(fallback, undefined, errorContent);
+    }
+
+    return <div className="flex items-center justify-center">{errorContent}</div>;
   }
 
   if (!recharts) {
@@ -123,15 +129,19 @@ export function ResponsiveContainer(props: RechartsResponsiveContainerProps) {
       ? props.width
       : "100%";
 
-  return (
+  const loadingFallback = (
     <div
       className="flex items-center justify-center"
       style={{ height: placeholderHeight, width: placeholderWidth }}
     >
-      <WithRecharts fallback={<LoadingSpinner size="sm" />}>
-        {(Recharts) => <Recharts.ResponsiveContainer {...props} />}
-      </WithRecharts>
+      <LoadingSpinner size="sm" />
     </div>
+  );
+
+  return (
+    <WithRecharts fallback={loadingFallback}>
+      {(Recharts) => <Recharts.ResponsiveContainer {...props} />}
+    </WithRecharts>
   );
 }
 
