@@ -227,6 +227,7 @@ export async function withRequestSpan<T>(
  * @param opts.error - Error code string (e.g., "invalid_request", "rate_limit_exceeded").
  * @param opts.reason - Human-readable reason string.
  * @param opts.err - Optional error object to log (will be redacted).
+ * @param opts.extras - Optional additional fields to include in the response body.
  * @returns NextResponse with standardized error format.
  */
 export function errorResponse({
@@ -235,28 +236,30 @@ export function errorResponse({
   reason,
   status,
   issues,
+  extras,
 }: {
   error: string;
   reason: string;
   status: number;
   err?: unknown;
   issues?: ValidationIssue[];
+  extras?: Record<string, unknown>;
 }): NextResponse {
   if (err) {
     const { context, message } = redactErrorForLogging(err);
     logger.error("agent.error", { context, error, message, reason });
   }
-  const body: {
-    error: string;
-    reason: string;
-    issues?: ValidationIssue[];
-  } = {
+  const body: Record<string, unknown> = {
     error,
     reason,
   };
 
   if (issues) {
     body.issues = issues;
+  }
+
+  if (extras) {
+    Object.assign(body, extras);
   }
 
   return NextResponse.json(body, { status });

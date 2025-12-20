@@ -35,7 +35,8 @@ export const POST = withApiGuards({
   if (isMfaRequiredError(error)) {
     return errorResponse({
       error: "mfa_required",
-      reason: `Multi-factor authentication required (code: ${error.code})`,
+      extras: error.code ? { code: error.code } : undefined,
+      reason: "Multi-factor authentication required",
       status: 403,
     });
   }
