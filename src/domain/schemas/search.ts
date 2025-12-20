@@ -8,6 +8,7 @@ import { propertyTypeSchema } from "./accommodations";
 import { CABIN_CLASS_ENUM } from "./flights";
 import { primitiveSchemas } from "./registry";
 import { CURRENCY_CODE_SCHEMA } from "./shared/money";
+import { DURATION_RANGE_SCHEMA, PRICE_RANGE_SCHEMA } from "./shared/ranges";
 import { ISO_DATE_STRING } from "./shared/time";
 
 // ===== CORE SCHEMAS =====
@@ -20,8 +21,8 @@ const COORDINATES_SCHEMA = z.object({
 });
 
 const DATE_STRING_SCHEMA = ISO_DATE_STRING;
-const POSITIVE_INT_SCHEMA = z.number().int().positive();
-const NON_NEGATIVE_INT_SCHEMA = z.number().int().nonnegative();
+const POSITIVE_INT_SCHEMA = primitiveSchemas.positiveInt;
+const NON_NEGATIVE_INT_SCHEMA = primitiveSchemas.nonNegativeInt;
 
 /**
  * Zod schema for base search parameters shared across search types.
@@ -82,15 +83,7 @@ export const searchAccommodationParamsSchema = z.object({
   destination: z.string().optional(),
   infants: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
   minRating: z.number().min(0).max(5).optional(),
-  priceRange: z
-    .object({
-      max: z.number().positive().optional(),
-      min: z.number().nonnegative().optional(),
-    })
-    .refine((data) => !data.min || !data.max || data.min <= data.max, {
-      error: "Min price must be less than or equal to max price",
-    })
-    .optional(),
+  priceRange: PRICE_RANGE_SCHEMA.optional(),
   propertyType: z.enum(propertyTypeSchema.options as [string, ...string[]]).optional(),
   propertyTypes: z.array(propertyTypeSchema).optional(),
   rooms: POSITIVE_INT_SCHEMA.max(20, { error: "Too many rooms" }).optional(),
@@ -123,27 +116,10 @@ export const activitySearchParamsSchema = z.object({
     .optional(),
   destination: z.string().min(1, { error: "destination is required" }),
   difficulty: z.enum(["easy", "moderate", "challenging", "extreme"]).optional(),
-  duration: z
-    .object({
-      max: z.number().positive().optional(),
-      min: z.number().positive().optional(),
-    })
-    .refine((data) => !data.min || !data.max || data.min <= data.max, {
-      error: "Min duration must be less than or equal to max duration",
-    })
-    .optional(),
+  duration: DURATION_RANGE_SCHEMA.optional(),
   indoor: z.boolean().optional(),
   infants: NON_NEGATIVE_INT_SCHEMA.max(20).optional(),
-  priceRange: z
-    .object({
-      max: z.number().positive().optional(),
-      min: z.number().min(0).optional(),
-    })
-    .refine((data) => !data.min || !data.max || data.min <= data.max, {
-      error: "Min price must be less than or equal to max price",
-      path: ["min"],
-    })
-    .optional(),
+  priceRange: PRICE_RANGE_SCHEMA.optional(),
 });
 
 /** TypeScript type for activity search parameters. */

@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { TIME_24H_SCHEMA } from "./shared/time";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for temporal data
@@ -28,12 +29,8 @@ export type DateRange = z.infer<typeof dateRangeSchema>;
  */
 export const timeRangeSchema = z
   .object({
-    endTime: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: "Invalid time format (HH:MM)" }),
-    startTime: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: "Invalid time format (HH:MM)" }),
+    endTime: TIME_24H_SCHEMA,
+    startTime: TIME_24H_SCHEMA,
   })
   .refine((data) => data.endTime > data.startTime, {
     error: "End time must be after start time",

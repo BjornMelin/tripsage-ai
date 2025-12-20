@@ -36,10 +36,15 @@ export const primitiveSchemas = {
 
   // Enhanced string schemas
   nonEmptyString: z.string().min(1, { error: "Value cannot be empty" }),
+  nonNegativeInt: z
+    .number()
+    .int()
+    .nonnegative({ error: "Must be a non-negative integer" }),
   nonNegativeNumber: z.number().nonnegative({ error: "Must be non-negative" }),
   percentage: z.number().min(0).max(100, { error: "Must be between 0 and 100" }),
 
   // Number schemas
+  positiveInt: z.number().int().positive({ error: "Must be a positive integer" }),
   positiveNumber: z.number().positive({ error: "Must be positive" }),
   slug: z.string().regex(/^[a-z0-9-]+$/, { error: "Invalid slug format" }),
   timestamp: z.number().int().positive({ error: "Invalid timestamp" }),
@@ -121,3 +126,5 @@ export type Email = z.infer<typeof primitiveSchemas.email>;
 export type Url = z.infer<typeof primitiveSchemas.url>;
 export type IsoDateTime = z.infer<typeof primitiveSchemas.isoDateTime>;
 export type Timestamp = z.infer<typeof primitiveSchemas.timestamp>;
+export type PositiveInt = z.infer<typeof primitiveSchemas.positiveInt>;
+export type NonNegativeInt = z.infer<typeof primitiveSchemas.nonNegativeInt>;

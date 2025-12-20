@@ -191,6 +191,50 @@ describe("primitiveSchemas", () => {
       expect(result.success).toBe(false);
     });
   });
+
+  describe("positiveInt", () => {
+    it.concurrent("should validate positive integer", () => {
+      const result = primitiveSchemas.positiveInt.safeParse(42);
+      expect(result.success).toBe(true);
+    });
+
+    it.concurrent("should reject zero", () => {
+      const result = primitiveSchemas.positiveInt.safeParse(0);
+      expect(result.success).toBe(false);
+    });
+
+    it.concurrent("should reject negative integer", () => {
+      const result = primitiveSchemas.positiveInt.safeParse(-5);
+      expect(result.success).toBe(false);
+    });
+
+    it.concurrent("should reject non-integer", () => {
+      const result = primitiveSchemas.positiveInt.safeParse(3.14);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("nonNegativeInt", () => {
+    it.concurrent("should validate positive integer", () => {
+      const result = primitiveSchemas.nonNegativeInt.safeParse(42);
+      expect(result.success).toBe(true);
+    });
+
+    it.concurrent("should validate zero", () => {
+      const result = primitiveSchemas.nonNegativeInt.safeParse(0);
+      expect(result.success).toBe(true);
+    });
+
+    it.concurrent("should reject negative integer", () => {
+      const result = primitiveSchemas.nonNegativeInt.safeParse(-5);
+      expect(result.success).toBe(false);
+    });
+
+    it.concurrent("should reject non-integer", () => {
+      const result = primitiveSchemas.nonNegativeInt.safeParse(3.14);
+      expect(result.success).toBe(false);
+    });
+  });
 });
 
 describe("transformSchemas", () => {

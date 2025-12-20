@@ -5,6 +5,10 @@
  */
 
 import { z } from "zod";
+import {
+  OFFSET_PAGINATION_QUERY_SCHEMA,
+  OFFSET_PAGINATION_RESPONSE_SCHEMA,
+} from "./shared/pagination";
 
 // ===== CONSTANTS =====
 
@@ -48,10 +52,8 @@ export type AttachmentUploadOptions = z.infer<typeof attachmentUploadOptionsSche
 // ===== LIST QUERY SCHEMAS =====
 
 /** Schema for attachment listing query parameters. */
-export const attachmentListQuerySchema = z.strictObject({
+export const attachmentListQuerySchema = OFFSET_PAGINATION_QUERY_SCHEMA.extend({
   chatMessageId: z.coerce.number().int().nonnegative().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
   tripId: z.coerce.number().int().nonnegative().optional(),
 });
 
@@ -97,13 +99,7 @@ export const attachmentFileSchema = z.strictObject({
 export type AttachmentFile = z.infer<typeof attachmentFileSchema>;
 
 /** Schema for pagination metadata. */
-export const paginationSchema = z.strictObject({
-  hasMore: z.boolean(),
-  limit: z.number().int().positive(),
-  nextOffset: z.number().int().nonnegative().nullable(),
-  offset: z.number().int().nonnegative(),
-  total: z.number().int().nonnegative(),
-});
+export const paginationSchema = OFFSET_PAGINATION_RESPONSE_SCHEMA;
 
 export type Pagination = z.infer<typeof paginationSchema>;
 
