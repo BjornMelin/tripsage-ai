@@ -617,15 +617,17 @@ export function withApiGuards<SchemaType extends z.ZodType>(
  *
  * @see https://sdk.vercel.ai/docs/reference/ai-sdk-core/agent
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AgentOutput<TOutput = any, TPartial = any> = {
+type AgentOutput<OutputType = unknown, PartialType = unknown> = {
   responseFormat: PromiseLike<
     { type: "text" } | { type: "json"; schema?: unknown } | undefined
   >;
-  parseCompleteOutput: (options: { text: string }, context: unknown) => Promise<TOutput>;
+  parseCompleteOutput: (
+    options: { text: string },
+    context: unknown
+  ) => Promise<OutputType>;
   parsePartialOutput: (options: {
     text: string;
-  }) => Promise<{ partial: TPartial } | undefined>;
+  }) => Promise<{ partial: PartialType } | undefined>;
 };
 
 type AgentRouteFactoryResult<
