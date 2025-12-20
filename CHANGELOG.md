@@ -1,3 +1,10 @@
+## [1.22.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.2...v1.22.3) (2025-12-20)
+
+### Bug Fixes
+
+* **api:** address PR feedback on model hints and gateway URL ([318745c](https://github.com/BjornMelin/tripsage-ai/commit/318745cc5cb864847db2336b1a9e9d519ea259be))
+* **lint:** remove explicit any from agent output type ([5493629](https://github.com/BjornMelin/tripsage-ai/commit/54936299c33513c69dadf2df8c4b305b69a7a237))
+
 ## [1.22.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.1...v1.22.2) (2025-12-20)
 
 ### Bug Fixes
