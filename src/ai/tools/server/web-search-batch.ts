@@ -166,10 +166,10 @@ export const webSearchBatch = createAiTool({
         } else if (message.includes(TOOL_ERROR_CODES.webSearchFailed)) {
           code = TOOL_ERROR_CODES.webSearchFailed;
         } else {
-          code = "web_search_error";
+          code = TOOL_ERROR_CODES.webSearchError;
         }
         // Fallback to direct HTTP for unexpected errors (not rate/auth/payment)
-        if (code === "web_search_error") {
+        if (code === TOOL_ERROR_CODES.webSearchError) {
           try {
             // Proper env access via validated server env helpers
             const { getServerEnvVar, getServerEnvVarWithFallback } = await import(
@@ -179,7 +179,7 @@ export const webSearchBatch = createAiTool({
             try {
               apiKey = getServerEnvVar("FIRECRAWL_API_KEY");
             } catch {
-              throw new Error("web_search_not_configured");
+              throw createToolError(TOOL_ERROR_CODES.webSearchNotConfigured);
             }
             const baseUrl = getServerEnvVarWithFallback(
               "FIRECRAWL_BASE_URL",
@@ -229,8 +229,14 @@ export const webSearchBatch = createAiTool({
             }
             if (!res.ok) {
               const text = await res.text();
-              throw new Error(
-                `web_search_failed:${res.status}:body_hash=${hashInputForCache(text)}:body_length=${text.length}`
+              throw createToolError(
+                TOOL_ERROR_CODES.webSearchFailed,
+                `web search failed with status ${res.status}`,
+                {
+                  bodyHash: hashInputForCache(text),
+                  bodyLength: text.length,
+                  status: res.status,
+                }
               );
             }
             const firecrawlResponseSchema = z.object({
