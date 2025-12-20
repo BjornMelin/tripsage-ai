@@ -366,12 +366,9 @@ export const crawlUrl = createAiTool({
       // Normalize missing configuration into a tool-specific error code
       throw new Error("web_crawl_not_configured");
     }
-    if (!apiKey) throw new Error("web_crawl_not_configured");
     const baseUrl =
-      getServerEnvVarWithFallback(
-        "FIRECRAWL_BASE_URL",
-        "https://api.firecrawl.dev/v2"
-      ) ?? "https://api.firecrawl.dev/v2";
+      getServerEnvVarWithFallback("FIRECRAWL_BASE_URL", undefined) ??
+      "https://api.firecrawl.dev/v2";
     const normalizedScrapeOptions = normalizeScrapeOptionsForCache(scrapeOptions);
     const body = buildScrapeBody(url, normalizedScrapeOptions);
     const endpoint = `${baseUrl}/scrape`;
@@ -449,12 +446,9 @@ export const crawlSite = createAiTool({
     } catch {
       throw new Error("web_crawl_not_configured");
     }
-    if (!apiKey) throw new Error("web_crawl_not_configured");
     const baseUrl =
-      getServerEnvVarWithFallback(
-        "FIRECRAWL_BASE_URL",
-        "https://api.firecrawl.dev/v2"
-      ) ?? "https://api.firecrawl.dev/v2";
+      getServerEnvVarWithFallback("FIRECRAWL_BASE_URL", undefined) ??
+      "https://api.firecrawl.dev/v2";
     const normalizedScrapeOptions = normalizeScrapeOptionsForCache(scrapeOptions);
     const body = buildCrawlBody(
       url,

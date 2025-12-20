@@ -250,9 +250,7 @@ export async function persistMemoryRecords(
           toolCallId: `memory-add-${index}`,
         });
         if (isAsyncIterable(res)) {
-          throw new Error(
-            `${TOOL_ERROR_CODES.toolExecutionFailed}: unexpected streaming response from memory tool`
-          );
+          throw new Error(TOOL_ERROR_CODES.memoryUnexpectedStream);
         }
         successes.push({
           category: normalizedCategory,

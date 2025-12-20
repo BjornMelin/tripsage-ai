@@ -51,6 +51,7 @@ export const TOOL_ERROR_CODES = {
   // General tool errors
   invalidOutput: "invalid_output",
   invalidParams: "invalid_params",
+  memoryUnexpectedStream: "memory_unexpected_stream",
   toolExecutionFailed: "tool_execution_failed",
   toolRateLimited: "tool_rate_limited",
   webSearchError: "web_search_error",

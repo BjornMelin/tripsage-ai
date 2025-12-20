@@ -15,16 +15,27 @@ const geoCodeModelOutputSchema = z
   .optional();
 
 /**
+ * Coerce string-or-number to number, returning undefined for non-parseable values.
+ */
+const coerceToNumber = z
+  .union([z.string(), z.number()])
+  .optional()
+  .transform((val) => {
+    if (val === undefined || val === null) return undefined;
+    if (typeof val === "number") return val;
+    const parsed = Number(val);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  });
+
+/**
  * Accommodation listing entry for model consumption.
- * Note: `id` and `lowestPrice` accept string | number unions because:
- * - Amadeus API returns numeric IDs while cached results may have string IDs
- * - Price totals can be numeric or formatted currency strings from different providers
+ * Fields are normalized to numbers via transforms to ensure type safety downstream.
  */
 const accommodationListingModelOutputSchema = z.strictObject({
   amenities: z.array(z.string()).optional(),
   geoCode: geoCodeModelOutputSchema,
-  id: z.union([z.string(), z.number()]).optional(),
-  lowestPrice: z.union([z.string(), z.number()]).optional(),
+  id: coerceToNumber,
+  lowestPrice: coerceToNumber,
   name: z.string().optional(),
   rating: z.number().optional(),
   starRating: z.number().optional(),

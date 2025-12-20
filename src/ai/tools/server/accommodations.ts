@@ -71,25 +71,64 @@ export const searchAccommodations = createAiTool<
    * Simplifies accommodation results for model consumption to reduce token usage.
    * Strips photos, searchParameters, and compresses nested rates to essential pricing.
    */
-  toModelOutput: (result): AccommodationModelOutput => ({
-    avgPrice: result.avgPrice,
-    fromCache: result.fromCache,
-    listingCount: Math.min(result.listings.length, 10),
-    listings: result.listings.slice(0, 10).map((listing) => ({
-      amenities: listing.amenities?.slice(0, 5),
-      geoCode: listing.geoCode,
-      id: listing.id,
-      lowestPrice: listing.rooms?.[0]?.rates?.[0]?.price?.total,
-      name: listing.name,
-      rating: listing.place?.rating,
-      starRating: listing.starRating,
-    })),
-    maxPrice: result.maxPrice,
-    minPrice: result.minPrice,
-    provider: result.provider,
-    resultsReturned: result.resultsReturned,
-    totalResults: result.totalResults,
-  }),
+  toModelOutput: (result): AccommodationModelOutput => {
+    /**
+     * Coerce string or number to number, returning undefined for non-parseable values.
+     */
+    const coerceToNumber = (
+      val: string | number | undefined
+    ): number | undefined => {
+      if (val === undefined || val === null) return undefined;
+      if (typeof val === "number") return val;
+      const parsed = Number(val);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    };
+
+    /**
+     * Compute the actual lowest price across all rooms and rates for a listing.
+     * Falls back to undefined if no valid prices found.
+     */
+    const computeLowestPrice = (
+      rooms?: Array<{ rates?: Array<{ price?: { total?: number | string } }> }>
+    ): number | undefined => {
+      if (!rooms?.length) return undefined;
+      let lowest: number | undefined;
+      for (const room of rooms) {
+        if (!room.rates?.length) continue;
+        for (const rate of room.rates) {
+          const total = rate.price?.total;
+          if (total === undefined || total === null) continue;
+          const numVal = typeof total === "number" ? total : Number(total);
+          if (Number.isNaN(numVal)) continue;
+          if (lowest === undefined || numVal < lowest) {
+            lowest = numVal;
+          }
+        }
+      }
+      return lowest;
+    };
+
+    const slicedListings = result.listings.slice(0, 10);
+    return {
+      avgPrice: result.avgPrice,
+      fromCache: result.fromCache,
+      listingCount: slicedListings.length,
+      listings: slicedListings.map((listing) => ({
+        amenities: listing.amenities?.slice(0, 5),
+        geoCode: listing.geoCode,
+        id: coerceToNumber(listing.id),
+        lowestPrice: computeLowestPrice(listing.rooms),
+        name: listing.name,
+        rating: listing.place?.rating,
+        starRating: listing.starRating,
+      })),
+      maxPrice: result.maxPrice,
+      minPrice: result.minPrice,
+      provider: result.provider,
+      resultsReturned: result.resultsReturned,
+      totalResults: result.totalResults,
+    };
+  },
   validateOutput: true,
 });
 
