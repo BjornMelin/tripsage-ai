@@ -8,7 +8,12 @@ import type { SystemModelMessage } from "ai";
 
 /** Type guard for message parts that may contain text or content strings. */
 function isTextPart(part: unknown): part is { text?: string; content?: string } {
-  return typeof part === "object" && part !== null;
+  if (typeof part !== "object" || part === null) return false;
+  const obj = part as Record<string, unknown>;
+  return (
+    (obj.text === undefined || typeof obj.text === "string") &&
+    (obj.content === undefined || typeof obj.content === "string")
+  );
 }
 
 /** Extracts text from the content of a system model message. */

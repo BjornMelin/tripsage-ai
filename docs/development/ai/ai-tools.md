@@ -107,7 +107,7 @@ export const myTool = createAiTool({
 If a server tool must use raw `tool()` temporarily:
 1. Add the marker `// ai-tool-check: allow-raw-tool` in the file.
 2. Add the file to `TOOL_ALLOWLIST` in `scripts/check-ai-tools.mjs` with a reason.
-3. Remove the exception as soon as the migration completes.
+3. Remove the exception as soon as the file's migration to `createAiTool` completes.
 
 ## Tool Execution Signature
 

@@ -430,7 +430,6 @@ export const crawlSite = createAiTool({
   execute: async ({
     url,
     limit,
-    fresh: _fresh,
     includePaths,
     excludePaths,
     sitemap,

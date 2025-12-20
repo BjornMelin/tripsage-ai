@@ -276,6 +276,7 @@ function findFiles(dir, files = []) {
     } else if (
       stat.isFile() &&
       (item.endsWith(".ts") || item.endsWith(".tsx")) &&
+      !item.endsWith(".d.ts") &&
       !item.endsWith(".test.ts") &&
       !item.endsWith(".test.tsx") &&
       !item.endsWith(".spec.ts") &&
