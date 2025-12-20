@@ -1,11 +1,17 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
@@ -43,6 +49,31 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 describe("/api/agents/budget validation", () => {
+  beforeEach(() => {
+    const mockLimitFn = vi.fn().mockResolvedValue({
+      limit: 30,
+      remaining: 29,
+      reset: Date.now() + 60000,
+      success: true,
+    });
+    setRateLimitFactoryForTests(async () => mockLimitFn());
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast<TypedServerSupabase>({
+        auth: {
+          getUser: async () => ({
+            data: { user: { id: "user-1" } },
+            error: null,
+          }),
+        },
+      })
+    );
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
+    setSupabaseFactoryForTests(null);
+  });
+
   it("returns 400 on invalid body", async () => {
     const mod = await import("../route");
     // Missing required fields like destination/durationDays
