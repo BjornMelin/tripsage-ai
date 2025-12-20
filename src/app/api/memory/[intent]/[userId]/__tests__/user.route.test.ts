@@ -53,12 +53,9 @@ const supabaseClient = {
   auth: {
     getUser: vi.fn(),
   },
-  schema: vi.fn(),
 };
 
-const mockFrom = vi.fn();
-const mockDelete = vi.fn();
-const mockEq = vi.fn();
+const mockRpc = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => supabaseClient),
@@ -66,12 +63,8 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabase: vi.fn(() => ({
-    schema: mockSchema,
+    rpc: mockRpc,
   })),
-}));
-
-const mockSchema = vi.fn((_schemaName: string) => ({
-  from: mockFrom,
 }));
 
 async function importRoute() {
@@ -79,7 +72,15 @@ async function importRoute() {
   return mod.POST;
 }
 
-describe("POST /api/memory/user/[userId] (delete memories)", () => {
+async function importDeleteRoute() {
+  const mod = await import("../route");
+  return mod.DELETE;
+}
+
+describe("/api/memory/user/[userId] (delete memories)", () => {
+  const userId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+  const otherUserId = "3fa85f64-5717-4562-b3fc-2c963f66afa8";
+
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
@@ -91,23 +92,13 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
     }));
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-123" } },
+      data: { user: { id: userId } },
       error: null,
     });
-
-    mockSchema.mockReturnValue({
-      from: mockFrom,
+    mockRpc.mockResolvedValue({
+      data: [{ deleted_sessions: 1, deleted_turns: 2 }],
+      error: null,
     });
-
-    mockFrom.mockReturnValue({
-      delete: mockDelete,
-    });
-
-    mockDelete.mockReturnValue({
-      eq: mockEq,
-    });
-
-    mockEq.mockResolvedValue({ error: null });
   });
 
   afterAll(() => {
@@ -116,19 +107,33 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
     upstashAfterAllHook();
   });
 
+  it("returns 405 when attempting deletion via POST", async () => {
+    const post = await importRoute();
+    const req = createMockNextRequest({
+      method: "POST",
+      url: `http://localhost/api/memory/user/${userId}`,
+    });
+
+    const res = await post(req, createRouteParamsContext({ intent: "user", userId }));
+
+    expect(res.status).toBe(405);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("method_not_allowed");
+  });
+
   it("returns 401 when user is unauthenticated", async () => {
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: null },
       error: null,
     });
 
-    const post = await importRoute();
+    const del = await importDeleteRoute();
     const req = createMockNextRequest({
-      method: "POST",
-      url: "http://localhost/api/memory/user/user-123",
+      method: "DELETE",
+      url: `http://localhost/api/memory/user/${userId}`,
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await del(req, createRouteParamsContext({ intent: "user", userId }));
     expect(res.status).toBe(401);
   });
 
@@ -138,13 +143,13 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
       error: { message: "auth failed" },
     });
 
-    const post = await importRoute();
+    const del = await importDeleteRoute();
     const req = createMockNextRequest({
-      method: "POST",
-      url: "http://localhost/api/memory/user/user-123",
+      method: "DELETE",
+      url: `http://localhost/api/memory/user/${userId}`,
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await del(req, createRouteParamsContext({ intent: "user", userId }));
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(401);
@@ -152,13 +157,13 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
   });
 
   it("returns 400 when userId parameter is missing", async () => {
-    const post = await importRoute();
+    const del = await importDeleteRoute();
     const req = createMockNextRequest({
-      method: "POST",
+      method: "DELETE",
       url: "http://localhost/api/memory/user/",
     });
 
-    const res = await post(req, createRouteParamsContext({}));
+    const res = await del(req, createRouteParamsContext({ intent: "user" }));
     const body = (await res.json()) as { error: string; reason: string };
 
     expect(res.status).toBe(400);
@@ -167,13 +172,16 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
   });
 
   it("returns 403 when userId in URL does not match authenticated user", async () => {
-    const post = await importRoute();
+    const del = await importDeleteRoute();
     const req = createMockNextRequest({
-      method: "POST",
-      url: "http://localhost/api/memory/user/other-user-id",
+      method: "DELETE",
+      url: `http://localhost/api/memory/user/${otherUserId}`,
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "other-user-id" }));
+    const res = await del(
+      req,
+      createRouteParamsContext({ intent: "user", userId: otherUserId })
+    );
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(403);
@@ -181,60 +189,42 @@ describe("POST /api/memory/user/[userId] (delete memories)", () => {
   });
 
   it("successfully deletes all memories when userId matches authenticated user", async () => {
-    const post = await importRoute();
+    const del = await importDeleteRoute();
     const req = createMockNextRequest({
-      method: "POST",
-      url: "http://localhost/api/memory/user/user-123",
+      method: "DELETE",
+      url: `http://localhost/api/memory/user/${userId}`,
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
-    const body = (await res.json()) as { deleted: boolean };
+    const res = await del(req, createRouteParamsContext({ intent: "user", userId }));
+    const body = (await res.json()) as {
+      deletedCount: number;
+      metadata: { deletionTime: string; userId: string };
+      success: boolean;
+    };
 
     expect(res.status).toBe(200);
-    expect(body.deleted).toBe(true);
+    expect(body.success).toBe(true);
+    expect(body.metadata.userId).toBe(userId);
+    expect(body.deletedCount).toBe(3);
 
-    // Verify both schema calls were made
-    expect(mockSchema).toHaveBeenCalledWith("memories");
-    expect(mockFrom).toHaveBeenCalledWith("turns");
-    expect(mockFrom).toHaveBeenCalledWith("sessions");
-
-    // Verify delete was called with correct user_id
-    expect(mockDelete).toHaveBeenCalled();
-    expect(mockEq).toHaveBeenCalledWith("user_id", "user-123");
+    expect(mockRpc).toHaveBeenCalledWith("delete_user_memories", {
+      p_user_id: userId,
+    });
   });
 
-  it("returns 500 when turns deletion fails", async () => {
-    mockEq.mockResolvedValueOnce({
+  it("returns 500 when deletion RPC fails", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
       error: { message: "Database error" },
     });
 
-    const post = await importRoute();
+    const del = await importDeleteRoute();
     const req = createMockNextRequest({
-      method: "POST",
-      url: "http://localhost/api/memory/user/user-123",
+      method: "DELETE",
+      url: `http://localhost/api/memory/user/${userId}`,
     });
 
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
-    const body = (await res.json()) as { error: string };
-
-    expect(res.status).toBe(500);
-    expect(body.error).toBe("memory_delete_failed");
-  });
-
-  it("returns 500 when sessions deletion fails", async () => {
-    mockEq
-      .mockResolvedValueOnce({ error: null }) // turns delete succeeds
-      .mockResolvedValueOnce({
-        error: { message: "Database error" },
-      }); // sessions delete fails
-
-    const post = await importRoute();
-    const req = createMockNextRequest({
-      method: "POST",
-      url: "http://localhost/api/memory/user/user-123",
-    });
-
-    const res = await post(req, createRouteParamsContext({ userId: "user-123" }));
+    const res = await del(req, createRouteParamsContext({ intent: "user", userId }));
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(500);

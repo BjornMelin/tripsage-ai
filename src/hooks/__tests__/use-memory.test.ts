@@ -3,6 +3,7 @@
 import type {
   AddConversationMemoryRequest,
   AddConversationMemoryResponse,
+  DeleteUserMemoriesResponse,
   MemoryContextResponse,
   MemoryInsightsResponse,
   SearchMemoriesRequest,
@@ -17,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/error-types";
 import {
   useAddConversationMemory,
+  useDeleteUserMemories,
   useMemoryContext,
   useMemoryInsights,
   useMemoryStats,
@@ -345,6 +347,35 @@ describe("Memory Hooks", () => {
       await waitFor(() => expect(result.current.data).toEqual(mockStats));
       expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
         "/api/memory/stats/user-123"
+      );
+    });
+  });
+
+  describe("useDeleteUserMemories", () => {
+    it("should delete user memories", async () => {
+      const mockResponse: DeleteUserMemoriesResponse = {
+        backupCreated: false,
+        deletedCount: 2,
+        metadata: {
+          deletionTime: "2024-01-01T10:00:00Z",
+          userId: "user-123",
+        },
+        success: true,
+      };
+      MOCK_MAKE_AUTHENTICATED_REQUEST.mockResolvedValueOnce(mockResponse);
+
+      const { result } = renderHook(() => useDeleteUserMemories("user-123"), {
+        wrapper,
+      });
+
+      await act(async () => {
+        const res = await result.current.mutateAsync();
+        expect(res).toEqual(mockResponse);
+      });
+
+      expect(MOCK_MAKE_AUTHENTICATED_REQUEST).toHaveBeenCalledWith(
+        "/api/memory/user/user-123",
+        { method: "DELETE" }
       );
     });
   });

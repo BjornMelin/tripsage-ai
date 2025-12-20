@@ -75,7 +75,7 @@ Current `functionId` values in this codebase:
 | `agent.{agentType}` | `src/ai/agents/agent-factory.ts` | ToolLoopAgent instances |
 | `router.classifyUserMessage` | `src/ai/agents/router-agent.ts` | Message classification |
 | `agent.memory.summarize` | `src/ai/agents/memory-agent.ts` | Memory write summary |
-| `memory.insights.generate` | `src/app/api/memory/insights/[userId]/route.ts` | Insights generation |
+| `memory.insights.generate` | `src/app/api/memory/[intent]/[userId]/route.ts` | Insights generation (`intent="insights"`) |
 | `ai.stream.demo` | `src/app/api/ai/stream/route.ts` | Demo streaming route (requires `ENABLE_AI_DEMO="true"`) |
 
 ## Telemetry-safe identifiers

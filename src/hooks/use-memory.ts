@@ -173,7 +173,7 @@ export function useDeleteUserMemories(userId: string) {
         return await makeAuthenticatedRequest<DeleteUserMemoriesResponse>(
           `/api/memory/user/${userId}`,
           {
-            method: "POST",
+            method: "DELETE",
           }
         );
       } catch (error) {
