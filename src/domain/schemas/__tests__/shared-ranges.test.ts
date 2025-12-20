@@ -78,6 +78,15 @@ describe("PRICE_RANGE_SCHEMA", () => {
       const result = PRICE_RANGE_SCHEMA.safeParse({ max: -5 });
       expect(result.success).toBe(false);
     });
+
+    it.concurrent("should reject unknown keys (strictObject)", () => {
+      const result = PRICE_RANGE_SCHEMA.safeParse({
+        extra: "unexpected",
+        max: 100,
+        min: 10,
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("type inference", () => {
@@ -140,6 +149,15 @@ describe("DURATION_RANGE_SCHEMA", () => {
       const result = DURATION_RANGE_SCHEMA.safeParse({ min: -10 });
       expect(result.success).toBe(false);
     });
+
+    it.concurrent("should reject unknown keys (strictObject)", () => {
+      const result = DURATION_RANGE_SCHEMA.safeParse({
+        extra: "unexpected",
+        max: 120,
+        min: 30,
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("type inference", () => {
@@ -177,6 +195,15 @@ describe("NUMERIC_RANGE_SCHEMA", () => {
   describe("invalid cases", () => {
     it.concurrent("should reject min > max", () => {
       const result = NUMERIC_RANGE_SCHEMA.safeParse({ max: -100, min: 100 });
+      expect(result.success).toBe(false);
+    });
+
+    it.concurrent("should reject unknown keys (strictObject)", () => {
+      const result = NUMERIC_RANGE_SCHEMA.safeParse({
+        extra: "unexpected",
+        max: 10,
+        min: -10,
+      });
       expect(result.success).toBe(false);
     });
   });

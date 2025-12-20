@@ -12,7 +12,7 @@ import { z } from "zod";
  * Both min and max are optional; validation applies only when both are present.
  */
 export const PRICE_RANGE_SCHEMA = z
-  .object({
+  .strictObject({
     max: z.number().positive().optional(),
     min: z.number().nonnegative().optional(),
   })
@@ -26,7 +26,7 @@ export const PRICE_RANGE_SCHEMA = z
  * Both min and max are optional; validation applies only when both are present.
  */
 export const DURATION_RANGE_SCHEMA = z
-  .object({
+  .strictObject({
     max: z.number().positive().optional(),
     min: z.number().positive().optional(),
   })
@@ -40,7 +40,7 @@ export const DURATION_RANGE_SCHEMA = z
  * Both min and max are optional; validation applies only when both are present.
  */
 export const NUMERIC_RANGE_SCHEMA = z
-  .object({
+  .strictObject({
     max: z.number().optional(),
     min: z.number().optional(),
   })
