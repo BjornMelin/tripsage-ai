@@ -74,9 +74,45 @@ function isPrivateGatewayHost(hostname: string): boolean {
   }
 
   const trimmed = host.replace(/^\[|\]$/gu, "");
-  if (trimmed === "::1") return true;
-  if (trimmed.startsWith("fc") || trimmed.startsWith("fd")) return true; // unique local
-  if (trimmed.startsWith("fe80")) return true; // link-local
+  const ipv6 = trimmed.toLowerCase();
+
+  // IPv6 loopback (::1 and fully unabbreviated 0:0:0:0:0:0:0:1 variants)
+  if (ipv6 === "::1") return true;
+  if (/^(0{1,4}:){7}0*1$/iu.test(ipv6)) return true;
+
+  // Unique local addresses: fc00::/7 (fc00–fdff in the first hextet), case-insensitive
+  const firstHextetMatch = /^([0-9a-f]{1,4}):/iu.exec(ipv6);
+  if (firstHextetMatch) {
+    const firstHextet = Number.parseInt(firstHextetMatch[1], 16);
+    if (firstHextet >= 0xfc00 && firstHextet <= 0xfdff) {
+      return true;
+    }
+  }
+
+  // Link-local addresses (fe80::/10) – conservative prefix check on normalized string
+  if (ipv6.startsWith("fe80")) return true;
+
+  // IPv4-mapped / embedded IPv4 in IPv6, e.g. ::ffff:10.0.0.1
+  if (ipv6.includes(".")) {
+    const lastSegment = ipv6.split(":").pop() ?? "";
+    const embeddedIpv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(
+      lastSegment
+    );
+    if (embeddedIpv4Match) {
+      const a = Number(embeddedIpv4Match[1]);
+      const b = Number(embeddedIpv4Match[2]);
+
+      if (
+        a === 10 || // 10.0.0.0/8
+        (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0 – 172.31.255.255
+        (a === 192 && b === 168) || // 192.168.0.0/16
+        a === 127 || // 127.0.0.0/8 (loopback)
+        (a === 169 && b === 254) // 169.254.0.0/16 (link-local)
+      ) {
+        return true;
+      }
+    }
+  }
 
   return false;
 }

@@ -701,8 +701,9 @@ export function createAgentRoute<
         const resolvedConfig = await resolveAgentConfig(options.agentType);
         const agentConfig = resolvedConfig.config;
 
+        const urlModel = req.nextUrl.searchParams.get("model") ?? undefined;
         const modelHint =
-          options.getModelHint?.({ agentConfig, req }) ?? agentConfig.model;
+          options.getModelHint?.({ agentConfig, req }) ?? agentConfig.model ?? urlModel;
 
         const { resolveProvider } = await import("@ai/models/registry");
         const { model, modelId, provider } = await resolveProvider(userId, modelHint);

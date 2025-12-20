@@ -56,7 +56,7 @@ describe("/api/agents/memory validation", () => {
       reset: Date.now() + 60000,
       success: true,
     });
-    setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
+    setRateLimitFactoryForTests(async () => mockLimitFn());
     setSupabaseFactoryForTests(async () =>
       unsafeCast<TypedServerSupabase>({
         auth: {
