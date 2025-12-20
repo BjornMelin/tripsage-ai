@@ -153,6 +153,7 @@ Prefer domain-specific error classes over string matching:
 | Activities | `NotFoundError` | `@domain/activities/errors` |
 
 **Pattern:** Check domain error first, then generic:
+
 ```typescript
 if (error instanceof GoogleCalendarApiError) {
   if (error.statusCode === 401) return handleTokenExpired();

@@ -32,9 +32,8 @@ export default function GlobalError({
 
     fireAndForget(errorService.reportError(errorReport));
 
-    // Log critical error in dev/test (production uses errorService only)
-    // Exception to dev-only pattern: global boundary needs test verification
-    if (process.env.NODE_ENV !== "production") {
+    // Log critical error in development (production uses errorService only)
+    if (process.env.NODE_ENV === "development") {
       console.error("CRITICAL: Global error boundary caught error:", error);
     }
   }, [error]);

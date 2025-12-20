@@ -85,7 +85,7 @@ export const GET = withApiGuards({
         err: error,
         error: "calendar_error",
         reason: error.message,
-        status: error.statusCode && error.statusCode >= 500 ? 500 : 400,
+        status: (error.statusCode ?? 400) >= 500 ? 500 : (error.statusCode ?? 400),
       });
     }
 
