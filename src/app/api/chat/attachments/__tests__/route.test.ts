@@ -8,7 +8,8 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { createRouteParamsContext } from "@/test/helpers/route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
+import { getSupabaseMockState, resetSupabaseMockState } from "@/test/mocks/supabase";
 
 // Mock file-type for magic byte verification
 vi.mock("file-type", () => ({
@@ -54,17 +55,6 @@ describe("/api/chat/attachments", () => {
   const mockUpload = vi.fn();
   const mockRemove = vi.fn();
   const mockCreateSignedUrl = vi.fn();
-  type SupabaseClientMock = ReturnType<typeof getApiRouteSupabaseMock>;
-  type InsertMock = ReturnType<
-    typeof vi.fn<(payload: unknown) => Promise<{ error: unknown }>>
-  >;
-  const setInsertMock = (supabase: SupabaseClientMock, insertMock: InsertMock) => {
-    return vi.spyOn(supabase, "from").mockImplementation(() =>
-      unsafeCast<ReturnType<SupabaseClientMock["from"]>>({
-        insert: insertMock,
-      })
-    );
-  };
 
   beforeEach(async () => {
     resetApiRouteMocks();
@@ -94,13 +84,14 @@ describe("/api/chat/attachments", () => {
 
     // Setup Supabase storage mock
     const supabase = getApiRouteSupabaseMock();
-    vi.spyOn(supabase.storage, "from").mockImplementation(() =>
-      unsafeCast<ReturnType<SupabaseClientMock["storage"]["from"]>>({
-        createSignedUrl: mockCreateSignedUrl,
-        remove: mockRemove,
-        upload: mockUpload,
-      })
-    );
+    resetSupabaseMockState(supabase);
+
+    vi.spyOn(supabase, "from");
+    setupStorageFromMock(supabase, {
+      createSignedUrl: mockCreateSignedUrl,
+      remove: mockRemove,
+      upload: mockUpload,
+    });
   });
 
   it("should validate content type header", async () => {
@@ -133,12 +124,8 @@ describe("/api/chat/attachments", () => {
   });
 
   it("should upload single file to Supabase Storage", async () => {
-    // Mock Supabase insert
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi
-      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
-      .mockResolvedValue({ error: null });
-    setInsertMock(supabase, insertMock);
+    const state = getSupabaseMockState(supabase);
 
     const mod = await import("../route");
     const validFile = new File(["test content"], "test.jpg", { type: "image/jpeg" });
@@ -167,7 +154,9 @@ describe("/api/chat/attachments", () => {
 
     // Verify Supabase metadata insert was called
     expect(supabase.from).toHaveBeenCalledWith("file_attachments");
-    expect(insertMock).toHaveBeenCalledWith(
+    const inserts = state.insertByTable.get("file_attachments") ?? [];
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toEqual(
       expect.objectContaining({
         bucket_name: "attachments",
         file_size: validFile.size,
@@ -202,12 +191,8 @@ describe("/api/chat/attachments", () => {
       .mockResolvedValueOnce({ ext: "png", mime: "image/png" })
       .mockResolvedValueOnce({ ext: "pdf", mime: "application/pdf" });
 
-    // Mock Supabase insert - create fresh mock and attach
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi
-      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
-      .mockResolvedValue({ error: null });
-    setInsertMock(supabase, insertMock);
+    const state = getSupabaseMockState(supabase);
 
     // Mock multiple storage uploads
     mockUpload
@@ -258,6 +243,9 @@ describe("/api/chat/attachments", () => {
     const body = await res.json();
     expect(body.files).toHaveLength(2);
     expect(body.urls).toHaveLength(2);
+
+    const inserts = state.insertByTable.get("file_attachments") ?? [];
+    expect(inserts).toHaveLength(2);
   });
 
   it("should reject files exceeding size limit", async () => {
@@ -339,13 +327,8 @@ describe("/api/chat/attachments", () => {
       data: null,
       error: { message: "Storage upload failed" },
     });
-
-    // Mock Supabase insert
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi
-      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
-      .mockResolvedValue({ error: null });
-    setInsertMock(supabase, insertMock);
+    const state = getSupabaseMockState(supabase);
 
     const mod = await import("../route");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
@@ -362,17 +345,14 @@ describe("/api/chat/attachments", () => {
     const body = await res.json();
     expect(body.reason).toBe("File upload failed");
     expect(body.error).toBe("internal");
+
+    expect(state.insertByTable.get("file_attachments") ?? []).toHaveLength(0);
   });
 
   it("should handle Supabase metadata insert errors gracefully", async () => {
-    // Mock Supabase insert to fail
     const supabase = getApiRouteSupabaseMock();
-    const insertMock = vi
-      .fn<(payload: unknown) => Promise<{ error: unknown }>>()
-      .mockResolvedValue({
-        error: { message: "Database error" },
-      });
-    setInsertMock(supabase, insertMock);
+    const state = getSupabaseMockState(supabase);
+    state.insertErrorsByTable.set("file_attachments", { message: "Database error" });
 
     const mod = await import("../route");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
@@ -481,20 +461,8 @@ describe("/api/chat/attachments", () => {
     });
 
     const supabase = getApiRouteSupabaseMock();
-    const apiMetricsInsertMock = vi.fn().mockResolvedValue({ error: null });
-    const insertMock = vi.fn().mockResolvedValue({ error: null });
-    const eqMock = vi.fn().mockResolvedValue({ error: null });
-    const deleteMock = vi.fn();
-    deleteMock.mockReturnValue({ delete: deleteMock, eq: eqMock });
-    vi.spyOn(supabase, "from").mockImplementation((table: string) =>
-      unsafeCast<ReturnType<SupabaseClientMock["from"]>>(
-        table === "file_attachments"
-          ? { delete: deleteMock, eq: eqMock, insert: insertMock }
-          : table === "api_metrics"
-            ? { insert: apiMetricsInsertMock }
-            : { insert: vi.fn() }
-      )
-    );
+    const state = getSupabaseMockState(supabase);
+    state.insertErrorsByTable.delete("file_attachments");
 
     const mod = await import("../route");
     const file1 = new File(["content1"], "file1.png", { type: "image/png" });
@@ -514,7 +482,9 @@ describe("/api/chat/attachments", () => {
     expect(body.reason).toBe("File upload failed");
 
     // Confirm metadata insert happened for first file
-    expect(insertMock).toHaveBeenCalledWith(
+    const inserts = state.insertByTable.get("file_attachments") ?? [];
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toEqual(
       expect.objectContaining({
         bucket_name: "attachments",
         filename: "test-uuid-3",
@@ -525,8 +495,14 @@ describe("/api/chat/attachments", () => {
     );
 
     // Metadata rows for successful uploads are deleted on failure
-    expect(deleteMock).toHaveBeenCalledTimes(1);
-    expect(eqMock).toHaveBeenCalledWith("id", "test-uuid-3");
+    expect(
+      state.requests.some(
+        (r) =>
+          r.method === "DELETE" &&
+          r.url.startsWith("/rest/v1/file_attachments") &&
+          r.url.includes("id=eq.test-uuid-3")
+      )
+    ).toBe(true);
 
     // Uploaded storage object is cleaned up
     expect(mockRemove).toHaveBeenCalledWith(["chat/user-1/test-uuid-1-file1.png"]);

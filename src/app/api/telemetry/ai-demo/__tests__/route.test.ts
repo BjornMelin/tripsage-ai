@@ -7,7 +7,7 @@ import {
 } from "@/lib/api/factory";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
 const EMIT_ALERT = vi.hoisted(() => vi.fn());
 
@@ -25,7 +25,7 @@ describe("/api/telemetry/ai-demo", () => {
     vi.stubEnv("TELEMETRY_HASH_SECRET", "test-telemetry-hash-secret-1234567890");
     __resetServerEnvCacheForTest();
 
-    setSupabaseFactoryForTests(async () => unsafeCast({}));
+    setSupabaseFactoryForTests(async () => createMockSupabaseClient({ user: null }));
     setRateLimitFactoryForTests(async () => ({
       limit: 10,
       remaining: 9,

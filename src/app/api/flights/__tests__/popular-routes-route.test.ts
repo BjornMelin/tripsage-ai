@@ -1,32 +1,19 @@
 /** @vitest-environment node */
 
 import type { Redis } from "@upstash/redis";
-import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
 import { setRedisFactoryForTests } from "@/lib/redis";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import {
   RedisMockClient,
   setupUpstashMocks,
   type UpstashMemoryStore,
 } from "@/test/upstash/redis-mock";
-
-/**
- * Narrow mock type matching the Supabase methods used by the popular-routes route.
- */
-interface MockedSupabaseClient {
-  auth: {
-    // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
-    getUser: MockInstance<() => Promise<{ data: { user: any }; error: any }>>;
-  };
-  // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
-  from: MockInstance<(table: string) => any>;
-}
 
 const { redis, ratelimit } = setupUpstashMocks();
 
@@ -56,13 +43,6 @@ vi.mock("next/headers", () => ({
 import { GET as getPopularRoutes } from "../popular-routes/route";
 
 describe("/api/flights/popular-routes", () => {
-  const supabaseClient: MockedSupabaseClient = {
-    auth: {
-      getUser: vi.fn(),
-    },
-    from: vi.fn(),
-  };
-
   beforeEach(() => {
     stubRateLimitDisabled();
     redis.__reset();
@@ -70,14 +50,7 @@ describe("/api/flights/popular-routes", () => {
     setRedisFactoryForTests(() =>
       unsafeCast<Redis>(new RawStringRedisMock(redis.store))
     );
-    setSupabaseFactoryForTests(async () =>
-      unsafeCast<TypedServerSupabase>(supabaseClient)
-    );
-    supabaseClient.auth.getUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-    supabaseClient.from.mockReset();
+    setSupabaseFactoryForTests(async () => createMockSupabaseClient({ user: null }));
   });
 
   afterEach(() => {

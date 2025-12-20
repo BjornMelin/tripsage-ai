@@ -2,7 +2,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/cache/tags", () => ({
   bumpTag: vi.fn(async () => 1),
@@ -36,6 +36,7 @@ vi.mock("@/lib/agents/config-resolver", () => ({
 }));
 
 const supabaseData = {
+  agent_type: "budgetAgent",
   config: {
     agentType: "budgetAgent",
     createdAt: new Date().toISOString(),
@@ -45,6 +46,7 @@ const supabaseData = {
     scope: "global",
     updatedAt: new Date().toISOString(),
   },
+  id: "11111111-1111-4111-8111-111111111111",
   version_id: "ver-1",
 };
 
@@ -127,28 +129,19 @@ describe("config routes", () => {
   });
 
   it("PUT upserts and emits alert", async () => {
-    const supabaseRpc = vi.fn().mockResolvedValue({
+    const supabase = createMockSupabaseClient({ user: null });
+    const state = getSupabaseMockState(supabase);
+    state.selectByTable.set("agent_config", {
+      count: null,
+      data: [{ config: supabaseData.config, version_id: supabaseData.version_id }],
+      error: null,
+    });
+    state.rpcResults.set("agent_config_upsert", {
+      count: null,
       data: [{ version_id: "ver-2" }],
       error: null,
     });
-    const supabase = unsafeCast<{
-      from: ReturnType<typeof vi.fn>;
-      rpc: ReturnType<typeof vi.fn>;
-    }>({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({ maybeSingle: supabaseMaybeSingle })),
-          })),
-        })),
-      })),
-      rpc: supabaseRpc,
-    });
-
-    supabaseMaybeSingle.mockResolvedValue({
-      data: { config: supabaseData.config },
-      error: null,
-    });
+    const rpcSpy = vi.spyOn(supabase, "rpc");
 
     const body = {
       description: "updated",
@@ -181,7 +174,7 @@ describe("config routes", () => {
         attributes: expect.objectContaining({ agentType: "budgetAgent" }),
       })
     );
-    expect(supabaseRpc).toHaveBeenCalledWith(
+    expect(rpcSpy).toHaveBeenCalledWith(
       "agent_config_upsert",
       expect.objectContaining({
         p_agent_type: "budgetAgent",
@@ -203,6 +196,7 @@ describe("config routes", () => {
 
   it("versions returns list", async () => {
     const versionsRow = {
+      agent_type: "budgetAgent",
       created_at: "2025-12-01T00:00:00Z",
       created_by: "admin-user",
       id: "ver-1",
@@ -210,18 +204,11 @@ describe("config routes", () => {
       summary: "initial",
     };
 
-    const supabase = unsafeCast<{ from: ReturnType<typeof vi.fn> }>({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => ({ data: [versionsRow], error: null })),
-              })),
-            })),
-          })),
-        })),
-      })),
+    const supabase = createMockSupabaseClient({ user: null });
+    getSupabaseMockState(supabase).selectByTable.set("agent_config_versions", {
+      count: null,
+      data: [versionsRow],
+      error: null,
     });
 
     const { GET } = await import("../[agentType]/versions/route");
@@ -241,22 +228,17 @@ describe("config routes", () => {
   });
 
   it("rollback emits alert", async () => {
-    const supabase = unsafeCast<{
-      from: ReturnType<typeof vi.fn>;
-      rpc: ReturnType<typeof vi.fn>;
-    }>({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              maybeSingle: vi
-                .fn()
-                .mockResolvedValue({ data: supabaseData, error: null }),
-            })),
-          })),
-        })),
-      })),
-      rpc: vi.fn(async () => ({ data: [{ version_id: "ver-rollback" }], error: null })),
+    const supabase = createMockSupabaseClient({ user: null });
+    const state = getSupabaseMockState(supabase);
+    state.selectByTable.set("agent_config_versions", {
+      count: null,
+      data: [supabaseData],
+      error: null,
+    });
+    state.rpcResults.set("agent_config_upsert", {
+      count: null,
+      data: [{ version_id: "ver-rollback" }],
+      error: null,
     });
 
     const { POST } = await import("../[agentType]/rollback/[versionId]/route");

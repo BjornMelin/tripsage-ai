@@ -8,7 +8,8 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { createRouteParamsContext } from "@/test/helpers/route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
+import { getSupabaseMockState } from "@/test/mocks/supabase";
 
 // Mock cache functions to skip caching in tests
 vi.mock("@/lib/cache/upstash", () => ({
@@ -16,10 +17,25 @@ vi.mock("@/lib/cache/upstash", () => ({
   setCachedJson: vi.fn(() => Promise.resolve()),
 }));
 
+function hasRequest(
+  requests: Array<{ method: string; url: string }>,
+  method: string,
+  pathPrefix: string,
+  params: Record<string, string>
+): boolean {
+  return requests.some((r) => {
+    if (r.method !== method) return false;
+    if (!r.url.startsWith(pathPrefix)) return false;
+    const url = new URL(r.url, "http://localhost");
+    return Object.entries(params).every(
+      ([key, value]) => url.searchParams.get(key) === value
+    );
+  });
+}
+
 describe("/api/attachments/files", () => {
   // Storage mock for signed URL generation
   const mockCreateSignedUrls = vi.fn();
-  type SupabaseClientMock = ReturnType<typeof getApiRouteSupabaseMock>;
 
   beforeEach(() => {
     vi.resetModules();
@@ -29,11 +45,8 @@ describe("/api/attachments/files", () => {
 
     // Setup storage mock for signed URL generation
     const supabase = getApiRouteSupabaseMock();
-    vi.spyOn(supabase.storage, "from").mockImplementation(() =>
-      unsafeCast<ReturnType<SupabaseClientMock["storage"]["from"]>>({
-        createSignedUrls: mockCreateSignedUrls,
-      })
-    );
+    vi.spyOn(supabase, "from");
+    setupStorageFromMock(supabase, { createSignedUrls: mockCreateSignedUrls });
 
     // Default: return signed URLs matching file paths
     mockCreateSignedUrls.mockImplementation((paths: string[]) =>
@@ -47,57 +60,10 @@ describe("/api/attachments/files", () => {
     );
   });
 
-  /**
-   * Helper to setup Supabase query chain mock.
-   * @param supabase - Supabase client mock
-   * @param options - Mock response options (count, data, error)
-   * @returns Object with all mock functions for assertions
-   */
-  function setupSupabaseQueryMock(
-    supabase: SupabaseClientMock,
-    options: { count: number | null; data: unknown[] | null; error: unknown }
-  ) {
-    type QueryResult = { count: number | null; data: unknown[] | null; error: unknown };
-    type QueryChain = Promise<QueryResult> & {
-      eq: (column: string, value: unknown) => QueryChain;
-      order: (column: string, options?: unknown) => QueryChain;
-      range: (from: number, to: number) => QueryChain;
-    };
-
-    const eqMock = vi.fn<(column: string, value: unknown) => QueryChain>();
-    const orderMock = vi.fn<(column: string, options?: unknown) => QueryChain>();
-    const rangeMock = vi.fn<(from: number, to: number) => QueryChain>();
-
-    const chainable: QueryChain = Object.assign(Promise.resolve(options), {
-      eq: eqMock,
-      order: orderMock,
-      range: rangeMock,
-    });
-
-    eqMock.mockReturnValue(chainable);
-    orderMock.mockReturnValue(chainable);
-    rangeMock.mockReturnValue(chainable);
-
-    const selectMock = vi.fn(
-      (_columns?: string, _options?: { count?: "exact" | null }) => chainable
-    );
-    vi.spyOn(supabase, "from").mockImplementation(() =>
-      unsafeCast<ReturnType<SupabaseClientMock["from"]>>({
-        select: selectMock,
-      })
-    );
-
-    return {
-      eqMock,
-      orderMock,
-      rangeMock,
-      selectMock,
-    };
-  }
-
   it("should list attachments from Supabase", async () => {
     // Mock Supabase query chain
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
     const mockAttachments = [
       {
         bucket_name: "attachments",
@@ -117,11 +83,11 @@ describe("/api/attachments/files", () => {
       },
     ];
 
-    const { eqMock, selectMock } = setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 1,
       data: mockAttachments,
       error: null,
-    });
+    };
 
     const mod = await import("../route");
     const req = new NextRequest(
@@ -136,8 +102,13 @@ describe("/api/attachments/files", () => {
 
     // Verify Supabase was called correctly
     expect(supabase.from).toHaveBeenCalledWith("file_attachments");
-    expect(selectMock).toHaveBeenCalledWith("*", { count: "exact" });
-    expect(eqMock).toHaveBeenCalledWith("user_id", "user-1");
+    expect(
+      hasRequest(state.requests, "GET", "/rest/v1/file_attachments", {
+        limit: "20",
+        offset: "0",
+        user_id: "eq.user-1",
+      })
+    ).toBe(true);
 
     // Verify storage signed URL generation was called
     expect(supabase.storage.from).toHaveBeenCalledWith("attachments");
@@ -170,6 +141,7 @@ describe("/api/attachments/files", () => {
 
   it("should handle pagination correctly", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
 
     // Create mock data with 30 items total (returned 20 per page)
     const mockAttachments = Array.from({ length: 20 }, (_, i) => ({
@@ -189,11 +161,11 @@ describe("/api/attachments/files", () => {
       user_id: "user-1",
     }));
 
-    setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 30, // Total 30 items
       data: mockAttachments, // Return 20 items for this page
       error: null,
-    });
+    };
 
     const mod = await import("../route");
     const req = new NextRequest(
@@ -219,12 +191,13 @@ describe("/api/attachments/files", () => {
 
   it("should filter by tripId when provided", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
 
-    const { eqMock } = setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 0,
       data: [],
       error: null,
-    });
+    };
 
     const mod = await import("../route");
     const req = new NextRequest("http://localhost/api/attachments/files?tripId=123", {
@@ -235,18 +208,26 @@ describe("/api/attachments/files", () => {
     expect(res.status).toBe(200);
 
     // Verify tripId filter was applied (as number after coercion)
-    expect(eqMock).toHaveBeenCalledWith("user_id", "user-1");
-    expect(eqMock).toHaveBeenCalledWith("trip_id", 123);
+    expect(
+      state.requests.some(
+        (r) =>
+          r.method === "GET" &&
+          r.url.startsWith("/rest/v1/file_attachments") &&
+          r.url.includes("user_id=eq.user-1") &&
+          r.url.includes("trip_id=eq.123")
+      )
+    ).toBe(true);
   });
 
   it("should filter by chatMessageId when provided", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
 
-    const { eqMock } = setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 0,
       data: [],
       error: null,
-    });
+    };
 
     const mod = await import("../route");
     const req = new NextRequest(
@@ -258,8 +239,15 @@ describe("/api/attachments/files", () => {
     expect(res.status).toBe(200);
 
     // Verify chatMessageId filter was applied (as number after coercion)
-    expect(eqMock).toHaveBeenCalledWith("user_id", "user-1");
-    expect(eqMock).toHaveBeenCalledWith("chat_message_id", 456);
+    expect(
+      state.requests.some(
+        (r) =>
+          r.method === "GET" &&
+          r.url.startsWith("/rest/v1/file_attachments") &&
+          r.url.includes("user_id=eq.user-1") &&
+          r.url.includes("chat_message_id=eq.456")
+      )
+    ).toBe(true);
   });
 
   it("should reject invalid query parameters", async () => {
@@ -279,12 +267,13 @@ describe("/api/attachments/files", () => {
 
   it("should handle Supabase query errors", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
 
-    setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: null,
       data: null,
       error: { message: "Database connection failed" },
-    });
+    };
 
     const mod = await import("../route");
     const req = new NextRequest("http://localhost/api/attachments/files", {
@@ -313,12 +302,13 @@ describe("/api/attachments/files", () => {
 
   it("should use default pagination values", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
 
-    const { rangeMock } = setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 0,
       data: [],
       error: null,
-    });
+    };
 
     const mod = await import("../route");
     // No limit or offset provided
@@ -329,8 +319,15 @@ describe("/api/attachments/files", () => {
     const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(200);
 
-    // Default pagination: offset=0, limit=20
-    expect(rangeMock).toHaveBeenCalledWith(0, 19);
+    expect(
+      state.requests.some(
+        (r) =>
+          r.method === "GET" &&
+          r.url.startsWith("/rest/v1/file_attachments") &&
+          r.url.includes("offset=0") &&
+          r.url.includes("limit=20")
+      )
+    ).toBe(true);
 
     const body = await res.json();
     expect(body.pagination.limit).toBe(20);
@@ -339,12 +336,13 @@ describe("/api/attachments/files", () => {
 
   it("should handle empty results gracefully", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
 
-    setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 0,
       data: [],
       error: null,
-    });
+    };
 
     const mod = await import("../route");
     const req = new NextRequest("http://localhost/api/attachments/files", {
@@ -367,6 +365,7 @@ describe("/api/attachments/files", () => {
 
   it("should filter out items when signed URL generation fails completely", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
     const mockAttachments = [
       {
         bucket_name: "attachments",
@@ -386,11 +385,11 @@ describe("/api/attachments/files", () => {
       },
     ];
 
-    setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 1,
       data: mockAttachments,
       error: null,
-    });
+    };
 
     // Simulate signed URL generation failure
     mockCreateSignedUrls.mockResolvedValue({
@@ -415,6 +414,7 @@ describe("/api/attachments/files", () => {
 
   it("should filter out items when individual signed URLs fail", async () => {
     const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
     const mockAttachments = [
       {
         bucket_name: "attachments",
@@ -450,11 +450,11 @@ describe("/api/attachments/files", () => {
       },
     ];
 
-    setupSupabaseQueryMock(supabase, {
+    state.selectResult = {
       count: 2,
       data: mockAttachments,
       error: null,
-    });
+    };
 
     // First file gets a URL, second file fails
     mockCreateSignedUrls.mockResolvedValue({

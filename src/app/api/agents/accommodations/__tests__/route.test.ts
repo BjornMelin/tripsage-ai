@@ -5,13 +5,12 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
   resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
@@ -79,16 +78,9 @@ vi.mock("@/lib/api/route-helpers", async () => {
 describe("/api/agents/accommodations route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setRateLimitFactoryForTests(async (_key, _identifier) => mockLimitFn());
+    setRateLimitFactoryForTests(async () => mockLimitFn());
     setSupabaseFactoryForTests(async () =>
-      unsafeCast<TypedServerSupabase>({
-        auth: {
-          getUser: async () => ({
-            data: { user: { id: "user-1" } },
-            error: null,
-          }),
-        },
-      })
+      createMockSupabaseClient({ user: { id: "user-1" } })
     );
     mockLimitFn.mockResolvedValue({
       limit: 30,

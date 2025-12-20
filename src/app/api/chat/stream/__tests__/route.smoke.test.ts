@@ -1,11 +1,10 @@
 /** @vitest-environment node */
 
 import type { ProviderResolution } from "@schemas/providers";
-import type { User } from "@supabase/supabase-js";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
 
@@ -54,20 +53,6 @@ vi.mock("@/lib/security/random", () => ({
   secureUuid: vi.fn(() => "test-uuid-123"),
 }));
 
-// Type assertions inline since vi.hoisted runs before ES module imports
-const MOCK_SUPABASE = vi.hoisted(() => {
-  const mockUser = { id: "user-1" } as unknown as User;
-
-  return {
-    auth: {
-      getUser: vi.fn(async () => ({
-        data: { user: mockUser },
-        error: null,
-      })),
-    },
-  } as unknown as TypedServerSupabase;
-});
-
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
   vi.fn(
     async (): Promise<ProviderResolution> => ({
@@ -90,6 +75,9 @@ const MOCK_RATE_LIMITER = vi.hoisted(() =>
   }))
 );
 
+const makeSupabase = (userId: string | null): TypedServerSupabase =>
+  createMockSupabaseClient({ user: userId ? { id: userId } : null });
+
 describe("/api/chat/stream route smoke", () => {
   const createDeps = (overrides?: Partial<ChatDeps>): ChatDeps => ({
     clock: { now: () => 0 },
@@ -100,7 +88,7 @@ describe("/api/chat/stream route smoke", () => {
       info: vi.fn(),
     },
     resolveProvider: MOCK_RESOLVE_PROVIDER,
-    supabase: MOCK_SUPABASE,
+    supabase: makeSupabase("user-1"),
     ...overrides,
   });
 
@@ -110,14 +98,7 @@ describe("/api/chat/stream route smoke", () => {
 
   it("returns 401 unauthenticated", async () => {
     const deps = createDeps({
-      supabase: unsafeCast<TypedServerSupabase>({
-        auth: {
-          getUser: vi.fn(async () => ({
-            data: { user: null },
-            error: { message: "Unauthorized" },
-          })),
-        },
-      }),
+      supabase: makeSupabase(null),
     });
 
     const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });

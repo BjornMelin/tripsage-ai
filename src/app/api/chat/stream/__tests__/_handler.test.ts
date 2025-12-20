@@ -3,7 +3,7 @@
 import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import type { ChatDeps, ProviderResolver } from "../_handler";
 
 type AgentUIStreamOptions = {
@@ -63,18 +63,6 @@ const createResolver =
   });
 
 /**
- * Type for the mock query builder methods used in tests.
- */
-type MockQueryBuilder = {
-  eq: ReturnType<typeof vi.fn>;
-  limit?: ReturnType<typeof vi.fn>;
-  order?: ReturnType<typeof vi.fn>;
-  select?: ReturnType<typeof vi.fn>;
-  insert?: ReturnType<typeof vi.fn>;
-  update?: ReturnType<typeof vi.fn>;
-};
-
-/**
  * Creates a mock Supabase client for testing handleChatStream functionality.
  *
  * @param userId - User ID for authentication mocking, or null for unauthenticated.
@@ -85,44 +73,15 @@ function fakeSupabase(
   userId: string | null,
   memories: string[] = []
 ): ChatDeps["supabase"] {
-  const mockQueryBuilder = (table: string): MockQueryBuilder => {
-    if (table === "memories") {
-      return {
-        eq: vi.fn().mockReturnThis(),
-        limit: vi
-          .fn()
-          .mockResolvedValue({ data: memories.map((m) => ({ content: m })) }),
-        order: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-      };
-    }
-    if (table === "chat_messages") {
-      return {
-        eq: vi.fn().mockReturnThis(),
-        insert: vi.fn(async () => ({ error: null })),
-        limit: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-      };
-    }
-    if (table === "chat_sessions") {
-      return {
-        eq: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-      };
-    }
-    return {
-      eq: vi.fn().mockReturnThis(),
-    };
-  };
-
-  return unsafeCast<ChatDeps["supabase"]>({
-    auth: {
-      getUser: vi.fn(async () => ({
-        data: { user: userId ? { id: userId } : null },
-      })),
+  return createMockSupabaseClient({
+    selectResults: {
+      memories: {
+        count: null,
+        data: memories.map((m) => ({ content: m })),
+        error: null,
+      },
     },
-    from: vi.fn(mockQueryBuilder),
+    user: userId ? { id: userId } : null,
   });
 }
 

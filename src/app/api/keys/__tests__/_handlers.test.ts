@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 import { getKeys, postKey } from "../_handlers";
 
 /**
@@ -15,18 +15,17 @@ import { getKeys, postKey } from "../_handlers";
  */
 function makeSupabase(
   userId: string | null,
-  rows: Array<Pick<Tables<"api_keys">, "service" | "created_at" | "last_used">> = []
+  rows: Array<
+    Pick<Tables<"api_keys">, "service" | "created_at" | "last_used" | "user_id">
+  > = []
 ) {
-  return unsafeCast<TypedServerSupabase>({
-    auth: {
-      getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })),
-    },
-    from: vi.fn(() => ({
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: rows, error: null }),
-      select: vi.fn().mockReturnThis(),
-    })),
-  });
+  const supabase = createMockSupabaseClient({ user: userId ? { id: userId } : null });
+  getSupabaseMockState(supabase).selectResult = {
+    count: null,
+    data: rows,
+    error: null,
+  };
+  return supabase;
 }
 
 describe("keys _handlers", () => {
@@ -67,7 +66,7 @@ describe("keys _handlers", () => {
 
   it("getKeys returns 200 for authenticated users", async () => {
     const supabase = makeSupabase("u3", [
-      { created_at: "2025-11-01", last_used: null, service: "openai" },
+      { created_at: "2025-11-01", last_used: null, service: "openai", user_id: "u3" },
     ]);
     const res = await getKeys({ supabase, userId: "u3" });
     expect(res.status).toBe(200);
@@ -76,13 +75,14 @@ describe("keys _handlers", () => {
   });
 
   it("getKeys maps query errors to VAULT_UNAVAILABLE", async () => {
-    const order = vi
-      .fn()
-      .mockResolvedValue({ data: null, error: new Error("db down") });
-    const eq = vi.fn().mockReturnValue({ order });
-    const select = vi.fn().mockReturnValue({ eq });
-    const from = vi.fn().mockReturnValue({ select });
-    const supabase = unsafeCast<TypedServerSupabase>({ from });
+    const supabase: TypedServerSupabase = createMockSupabaseClient({
+      user: { id: "u3" },
+    });
+    getSupabaseMockState(supabase).selectResult = {
+      count: null,
+      data: null,
+      error: new Error("db down"),
+    };
 
     const res = await getKeys({ supabase, userId: "u3" });
     expect(res.status).toBe(500);
