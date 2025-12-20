@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA, PHONE_SCHEMA } from "./shared/person";
+import { ISO_DATE_STRING } from "./shared/time";
 
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
@@ -22,19 +23,15 @@ export const personalInfoFormSchema = z.object({
     .max(500, { error: "Bio must be less than 500 characters" })
     .optional(),
   currency: CURRENCY_SCHEMA.optional(),
-  dateOfBirth: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Please enter a valid date" })
-    .refine(
-      (date) => {
-        const birthDate = new Date(date);
-        const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        return age >= 13 && age <= 120;
-      },
-      { error: "You must be between 13 and 120 years old" }
-    )
-    .optional(),
+  dateOfBirth: ISO_DATE_STRING.refine(
+    (date) => {
+      const birthDate = new Date(date);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      return age >= 13 && age <= 120;
+    },
+    { error: "You must be between 13 and 120 years old" }
+  ).optional(),
   displayName: z
     .string()
     .min(1, { error: "Display name is required" })

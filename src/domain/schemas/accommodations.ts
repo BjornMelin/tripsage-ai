@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
+import { ISO_DATE_STRING } from "./shared/time";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for accommodation management
@@ -62,8 +63,8 @@ export const accommodationSearchInputSchema = z
     bathrooms: z.number().nonnegative().max(10).optional(),
     bedrooms: z.number().int().min(0).max(10).optional(),
     beds: z.number().int().min(0).max(20).optional(),
-    checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    checkin: ISO_DATE_STRING,
+    checkout: ISO_DATE_STRING,
     children: z.number().int().min(0).max(16).optional(),
     currency: primitiveSchemas.isoCurrency.default("USD").optional(),
     freeCancellation: z.boolean().optional(),
@@ -210,14 +211,8 @@ export type AccommodationSearchResult = z.infer<typeof accommodationSearchOutput
  */
 export const accommodationDetailsInputSchema = z.strictObject({
   adults: z.number().int().min(1).max(16).default(1).optional(),
-  checkin: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  checkout: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  checkin: ISO_DATE_STRING.optional(),
+  checkout: ISO_DATE_STRING.optional(),
   children: z.number().int().min(0).max(16).default(0).optional(),
   infants: z.number().int().min(0).max(16).default(0).optional(),
   listingId: z.string().min(1),
@@ -248,8 +243,8 @@ export type AccommodationDetailsResult = z.infer<
  * Validates parameters for checking property availability and pricing.
  */
 export const accommodationCheckAvailabilityInputSchema = z.strictObject({
-  checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  checkIn: ISO_DATE_STRING,
+  checkOut: ISO_DATE_STRING,
   guests: z.number().int().min(1).max(16),
   priceCheckToken: z.string().min(1),
   propertyId: z.string().min(1),
@@ -298,8 +293,8 @@ export const accommodationBookingInputSchema = z
   .strictObject({
     amount: z.number().positive(), // Total amount in cents from checkAvailability
     bookingToken: z.string().min(1), // From checkAvailability
-    checkin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    checkout: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    checkin: ISO_DATE_STRING,
+    checkout: ISO_DATE_STRING,
     currency: primitiveSchemas.isoCurrency, // Currency code from checkAvailability
     guestEmail: primitiveSchemas.email,
     guestName: z.string().min(1),
