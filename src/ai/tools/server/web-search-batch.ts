@@ -98,13 +98,14 @@ export const webSearchBatch = createAiTool({
         const identifier = `user:${hashIdentifier(normalizeIdentifier(userId))}`;
         const rr = await rl.limit(identifier);
         if (!rr.success) {
-          const err = new Error("web_search_rate_limited");
-          (err as Error & { meta?: unknown }).meta = rr;
-          throw err;
+          throw createToolError(TOOL_ERROR_CODES.webSearchRateLimited, undefined, rr);
         }
       }
     } catch (e) {
-      if (e instanceof Error && e.message.startsWith("web_search_rate_limited"))
+      if (
+        e instanceof Error &&
+        (e as { code?: unknown }).code === TOOL_ERROR_CODES.webSearchRateLimited
+      )
         throw e;
       webSearchBatchLogger.error("rate_limiter_error", {
         error: e instanceof Error ? e.message : String(e),
@@ -195,10 +196,10 @@ export const webSearchBatch = createAiTool({
             if (rest.scrapeOptions != null) body.scrapeOptions = rest.scrapeOptions;
             if (rest.sources != null) body.sources = rest.sources;
             if (rest.tbs != null) body.tbs = rest.tbs;
-            if (rest.timeoutMs != null) body.timeout = rest.timeoutMs;
             const startedAt = Date.now();
             // Clamp timeouts to safe bounds to avoid too-short/unbounded requests and align with provider expectations.
             const timeoutMs = Math.min(20000, Math.max(5000, rest.timeoutMs ?? 12000));
+            body.timeout = timeoutMs;
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             let res: Response;
