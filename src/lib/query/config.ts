@@ -10,6 +10,7 @@ export const staleTimes = {
   // App-wide feature groups
   categories: 60 * 60 * 1000, // 1 hour - typically stable reference data
   chat: 30 * 1000, // 30 seconds - conversation context
+  chatSession: 10 * 60 * 1000, // 10 minutes - single chat session metadata
   configuration: 60 * 60 * 1000, // 1 hour - app/config data changes rarely
   currency: 60 * 60 * 1000, // 1 hour - exchange rates rarely change
   dashboard: 30 * 1000, // 30 seconds - fast-changing metrics
@@ -26,6 +27,7 @@ export const staleTimes = {
 
 /** Cache times for different retention periods (ms). */
 export const cacheTimes = {
+  extended: 30 * 60 * 1000, // 30 minutes
   long: 60 * 60 * 1000, // 1 hour
   medium: 10 * 60 * 1000, // 10 minutes
   short: 5 * 60 * 1000, // 5 minutes

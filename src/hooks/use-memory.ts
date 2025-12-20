@@ -21,7 +21,7 @@ import type {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
-import { staleTimes } from "@/lib/query/config";
+import { cacheTimes, staleTimes } from "@/lib/query/config";
 import { queryKeys } from "@/lib/query-keys";
 
 /**
@@ -35,7 +35,7 @@ export function useMemoryContext(userId: string, enabled = true) {
 
   return useQuery<MemoryContextResponse, AppError>({
     enabled: enabled && !!userId,
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<MemoryContextResponse>(
@@ -114,7 +114,7 @@ export function useMemoryInsights(userId: string, enabled = true) {
 
   return useQuery<MemoryInsightsResponse, AppError>({
     enabled: enabled && !!userId,
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: cacheTimes.extended,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<MemoryInsightsResponse>(
@@ -203,7 +203,7 @@ export function useMemoryStats(userId: string, enabled = true) {
     AppError
   >({
     enabled: enabled && !!userId,
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: cacheTimes.extended,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<{

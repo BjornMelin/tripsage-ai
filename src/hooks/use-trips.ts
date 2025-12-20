@@ -237,7 +237,7 @@ interface TripRealtimeStatus {
 
 function useCurrentUserId(supabase: TypedSupabaseClient): string | null {
   const { data, error } = useQuery<string | null>({
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: cacheTimes.extended,
     queryFn: async () => {
       const { data: authData } = await supabase.auth.getUser();
       return authData.user?.id ?? null;

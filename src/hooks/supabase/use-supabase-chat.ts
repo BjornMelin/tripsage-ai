@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
+import { staleTimes } from "@/lib/query/config";
 import { useSupabase, useSupabaseRequired } from "@/lib/supabase";
 import type {
   ChatMessage,
@@ -115,7 +116,12 @@ export function useSupabaseChat() {
         return data as ChatSession[];
       };
 
-      return { enabled: !!userId, queryFn, queryKey, staleTime: 1000 * 60 * 5 };
+      return {
+        enabled: !!userId,
+        queryFn,
+        queryKey,
+        staleTime: staleTimes.user,
+      };
     },
     [supabase, userId]
   );
@@ -137,7 +143,12 @@ export function useSupabaseChat() {
         return data as ChatSession;
       };
 
-      return { enabled: !!sessionId, queryFn, queryKey, staleTime: 1000 * 60 * 10 };
+      return {
+        enabled: !!sessionId,
+        queryFn,
+        queryKey,
+        staleTime: staleTimes.chatSession,
+      };
     },
     [supabase]
   );
@@ -179,7 +190,7 @@ export function useSupabaseChat() {
         };
       },
       queryKey: ["chat-messages", sessionId],
-      staleTime: 1000 * 30, // 30 seconds for fresh messages
+      staleTime: staleTimes.chat,
     });
   };
 
@@ -626,6 +637,6 @@ export function useChatStats() {
       };
     },
     queryKey: ["chat-stats", userId],
-    staleTime: 1000 * 60 * 15, // 15 minutes
+    staleTime: staleTimes.stats,
   });
 }
