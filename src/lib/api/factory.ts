@@ -7,15 +7,20 @@
 
 import "server-only";
 
+import type { AgentDependencies } from "@ai/agents/types";
+import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
+import type { Agent, ToolSet } from "ai";
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
+import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import {
   checkAuthentication,
   errorResponse,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
+  requireUserId,
   unauthorizedResponse,
   withRequestSpan,
 } from "@/lib/api/route-helpers";
@@ -34,6 +39,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { sanitizePathnameForTelemetry } from "@/lib/telemetry/route-key";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const apiFactoryLogger = createServerLogger("api.factory");
 
@@ -184,6 +190,7 @@ function defaultDegradedModeForRateLimitKey(key: RouteRateLimitKey): DegradedMod
   }
   if (key.startsWith("auth:")) return "fail_closed";
   if (key.startsWith("keys:")) return "fail_closed";
+  if (key.startsWith("agents:")) return "fail_closed";
   return "fail_open";
 }
 
@@ -595,4 +602,135 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       return await executeHandler();
     };
   };
+}
+
+/**
+ * Represents the output specification for an AI SDK Agent.
+ *
+ * This mirrors the internal `Output<OUTPUT, PARTIAL>` interface from the AI SDK.
+ * We define it here because the SDK exports `Output` as a namespace with factory
+ * functions (e.g., `Output.text()`, `Output.object()`) rather than as a type.
+ *
+ * The Agent interface uses `OUTPUT extends Output` internally, but since we can't
+ * import that type directly, we provide a compatible interface for type safety
+ * in our generic factory functions.
+ *
+ * @see https://sdk.vercel.ai/docs/reference/ai-sdk-core/agent
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AgentOutput<TOutput = any, TPartial = any> = {
+  responseFormat: PromiseLike<
+    { type: "text" } | { type: "json"; schema?: unknown } | undefined
+  >;
+  parseCompleteOutput: (options: { text: string }, context: unknown) => Promise<TOutput>;
+  parsePartialOutput: (options: {
+    text: string;
+  }) => Promise<{ partial: TPartial } | undefined>;
+};
+
+type AgentRouteFactoryResult<
+  CallOptions = never,
+  Tools extends ToolSet = Record<string, never>,
+  OutputType extends AgentOutput = AgentOutput,
+> = {
+  agent: Agent<CallOptions, Tools, OutputType>;
+  defaultMessages: unknown[];
+};
+
+type CreateAgentRouteOptions<
+  SchemaType extends z.ZodType,
+  CallOptions = never,
+  Tools extends ToolSet = Record<string, never>,
+  OutputType extends AgentOutput = AgentOutput,
+> = {
+  agentFactory: (
+    deps: AgentDependencies,
+    agentConfig: AgentConfig,
+    input: z.infer<SchemaType>
+  ) =>
+    | AgentRouteFactoryResult<CallOptions, Tools, OutputType>
+    | Promise<AgentRouteFactoryResult<CallOptions, Tools, OutputType>>;
+  agentType: AgentType;
+  botId?: BotIdGuardConfig;
+  getModelHint?: (params: {
+    agentConfig: AgentConfig;
+    req: NextRequest;
+  }) => string | undefined;
+  rateLimit: RouteRateLimitKey;
+  schema: SchemaType;
+  telemetry: string;
+};
+
+/**
+ * Creates a standardized POST route handler for AI ToolLoopAgent endpoints.
+ *
+ * Centralizes auth, request validation, agent config + provider resolution, and
+ * AI SDK v6 streaming response creation so agent routes stay thin and consistent.
+ */
+export function createAgentRoute<
+  SchemaType extends z.ZodType,
+  CallOptions = never,
+  Tools extends ToolSet = Record<string, never>,
+  OutputType extends AgentOutput = AgentOutput,
+>(
+  options: CreateAgentRouteOptions<SchemaType, CallOptions, Tools, OutputType>
+): (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
+  return withApiGuards({
+    auth: true,
+    botId: options.botId,
+    rateLimit: options.rateLimit,
+    schema: options.schema,
+    telemetry: options.telemetry,
+  })(async (req, { user }, input) => {
+    const userResult = requireUserId(user);
+    if ("error" in userResult) return userResult.error;
+    const { userId } = userResult;
+
+    return await withTelemetrySpan(
+      "agent.route",
+      {
+        attributes: {
+          agentType: options.agentType,
+          rateLimit: options.rateLimit,
+          telemetry: options.telemetry,
+        },
+      },
+      async (span) => {
+        const resolvedConfig = await resolveAgentConfig(options.agentType);
+        const agentConfig = resolvedConfig.config;
+
+        const modelHint =
+          options.getModelHint?.({ agentConfig, req }) ?? agentConfig.model;
+
+        const { resolveProvider } = await import("@ai/models/registry");
+        const { model, modelId, provider } = await resolveProvider(userId, modelHint);
+        span.setAttribute("modelId", modelId);
+        span.setAttribute("provider", provider);
+
+        const deps = {
+          identifier: userId,
+          model,
+          modelId,
+          userId,
+        } satisfies AgentDependencies;
+
+        const { agent, defaultMessages } = await options.agentFactory(
+          deps,
+          agentConfig,
+          input
+        );
+
+        const { createAgentUIStreamResponse } = await import("ai");
+
+        const { createErrorHandler } = await import("@/lib/agents/error-recovery");
+
+        return createAgentUIStreamResponse({
+          abortSignal: req.signal,
+          agent,
+          messages: defaultMessages,
+          onError: createErrorHandler(),
+        });
+      }
+    );
+  });
 }

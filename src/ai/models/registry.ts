@@ -17,13 +17,18 @@ import {
   getUserGatewayBaseUrl,
   touchUserApiKey,
 } from "@/lib/supabase/rpc";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+const providerRegistryLogger = createServerLogger("ai.providers");
 
 /**
  * Provider preference order for BYOK key resolution.
  * Earlier providers in this array take precedence when multiple keys are available.
  */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
+
+const DEFAULT_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v1";
 
 /**
  * Extracts the host from a URL string.
@@ -39,6 +44,77 @@ function extractHost(url: string | undefined): string | undefined {
     // ignore parse errors for malformed URLs
     return undefined;
   }
+}
+
+type GatewayBaseUrlSource = "default" | "invalid_user_fallback" | "user";
+
+function isPrivateGatewayHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+
+  if (host === "localhost") return true;
+  if (host.endsWith(".local")) return true;
+
+  const ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(host);
+  if (ipv4Match) {
+    const octets = [
+      Number(ipv4Match[1]),
+      Number(ipv4Match[2]),
+      Number(ipv4Match[3]),
+      Number(ipv4Match[4]),
+    ];
+    if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+      return true;
+    }
+    const [a, b] = octets;
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+  }
+
+  const trimmed = host.replace(/^\[|\]$/gu, "");
+  if (trimmed === "::1") return true;
+  if (trimmed.startsWith("fc") || trimmed.startsWith("fd")) return true; // unique local
+  if (trimmed.startsWith("fe80")) return true; // link-local
+
+  return false;
+}
+
+function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
+  baseUrl: string;
+  source: GatewayBaseUrlSource;
+} {
+  if (!rawBaseUrl) {
+    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "default" };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(rawBaseUrl);
+  } catch {
+    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "invalid_url" });
+    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+  }
+
+  if (parsed.protocol !== "https:") {
+    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "non_https" });
+    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+  }
+
+  if (parsed.username || parsed.password) {
+    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "credentials" });
+    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+  }
+
+  if (isPrivateGatewayHost(parsed.hostname)) {
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "private_host",
+    });
+    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+  }
+
+  return { baseUrl: parsed.toString(), source: "user" };
 }
 
 /**
@@ -112,8 +188,8 @@ export async function resolveProvider(
   // 0) Per-user Gateway key (if present): highest precedence
   const userGatewayKey = await getUserApiKey(userId, "gateway");
   if (userGatewayKey) {
-    const baseUrl =
-      (await getUserGatewayBaseUrl(userId)) ?? "https://ai-gateway.vercel.sh/v1";
+    const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
+    const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
     const client = createGateway({
       apiKey: userGatewayKey,
       // biome-ignore lint/style/useNamingConvention: provider option name
@@ -125,7 +201,7 @@ export async function resolveProvider(
       {
         attributes: {
           baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
-          baseUrlSource: "user",
+          baseUrlSource: source,
           modelId,
           path: "user-gateway",
           provider: "gateway",
@@ -150,7 +226,12 @@ export async function resolveProvider(
     if (provider === "openai") {
       const openai = createOpenAI({ apiKey });
       // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch(() => undefined);
+      touchUserApiKey(userId, provider).catch((error) => {
+        providerRegistryLogger.warn("touch_user_api_key_failed", {
+          errorName: error instanceof Error ? error.name : "unknown_error",
+          provider,
+        });
+      });
       return await withTelemetrySpan(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
@@ -168,7 +249,12 @@ export async function resolveProvider(
         baseURL: "https://openrouter.ai/api/v1",
       });
       // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch(() => undefined);
+      touchUserApiKey(userId, provider).catch((error) => {
+        providerRegistryLogger.warn("touch_user_api_key_failed", {
+          errorName: error instanceof Error ? error.name : "unknown_error",
+          provider,
+        });
+      });
       return await withTelemetrySpan(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
@@ -182,7 +268,12 @@ export async function resolveProvider(
     if (provider === "anthropic") {
       const a = createAnthropic({ apiKey });
       // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch(() => undefined);
+      touchUserApiKey(userId, provider).catch((error) => {
+        providerRegistryLogger.warn("touch_user_api_key_failed", {
+          errorName: error instanceof Error ? error.name : "unknown_error",
+          provider,
+        });
+      });
       return await withTelemetrySpan(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },
@@ -196,7 +287,12 @@ export async function resolveProvider(
     if (provider === "xai") {
       const client = createXai({ apiKey });
       // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch(() => undefined);
+      touchUserApiKey(userId, provider).catch((error) => {
+        providerRegistryLogger.warn("touch_user_api_key_failed", {
+          errorName: error instanceof Error ? error.name : "unknown_error",
+          provider,
+        });
+      });
       return await withTelemetrySpan(
         "providers.resolve",
         { attributes: { modelId, path: "user-provider", provider } },

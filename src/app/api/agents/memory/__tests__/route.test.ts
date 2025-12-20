@@ -1,7 +1,10 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -59,6 +62,12 @@ describe("/api/agents/memory route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 30,
+      remaining: 29,
+      reset: Date.now() + 60000,
+      success: true,
+    }));
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -67,6 +76,7 @@ describe("/api/agents/memory route", () => {
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     setSupabaseFactoryForTests(null);
   });
 

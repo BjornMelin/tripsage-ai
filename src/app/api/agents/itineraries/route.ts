@@ -1,67 +1,15 @@
-/**
- * @fileoverview Itinerary agent route handler using AI SDK v6 ToolLoopAgent.
- * - Supabase SSR auth → userId
- * - Provider resolution (BYOK/Gateway)
- * - Guardrails (cache, ratelimit, telemetry) around tools
- * - AI SDK v6 ToolLoopAgent with createAgentUIStreamResponse
- */
-
 import "server-only";
 
 import { createItineraryAgent } from "@ai/agents";
-import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
-import { createAgentUIStreamResponse } from "ai";
-import type { NextRequest } from "next/server";
-import { resolveAgentConfig } from "@/lib/agents/config-resolver";
-import { createErrorHandler } from "@/lib/agents/error-recovery";
-import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, requireUserId, validateSchema } from "@/lib/api/route-helpers";
+import { createAgentRoute } from "@/lib/api/factory";
 
 export const maxDuration = 60;
 
-const RequestSchema = agentSchemas.itineraryPlanRequestSchema;
-
-/**
- * POST /api/agents/itineraries
- *
- * Validates request, resolves provider, and streams ToolLoopAgent response.
- */
-export const POST = withApiGuards({
-  auth: true,
+export const POST = createAgentRoute({
+  agentFactory: createItineraryAgent,
+  agentType: "itineraryAgent",
   rateLimit: "agents:itineraries",
+  schema: agentSchemas.itineraryPlanRequestSchema,
   telemetry: "agent.itineraryPlanning",
-})(async (req: NextRequest, { user }) => {
-  const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
-
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-
-  const validation = validateSchema(RequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
-  const body = validation.data;
-
-  const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const resolved = await resolveAgentConfig("itineraryAgent");
-  const agentConfig = resolved.config;
-  const resolvedModelHint = agentConfig.model ?? modelHint;
-  const { model, modelId } = await resolveProvider(userId, resolvedModelHint);
-
-  const { agent, defaultMessages } = createItineraryAgent(
-    { identifier: userId, model, modelId },
-    agentConfig,
-    body
-  );
-
-  return createAgentUIStreamResponse({
-    agent,
-    messages: defaultMessages,
-    onError: createErrorHandler(),
-  });
 });
