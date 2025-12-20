@@ -108,6 +108,9 @@ jobs:
       - name: AI tool guardrails check
         run: pnpm ai-tools:check
 
+      - name: Dependency cycle check (AI agents)
+        run: pnpm deps:cycles
+
       - name: Production build
         run: pnpm build
         env:
