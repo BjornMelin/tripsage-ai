@@ -5,6 +5,7 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import type { FlightModelOutput } from "@ai/tools/schemas/flights";
 import {
   createToolError,
   isToolError,
@@ -12,7 +13,7 @@ import {
 } from "@ai/tools/server/errors";
 import { searchFlightsService } from "@domain/flights/service";
 import type { FlightSearchRequest, FlightSearchResult } from "@schemas/flights";
-import { flightSearchRequestSchema } from "@schemas/flights";
+import { flightSearchRequestSchema, flightSearchResultSchema } from "@schemas/flights";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 
@@ -97,4 +98,44 @@ export const searchFlights = createAiTool<SearchFlightsInput, SearchFlightsResul
   },
   inputSchema: searchFlightsInputSchema,
   name: "searchFlights",
+  outputSchema: flightSearchResultSchema,
+  /**
+   * Simplifies flight results for model consumption to reduce token usage.
+   * Strips sources, bookingUrl, schemaVersion, and simplifies segment details.
+   */
+  toModelOutput: (result): FlightModelOutput => ({
+    currency: result.currency,
+    fromCache: result.fromCache,
+    itineraries: result.itineraries.slice(0, 10).map((itinerary) => ({
+      id: itinerary.id,
+      price: itinerary.price,
+      segments: itinerary.segments.map((seg) => ({
+        carrier: seg.carrier,
+        departure: seg.departure,
+        destination: seg.destination,
+        flightNumber: seg.flightNumber,
+        origin: seg.origin,
+      })),
+    })),
+    itineraryCount: result.itineraries.length,
+    offerCount: result.offers.length,
+    offers: result.offers.slice(0, 5).map((offer) => ({
+      id: offer.id,
+      price: offer.price.amount,
+      provider: offer.provider,
+      slices: offer.slices.map((slice) => ({
+        cabinClass: slice.cabinClass,
+        segmentCount: slice.segments.length,
+        segments: slice.segments.slice(0, 2).map((seg) => ({
+          carrier: seg.carrier,
+          departureTime: seg.departureTime,
+          destination: seg.destination.iata,
+          flightNumber: seg.flightNumber,
+          origin: seg.origin.iata,
+        })),
+      })),
+    })),
+    provider: result.provider,
+  }),
+  validateOutput: true,
 });

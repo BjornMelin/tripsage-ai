@@ -38,6 +38,7 @@
     "test:analyze": "pnpm ops test analyze failures",
     "test:analyze:all": "pnpm ops test analyze all",
     "boundary:check": "node scripts/check-boundaries.mjs",
+    "ai-tools:check": "node scripts/check-ai-tools.mjs",
     "check:no-new-unknown-casts": "node scripts/check-no-new-unknown-casts.mjs",
     "check:no-unknown-casts": "node scripts/check-no-unknown-casts.mjs"
   },

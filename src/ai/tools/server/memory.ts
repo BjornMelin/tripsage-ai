@@ -11,7 +11,9 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import {
   addConversationMemoryInputSchema,
+  addConversationMemoryOutputSchema,
   searchUserMemoriesInputSchema,
+  searchUserMemoriesOutputSchema,
 } from "@schemas/memory";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import { nowIso, secureUuid } from "@/lib/security/random";
@@ -108,6 +110,8 @@ export const addConversationMemory = createAiTool({
   },
   inputSchema: addConversationMemoryInputSchema,
   name: "addConversationMemory",
+  outputSchema: addConversationMemoryOutputSchema,
+  validateOutput: true,
 });
 
 /**
@@ -157,4 +161,6 @@ export const searchUserMemories = createAiTool({
   },
   inputSchema: searchUserMemoriesInputSchema,
   name: "searchUserMemories",
+  outputSchema: searchUserMemoriesOutputSchema,
+  validateOutput: true,
 });

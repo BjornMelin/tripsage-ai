@@ -347,11 +347,12 @@ if (!result.success) {
 ### Tool Definition
 
 ```typescript
-import { tool } from "ai";
+import { createAiTool } from "@ai/lib/tool-factory";
 
-export const webSearchTool = tool({
+export const webSearchTool = createAiTool({
+  name: "webSearch",
   description: "Search the web for current information",
-  parameters: webSearchSchema,
+  inputSchema: webSearchSchema,
   execute: async (args) => {
     // Use temperature: 0 for deterministic tool outputs
     return await callAIWithTool({ ...args, temperature: 0 });
@@ -360,6 +361,7 @@ export const webSearchTool = tool({
 ```
 
 **Temperature:** Tool calls use `temperature: 0`, creative tasks use `temperature: 0.7-1.0`
+**Guardrails:** Server tools should use `createAiTool` with cache/rateLimit/telemetry guardrails (see AI Tools guide).
 
 **Zod v4 Migration:** `z.iso.datetime()` → `z.string().datetime()`, `message:` → `error:`, avoid deprecated APIs
 

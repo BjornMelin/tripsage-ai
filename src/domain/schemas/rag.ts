@@ -191,6 +191,26 @@ export const ragSearchInputSchema = z.object({
 /** TypeScript type for RAG search tool input. */
 export type RagSearchInput = z.infer<typeof ragSearchInputSchema>;
 
+// ===== TOOL OUTPUT SCHEMAS =====
+// Schemas for RAG tool output validation
+
+export const ragSearchToolResultSchema = z.object({
+  chunkIndex: z.number().int().nonnegative(),
+  content: z.string(),
+  metadata: ragMetadataSchema,
+  namespace: ragNamespaceSchema,
+  score: z.number(),
+  sourceId: z.string().nullable(),
+});
+
+export const ragSearchToolOutputSchema = z.object({
+  latencyMs: z.number().nonnegative(),
+  results: z.array(ragSearchToolResultSchema),
+  total: z.number().int().nonnegative(),
+});
+
+export type RagSearchToolOutput = z.infer<typeof ragSearchToolOutputSchema>;
+
 // ===== INTERNAL SCHEMAS =====
 // Schemas for internal RAG operations
 

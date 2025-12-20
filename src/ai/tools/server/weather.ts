@@ -7,7 +7,7 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import {
   getCurrentWeatherInputSchema,
-  type WEATHER_RESULT_SCHEMA,
+  WEATHER_RESULT_SCHEMA,
 } from "@ai/tools/schemas/weather";
 import type { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -243,4 +243,6 @@ export const getCurrentWeather = createAiTool<GetCurrentWeatherInput, WeatherRes
   },
   inputSchema: getCurrentWeatherInputSchema,
   name: "getCurrentWeather",
+  outputSchema: WEATHER_RESULT_SCHEMA,
+  validateOutput: true,
 });

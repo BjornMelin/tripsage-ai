@@ -8,7 +8,12 @@
 
 import "server-only";
 
-import { travelAdvisoryInputSchema } from "@ai/tools/schemas/travel-advisory";
+import { createAiTool } from "@ai/lib/tool-factory";
+import {
+  travelAdvisoryInputSchema,
+  travelAdvisoryOutputSchema,
+} from "@ai/tools/schemas/travel-advisory";
+import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { SafetyResult } from "@ai/tools/server/travel-advisory/providers";
 import {
   getDefaultProvider,
@@ -16,12 +21,9 @@ import {
 } from "@ai/tools/server/travel-advisory/providers";
 import { createStateDepartmentProvider } from "@ai/tools/server/travel-advisory/providers/state-department";
 import { mapToCountryCode } from "@ai/tools/server/travel-advisory/utils";
-import type { ToolCallOptions } from "ai";
-import { tool } from "ai";
+import type { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
-import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 // Initialize and register the State Department provider
 const stateDepartmentProvider = createStateDepartmentProvider();
@@ -89,63 +91,70 @@ async function fetchSafetyScores(
  * @returns Safety scores and advisory information.
  */
 
-export const getTravelAdvisory = tool({
+type TravelAdvisoryInput = z.infer<typeof travelAdvisoryInputSchema>;
+
+type TravelAdvisoryResult = z.infer<typeof travelAdvisoryOutputSchema>;
+
+export const getTravelAdvisory = createAiTool<
+  TravelAdvisoryInput,
+  TravelAdvisoryResult
+>({
   description:
     "Get travel advisory and safety scores for a destination using US State Department Travel Advisories API. Accepts country names or ISO country codes (e.g., 'United States', 'US', 'France', 'FR').",
-  execute: async (params, _callOptions?: ToolCallOptions) => {
+  execute: async (params) => {
     // Validate input at boundary (AI SDK validates, but ensure for direct calls)
     const validatedParams = travelAdvisoryInputSchema.parse(params);
     const mappedCountryCode = mapToCountryCode(validatedParams.destination);
-    return await withTelemetrySpan(
-      "tool.travel_advisory.get",
-      {
-        attributes: {
-          countryCode: mappedCountryCode ?? "unknown",
-          destinationLength: validatedParams.destination.length,
-          "tool.name": "getTravelAdvisory",
-        },
-      },
-      async () => {
-        const normalizedDestination = validatedParams.destination.trim().toLowerCase();
-        const cacheKey = `travel_advisory:v1:${hashInputForCache(normalizedDestination)}`;
-
-        // Check cache (7d = 604800 seconds)
-        const cached = await getCachedJson<SafetyResult>(cacheKey);
-        if (cached) {
-          return {
-            ...cached,
-            fromCache: true,
-          } as const;
-        }
-
-        // Fetch from API (pass pre-computed country code to avoid redundant mapping)
-        const result = await fetchSafetyScores(
-          validatedParams.destination,
-          mappedCountryCode
-        );
-
-        if (!result) {
-          // Fallback to stub if API unavailable or country not found
-          return {
-            categories: [],
-            destination: validatedParams.destination,
-            fromCache: false,
-            overallScore: 75,
-            provider: "stub",
-            summary:
-              "Safety information not available. Data provided by U.S. Department of State.",
-          } as const;
-        }
-
-        // Cache results (7d = 604800 seconds)
-        await setCachedJson(cacheKey, result, 604800);
-
-        return {
-          ...result,
-          fromCache: false,
-        } as const;
-      }
+    // Fetch from API (pass pre-computed country code to avoid redundant mapping)
+    const result = await fetchSafetyScores(
+      validatedParams.destination,
+      mappedCountryCode
     );
+
+    if (!result) {
+      // Fallback to stub if API unavailable or country not found
+      return {
+        categories: [],
+        destination: validatedParams.destination,
+        fromCache: false,
+        overallScore: 75,
+        provider: "stub",
+        summary:
+          "Safety information not available. Data provided by U.S. Department of State.",
+      } as const;
+    }
+
+    return {
+      ...result,
+      fromCache: false,
+    } as const;
+  },
+  guardrails: {
+    cache: {
+      key: (params) =>
+        `v1:${hashInputForCache(params.destination.trim().toLowerCase())}`,
+      namespace: "travel_advisory",
+      onHit: (cached) => ({
+        ...cached,
+        fromCache: true,
+      }),
+      ttlSeconds: 60 * 60 * 24 * 7,
+    },
+    rateLimit: {
+      errorCode: TOOL_ERROR_CODES.toolRateLimited,
+      limit: 20,
+      prefix: "ratelimit:tools:travel-advisory",
+      window: "1 m",
+    },
+    telemetry: {
+      attributes: (params) => ({
+        countryCode: mapToCountryCode(params.destination) ?? "unknown",
+        destinationLength: params.destination.length,
+      }),
+    },
   },
   inputSchema: travelAdvisoryInputSchema,
+  name: "getTravelAdvisory",
+  outputSchema: travelAdvisoryOutputSchema,
+  validateOutput: true,
 });

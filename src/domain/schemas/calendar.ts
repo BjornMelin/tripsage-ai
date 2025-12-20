@@ -379,3 +379,66 @@ export const exportItineraryToIcsInputSchema = z.strictObject({
     .describe("List of calendar events to export"),
   timezone: z.string().nullable().describe("Timezone for the exported calendar"),
 });
+
+// ===== TOOL OUTPUT SCHEMAS =====
+// Schemas for calendar tool output validation
+
+/**
+ * Schema for createCalendarEvent tool output.
+ */
+export const createCalendarEventOutputSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string(),
+    success: z.literal(false),
+  }),
+  z.object({
+    end: eventDateTimeSchema,
+    eventId: z.string(),
+    htmlLink: primitiveSchemas.url.optional(),
+    start: eventDateTimeSchema,
+    success: z.literal(true),
+    summary: z.string().optional(),
+  }),
+]);
+
+/**
+ * Schema for getAvailability tool output.
+ */
+export const getAvailabilityOutputSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string(),
+    success: z.literal(false),
+  }),
+  z.object({
+    calendars: z.array(
+      z.object({
+        busy: z.array(
+          z.object({
+            end: primitiveSchemas.isoDateTime,
+            start: primitiveSchemas.isoDateTime,
+          })
+        ),
+        calendarId: z.string(),
+      })
+    ),
+    success: z.literal(true),
+    timeMax: primitiveSchemas.isoDateTime,
+    timeMin: primitiveSchemas.isoDateTime,
+  }),
+]);
+
+/**
+ * Schema for exportItineraryToIcs tool output.
+ */
+export const exportItineraryToIcsOutputSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string(),
+    success: z.literal(false),
+  }),
+  z.object({
+    calendarName: z.string(),
+    eventCount: z.number().int().nonnegative(),
+    icsContent: z.string(),
+    success: z.literal(true),
+  }),
+]);

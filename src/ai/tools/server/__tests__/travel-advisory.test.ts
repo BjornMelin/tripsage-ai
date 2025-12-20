@@ -23,7 +23,12 @@ function getUpstashCache(): ReturnType<typeof buildUpstashCacheMock> {
 }
 
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name: string, _options, fn) => fn()),
+  withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
+    fn({
+      addEvent: vi.fn(),
+      setAttribute: vi.fn(),
+    })
+  ),
 }));
 
 describe("getTravelAdvisory", () => {

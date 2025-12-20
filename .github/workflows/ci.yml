@@ -105,6 +105,9 @@ jobs:
       - name: Architecture boundary checks
         run: pnpm boundary:check
 
+      - name: AI tool guardrails check
+        run: pnpm ai-tools:check
+
       - name: Production build
         run: pnpm build
         env:

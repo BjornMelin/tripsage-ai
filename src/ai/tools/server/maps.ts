@@ -2,13 +2,18 @@
  * @fileoverview Google Maps tools: geocode, distance matrix.
  *
  * Uses centralized client functions with retry logic and Zod validation.
- * Distance matrix migrated from legacy API to Routes API computeRouteMatrix.
+ * Distance matrix uses Google Routes API computeRouteMatrix.
  */
 
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
-import { distanceMatrixInputSchema, geocodeInputSchema } from "@ai/tools/schemas/maps";
+import {
+  distanceMatrixInputSchema,
+  distanceMatrixOutputSchema,
+  geocodeInputSchema,
+  geocodeOutputSchema,
+} from "@ai/tools/schemas/maps";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import {
   upstreamGeocodeResponseSchema,
@@ -91,6 +96,8 @@ export const geocode = createAiTool({
   },
   inputSchema: geocodeInputSchema,
   name: "geocode",
+  outputSchema: geocodeOutputSchema,
+  validateOutput: true,
 });
 
 /**
@@ -161,13 +168,13 @@ function formatDistance(
 /**
  * Tool for computing distances between origins and destinations.
  *
- * Uses Google Routes API computeRouteMatrix (migrated from deprecated Distance Matrix API).
- * Geocodes addresses to coordinates, computes route matrix, and returns legacy-compatible format.
+ * Uses Google Routes API computeRouteMatrix.
+ * Geocodes addresses to coordinates and returns normalized route matrix entries.
  *
  * @param origins Array of origin addresses.
  * @param destinations Array of destination addresses.
  * @param units Distance units ("metric" or "imperial").
- * @returns Promise resolving to distance matrix in legacy format for backward compatibility.
+ * @returns Promise resolving to distance matrix entries.
  */
 export const distanceMatrix = createAiTool({
   description:
@@ -267,38 +274,38 @@ export const distanceMatrix = createAiTool({
       throw new Error(`Invalid response from Routes API: ${JSON.stringify(zodError)}`);
     }
 
-    // Transform Routes API response to legacy Distance Matrix format
     const entries = parseResult.data;
 
-    // Pre-index entries for O(1) lookup (avoids O(n²) find() in nested loops)
-    const entryMap = new Map<string, (typeof entries)[number]>();
-    for (const e of entries) {
-      entryMap.set(`${e.originIndex}:${e.destinationIndex}`, e);
-    }
-
-    const rows = origins.map((_, originIdx) => ({
-      elements: destinations.map((_, destIdx) => {
-        const entry = entryMap.get(`${originIdx}:${destIdx}`);
-        const isSuccess = entry && entry.condition === "ROUTE_EXISTS";
-        if (!isSuccess) {
-          return { status: "ZERO_RESULTS" };
-        }
-        return {
-          distance: formatDistance(entry.distanceMeters, units),
-          duration: formatDuration(entry.duration),
-          status: "OK",
-        };
-      }),
-    }));
-
-    // Return legacy-compatible format (snake_case for backward compatibility)
     return {
-      // biome-ignore lint/style/useNamingConvention: legacy Distance Matrix API format
-      destination_addresses: destinations,
-      // biome-ignore lint/style/useNamingConvention: legacy Distance Matrix API format
-      origin_addresses: origins,
-      rows,
-      status: "OK",
+      destinations,
+      entries: entries
+        .map((entry) => {
+          const isSuccess = entry.condition === "ROUTE_EXISTS";
+          const distanceMeters =
+            isSuccess && typeof entry.distanceMeters === "number"
+              ? entry.distanceMeters
+              : null;
+          const durationValue =
+            isSuccess && entry.duration ? formatDuration(entry.duration) : null;
+          const distanceValue =
+            distanceMeters !== null ? formatDistance(distanceMeters, units) : null;
+
+          return {
+            destinationIndex: entry.destinationIndex,
+            distanceMeters,
+            distanceText: distanceValue?.text ?? null,
+            durationSeconds: durationValue?.value ?? null,
+            durationText: durationValue?.text ?? null,
+            originIndex: entry.originIndex,
+            status: isSuccess ? "OK" : "ZERO_RESULTS",
+          };
+        })
+        .sort(
+          (a, b) =>
+            a.originIndex - b.originIndex || a.destinationIndex - b.destinationIndex
+        ),
+      origins,
+      units,
     };
   },
   guardrails: {
@@ -321,4 +328,6 @@ export const distanceMatrix = createAiTool({
   },
   inputSchema: distanceMatrixInputSchema,
   name: "distanceMatrix",
+  outputSchema: distanceMatrixOutputSchema,
+  validateOutput: true,
 });

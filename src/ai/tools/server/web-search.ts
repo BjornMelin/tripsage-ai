@@ -84,6 +84,21 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
   },
   inputSchema: webSearchInputSchema,
   name: "webSearch",
+  outputSchema: WEB_SEARCH_OUTPUT_SCHEMA,
+  /**
+   * Simplifies search results for model consumption to reduce token usage.
+   * Strips snippets, publishedAt dates, and limits results to top 10.
+   */
+  toModelOutput: (result) => ({
+    fromCache: result.fromCache,
+    resultCount: result.results.length,
+    results: result.results.slice(0, 10).map((res) => ({
+      title: res.title,
+      url: res.url,
+    })),
+    tookMs: result.tookMs,
+  }),
+  validateOutput: true,
 });
 
 async function runWebSearch(

@@ -65,6 +65,13 @@ const scrapeOptionsSchema = z
   .nullable()
   .describe("Options for content scraping");
 
+/** Schema for crawl URL tool input. */
+export const crawlUrlInputSchema = z.strictObject({
+  fresh: z.boolean().default(false).describe("Whether to bypass cached results"),
+  scrapeOptions: scrapeOptionsSchema.describe("Scraping configuration options"),
+  url: z.url().describe("URL to crawl"),
+});
+
 /** Schema for crawl site tool input. */
 export const crawlSiteInputSchema = z.strictObject({
   excludePaths: z
@@ -116,4 +123,22 @@ export const crawlSiteInputSchema = z.strictObject({
     .nullable()
     .describe("Timeout in milliseconds"),
   url: z.url().describe("Starting URL for the crawl"),
+});
+
+// ===== TOOL OUTPUT SCHEMAS =====
+
+/** Schema for crawl URL tool output. */
+export const crawlUrlOutputSchema = z.looseObject({
+  data: z.unknown().optional().describe("Scraped content payload"),
+  success: z.boolean().optional().describe("Success indicator"),
+  url: z.string().optional().describe("Crawled URL"),
+});
+
+/** Schema for crawl site tool output. */
+export const crawlSiteOutputSchema = z.looseObject({
+  completed: z.number().optional().describe("Completed pages count"),
+  data: z.array(z.unknown()).optional().describe("Aggregated crawl results"),
+  next: z.string().nullable().optional().describe("Next page cursor"),
+  status: z.string().describe("Crawl status"),
+  total: z.number().optional().describe("Total pages available"),
 });

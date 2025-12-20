@@ -8,9 +8,14 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import {
   combineSearchResultsInputSchema,
+  combineSearchResultsResponseSchema,
   createTravelPlanInputSchema,
+  createTravelPlanResponseSchema,
+  deleteTravelPlanResponseSchema,
   saveTravelPlanInputSchema,
+  saveTravelPlanResponseSchema,
   updateTravelPlanInputSchema,
+  updateTravelPlanResponseSchema,
 } from "@ai/tools/schemas/planning";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { z } from "zod";
@@ -281,6 +286,8 @@ export const createTravelPlan = createAiTool({
   },
   inputSchema: createTravelPlanInputSchema,
   name: "createTravelPlan",
+  outputSchema: createTravelPlanResponseSchema,
+  validateOutput: true,
 });
 
 /**
@@ -348,6 +355,8 @@ export const updateTravelPlan = createAiTool({
   },
   inputSchema: updateTravelPlanInputSchema,
   name: "updateTravelPlan",
+  outputSchema: updateTravelPlanResponseSchema,
+  validateOutput: true,
 });
 
 /**
@@ -408,6 +417,8 @@ export const combineSearchResults = createAiTool({
   },
   inputSchema: combineSearchResultsInputSchema,
   name: "combineSearchResults",
+  outputSchema: combineSearchResultsResponseSchema,
+  validateOutput: true,
 });
 
 /**
@@ -451,6 +462,8 @@ export const saveTravelPlan = createAiTool({
   },
   inputSchema: saveTravelPlanInputSchema,
   name: "saveTravelPlan",
+  outputSchema: saveTravelPlanResponseSchema,
+  validateOutput: true,
 });
 
 /**
@@ -520,4 +533,6 @@ export const deleteTravelPlan = createAiTool({
     sessionId: z.string().optional(),
   }),
   name: "deleteTravelPlan",
+  outputSchema: deleteTravelPlanResponseSchema,
+  validateOutput: true,
 });

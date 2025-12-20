@@ -65,6 +65,23 @@ export type ToolOptions<InputValue, OutputValue> = {
   validateOutput?: boolean;
 };
 
+/**
+ * Lifecycle hooks for streaming tool input progress.
+ *
+ * These callbacks are invoked during streamText when the model is generating
+ * tool input parameters, enabling real-time UI feedback before execution.
+ *
+ * @template InputValue - The input type for the tool.
+ */
+export type LifecycleHooks<InputValue> = {
+  /** Called when tool input streaming starts. */
+  onInputStart?: () => void;
+  /** Called for each chunk of streamed input text. */
+  onInputDelta?: (delta: { inputTextDelta: string }) => void;
+  /** Called when complete input is available and validated. */
+  onInputAvailable?: (available: { input: InputValue }) => void;
+};
+
 export type TelemetryOptions<InputValue> = {
   /** Optional custom span name suffix (defaults to tool name). */
   name?: string;
@@ -140,6 +157,8 @@ export type CreateAiToolOptions<InputValue, OutputValue> = ToolOptions<
   OutputValue
 > & {
   guardrails?: GuardrailOptions<InputValue, OutputValue>;
+  /** Optional lifecycle hooks for streaming tool input progress. */
+  lifecycle?: LifecycleHooks<InputValue>;
 };
 
 /**
@@ -162,6 +181,36 @@ type CacheLookupResult<OutputValue> =
  */
 const rateLimiterCache = new Map<string, InstanceType<typeof Ratelimit>>();
 const MAX_RATE_LIMITER_CACHE_SIZE = 128;
+
+/**
+ * Builds lifecycle hooks object from options, including only defined hooks.
+ *
+ * @template InputValue - Input type for the tool.
+ * @param lifecycle - Optional lifecycle hooks configuration.
+ * @returns Object containing only the defined lifecycle hooks.
+ */
+function buildLifecycleHooks<InputValue>(lifecycle?: LifecycleHooks<InputValue>): {
+  onInputStart?: () => void;
+  onInputDelta?: (delta: { inputTextDelta: string }) => void;
+  onInputAvailable?: (available: { input: InputValue }) => void;
+} {
+  if (!lifecycle) return {};
+  const hooks: {
+    onInputStart?: () => void;
+    onInputDelta?: (delta: { inputTextDelta: string }) => void;
+    onInputAvailable?: (available: { input: InputValue }) => void;
+  } = {};
+  if (lifecycle.onInputStart !== undefined) {
+    hooks.onInputStart = lifecycle.onInputStart;
+  }
+  if (lifecycle.onInputDelta !== undefined) {
+    hooks.onInputDelta = lifecycle.onInputDelta;
+  }
+  if (lifecycle.onInputAvailable !== undefined) {
+    hooks.onInputAvailable = lifecycle.onInputAvailable;
+  }
+  return hooks;
+}
 
 /**
  * Creates an AI SDK v6 tool with optional guardrails (caching, rate limiting, telemetry).
@@ -260,6 +309,8 @@ export function createAiTool<InputValue, OutputValue>(
       ? { outputSchema: options.outputSchema as FlexibleSchema<OutputValue> }
       : {}),
     ...(options.toModelOutput ? { toModelOutput: options.toModelOutput } : {}),
+    // Lifecycle hooks for streaming tool input progress (AI SDK v6)
+    ...buildLifecycleHooks(options.lifecycle),
   }) as Tool<InputValue, OutputValue>;
 }
 

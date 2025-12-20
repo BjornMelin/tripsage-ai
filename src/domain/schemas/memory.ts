@@ -406,3 +406,28 @@ export const searchUserMemoriesInputSchema = z.object({
   limit: z.number().int().min(1).max(20).default(5),
   query: z.string().min(1),
 });
+
+// ===== TOOL OUTPUT SCHEMAS =====
+// Schemas for memory tool output validation
+
+/**
+ * Schema for addConversationMemory tool output.
+ * Returns the memory ID and creation timestamp.
+ */
+export const addConversationMemoryOutputSchema = z.object({
+  createdAt: primitiveSchemas.isoDateTime,
+  id: primitiveSchemas.uuid,
+});
+
+/**
+ * Schema for searchUserMemories tool output.
+ * Returns normalized memory entries matching the query.
+ */
+export const searchUserMemoriesOutputSchema = z.array(
+  z.object({
+    content: z.string(),
+    created_at: primitiveSchemas.isoDateTime,
+    id: primitiveSchemas.uuid,
+    source: z.string().optional(),
+  })
+);

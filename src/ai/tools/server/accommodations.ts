@@ -5,6 +5,7 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import type { AccommodationModelOutput } from "@ai/tools/schemas/accommodations";
 import {
   createToolError,
   TOOL_ERROR_CODES,
@@ -66,6 +67,30 @@ export const searchAccommodations = createAiTool<
   inputSchema: accommodationSearchInputSchema,
   name: "searchAccommodations",
   outputSchema: accommodationSearchOutputSchema,
+  /**
+   * Simplifies accommodation results for model consumption to reduce token usage.
+   * Strips photos, searchParameters, and compresses nested rates to essential pricing.
+   */
+  toModelOutput: (result): AccommodationModelOutput => ({
+    avgPrice: result.avgPrice,
+    fromCache: result.fromCache,
+    listingCount: result.listings.length,
+    listings: result.listings.slice(0, 10).map((listing) => ({
+      amenities: listing.amenities?.slice(0, 5),
+      geoCode: listing.geoCode,
+      id: listing.id,
+      lowestPrice: listing.rooms?.[0]?.rates?.[0]?.price?.total,
+      name: listing.name,
+      rating: listing.place?.rating,
+      starRating: listing.starRating,
+    })),
+    maxPrice: result.maxPrice,
+    minPrice: result.minPrice,
+    provider: result.provider,
+    resultsReturned: result.resultsReturned,
+    totalResults: result.totalResults,
+  }),
+  validateOutput: true,
 });
 
 /** Retrieve comprehensive details for a specific accommodation property from Amadeus and Google Places. */
@@ -90,6 +115,7 @@ export const getAccommodationDetails = createAiTool<
   inputSchema: accommodationDetailsInputSchema,
   name: "getAccommodationDetails",
   outputSchema: accommodationDetailsOutputSchema,
+  validateOutput: true,
 });
 
 /** Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking. */
@@ -120,6 +146,7 @@ export const checkAvailability = createAiTool<
   inputSchema: accommodationCheckAvailabilityInputSchema,
   name: "checkAvailability",
   outputSchema: accommodationCheckAvailabilityOutputSchema,
+  validateOutput: true,
 });
 
 /** Complete an accommodation booking via Amadeus. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
@@ -173,6 +200,7 @@ export const bookAccommodation = createAiTool<
   inputSchema: accommodationBookingInputSchema,
   name: "bookAccommodation",
   outputSchema: accommodationBookingOutputSchema,
+  validateOutput: true,
 });
 
 /** Extract user identifier from request headers or return undefined if not found. */

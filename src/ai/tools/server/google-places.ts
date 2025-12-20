@@ -12,7 +12,10 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
-import { lookupPoiInputSchema } from "@ai/tools/schemas/google-places";
+import {
+  lookupPoiInputSchema,
+  lookupPoiResponseSchema,
+} from "@ai/tools/schemas/google-places";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { upstreamPlacesSearchResponseSchema } from "@schemas/api";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -219,4 +222,28 @@ export const lookupPoiContext = createAiTool({
   },
   inputSchema: lookupPoiInputSchema,
   name: "lookupPoiContext",
+  outputSchema: lookupPoiResponseSchema,
+  /**
+   * Simplifies POI results for model consumption to reduce token usage.
+   * Strips photoName, url, formattedAddress, inputs echo, and limits types.
+   */
+  toModelOutput: (result) => {
+    if (result.status === "error") {
+      return { error: result.error, status: "error" as const };
+    }
+    return {
+      poiCount: result.pois.length,
+      pois: result.pois.slice(0, 10).map((poi) => ({
+        lat: poi.lat,
+        lon: poi.lon,
+        name: poi.name,
+        placeId: poi.placeId,
+        rating: poi.rating,
+        types: poi.types?.slice(0, 3),
+      })),
+      provider: result.provider,
+      status: "success" as const,
+    };
+  },
+  validateOutput: true,
 });
