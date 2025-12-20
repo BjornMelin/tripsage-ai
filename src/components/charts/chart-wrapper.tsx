@@ -5,15 +5,38 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ComponentProps, ComponentType } from "react";
+import {
+  type ComponentProps,
+  type ComponentType,
+  cloneElement,
+  isValidElement,
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react";
 import type {
   AreaProps as RechartsAreaProps,
   LineProps as RechartsLineProps,
+  ResponsiveContainerProps as RechartsResponsiveContainerProps,
   TooltipProps as RechartsTooltipProps,
   XAxisProps as RechartsXAxisProps,
   YAxisProps as RechartsYAxisProps,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
+type RechartsModule = typeof import("recharts");
+
+let rechartsPromise: Promise<RechartsModule> | null = null;
+
+function LoadRecharts(): Promise<RechartsModule> {
+  rechartsPromise ??= import("recharts").catch((error) => {
+    rechartsPromise = null;
+    throw error;
+  });
+
+  return rechartsPromise;
+}
 
 function CreateDynamicComponent<P extends object>(
   loader: () => Promise<ComponentType<P>>
@@ -23,38 +46,122 @@ function CreateDynamicComponent<P extends object>(
   });
 }
 
-/** Dynamically import chart components to reduce initial bundle size */
-export const ResponsiveContainer = dynamic(
-  () => import("recharts").then((mod) => mod.ResponsiveContainer),
-  {
-    loading: () => (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="sm" />
+export interface WithRechartsProps {
+  children: (recharts: RechartsModule) => ReactNode;
+  fallback?: ReactNode;
+  loadRecharts?: () => Promise<RechartsModule>;
+}
+
+export function WithRecharts({ children, fallback, loadRecharts }: WithRechartsProps) {
+  const [recharts, setRecharts] = useState<RechartsModule | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadRechartsModule = loadRecharts ?? LoadRecharts;
+
+    if (retryCount > 0) {
+      setLoadError(false);
+    }
+
+    loadRechartsModule()
+      .then((mod) => {
+        if (!isActive) return;
+        setRecharts(mod);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setLoadError(true);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [loadRecharts, retryCount]);
+
+  if (loadError) {
+    const errorContent = (
+      <div className="flex flex-col items-center justify-center gap-2">
+        <p className="text-sm text-muted-foreground">Failed to load chart.</p>
+        <Button
+          size="sm"
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setRetryCount((count) => count + 1);
+          }}
+        >
+          Retry
+        </Button>
       </div>
-    ),
-    ssr: false,
+    );
+
+    if (isValidElement(fallback) && typeof fallback.type === "string") {
+      return cloneElement(fallback, undefined, errorContent);
+    }
+
+    return <div className="flex items-center justify-center">{errorContent}</div>;
   }
-);
+
+  if (!recharts) {
+    return (
+      fallback ?? (
+        <div className="flex items-center justify-center">
+          <LoadingSpinner size="sm" />
+        </div>
+      )
+    );
+  }
+
+  return children(recharts);
+}
+
+/** Dynamically import chart components to reduce initial bundle size */
+export function ResponsiveContainer(props: RechartsResponsiveContainerProps) {
+  const placeholderHeight =
+    typeof props.height === "number" || typeof props.height === "string"
+      ? props.height
+      : 256;
+
+  const placeholderWidth =
+    typeof props.width === "number" || typeof props.width === "string"
+      ? props.width
+      : "100%";
+
+  const loadingFallback = (
+    <div
+      className="flex items-center justify-center"
+      style={{ height: placeholderHeight, width: placeholderWidth }}
+    >
+      <LoadingSpinner size="sm" />
+    </div>
+  );
+
+  return (
+    <WithRecharts fallback={loadingFallback}>
+      {(Recharts) => <Recharts.ResponsiveContainer {...props} />}
+    </WithRecharts>
+  );
+}
 
 /**
  * Dynamically import the AreaChart component.
  *
  * @returns The AreaChart component.
  */
-export const AreaChart = dynamic(
-  () => import("recharts").then((mod) => mod.AreaChart),
-  { ssr: false }
-);
+export const AreaChart = dynamic(() => LoadRecharts().then((mod) => mod.AreaChart), {
+  ssr: false,
+});
 
 /**
  * Dynamically import the LineChart component.
  *
  * @returns The LineChart component.
  */
-export const LineChart = dynamic(
-  () => import("recharts").then((mod) => mod.LineChart),
-  { ssr: false }
-);
+export const LineChart = dynamic(() => LoadRecharts().then((mod) => mod.LineChart), {
+  ssr: false,
+});
 
 /**
  * Dynamically import the Area component.
@@ -62,7 +169,7 @@ export const LineChart = dynamic(
  * @returns The Area component.
  */
 export const Area = CreateDynamicComponent<RechartsAreaProps>(() =>
-  import("recharts").then((mod) => mod.Area)
+  LoadRecharts().then((mod) => mod.Area)
 );
 
 /**
@@ -71,7 +178,7 @@ export const Area = CreateDynamicComponent<RechartsAreaProps>(() =>
  * @returns The Line component.
  */
 export const Line = CreateDynamicComponent<RechartsLineProps>(() =>
-  import("recharts").then((mod) => mod.Line)
+  LoadRecharts().then((mod) => mod.Line)
 );
 
 /**
@@ -80,7 +187,7 @@ export const Line = CreateDynamicComponent<RechartsLineProps>(() =>
  * @returns The CartesianGrid component.
  */
 export const CartesianGrid = dynamic(
-  () => import("recharts").then((mod) => mod.CartesianGrid),
+  () => LoadRecharts().then((mod) => mod.CartesianGrid),
   { ssr: false }
 );
 
@@ -90,7 +197,7 @@ export const CartesianGrid = dynamic(
  * @returns The XAxis component.
  */
 export const XAxis = CreateDynamicComponent<RechartsXAxisProps>(() =>
-  import("recharts").then((mod) => mod.XAxis)
+  LoadRecharts().then((mod) => mod.XAxis)
 );
 
 /**
@@ -99,7 +206,7 @@ export const XAxis = CreateDynamicComponent<RechartsXAxisProps>(() =>
  * @returns The YAxis component.
  */
 export const YAxis = CreateDynamicComponent<RechartsYAxisProps>(() =>
-  import("recharts").then((mod) => mod.YAxis)
+  LoadRecharts().then((mod) => mod.YAxis)
 );
 
 /**
@@ -109,7 +216,7 @@ export const YAxis = CreateDynamicComponent<RechartsYAxisProps>(() =>
  */
 export const Tooltip = CreateDynamicComponent<
   RechartsTooltipProps<string | number, string | number>
->(() => import("recharts").then((mod) => mod.Tooltip));
+>(() => LoadRecharts().then((mod) => mod.Tooltip));
 
 /** Export types for better TypeScript support */
 export type ResponsiveContainerProps = ComponentProps<typeof ResponsiveContainer>;

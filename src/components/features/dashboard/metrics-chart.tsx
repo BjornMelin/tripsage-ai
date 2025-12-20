@@ -8,16 +8,9 @@
 "use client";
 
 import { useId } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { WithRecharts } from "@/components/charts/chart-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 
 /**
@@ -72,7 +65,7 @@ export function MetricsChart({
 }: MetricsChartProps) {
   // Generate unique gradient ID per instance to avoid collisions between charts
   const uniqueId = useId().replace(/[:]/g, "");
-  const gradientId = `gradient-${title.replace(/\s+/g, "-").toLowerCase()}-${uniqueId}`;
+  const gradientId = `chart-gradient-${uniqueId}`;
 
   return (
     <Card className={cn(className)}>
@@ -80,33 +73,52 @@ export function MetricsChart({
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer height={height} width="100%">
-          <AreaChart data={data} margin={{ bottom: 0, left: 0, right: 10, top: 5 }}>
-            <defs>
-              <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.8} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
-            <XAxis className="text-xs" dataKey="name" />
-            <YAxis className="text-xs" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "6px",
-              }}
-            />
-            <Area
-              dataKey="value"
-              fill={`url(#${gradientId})`}
-              fillOpacity={1}
-              stroke={color}
-              type="monotone"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <WithRecharts
+          fallback={
+            <div
+              className="flex items-center justify-center"
+              style={{ height, width: "100%" }}
+            >
+              <LoadingSpinner size="sm" />
+            </div>
+          }
+        >
+          {(Recharts) => (
+            <Recharts.ResponsiveContainer height={height} width="100%">
+              <Recharts.AreaChart
+                data={data}
+                margin={{ bottom: 0, left: 0, right: 10, top: 5 }}
+              >
+                <defs>
+                  <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="5%" stopColor={color} stopOpacity={0.8} />
+                    <stop offset="95%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Recharts.CartesianGrid
+                  className="stroke-muted"
+                  strokeDasharray="3 3"
+                />
+                <Recharts.XAxis className="text-xs" dataKey="name" />
+                <Recharts.YAxis className="text-xs" />
+                <Recharts.Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Recharts.Area
+                  dataKey="value"
+                  fill={`url(#${gradientId})`}
+                  fillOpacity={1}
+                  stroke={color}
+                  type="monotone"
+                />
+              </Recharts.AreaChart>
+            </Recharts.ResponsiveContainer>
+          )}
+        </WithRecharts>
       </CardContent>
     </Card>
   );
