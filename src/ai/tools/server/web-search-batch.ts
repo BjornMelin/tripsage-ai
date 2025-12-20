@@ -18,7 +18,7 @@ import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import { Ratelimit } from "@upstash/ratelimit";
 import type { ToolCallOptions } from "ai";
-import type { z } from "zod";
+import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { getRedis } from "@/lib/redis";
@@ -148,23 +148,23 @@ export const webSearchBatch = createAiTool({
           e !== null &&
           "code" in e &&
           typeof (e as { code?: unknown }).code === "string";
-        const knownCodes = new Set([
-          "web_search_rate_limited",
-          "web_search_unauthorized",
-          "web_search_payment_required",
-          "web_search_failed",
+        const knownCodes = new Set<string>([
+          TOOL_ERROR_CODES.webSearchRateLimited,
+          TOOL_ERROR_CODES.webSearchUnauthorized,
+          TOOL_ERROR_CODES.webSearchPaymentRequired,
+          TOOL_ERROR_CODES.webSearchFailed,
         ]);
         let code: string;
         if (hasCode(err) && knownCodes.has(err.code)) {
           code = err.code;
-        } else if (message.includes("web_search_rate_limited")) {
-          code = "web_search_rate_limited";
-        } else if (message.includes("web_search_unauthorized")) {
-          code = "web_search_unauthorized";
-        } else if (message.includes("web_search_payment_required")) {
-          code = "web_search_payment_required";
-        } else if (message.includes("web_search_failed")) {
-          code = "web_search_failed";
+        } else if (message.includes(TOOL_ERROR_CODES.webSearchRateLimited)) {
+          code = TOOL_ERROR_CODES.webSearchRateLimited;
+        } else if (message.includes(TOOL_ERROR_CODES.webSearchUnauthorized)) {
+          code = TOOL_ERROR_CODES.webSearchUnauthorized;
+        } else if (message.includes(TOOL_ERROR_CODES.webSearchPaymentRequired)) {
+          code = TOOL_ERROR_CODES.webSearchPaymentRequired;
+        } else if (message.includes(TOOL_ERROR_CODES.webSearchFailed)) {
+          code = TOOL_ERROR_CODES.webSearchFailed;
         } else {
           code = "web_search_error";
         }
@@ -233,14 +233,26 @@ export const webSearchBatch = createAiTool({
                 `web_search_failed:${res.status}:body_hash=${hashInputForCache(text)}:body_length=${text.length}`
               );
             }
-            const data = (await res.json()) as {
-              results?: {
-                url: string;
-                title?: string;
-                snippet?: string;
-                publishedAt?: string;
-              }[];
-            };
+            const firecrawlResponseSchema = z.object({
+              results: z
+                .array(
+                  z.object({
+                    publishedAt: z.string().optional(),
+                    snippet: z.string().optional(),
+                    title: z.string().optional(),
+                    url: z.string(),
+                  })
+                )
+                .optional(),
+            });
+            const parsedResponse = firecrawlResponseSchema.safeParse(await res.json());
+            if (!parsedResponse.success) {
+              webSearchBatchLogger.error("fallback_response_invalid", {
+                error: parsedResponse.error.message,
+                queryLength: q.length,
+              });
+            }
+            const data = parsedResponse.success ? parsedResponse.data : { results: [] };
             // Normalize fallback HTTP response to ensure strict schema compliance
             const rawResults = Array.isArray(data.results) ? data.results : [];
             const normalizedResults = normalizeWebSearchResults(rawResults);
