@@ -1,3 +1,9 @@
+## [1.21.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.21.0...v1.21.1) (2025-12-20)
+
+### Bug Fixes
+
+* **route-handlers:** restore structured error fields for MFA and token budget responses ([620b952](https://github.com/BjornMelin/tripsage-ai/commit/620b952b82424170c48cafa8f77375d83f991055)), closes [#577](https://github.com/BjornMelin/tripsage-ai/issues/577)
+
 ## [1.21.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.20.0...v1.21.0) (2025-12-20)
 
 ### Features
