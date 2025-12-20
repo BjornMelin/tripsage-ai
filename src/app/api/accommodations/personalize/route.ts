@@ -97,14 +97,10 @@ export const POST = withApiGuards({
       ...getDefaultPersonalization(hotel),
     }));
 
-    return NextResponse.json(
-      {
-        error: "ai_service_unavailable",
-        fallback: true,
-        message: "AI service unavailable, please try again later",
-        results,
-      },
-      { status: 503 }
-    );
+    return NextResponse.json({
+      fallback: true,
+      results,
+      warning: "ai_service_unavailable",
+    });
   }
 });

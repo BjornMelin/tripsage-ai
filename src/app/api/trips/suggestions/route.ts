@@ -16,7 +16,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { requireUserId } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import {
@@ -228,10 +228,12 @@ export const GET = withApiGuards({
     return NextResponse.json(suggestions);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { details: error.issues, error: "Invalid query parameters" },
-        { status: 400 }
-      );
+      return errorResponse({
+        error: "invalid_request",
+        issues: error.issues,
+        reason: "Invalid query parameters",
+        status: 400,
+      });
     }
     throw error;
   }
