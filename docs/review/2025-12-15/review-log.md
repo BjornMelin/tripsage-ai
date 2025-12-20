@@ -244,9 +244,15 @@
 
 **Acceptance criteria:**  
 
-- [ ] A documented layering policy exists (1 page) with allowed import directions and examples.  
-- [ ] A CI boundary check fails on disallowed imports (at minimum: `src/domain/**` importing `src/app/**` or `next/*`, and client components importing server-only modules).  
-- [ ] New code follows the boundary rules; legacy violations are tracked with explicit TODOs and a burn-down plan.
+- [x] A documented layering policy exists (1 page) with allowed import directions and examples.  
+- [x] A CI boundary check fails on disallowed imports (at minimum: `src/domain/**` importing `src/app/**` or `next/*`, and client components importing server-only modules).  
+- [x] New code follows the boundary rules; legacy violations are tracked with explicit TODOs and a burn-down plan.
+
+**Implementation notes (2025-12-19):**
+
+- Added `docs/development/architecture/layering.md` and linked from standards + dev README.
+- Extended `scripts/check-boundaries.mjs` to block domain → app/next imports with a TODO allowlist.
+- CI now runs `pnpm boundary:check`.
 
 **References:**  
 
@@ -562,9 +568,21 @@
 
 **Acceptance criteria:**  
 
-- [ ] `getTravelAdvisory` is created via `createAiTool()` with explicit guardrails (cache/rateLimit/telemetry).  
-- [ ] Tool telemetry spans for all tools share a consistent naming + attribute strategy (spot-check via tests or logs).  
-- [ ] A lint/CI rule or documented convention prevents new raw `tool()` usage under `src/ai/tools/server/*`.
+- [x] `getTravelAdvisory` is created via `createAiTool()` with explicit guardrails (cache/rateLimit/telemetry).  
+- [x] Tool telemetry spans for all tools share a consistent naming + attribute strategy (spot-check via tests or logs).  
+- [x] A lint/CI rule or documented convention prevents new raw `tool()` usage under `src/ai/tools/server/*`.
+
+**Implementation notes (2025-12-19):**
+
+- Migrated `getTravelAdvisory` to `createAiTool` with cache + rate limit + telemetry guardrails.
+- Added `scripts/check-ai-tools.mjs`, `pnpm ai-tools:check`, and a CI step to block raw `tool()` usage.
+- Migrated `web-crawl` and `web-search-batch` to `createAiTool` and removed raw `tool()` allowlist entries.
+- Updated AI tool docs and frontend architecture references to reflect the rule.
+- Updated Maps tools to drop legacy Distance Matrix output, added output schemas/validation, and added `maps` tool unit tests.
+- Added output schemas + validation across remaining server tools (calendar, memory, planning, rag, weather, flights, activities, google-places, web-crawl).
+- Updated travel advisory safety score schema to 0–100 and added tool output schema validation.
+- Removed unused `src/ai/tools/schemas/memory.ts` duplicate.
+- Added output schema validation for the memory-agent wrapper and tests covering `createAiTool` output validation behavior.
 
 **References:**  
 
@@ -914,9 +932,14 @@
 
 **Acceptance criteria:**  
 
-- [ ] There is no import cycle between `chat-agent` and `agent-factory` after refactor.  
-- [ ] `pnpm test:quick` and `pnpm type-check` remain green.  
-- [ ] A CI check fails if a new cycle is introduced in `src/ai/agents/*`.
+- [x] There is no import cycle between `chat-agent` and `agent-factory` after refactor.  
+- [x] `pnpm test:quick` and `pnpm type-check` remain green.  
+- [x] A CI check fails if a new cycle is introduced in `src/ai/agents/*`.
+
+**Implementation notes (2025-12-19):**
+
+- Extracted instruction helpers to `src/ai/agents/instructions.ts` and updated imports.
+- Added `madge` + `pnpm deps:cycles` and wired the check into CI.
 
 **References:**  
 
