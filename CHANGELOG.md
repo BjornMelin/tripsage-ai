@@ -1,3 +1,13 @@
+## [1.22.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.21.1...v1.22.0) (2025-12-20)
+
+### Features
+
+* **schemas:** extract repeated Zod patterns into reusable validators ([5854228](https://github.com/BjornMelin/tripsage-ai/commit/58542287022ac9ba67fd660d3167c4f369922880))
+
+### Bug Fixes
+
+* **schemas:** use strictObject for range schemas to reject unknown keys ([2ff7321](https://github.com/BjornMelin/tripsage-ai/commit/2ff7321eabaf1f2b3bff27d21918df9f578fc855))
+
 ## [1.21.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.21.0...v1.21.1) (2025-12-20)
 
 ### Bug Fixes
