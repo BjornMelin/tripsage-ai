@@ -37,6 +37,35 @@ type ScrapeOptions = {
   proxy?: "basic" | "stealth" | "auto";
 };
 
+type JsonFormatInput = {
+  type: "json";
+  prompt?: string | null;
+  schema?: Record<string, unknown> | null;
+};
+
+function isJsonFormat(value: unknown): value is JsonFormatInput {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  if (record.type !== "json") {
+    return false;
+  }
+  const prompt = record.prompt;
+  if (prompt !== undefined && prompt !== null && typeof prompt !== "string") {
+    return false;
+  }
+  const schema = record.schema;
+  if (
+    schema !== undefined &&
+    schema !== null &&
+    (typeof schema !== "object" || Array.isArray(schema))
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Normalizes URL for cache key generation.
  */
@@ -115,16 +144,16 @@ function normalizeScrapeOptionsForCache(
   if (scrapeOptions.formats !== null) {
     const formats: ScrapeFormat[] = [];
     for (const f of scrapeOptions.formats) {
-      if (typeof f === "object" && f !== null && "type" in f && f.type === "json") {
+      if (isJsonFormat(f)) {
         const jsonFormat: {
           type: "json";
           prompt?: string;
           schema?: Record<string, unknown>;
         } = { type: "json" };
-        if (f.prompt !== null) {
+        if (f.prompt != null) {
           jsonFormat.prompt = f.prompt;
         }
-        if (f.schema !== null) {
+        if (f.schema != null) {
           jsonFormat.schema = f.schema;
         }
         formats.push(jsonFormat);

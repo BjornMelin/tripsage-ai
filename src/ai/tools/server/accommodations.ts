@@ -75,9 +75,7 @@ export const searchAccommodations = createAiTool<
     /**
      * Coerce string or number to number, returning undefined for non-parseable values.
      */
-    const coerceToNumber = (
-      val: string | number | undefined
-    ): number | undefined => {
+    const coerceToNumber = (val: string | number | undefined): number | undefined => {
       if (val === undefined || val === null) return undefined;
       if (typeof val === "number") return val;
       const parsed = Number(val);

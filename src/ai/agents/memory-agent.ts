@@ -81,8 +81,10 @@ const MEMORY_CATEGORY_VALUES: readonly AddConversationMemoryInput["category"][] 
 const isAsyncIterable = (
   value: unknown
 ): value is AsyncIterable<AddConversationMemoryOutput> =>
-  !!value &&
-  typeof (value as AsyncIterable<AddConversationMemoryOutput>)[Symbol.asyncIterator] ===
+  value !== null &&
+  typeof value === "object" &&
+  Symbol.asyncIterator in value &&
+  typeof (value as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] ===
     "function";
 
 /**

@@ -400,6 +400,7 @@ export const createCalendarEventOutputSchema = z.discriminatedUnion("success", [
     summary: z.string().optional(),
   }),
 ]);
+export type CreateCalendarEventOutput = z.infer<typeof createCalendarEventOutputSchema>;
 
 /**
  * Schema for getAvailability tool output.
@@ -426,6 +427,7 @@ export const getAvailabilityOutputSchema = z.discriminatedUnion("success", [
     timeMin: primitiveSchemas.isoDateTime,
   }),
 ]);
+export type GetAvailabilityOutput = z.infer<typeof getAvailabilityOutputSchema>;
 
 /**
  * Schema for exportItineraryToIcs tool output.
@@ -442,3 +444,6 @@ export const exportItineraryToIcsOutputSchema = z.discriminatedUnion("success", 
     success: z.literal(true),
   }),
 ]);
+export type ExportItineraryToIcsOutput = z.infer<
+  typeof exportItineraryToIcsOutputSchema
+>;

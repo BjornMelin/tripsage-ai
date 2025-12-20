@@ -105,10 +105,10 @@ export const webSearchBatch = createAiTool({
     } catch (e) {
       if (e instanceof Error && e.message.startsWith("web_search_rate_limited"))
         throw e;
-      // Log unexpected rate-limiter errors but don't block execution
       webSearchBatchLogger.error("rate_limiter_error", {
         error: e instanceof Error ? e.message : String(e),
       });
+      throw e;
     }
 
     // Bounded concurrency runner with pool size 5

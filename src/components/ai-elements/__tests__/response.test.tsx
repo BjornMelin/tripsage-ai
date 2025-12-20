@@ -1,7 +1,11 @@
 /** @vitest-environment jsdom */
 
 import { render } from "@testing-library/react";
+import type { ComponentProps } from "react";
+import type { Streamdown as StreamdownComponent } from "streamdown";
 import { describe, expect, it, vi } from "vitest";
+
+type StreamdownProps = ComponentProps<typeof StreamdownComponent>;
 
 // Mock streamdown to avoid CSS imports (KaTeX) in test environment
 vi.mock("streamdown", () => ({
@@ -11,21 +15,7 @@ vi.mock("streamdown", () => ({
     raw: () => undefined,
   },
   defaultRemarkPlugins: {},
-  Streamdown: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    className?: string;
-    controls?: boolean;
-    isAnimating?: boolean;
-    mermaid?: boolean;
-    mode?: string;
-    rehypePlugins?: unknown[];
-    remarkPlugins?: unknown[];
-    shikiTheme?: unknown;
-    [key: string]: unknown;
-  }) => (
+  Streamdown: ({ children, ...props }: StreamdownProps) => (
     <div data-testid="mock-streamdown" data-props={JSON.stringify(Object.keys(props))}>
       {children}
     </div>
@@ -50,5 +40,16 @@ describe("ai-elements/response", () => {
     const wrapper = getByTestId("mock-streamdown");
     expect(wrapper).toBeInTheDocument();
     expect(wrapper.textContent).toContain("bold");
+  });
+
+  it("passes expected props to Streamdown", () => {
+    const { getByTestId } = render(<Response>hello</Response>);
+    const wrapper = getByTestId("mock-streamdown");
+    const rawProps = wrapper.getAttribute("data-props");
+    expect(rawProps).toBeTruthy();
+    const propKeys = JSON.parse(rawProps ?? "[]") as string[];
+    expect(propKeys).toEqual(
+      expect.arrayContaining(["controls", "mode", "shikiTheme"])
+    );
   });
 });
