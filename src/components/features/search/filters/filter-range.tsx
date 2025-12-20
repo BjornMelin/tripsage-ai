@@ -109,7 +109,7 @@ export function FilterRange({
   );
 
   if (hasInvalidConfig) {
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV === "development") {
       console.error(
         `Invalid FilterRange props for "${filterId}": min (${min}) must be < max (${max}), and step (${step}) must be > 0`
       );

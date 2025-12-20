@@ -20,7 +20,7 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 import {
   createEvent,
   deleteEvent,
@@ -152,10 +152,11 @@ export const PATCH = withApiGuards({
   const calendarId = getCalendarId(searchParams);
 
   if (!eventId) {
-    return NextResponse.json(
-      { error: "eventId query parameter is required" },
-      { status: 400 }
-    );
+    return errorResponse({
+      error: "invalid_request",
+      reason: "eventId query parameter is required",
+      status: 400,
+    });
   }
 
   const parsed = await parseJsonBody(req);
@@ -190,10 +191,11 @@ export const DELETE = withApiGuards({
   const calendarId = getCalendarId(searchParams);
 
   if (!eventId) {
-    return NextResponse.json(
-      { error: "eventId query parameter is required" },
-      { status: 400 }
-    );
+    return errorResponse({
+      error: "invalid_request",
+      reason: "eventId query parameter is required",
+      status: 400,
+    });
   }
 
   await deleteEvent(eventId, calendarId);

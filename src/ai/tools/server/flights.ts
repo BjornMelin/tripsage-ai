@@ -41,22 +41,38 @@ export const searchFlights = createAiTool<SearchFlightsInput, SearchFlightsResul
         provider: "duffel",
       };
 
+      // Check for typed error with code property first
+      const hasCode = (e: unknown): e is { code: string } =>
+        typeof e === "object" &&
+        e !== null &&
+        "code" in e &&
+        typeof (e as { code?: unknown }).code === "string";
+
+      if (hasCode(err)) {
+        if (err.code === TOOL_ERROR_CODES.flightNotConfigured) {
+          throw createToolError(
+            TOOL_ERROR_CODES.flightNotConfigured,
+            "Duffel API key is not configured",
+            errorMeta
+          );
+        }
+        if (err.code === TOOL_ERROR_CODES.flightOfferFailed) {
+          throw createToolError(TOOL_ERROR_CODES.flightOfferFailed, message, errorMeta);
+        }
+      }
+
+      // Fallback: check error message patterns for untyped errors from service layer
       if (message.includes("duffel_not_configured")) {
         throw createToolError(
-          TOOL_ERROR_CODES.toolExecutionFailed,
+          TOOL_ERROR_CODES.flightNotConfigured,
           "Duffel API key is not configured",
-          {
-            ...errorMeta,
-            reason: "not_configured",
-          }
+          errorMeta
         );
       }
       if (message.startsWith("duffel_offer_request_failed")) {
-        throw createToolError(TOOL_ERROR_CODES.toolExecutionFailed, message, {
-          ...errorMeta,
-          reason: "offer_request_failed",
-        });
+        throw createToolError(TOOL_ERROR_CODES.flightOfferFailed, message, errorMeta);
       }
+
       throw createToolError(TOOL_ERROR_CODES.toolExecutionFailed, message, {
         ...errorMeta,
         reason: "unknown",

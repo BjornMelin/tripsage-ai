@@ -17,6 +17,7 @@ import {
 import type { ProviderResolution } from "@schemas/providers";
 import type { UIMessage } from "ai";
 import { createAgentUIStreamResponse } from "ai";
+import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
   assistantResponseToMemoryTurn,
@@ -104,10 +105,7 @@ export async function handleChatStream(
   const { data: auth } = await deps.supabase.auth.getUser();
   const user = auth?.user ?? null;
   if (!user) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      headers: { "content-type": "application/json" },
-      status: 401,
-    });
+    return unauthorizedResponse();
   }
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
@@ -118,20 +116,25 @@ export async function handleChatStream(
     const identifier = `${user.id}:${payload.ip ?? "unknown"}`;
     const { success } = await deps.limit(identifier);
     if (!success) {
-      return new Response(JSON.stringify({ error: "rate_limited" }), {
-        headers: { "content-type": "application/json", "Retry-After": "60" },
-        status: 429,
-      });
+      // Use Response directly for Retry-After header (errorResponse doesn't support custom headers)
+      return new Response(
+        JSON.stringify({ error: "rate_limited", reason: "Too many requests" }),
+        {
+          headers: { "content-type": "application/json", "Retry-After": "60" },
+          status: 429,
+        }
+      );
     }
   }
 
   // Validate attachments
   const validation = validateChatMessages(messages);
   if (!validation.valid) {
-    return new Response(
-      JSON.stringify({ error: validation.error, reason: validation.reason }),
-      { headers: { "content-type": "application/json" }, status: 400 }
-    );
+    return errorResponse({
+      error: validation.error ?? "validation_error",
+      reason: validation.reason ?? "Message validation failed",
+      status: 400,
+    });
   }
 
   // Provider resolution

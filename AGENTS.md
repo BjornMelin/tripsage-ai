@@ -124,6 +124,43 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification.
 
+#### 5.1.1 Error response helpers
+
+Use standardized helpers from `@/lib/api/route-helpers` for all error responses:
+
+| Status | Helper | Use Case |
+|--------|--------|----------|
+| 401 | `unauthorizedResponse()` | Missing or invalid auth |
+| 403 | `forbiddenResponse()` | Valid auth, insufficient permissions |
+| 404 | `notFoundResponse()` | Resource doesn't exist |
+| 4xx/5xx | `errorResponse({ error, reason, status })` | Validation, rate limits, server errors |
+
+**Anti-patterns (avoid):**
+- `NextResponse.json({ error: "..." }, { status: 4xx })` → use `errorResponse()`
+- `new Response(JSON.stringify({ error }), ...)` → use `errorResponse()`
+
+#### 5.1.2 Domain error classes
+
+Prefer domain-specific error classes over string matching:
+
+| Domain | Error Class | Location |
+|--------|-------------|----------|
+| Google Calendar | `GoogleCalendarApiError` | `@/lib/calendar/google` |
+| Webhooks | `WebhookError` (+ subclasses) | `@/lib/webhooks/errors` |
+| AI Tools | `ToolError` | `@ai/tools/server/errors` |
+| API Responses | `ApiError` | `@/lib/api/error-types` |
+| Accommodations | `ProviderError` | `@domain/accommodations/errors` |
+| Activities | `NotFoundError` | `@domain/activities/errors` |
+
+**Pattern:** Check domain error first, then generic:
+```typescript
+if (error instanceof GoogleCalendarApiError) {
+  if (error.statusCode === 401) return handleTokenExpired();
+  return errorResponse({ error: "calendar_error", reason: error.message, status: 400 });
+}
+throw error; // Let withApiGuards handle unknown errors
+```
+
 ### 5.2 AI SDK v6 usage
 
 - Use AI SDK v6 primitives only; no custom streaming/tool-calling.

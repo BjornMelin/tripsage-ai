@@ -204,7 +204,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
       if (!prev) return prev;
       const uiKey = fieldToUiKey[field];
       if (!uiKey) {
-        if (process.env.NODE_ENV !== "production") {
+        if (process.env.NODE_ENV === "development") {
           console.warn("Unmapped trip update field", {
             field,
             tripId,
