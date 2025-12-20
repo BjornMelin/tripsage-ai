@@ -11,8 +11,12 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import {
   createCalendarEventInputSchema,
+  createCalendarEventOutputSchema,
+  type EventDateTime,
   exportItineraryToIcsInputSchema,
+  exportItineraryToIcsOutputSchema,
   freeBusyRequestSchema,
+  getAvailabilityOutputSchema,
 } from "@schemas/calendar";
 import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
 import { generateIcsFromEvents } from "@/lib/calendar/ics";
@@ -24,21 +28,35 @@ export const createCalendarEvent = createAiTool({
   description: "Create a calendar event in the user's Google Calendar.",
   execute: async (params) => {
     try {
+      const toIsoDateTime = (value: EventDateTime): string => {
+        if (value.dateTime) {
+          return value.dateTime instanceof Date
+            ? value.dateTime.toISOString()
+            : value.dateTime;
+        }
+        if (value.date) {
+          return new Date(value.date).toISOString();
+        }
+        throw new Error("calendar_event_missing_datetime");
+      };
       const { calendarId, ...eventData } = params;
       const result = await createEvent(eventData, calendarId);
+      if (!result.id) {
+        return { error: "calendar_event_missing_id", success: false } as const;
+      }
       return {
-        end: result.end,
+        end: toIsoDateTime(result.end),
         eventId: result.id,
         htmlLink: result.htmlLink,
-        start: result.start,
+        start: toIsoDateTime(result.start),
         success: true,
         summary: result.summary,
-      };
+      } as const;
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : "Unknown error",
         success: false,
-      };
+      } as const;
     }
   },
   guardrails: {
@@ -50,6 +68,8 @@ export const createCalendarEvent = createAiTool({
   },
   inputSchema: createCalendarEventInputSchema,
   name: "createCalendarEvent",
+  outputSchema: createCalendarEventOutputSchema,
+  validateOutput: true,
 });
 
 /**
@@ -68,12 +88,12 @@ export const getAvailability = createAiTool({
         success: true,
         timeMax: result.timeMax.toISOString(),
         timeMin: result.timeMin.toISOString(),
-      };
+      } as const;
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : "Unknown error",
         success: false,
-      };
+      } as const;
     }
   },
   guardrails: {
@@ -85,6 +105,8 @@ export const getAvailability = createAiTool({
   },
   inputSchema: freeBusyRequestSchema,
   name: "getAvailability",
+  outputSchema: getAvailabilityOutputSchema,
+  validateOutput: true,
 });
 
 /**
@@ -106,12 +128,12 @@ export const exportItineraryToIcs = createAiTool({
         eventCount,
         icsContent: icsString,
         success: true,
-      };
+      } as const;
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : "Unknown error",
         success: false,
-      };
+      } as const;
     }
   },
   guardrails: {
@@ -123,4 +145,6 @@ export const exportItineraryToIcs = createAiTool({
   },
   inputSchema: exportItineraryToIcsInputSchema,
   name: "exportItineraryToIcs",
+  outputSchema: exportItineraryToIcsOutputSchema,
+  validateOutput: true,
 });

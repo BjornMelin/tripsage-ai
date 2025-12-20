@@ -44,6 +44,15 @@ vi.mock("@/lib/env/server", () => ({
     envStore[key as keyof typeof envStore] ?? fallback,
 }));
 
+vi.mock("@/lib/telemetry/span", () => ({
+  withTelemetrySpan: vi.fn((_name: string, _options, fn) =>
+    fn({
+      addEvent: vi.fn(),
+      setAttribute: vi.fn(),
+    })
+  ),
+}));
+
 beforeEach(() => {
   redisMock.__reset();
   webSearchExecuteMock.mockResolvedValue({

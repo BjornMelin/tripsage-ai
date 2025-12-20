@@ -8,7 +8,7 @@ import { z } from "zod";
 export const safetyCategorySchema = z.object({
   category: z.string(),
   description: z.string().optional(),
-  value: z.number().min(0).max(10),
+  value: z.number().min(0).max(100),
 });
 /** TypeScript type for safety category. */
 export type SafetyCategory = z.infer<typeof safetyCategorySchema>;
@@ -18,7 +18,7 @@ export const safetyResultSchema = z.object({
   categories: z.array(safetyCategorySchema),
   destination: z.string().min(1),
   lastUpdated: z.string().optional(),
-  overallScore: z.number().min(0).max(10),
+  overallScore: z.number().min(0).max(100),
   provider: z.string().min(1),
   sourceUrl: z.url().optional(),
   summary: z.string().optional(),

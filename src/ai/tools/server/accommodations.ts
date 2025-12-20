@@ -6,6 +6,10 @@ import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
 import {
+  type AccommodationModelOutput,
+  coerceToNumber,
+} from "@ai/tools/schemas/accommodations";
+import {
   createToolError,
   TOOL_ERROR_CODES,
   type ToolErrorCode,
@@ -66,6 +70,57 @@ export const searchAccommodations = createAiTool<
   inputSchema: accommodationSearchInputSchema,
   name: "searchAccommodations",
   outputSchema: accommodationSearchOutputSchema,
+  /**
+   * Simplifies accommodation results for model consumption to reduce token usage.
+   * Strips photos, searchParameters, and compresses nested rates to essential pricing.
+   */
+  toModelOutput: (result): AccommodationModelOutput => {
+    /**
+     * Compute the actual lowest price across all rooms and rates for a listing.
+     * Falls back to undefined if no valid prices found.
+     */
+    const computeLowestPrice = (
+      rooms?: Array<{ rates?: Array<{ price?: { total?: number | string } }> }>
+    ): number | undefined => {
+      if (!rooms?.length) return undefined;
+      let lowest: number | undefined;
+      for (const room of rooms) {
+        if (!room.rates?.length) continue;
+        for (const rate of room.rates) {
+          const total = rate.price?.total;
+          if (total === undefined || total === null) continue;
+          const numVal = typeof total === "number" ? total : Number(total);
+          if (Number.isNaN(numVal)) continue;
+          if (lowest === undefined || numVal < lowest) {
+            lowest = numVal;
+          }
+        }
+      }
+      return lowest;
+    };
+
+    const slicedListings = result.listings.slice(0, 10);
+    return {
+      avgPrice: result.avgPrice,
+      fromCache: result.fromCache,
+      listingCount: slicedListings.length,
+      listings: slicedListings.map((listing) => ({
+        amenities: listing.amenities?.slice(0, 5),
+        geoCode: listing.geoCode,
+        id: coerceToNumber.parse(listing.id),
+        lowestPrice: computeLowestPrice(listing.rooms),
+        name: listing.name,
+        rating: listing.place?.rating,
+        starRating: listing.starRating,
+      })),
+      maxPrice: result.maxPrice,
+      minPrice: result.minPrice,
+      provider: result.provider,
+      resultsReturned: result.resultsReturned,
+      totalResults: result.totalResults,
+    };
+  },
+  validateOutput: true,
 });
 
 /** Retrieve comprehensive details for a specific accommodation property from Amadeus and Google Places. */
@@ -90,6 +145,7 @@ export const getAccommodationDetails = createAiTool<
   inputSchema: accommodationDetailsInputSchema,
   name: "getAccommodationDetails",
   outputSchema: accommodationDetailsOutputSchema,
+  validateOutput: true,
 });
 
 /** Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking. */
@@ -120,6 +176,7 @@ export const checkAvailability = createAiTool<
   inputSchema: accommodationCheckAvailabilityInputSchema,
   name: "checkAvailability",
   outputSchema: accommodationCheckAvailabilityOutputSchema,
+  validateOutput: true,
 });
 
 /** Complete an accommodation booking via Amadeus. Requires a bookingToken from checkAvailability, payment method, and prior approval. */
@@ -173,6 +230,7 @@ export const bookAccommodation = createAiTool<
   inputSchema: accommodationBookingInputSchema,
   name: "bookAccommodation",
   outputSchema: accommodationBookingOutputSchema,
+  validateOutput: true,
 });
 
 /** Extract user identifier from request headers or return undefined if not found. */

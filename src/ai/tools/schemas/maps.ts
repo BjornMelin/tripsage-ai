@@ -5,6 +5,7 @@
  * Tool schemas: Input validation for maps tools (geocode, distance matrix)
  */
 
+import { upstreamGeocodeResultSchema } from "@schemas/api";
 import { z } from "zod";
 
 /** Schema for geocode tool input. */
@@ -23,4 +24,29 @@ export const distanceMatrixInputSchema = z.strictObject({
     .enum(["metric", "imperial"])
     .default("metric")
     .describe("Unit system for distances"),
+});
+
+// ===== TOOL OUTPUT SCHEMAS =====
+
+/** Schema for geocode tool output. */
+export const geocodeOutputSchema = z
+  .array(upstreamGeocodeResultSchema)
+  .describe("Geocoding results");
+
+const distanceMatrixEntrySchema = z.strictObject({
+  destinationIndex: z.number().int().nonnegative(),
+  distanceMeters: z.number().nonnegative().nullable(),
+  distanceText: z.string().nullable(),
+  durationSeconds: z.number().int().nonnegative().nullable(),
+  durationText: z.string().nullable(),
+  originIndex: z.number().int().nonnegative(),
+  status: z.enum(["OK", "ZERO_RESULTS"]),
+});
+
+/** Schema for distance matrix tool output. */
+export const distanceMatrixOutputSchema = z.strictObject({
+  destinations: z.array(z.string()),
+  entries: z.array(distanceMatrixEntrySchema),
+  origins: z.array(z.string()),
+  units: z.enum(["metric", "imperial"]),
 });

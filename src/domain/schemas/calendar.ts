@@ -379,3 +379,71 @@ export const exportItineraryToIcsInputSchema = z.strictObject({
     .describe("List of calendar events to export"),
   timezone: z.string().nullable().describe("Timezone for the exported calendar"),
 });
+
+// ===== TOOL OUTPUT SCHEMAS =====
+// Schemas for calendar tool output validation
+
+/**
+ * Schema for createCalendarEvent tool output.
+ */
+export const createCalendarEventOutputSchema = z.discriminatedUnion("success", [
+  z.strictObject({
+    error: z.string(),
+    success: z.literal(false),
+  }),
+  z.strictObject({
+    end: primitiveSchemas.isoDateTime,
+    eventId: z.string(),
+    htmlLink: primitiveSchemas.url.optional(),
+    start: primitiveSchemas.isoDateTime,
+    success: z.literal(true),
+    summary: z.string().optional(),
+  }),
+]);
+export type CreateCalendarEventOutput = z.infer<typeof createCalendarEventOutputSchema>;
+
+/**
+ * Schema for getAvailability tool output.
+ */
+export const getAvailabilityOutputSchema = z.discriminatedUnion("success", [
+  z.strictObject({
+    error: z.string(),
+    success: z.literal(false),
+  }),
+  z.strictObject({
+    calendars: z.array(
+      z.strictObject({
+        busy: z.array(
+          z.strictObject({
+            end: primitiveSchemas.isoDateTime,
+            start: primitiveSchemas.isoDateTime,
+          })
+        ),
+        calendarId: z.string(),
+      })
+    ),
+    success: z.literal(true),
+    timeMax: primitiveSchemas.isoDateTime,
+    timeMin: primitiveSchemas.isoDateTime,
+  }),
+]);
+export type GetAvailabilityOutput = z.infer<typeof getAvailabilityOutputSchema>;
+
+/**
+ * Schema for exportItineraryToIcs tool output.
+ */
+export const exportItineraryToIcsOutputSchema = z.discriminatedUnion("success", [
+  z.strictObject({
+    error: z.string(),
+    success: z.literal(false),
+  }),
+  z.strictObject({
+    calendarName: z.string(),
+    eventCount: z.number().int().nonnegative(),
+    icsContent: z.string(),
+    success: z.literal(true),
+  }),
+]);
+export type ExportItineraryToIcsOutput = z.infer<
+  typeof exportItineraryToIcsOutputSchema
+>;

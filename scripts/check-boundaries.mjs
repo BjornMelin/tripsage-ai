@@ -26,6 +26,13 @@ import { fileURLToPath } from "node:url";
 
 const FILENAME = fileURLToPath(import.meta.url);
 const DIRNAME = dirname(FILENAME);
+const REPO_ROOT = path.join(DIRNAME, "..");
+
+const isMainModule = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return path.resolve(entry) === FILENAME;
+})();
 
 // Server-only packages that should never be imported in client components
 const SERVER_ONLY_PACKAGES = [
@@ -69,8 +76,16 @@ const SERVER_ONLY_PACKAGES = [
 // Note: src/lib is included because it contains client components (error-service.ts, telemetry/client.ts, etc.)
 const SCAN_DIRS = ["src/app", "src/components", "src/hooks", "src/stores", "src/lib"];
 
-let violationsCount = 0;
+// Domain boundary enforcement (keep rules small and high-signal).
+const DOMAIN_SCAN_DIR = "src/domain";
+const DOMAIN_IMPORT_ALLOWLIST = new Set([
+  // TODO(ARCH-001): Legacy exceptions only. Keep this list small and burn down.
+  // Example: "src/domain/example/legacy.ts",
+]);
+
+let hardViolationsCount = 0;
 let warningsFound = 0;
+let allowlistedDomainViolations = 0;
 
 /**
  * Recursively find all TypeScript/JavaScript files in a directory.
@@ -125,13 +140,70 @@ function findFiles(dir, files = []) {
   return files;
 }
 
+function getImportSpecifiers(content) {
+  const specifiers = new Set();
+  const patterns = [
+    /(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g,
+    /import\(\s*["']([^"']+)["']\s*\)/g,
+    /require\(\s*["']([^"']+)["']\s*\)/g,
+  ];
+
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    let match = pattern.exec(content);
+    while (match !== null) {
+      if (match[1]) {
+        specifiers.add(match[1]);
+      }
+      match = pattern.exec(content);
+    }
+  }
+
+  return Array.from(specifiers);
+}
+
+function isClientComponent(content) {
+  return content.includes('"use client"') || content.includes("'use client'");
+}
+
+function findDomainViolations(specifiers, filePath, repoRoot = REPO_ROOT) {
+  const appViolations = [];
+  const nextViolations = [];
+
+  for (const specifier of specifiers) {
+    if (specifier.startsWith("next/")) {
+      nextViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier === "@/app" || specifier.startsWith("@/app/")) {
+      appViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier === "src/app" || specifier.startsWith("src/app/")) {
+      appViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier.startsWith(".")) {
+      const resolved = path.resolve(path.dirname(filePath), specifier);
+      if (resolved.startsWith(path.join(repoRoot, "src", "app"))) {
+        appViolations.push(specifier);
+      }
+    }
+  }
+
+  return { appViolations, nextViolations };
+}
+
 function checkBoundaries() {
   console.log("🔍 Scanning for boundary violations...\n");
 
   const allFiles = [];
 
   for (const scanDir of SCAN_DIRS) {
-    const fullScanDir = path.join(DIRNAME, "..", scanDir);
+    const fullScanDir = path.join(REPO_ROOT, scanDir);
     if (fs.existsSync(fullScanDir)) {
       const files = findFiles(fullScanDir);
       allFiles.push(...files);
@@ -139,7 +211,7 @@ function checkBoundaries() {
   }
 
   for (const file of allFiles) {
-    const relativePath = path.relative(path.join(DIRNAME, ".."), file);
+    const relativePath = path.relative(REPO_ROOT, file);
     let content;
     try {
       content = fs.readFileSync(file, "utf8");
@@ -151,10 +223,9 @@ function checkBoundaries() {
     }
 
     // Check if this is a client component
-    const isClientComponent =
-      content.includes('"use client"') || content.includes("'use client'");
+    const isClient = isClientComponent(content);
 
-    if (isClientComponent) {
+    if (isClient) {
       const packageViolations = new Set();
       // Check for server-only imports
       for (const serverPackage of SERVER_ONLY_PACKAGES) {
@@ -196,7 +267,7 @@ function checkBoundaries() {
         }
       }
 
-      violationsCount += packageViolations.size;
+      hardViolationsCount += packageViolations.size;
 
       // Check for direct database operations that indicate server usage
       // Use precise regex to match supabase.from() or db.from(), not Array.from()
@@ -255,18 +326,72 @@ function checkBoundaries() {
     }
   }
 
+  // Domain layer: block imports from app/Next.js (beyond client/server boundary).
+  const domainRoot = path.join(REPO_ROOT, DOMAIN_SCAN_DIR);
+  if (fs.existsSync(domainRoot)) {
+    const domainFiles = findFiles(domainRoot);
+    for (const file of domainFiles) {
+      const relativePath = path.relative(REPO_ROOT, file);
+      const normalizedPath = relativePath.split(path.sep).join("/");
+      let content;
+      try {
+        content = fs.readFileSync(file, "utf8");
+      } catch (error) {
+        console.warn(
+          `⚠️  Could not read file: ${normalizedPath} — ${(error instanceof Error && error.message) || error}`
+        );
+        continue;
+      }
+
+      const specifiers = getImportSpecifiers(content);
+      if (specifiers.length === 0) continue;
+
+      const { appViolations, nextViolations } = findDomainViolations(
+        specifiers,
+        file,
+        REPO_ROOT
+      );
+
+      if (appViolations.length === 0 && nextViolations.length === 0) {
+        continue;
+      }
+
+      const isAllowlisted = DOMAIN_IMPORT_ALLOWLIST.has(normalizedPath);
+      const heading = isAllowlisted
+        ? `⚠️  LEGACY ALLOWLIST: ${normalizedPath}`
+        : `❌ BOUNDARY VIOLATION: ${normalizedPath}`;
+      const log = isAllowlisted ? console.warn : console.error;
+
+      log(heading);
+      if (appViolations.length > 0) {
+        log(`   Domain imports app layer: ${appViolations.join(", ")}`);
+      }
+      if (nextViolations.length > 0) {
+        log(`   Domain imports Next.js: ${nextViolations.join(", ")}`);
+      }
+      log("");
+
+      if (isAllowlisted) {
+        allowlistedDomainViolations += 1;
+      } else {
+        hardViolationsCount += 1;
+      }
+    }
+  }
+
   // Print summary
   console.log(`\n${"=".repeat(60)}`);
   console.log("📊 Summary");
   console.log("=".repeat(60));
   console.log(`Files scanned: ${allFiles.length}`);
-  console.log(`Hard violations: ${violationsCount}`);
+  console.log(`Hard violations: ${hardViolationsCount}`);
+  console.log(`Allowlisted domain violations: ${allowlistedDomainViolations}`);
   console.log(`Potential issues (warnings): ${warningsFound}`);
   console.log(`${"=".repeat(60)}\n`);
 
-  if (violationsCount > 0) {
+  if (hardViolationsCount > 0) {
     console.error(
-      "❌ Boundary violations found! Client components should not import server-only modules."
+      "❌ Boundary violations found! Check client/server and domain/app import rules."
     );
     process.exit(1);
   } else if (warningsFound > 0) {
@@ -279,9 +404,13 @@ function checkBoundaries() {
   }
 }
 
-try {
-  checkBoundaries();
-} catch (error) {
-  console.error("Error scanning boundaries:", error);
-  process.exit(1);
+if (isMainModule) {
+  try {
+    checkBoundaries();
+  } catch (error) {
+    console.error("Error scanning boundaries:", error);
+    process.exit(1);
+  }
 }
+
+export { findDomainViolations, getImportSpecifiers, isClientComponent };

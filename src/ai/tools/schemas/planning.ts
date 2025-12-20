@@ -130,3 +130,79 @@ export const saveTravelPlanResponseSchema = z.discriminatedUnion("success", [
 
 /** TypeScript type for saveTravelPlan tool response. */
 export type SaveTravelPlanResponse = z.infer<typeof saveTravelPlanResponseSchema>;
+
+/**
+ * Schema for updateTravelPlan tool response.
+ *
+ * Represents either an error response or a successful plan update result.
+ */
+export const updateTravelPlanResponseSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string().describe("Error message"),
+    success: z.literal(false),
+  }),
+  z.object({
+    message: z.string().describe("Success message"),
+    plan: z.unknown().describe("Updated plan object"),
+    planId: UUID_V4,
+    success: z.literal(true),
+  }),
+]);
+
+/** TypeScript type for updateTravelPlan tool response. */
+export type UpdateTravelPlanResponse = z.infer<typeof updateTravelPlanResponseSchema>;
+
+const combinedRecommendationsSchema = z.strictObject({
+  accommodations: z.array(z.unknown()),
+  activities: z.array(z.unknown()),
+  flights: z.array(z.unknown()),
+});
+
+const combinedResultsSchema = z.strictObject({
+  destinationHighlights: z.array(z.unknown()),
+  recommendations: combinedRecommendationsSchema,
+  totalEstimatedCost: z.number().describe("Estimated total cost"),
+  travelTips: z.array(z.unknown()),
+});
+
+/**
+ * Schema for combineSearchResults tool response.
+ *
+ * Represents either an error response or a successful combine result.
+ */
+export const combineSearchResultsResponseSchema = z.discriminatedUnion("success", [
+  z.object({
+    error: z.string().describe("Error message"),
+    success: z.literal(false),
+  }),
+  z.object({
+    combinedResults: combinedResultsSchema,
+    message: z.string().describe("Success message"),
+    success: z.literal(true),
+  }),
+]);
+
+/** TypeScript type for combineSearchResults tool response. */
+export type CombineSearchResultsResponse = z.infer<
+  typeof combineSearchResultsResponseSchema
+>;
+
+/**
+ * Schema for deleteTravelPlan tool response.
+ */
+export const deleteTravelPlanResponseSchema = z.discriminatedUnion("success", [
+  z.object({
+    approval: z.unknown().optional().describe("Approval metadata when required"),
+    error: z.string().describe("Error message"),
+    planId: UUID_V4.optional(),
+    success: z.literal(false),
+  }),
+  z.object({
+    message: z.string().describe("Success message"),
+    planId: UUID_V4,
+    success: z.literal(true),
+  }),
+]);
+
+/** TypeScript type for deleteTravelPlan tool response. */
+export type DeleteTravelPlanResponse = z.infer<typeof deleteTravelPlanResponseSchema>;

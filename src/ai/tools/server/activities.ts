@@ -7,6 +7,7 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import type { ActivityModelOutput } from "@ai/tools/schemas/activities";
 import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { getActivitiesService } from "@domain/activities/container";
 import { activitySchema, activitySearchParamsSchema } from "@schemas/search";
@@ -77,6 +78,27 @@ export const searchActivities = createAiTool<
   },
   inputSchema: activitySearchParamsSchema,
   name: "searchActivities",
+  outputSchema: activitySearchOutputSchema,
+  /**
+   * Simplifies activity search results for model consumption to reduce token usage.
+   * Strips images array, coordinates, and limits to essential identifying/decision info.
+   */
+  toModelOutput: (result): ActivityModelOutput => ({
+    activities: result.activities.slice(0, 10).map((activity) => ({
+      duration: activity.duration,
+      id: activity.id,
+      location: activity.location,
+      name: activity.name,
+      price: activity.price,
+      rating: activity.rating,
+      type: activity.type,
+    })),
+    metadata: {
+      primarySource: result.metadata.primarySource,
+      total: result.metadata.total,
+    },
+  }),
+  validateOutput: true,
 });
 
 /**
@@ -124,4 +146,6 @@ export const getActivityDetails = createAiTool<
   },
   inputSchema: getActivityDetailsInputSchema,
   name: "getActivityDetails",
+  outputSchema: activitySchema,
+  validateOutput: true,
 });

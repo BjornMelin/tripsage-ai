@@ -4,7 +4,7 @@ import type { SystemModelMessage } from "ai";
 import { describe, expect, it } from "vitest";
 
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
-import { extractTextFromContent, normalizeInstructions } from "../chat-agent";
+import { extractTextFromContent, normalizeInstructions } from "../instructions";
 
 describe("normalizeInstructions", () => {
   it("returns plain string input unchanged", () => {

@@ -18,7 +18,10 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import { toolRegistry } from "@ai/tools";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { MemoryUpdateRequest } from "@schemas/agents";
-import { addConversationMemoryInputSchema } from "@schemas/memory";
+import {
+  addConversationMemoryInputSchema,
+  addConversationMemoryOutputSchema,
+} from "@schemas/memory";
 import type { LanguageModel } from "ai";
 import { streamText } from "ai";
 import type { z } from "zod";
@@ -61,6 +64,7 @@ type PersistOutcome = {
 
 /** Type alias for the input schema of the addConversationMemory tool. */
 type AddConversationMemoryInput = z.infer<typeof addConversationMemoryInputSchema>;
+type AddConversationMemoryOutput = z.infer<typeof addConversationMemoryOutputSchema>;
 
 /** Type alias for individual memory records from the update request. */
 type MemoryRecordInput = MemoryUpdateRequest["records"][number];
@@ -73,6 +77,15 @@ const MEMORY_CATEGORY_VALUES: readonly AddConversationMemoryInput["category"][] 
   "conversation_context",
   "other",
 ] as const;
+
+const isAsyncIterable = (
+  value: unknown
+): value is AsyncIterable<AddConversationMemoryOutput> =>
+  value !== null &&
+  typeof value === "object" &&
+  Symbol.asyncIterator in value &&
+  typeof (value as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] ===
+    "function";
 
 /**
  * Normalizes a memory category string to a valid schema value.
@@ -190,16 +203,18 @@ export async function persistMemoryRecords(
   }
 
   const rateLimit = buildRateLimit("memoryUpdate", identifier);
-  const guardrailedAddMemory = createAiTool({
+  const guardrailedAddMemory = createAiTool<
+    AddConversationMemoryInput,
+    AddConversationMemoryOutput
+  >({
     description: memoryTool.description ?? "Add conversation memory",
-    execute: async (params, callOptions) => {
+    execute: async (params, callOptions): Promise<AddConversationMemoryOutput> => {
       if (typeof memoryTool.execute !== "function") {
         throw new Error("Tool addConversationMemory missing execute binding");
       }
-      return (await memoryTool.execute(params, callOptions)) as {
-        createdAt: string;
-        id: string;
-      };
+      const result = await memoryTool.execute(params, callOptions);
+      // Output validation is enabled; type narrowing is safe after validation passes
+      return result as AddConversationMemoryOutput;
     },
     guardrails: {
       rateLimit: {
@@ -215,6 +230,8 @@ export async function persistMemoryRecords(
     },
     inputSchema: addConversationMemoryInputSchema,
     name: "addConversationMemory",
+    outputSchema: addConversationMemoryOutputSchema,
+    validateOutput: true,
   });
 
   const guardrailedExecute = guardrailedAddMemory.execute;
@@ -230,10 +247,13 @@ export async function persistMemoryRecords(
           category: normalizedCategory,
           content: record.content,
         };
-        const res = (await guardrailedExecute(payload, {
+        const res = await guardrailedExecute(payload, {
           messages: [],
           toolCallId: `memory-add-${index}`,
-        })) as { createdAt: string; id: string };
+        });
+        if (isAsyncIterable(res)) {
+          throw new Error(TOOL_ERROR_CODES.memoryUnexpectedStream);
+        }
         successes.push({
           category: normalizedCategory,
           createdAt: res.createdAt,

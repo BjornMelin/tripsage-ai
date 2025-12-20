@@ -16,9 +16,15 @@ For tool input schema patterns, see [Zod Schema Guide](zod-schema-guide.md).
 
 ## Tool Creation Patterns
 
+### Server Tools (Required)
+
+All server tools under `src/ai/tools/server/**` **must** use `createAiTool`.
+Raw `tool()` usage is blocked by `pnpm ai-tools:check`.
+
 ### Simple Tool (No Guardrails)
 
-Use the AI SDK `tool()` helper for lightweight tools without guardrails:
+Use the AI SDK `tool()` helper only for non-server contexts (client-only
+helpers, tests, or prototypes). Do **not** use this in `src/ai/tools/server/**`.
 
 ```typescript
 import type { ToolCallOptions } from "ai";
@@ -37,7 +43,7 @@ export const myTool = tool({
 });
 ```
 
-### Tool with Guardrails (Recommended)
+### Tool with Guardrails (Required for Server Tools)
 
 Use `createAiTool` for production tools that need caching, rate-limiting, and telemetry:
 
@@ -85,8 +91,23 @@ export const myTool = createAiTool({
     userId: z.string().optional().describe("User context"),
   }),
   name: "myTool",
+  outputSchema: z.object({
+    result: z.string(),
+  }),
+  validateOutput: true,
 });
 ```
+
+**Output validation (required):**
+- All server tools must provide an `outputSchema` and set `validateOutput: true`.
+- Prefer shared Zod output schemas in `@schemas/*` or `@ai/tools/schemas/*` to keep tool contracts consistent.
+
+### Exceptions (Temporary Only)
+
+If a server tool must use raw `tool()` temporarily:
+1. Add the marker `// ai-tool-check: allow-raw-tool` in the file.
+2. Add the file to `TOOL_ALLOWLIST` in `scripts/check-ai-tools.mjs` with a reason.
+3. Remove the exception as soon as the file's migration to `createAiTool` completes.
 
 ## Tool Execution Signature
 

@@ -38,8 +38,10 @@
     "test:analyze": "pnpm ops test analyze failures",
     "test:analyze:all": "pnpm ops test analyze all",
     "boundary:check": "node scripts/check-boundaries.mjs",
+    "ai-tools:check": "node scripts/check-ai-tools.mjs",
     "check:no-new-unknown-casts": "node scripts/check-no-new-unknown-casts.mjs",
-    "check:no-unknown-casts": "node scripts/check-no-unknown-casts.mjs"
+    "check:no-unknown-casts": "node scripts/check-no-unknown-casts.mjs",
+    "deps:cycles": "madge --circular --extensions ts,tsx --ts-config ./tsconfig.json src/ai/agents"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.0-beta.83",
@@ -152,6 +154,7 @@
     "@vitest/coverage-v8": "^4.0.15",
     "@vitest/ui": "^4.0.15",
     "babel-plugin-react-compiler": "^1.0.0",
+    "madge": "^6.1.0",
     "conventional-changelog-conventionalcommits": "^9.1.0",
     "jose": "^6.1.3",
     "jscodeshift": "^17.3.0",

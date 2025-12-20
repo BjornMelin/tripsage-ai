@@ -58,3 +58,34 @@ export const webSearchBatchInputSchema = z.strictObject({
   timeoutMs: z.number().int().positive().nullable().describe("Timeout in milliseconds"),
   userId: z.string().nullable().describe("User identifier for the search"),
 });
+
+// ===== MODEL OUTPUT SCHEMAS =====
+
+/** Individual search result for model consumption. */
+const webSearchResultModelOutputSchema = z.strictObject({
+  title: z.string().optional(),
+  url: z.string(),
+});
+
+/** Per-query result value for model consumption. */
+const webSearchQueryValueModelOutputSchema = z.strictObject({
+  resultCount: z.number().int(),
+  results: z.array(webSearchResultModelOutputSchema),
+});
+
+/** Per-query result entry for model consumption. */
+const webSearchBatchResultEntryModelOutputSchema = z.strictObject({
+  error: z.string().optional(),
+  ok: z.boolean(),
+  query: z.string(),
+  value: webSearchQueryValueModelOutputSchema.optional(),
+});
+
+/** Web search batch result output schema for model consumption. */
+export const webSearchBatchModelOutputSchema = z.strictObject({
+  queryCount: z.number().int(),
+  results: z.array(webSearchBatchResultEntryModelOutputSchema),
+  tookMs: z.number(),
+});
+
+export type WebSearchBatchModelOutput = z.infer<typeof webSearchBatchModelOutputSchema>;

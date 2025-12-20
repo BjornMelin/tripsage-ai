@@ -61,10 +61,16 @@ describe("persistMemoryRecords", () => {
     const out = await persistMemoryRecords("user-123", req);
 
     const createAiToolCall = createAiToolMock.mock.calls[0]?.[0] as
-      | { guardrails?: Record<string, unknown> }
+      | {
+          guardrails?: Record<string, unknown>;
+          outputSchema?: unknown;
+          validateOutput?: boolean;
+        }
       | undefined;
     expect(createAiToolCall?.guardrails).toBeDefined();
     expect(createAiToolCall?.guardrails).not.toHaveProperty("cache");
+    expect(createAiToolCall?.outputSchema).toBeDefined();
+    expect(createAiToolCall?.validateOutput).toBe(true);
 
     // Assert successes and failures separately
     expect(out.successes).toBeDefined();

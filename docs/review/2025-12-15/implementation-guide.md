@@ -457,7 +457,7 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
 
 ### 4.1 Enforce layering boundaries (beyond client/server)
 
-- [ ] (ARCH-001) Define a 1-page layering policy and enforce it in CI
+- [x] (ARCH-001) Define a 1-page layering policy and enforce it in CI
   - Files:
     - `docs/development/standards/standards.md` (or a new architecture policy doc)
     - `scripts/check-boundaries.mjs`
@@ -467,10 +467,15 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
     - Keep the initial rule-set small and high-signal; track legacy violations explicitly.
   - Verify:
     - `pnpm boundary:check`
+  - Implementation notes (2025-12-19):
+    - Added `docs/development/architecture/layering.md` and linked it from `standards.md` and `docs/development/README.md`.
+    - Extended `scripts/check-boundaries.mjs` to block domain → app/next imports with an explicit allowlist.
+    - Normalized allowlist path handling in `scripts/check-boundaries.mjs` for Windows compatibility.
+    - CI now runs `pnpm boundary:check`.
 
 ### 4.2 Make `createAiTool` mandatory for server tools
 
-- [ ] (ARCH-002) Migrate `getTravelAdvisory` off raw `tool()` and onto `createAiTool`
+- [x] (ARCH-002) Migrate `getTravelAdvisory` off raw `tool()` and onto `createAiTool`
   - Files:
     - `src/ai/tools/server/travel-advisory.ts`
     - `src/ai/lib/tool-factory.ts` (if guardrails need enhancements)
@@ -479,12 +484,25 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
     - Consider a lint rule or test that rejects raw `tool()` exports under `src/ai/tools/server/*`.
   - Verify:
     - `pnpm test:affected`
+    - `pnpm ai-tools:check`
+  - Implementation notes (2025-12-19):
+    - Migrated `getTravelAdvisory` to `createAiTool` with cache + rate limit + telemetry guardrails.
+    - Added `scripts/check-ai-tools.mjs` and CI step to block raw `tool()` usage in server tools.
+    - Updated AI tools docs and frontend architecture docs to reflect the enforcement rule.
+    - Migrated `web-crawl` and `web-search-batch` to `createAiTool`; removed allowlisted raw `tool()` exceptions.
+    - Normalized allowlist path handling in `scripts/check-ai-tools.mjs` for Windows compatibility.
+    - Avoided mutating cache-key inputs in `web-crawl` by sorting copies.
+    - Updated Maps tools to drop legacy Distance Matrix output, added output schemas/validation, and added `maps` tool unit tests.
+    - Added output schemas + validation across remaining server tools (calendar, memory, planning, rag, weather, flights, activities, google-places, web-crawl).
+    - Updated travel advisory safety score schema to 0–100 and added tool output schema validation.
+    - Removed unused `src/ai/tools/schemas/memory.ts` duplicate.
+    - Added output validation for the memory-agent tool wrapper and tests covering `createAiTool` output schema enforcement.
   - References:
     - <https://github.com/vercel/ai/blob/ai@6.0.0-beta.128/content/docs/02-foundations/04-tools.mdx>
 
 ### 4.3 Break the AI core circular dependency
 
-- [ ] (ARCH-003) Extract instruction-normalization helpers into a leaf module
+- [x] (ARCH-003) Extract instruction-normalization helpers into a leaf module
   - Files:
     - `src/ai/agents/chat-agent.ts`
     - `src/ai/agents/agent-factory.ts`
@@ -496,6 +514,11 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
   - Verify:
     - `pnpm test:affected`
     - `pnpm type-check`
+    - `pnpm deps:cycles`
+  - Implementation notes (2025-12-19):
+    - Extracted instruction helpers to `src/ai/agents/instructions.ts`.
+    - Added `madge` + `pnpm deps:cycles` and wired it into CI.
+    - Re-sanitized `prepareCall` instruction overrides in `agent-factory` to prevent prompt-injection bypass.
   - References:
     - <https://nodejs.org/api/modules.html#cycles>
 

@@ -8,6 +8,7 @@ Resources and guidelines for TripSage development.
 |-------|---------|
 | [Quick Start](core/quick-start.md) | Project setup, environment, first run |
 | [Standards](standards/standards.md) | TypeScript, import paths, Zod schemas, Zustand stores, security |
+| [Layering Policy](architecture/layering.md) | Architecture layers, allowed dependencies, boundary enforcement |
 | [Development Guide](core/development-guide.md) | Architecture overview, key patterns, documentation index |
 | [Testing](testing/testing.md) | Strategy, patterns, templates, MSW handlers |
 | [Troubleshooting](core/troubleshooting.md) | Debugging, CI/CD, workflow guidance |

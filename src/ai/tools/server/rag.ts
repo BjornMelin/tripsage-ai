@@ -9,7 +9,7 @@ import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import { ragSearchInputSchema } from "@schemas/rag";
+import { ragSearchInputSchema, ragSearchToolOutputSchema } from "@schemas/rag";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { createReranker } from "@/lib/rag/reranker";
 import { retrieveDocuments } from "@/lib/rag/retriever";
@@ -95,4 +95,6 @@ export const ragSearch = createAiTool({
   },
   inputSchema: ragSearchInputSchema,
   name: "ragSearch",
+  outputSchema: ragSearchToolOutputSchema,
+  validateOutput: true,
 });

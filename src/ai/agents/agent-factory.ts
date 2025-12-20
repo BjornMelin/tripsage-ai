@@ -32,7 +32,7 @@ import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
-import { normalizeInstructions } from "./chat-agent";
+import { normalizeInstructions } from "./instructions";
 import type {
   AgentDependencies,
   StructuredOutput,
@@ -227,12 +227,36 @@ export function createTripSageAgent<
             });
 
             const hasResultInstructions = Object.hasOwn(result, "instructions");
+            const resolvedInstructions = hasResultInstructions
+              ? normalizeInstructionInput(result.instructions ?? "")
+              : sanitizedInstructions;
+
+            const sanitizedResultInstructions = hasResultInstructions
+              ? sanitizeWithInjectionDetection(resolvedInstructions, 5000)
+              : sanitizedInstructions;
+
+            if (hasResultInstructions && hasInjectionRisk(resolvedInstructions)) {
+              logger.warn(
+                "Prompt injection patterns detected in prepareCall instructions",
+                {
+                  hasFilteredContent: isFilteredValue(sanitizedResultInstructions),
+                  modelId: deps.modelId,
+                }
+              );
+              recordTelemetryEvent("security.prompt_injection_detected", {
+                attributes: {
+                  modelId: deps.modelId,
+                  source: "prepare_call",
+                  wasFiltered: isFilteredValue(sanitizedResultInstructions),
+                },
+                level: "warning",
+              });
+            }
+
             // Return merged settings - prepareCall can override any setting
             return {
               ...params,
-              instructions: hasResultInstructions
-                ? (result.instructions ?? "")
-                : sanitizedInstructions,
+              instructions: sanitizedResultInstructions,
               ...(result.model ? { model: result.model } : {}),
               ...(result.tools ? { tools: result.tools } : {}),
               ...(result.activeTools ? { activeTools: result.activeTools } : {}),

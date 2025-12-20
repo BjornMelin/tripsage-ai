@@ -377,4 +377,101 @@ describe("createAiTool", () => {
     await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
     expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
+
+  test("returns validated output when output schema is satisfied", async () => {
+    const tool = createAiTool({
+      description: "validated output tool",
+      execute: async () => ({ status: "ok" }),
+      inputSchema: z.object({}),
+      name: "validatedOutputTool",
+      outputSchema: z.object({ status: z.literal("ok") }),
+      validateOutput: true,
+    });
+
+    const result = await tool.execute?.({}, { messages: [], toolCallId: "call-5" });
+    expect(result).toEqual({ status: "ok" });
+  });
+
+  test("throws tool error when output validation fails", async () => {
+    const tool = createAiTool({
+      description: "invalid output tool",
+      execute: async () => ({ status: "nope" }),
+      inputSchema: z.object({}),
+      name: "invalidOutputTool",
+      outputSchema: z.object({ status: z.literal("ok") }),
+      validateOutput: true,
+    });
+
+    await expect(
+      tool.execute?.({}, { messages: [], toolCallId: "call-6" })
+    ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.invalidOutput });
+  });
+
+  test("passes lifecycle hooks to AI SDK tool when provided", () => {
+    const onInputStartSpy = vi.fn();
+    const onInputDeltaSpy = vi.fn();
+    const onInputAvailableSpy = vi.fn();
+
+    const tool = createAiTool({
+      description: "tool with lifecycle hooks",
+      execute: async () => ({ ok: true }),
+      inputSchema: z.object({ query: z.string() }),
+      lifecycle: {
+        onInputAvailable: onInputAvailableSpy,
+        onInputDelta: onInputDeltaSpy,
+        onInputStart: onInputStartSpy,
+      },
+      name: "lifecycleTool",
+    });
+
+    // Verify the tool was created and has the expected structure
+    expect(tool).toHaveProperty("description");
+    expect(tool).toHaveProperty("execute");
+    expect(tool).toHaveProperty("inputSchema");
+
+    // Verify the lifecycle hooks are attached to the tool
+    // AI SDK's tool() attaches these as properties on the tool object
+    expect(tool).toHaveProperty("onInputStart", onInputStartSpy);
+    expect(tool).toHaveProperty("onInputDelta", onInputDeltaSpy);
+    expect(tool).toHaveProperty("onInputAvailable", onInputAvailableSpy);
+  });
+
+  test("creates tool without lifecycle hooks when not provided", () => {
+    const tool = createAiTool({
+      description: "tool without lifecycle hooks",
+      execute: async () => ({ ok: true }),
+      inputSchema: z.object({ query: z.string() }),
+      name: "noLifecycleTool",
+    });
+
+    // Verify the tool was created and has the expected structure
+    expect(tool).toHaveProperty("description");
+    expect(tool).toHaveProperty("execute");
+    expect(tool).toHaveProperty("inputSchema");
+
+    // Verify no lifecycle hooks are attached
+    expect(tool).not.toHaveProperty("onInputStart");
+    expect(tool).not.toHaveProperty("onInputDelta");
+    expect(tool).not.toHaveProperty("onInputAvailable");
+  });
+
+  test("supports partial lifecycle hooks configuration", () => {
+    const onInputAvailableSpy = vi.fn();
+
+    const tool = createAiTool({
+      description: "tool with partial lifecycle hooks",
+      execute: async () => ({ ok: true }),
+      inputSchema: z.object({ query: z.string() }),
+      lifecycle: {
+        // Only provide onInputAvailable
+        onInputAvailable: onInputAvailableSpy,
+      },
+      name: "partialLifecycleTool",
+    });
+
+    // Verify only the provided hook is attached
+    expect(tool).not.toHaveProperty("onInputStart");
+    expect(tool).not.toHaveProperty("onInputDelta");
+    expect(tool).toHaveProperty("onInputAvailable", onInputAvailableSpy);
+  });
 });
