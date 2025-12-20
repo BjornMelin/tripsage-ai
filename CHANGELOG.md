@@ -1,3 +1,22 @@
+## [1.21.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.20.0...v1.21.0) (2025-12-20)
+
+### Features
+
+* **agents:** remove chat-agent cycle ([1980676](https://github.com/BjornMelin/tripsage-ai/commit/1980676040b42ae1591322f602e94766f19120aa))
+* **ai-tools:** enforce createAiTool guardrails ([884ff0e](https://github.com/BjornMelin/tripsage-ai/commit/884ff0ee22c9589060eafa3bc7a74558a2c9e912))
+* **architecture:** add layering policy and boundary checks ([a462c3e](https://github.com/BjornMelin/tripsage-ai/commit/a462c3e82852b484c380b3ce244a699aba3dfda3))
+
+### Bug Fixes
+
+* **ai-tools:** add timeouts and normalize calendar output ([5bba152](https://github.com/BjornMelin/tripsage-ai/commit/5bba152416ade85c54cdd73328c726e7cce77f82))
+* **ai-tools:** align cache keys and share coercion ([de6597d](https://github.com/BjornMelin/tripsage-ai/commit/de6597d6b48d750eeb911a9302b40320fbf50946))
+* **pr-review:** address additional refinement requests ([4527a59](https://github.com/BjornMelin/tripsage-ai/commit/4527a59ff93fedde0317007a7bc9e574daf2f00b))
+* **pr-review:** address all remaining PR [#576](https://github.com/BjornMelin/tripsage-ai/issues/576) nitpicks ([566bd79](https://github.com/BjornMelin/tripsage-ai/commit/566bd79a86bb92e59a893b43b350a86db20fb5f0))
+* **pr-review:** address PR [#576](https://github.com/BjornMelin/tripsage-ai/issues/576) review comments ([6370761](https://github.com/BjornMelin/tripsage-ai/commit/6370761bfa30fedebdbec13685d8266461e35509))
+* **web-search:** normalize fallback errors ([c27f663](https://github.com/BjornMelin/tripsage-ai/commit/c27f663bbf9b346e9ada2550ba2a2f3224ce73dd))
+* **web-search:** use tool errors and align timeouts ([32829de](https://github.com/BjornMelin/tripsage-ai/commit/32829debf06582043c8a864af9c458cc491be452))
+* **web-search:** validate fallback response and dedupe codes ([c643f65](https://github.com/BjornMelin/tripsage-ai/commit/c643f65ca7b31630c144f853e955050173e64680))
+
 ## [1.20.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.19.0...v1.20.0) (2025-12-19)
 
 ### Features
