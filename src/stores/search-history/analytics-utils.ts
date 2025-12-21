@@ -85,7 +85,6 @@ export const computeSearchAnalytics = (
     searchesByDay.set(dateKey, (searchesByDay.get(dateKey) ?? 0) + 1);
 
     const hour = ts.getUTCHours();
-    if (!Number.isFinite(hour)) continue;
     searchesByHour[hour] += 1;
 
     if (search.searchType === "destination") {
