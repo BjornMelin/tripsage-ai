@@ -139,6 +139,46 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       expect(analytics.popularSearchTimes).toHaveLength(24); // 24 hours
     });
 
+    it("computes topDestinations from destination searches", () => {
+      const destinationSearches: SearchHistoryItem[] = [
+        {
+          id: "dest-1",
+          location: { city: "Paris", country: "France" },
+          params: {},
+          searchType: "destination",
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: "dest-2",
+          location: { city: "Paris", country: "France" },
+          params: {},
+          searchType: "destination",
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: "dest-3",
+          params: { query: "Tokyo" },
+          searchType: "destination",
+          timestamp: new Date().toISOString(),
+        },
+      ];
+
+      act(() => {
+        useSearchHistoryStore.setState({ recentSearches: destinationSearches });
+      });
+
+      const { result } = renderHook(() => useSearchHistoryStore());
+      const analytics = result.current.getSearchAnalytics();
+
+      expect(analytics.topDestinations[0]).toEqual({ count: 2, destination: "Paris, France" });
+      expect(analytics.topDestinations).toEqual(
+        expect.arrayContaining([
+          { count: 2, destination: "Paris, France" },
+          { count: 1, destination: "Tokyo" },
+        ])
+      );
+    });
+
     it("buildSearchTrends is deterministic with a fixed now", () => {
       const searchesByDay = new Map<string, number>([
         ["2025-01-28", 1],

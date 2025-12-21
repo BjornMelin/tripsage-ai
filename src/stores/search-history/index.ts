@@ -21,6 +21,27 @@ import type { SearchAnalytics, SearchHistoryState } from "./types";
 
 const MS_PER_DAY = 86_400_000;
 
+const createSearchTypeRecord = <T>(createValue: () => T): Record<SearchType, T> => ({
+  accommodation: createValue(),
+  activity: createValue(),
+  destination: createValue(),
+  flight: createValue(),
+});
+
+const getDestinationLabel = (search: SearchHistoryItem): string | null => {
+  const city = search.location?.city?.trim();
+  const country = search.location?.country?.trim();
+
+  if (city && country) return `${city}, ${country}`;
+  if (city) return city;
+  if (country) return country;
+
+  const query = search.params.query;
+  if (typeof query === "string" && query.trim().length > 0) return query.trim();
+
+  return null;
+};
+
 /**
  * Build a fixed-length (N days) search trend series from per-day counts.
  *
@@ -53,15 +74,11 @@ const computeSearchAnalytics = (
   savedSearches: ValidatedSavedSearch[]
 ): SearchAnalytics => {
   const totalSearches = recentSearches.length;
-  const searchesByType: Record<SearchType, number> = {
-    accommodation: 0,
-    activity: 0,
-    destination: 0,
-    flight: 0,
-  };
+  const searchesByType = createSearchTypeRecord(() => 0);
 
   const searchesByDay = new Map<string, number>();
   const searchesByHour = new Array<number>(24).fill(0);
+  const destinationsByLabel = new Map<string, number>();
 
   let totalDuration = 0;
 
@@ -79,6 +96,11 @@ const computeSearchAnalytics = (
     const hour = ts.getUTCHours();
     if (!Number.isFinite(hour)) continue;
     searchesByHour[hour] += 1;
+
+    if (search.searchType === "destination") {
+      const label = getDestinationLabel(search);
+      if (label) destinationsByLabel.set(label, (destinationsByLabel.get(label) ?? 0) + 1);
+    }
   }
 
   const averageSearchDuration = totalSearches > 0 ? totalDuration / totalSearches : 0;
@@ -97,6 +119,11 @@ const computeSearchAnalytics = (
     (count, hour) => ({ count, hour })
   );
 
+  const topDestinations = [...destinationsByLabel.entries()]
+    .map(([destination, count]) => ({ count, destination }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
   return {
     averageSearchDuration,
     mostUsedSearchTypes,
@@ -112,7 +139,7 @@ const computeSearchAnalytics = (
       })),
     searchesByType,
     searchTrends,
-    topDestinations: [],
+    topDestinations,
     totalSearches,
   };
 };
@@ -127,12 +154,9 @@ const computeSearchHistory = (
   );
 
   // Compute recentSearchesByType
-  const recentSearchesByType: Record<SearchType, SearchHistoryItem[]> = {
-    accommodation: [],
-    activity: [],
-    destination: [],
-    flight: [],
-  };
+  const recentSearchesByType = createSearchTypeRecord<SearchHistoryItem[]>(
+    (): SearchHistoryItem[] => []
+  );
   state.recentSearches.forEach((search) => {
     recentSearchesByType[search.searchType].push(search);
   });
@@ -191,12 +215,9 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
           // Computed properties - initial values (updated via withComputed)
           favoriteSearches: [] satisfies ValidatedSavedSearch[],
-          recentSearchesByType: {
-            accommodation: [],
-            activity: [],
-            destination: [],
-            flight: [],
-          } satisfies Record<SearchType, SearchHistoryItem[]>,
+          recentSearchesByType: createSearchTypeRecord<SearchHistoryItem[]>(
+            (): SearchHistoryItem[] => []
+          ) satisfies Record<SearchType, SearchHistoryItem[]>,
 
           reset: () => {
             set({
@@ -218,12 +239,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             mostUsedSearchTypes: [],
             popularSearchTimes: [],
             savedSearchUsage: [],
-            searchesByType: {
-              accommodation: 0,
-              activity: 0,
-              destination: 0,
-              flight: 0,
-            },
+            searchesByType: createSearchTypeRecord(() => 0),
             searchTrends: [],
             topDestinations: [],
             totalSearches: 0,
