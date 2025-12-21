@@ -57,11 +57,14 @@ describe("chat realtime integration", () => {
 
     useChatRealtime.getState().handleTypingUpdate(sessionId, {
       isTyping: true,
+      username: "User One",
       userId: "user-1",
     });
 
     const typingUsers = useChatRealtime.getState().typingUsers;
-    expect(Object.keys(typingUsers)).toContain(`${sessionId}_user-1`);
+    const typingKey = `${sessionId}_user-1`;
+    expect(Object.keys(typingUsers)).toContain(typingKey);
+    expect(typingUsers[typingKey]?.username).toBe("User One");
 
     useChatRealtime.getState().handleTypingUpdate(sessionId, {
       isTyping: false,

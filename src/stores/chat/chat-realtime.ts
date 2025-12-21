@@ -119,7 +119,7 @@ export const useChatRealtime = create<ChatRealtimeState>()(
         }
 
         if (payload.isTyping) {
-          get().setUserTyping(sessionId, payload.userId);
+          get().setUserTyping(sessionId, payload.userId, payload.username);
         } else {
           get().removeUserTyping(sessionId, payload.userId);
         }
