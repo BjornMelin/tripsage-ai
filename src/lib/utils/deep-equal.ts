@@ -49,7 +49,11 @@ const deepEqualJsonLikeInner = (
   maxDepth: number,
   priorityKeys: readonly string[],
   priorityKeySet: ReadonlySet<string>,
-  context: { hitMaxDepth: boolean; maxDepthHitDepth: number | null }
+  context: {
+    hitMaxDepth: boolean;
+    maxDepthHitDepth: number | null;
+    objectKeySetsByDepth: Array<Set<string> | undefined>;
+  }
 ): boolean => {
   if (depth > maxDepth) {
     context.hitMaxDepth = true;
@@ -110,7 +114,17 @@ const deepEqualJsonLikeInner = (
     .filter((key) => !priorityKeySet.has(key));
   if (aKeys.length !== bKeys.length) return false;
 
-  const bKeySet = new Set(bKeys);
+  const existingKeySet = context.objectKeySetsByDepth[depth];
+  const bKeySet = existingKeySet ?? new Set<string>();
+  if (existingKeySet) {
+    bKeySet.clear();
+  } else {
+    context.objectKeySetsByDepth[depth] = bKeySet;
+  }
+
+  for (const key of bKeys) {
+    bKeySet.add(key);
+  }
   for (const key of aKeys) {
     if (!bKeySet.has(key)) return false;
     if (
@@ -149,7 +163,7 @@ export const deepEqualJsonLike = (
   const nowMs = options.nowMs ?? defaultNowMs;
   const logger = options.logger;
 
-  const context = { hitMaxDepth: false, maxDepthHitDepth: null as number | null };
+  const context = { hitMaxDepth: false, maxDepthHitDepth: null, objectKeySetsByDepth: [] };
   const start = nowMs();
   const result = deepEqualJsonLikeInner(
     a,
