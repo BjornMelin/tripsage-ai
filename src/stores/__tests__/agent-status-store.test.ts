@@ -326,15 +326,17 @@ describe("useAgentStatusStore", () => {
       result.current.removeStaleAgents(30_000);
     });
 
-    expect(result.current.agentsById["fresh"]).toBeDefined();
-    expect(result.current.agentsById["stale"]).toBeUndefined();
+    expect(result.current.agentsById.fresh).toBeDefined();
+    expect(result.current.agentsById.stale).toBeUndefined();
   });
 
   it("treats invalid updatedAt timestamps as stale and logs an error", () => {
     const { result } = renderHook(() => useAgentStatusStore());
 
     act(() => {
-      result.current.registerAgents([mockAgent({ id: "bad-ts", updatedAt: "not-a-date" })]);
+      result.current.registerAgents([
+        mockAgent({ id: "bad-ts", updatedAt: "not-a-date" }),
+      ]);
       result.current.removeStaleAgents(30_000);
     });
 

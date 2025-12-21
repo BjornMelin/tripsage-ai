@@ -57,8 +57,8 @@ describe("chat realtime integration", () => {
 
     useChatRealtime.getState().handleTypingUpdate(sessionId, {
       isTyping: true,
-      username: "User One",
       userId: "user-1",
+      username: "User One",
     });
 
     const typingUsers = useChatRealtime.getState().typingUsers;

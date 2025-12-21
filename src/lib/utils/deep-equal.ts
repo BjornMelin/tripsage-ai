@@ -163,7 +163,11 @@ export const deepEqualJsonLike = (
   const nowMs = options.nowMs ?? defaultNowMs;
   const logger = options.logger;
 
-  const context = { hitMaxDepth: false, maxDepthHitDepth: null, objectKeySetsByDepth: [] };
+  const context = {
+    hitMaxDepth: false,
+    maxDepthHitDepth: null,
+    objectKeySetsByDepth: [],
+  };
   const start = nowMs();
   const result = deepEqualJsonLikeInner(
     a,

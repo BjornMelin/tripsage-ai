@@ -189,16 +189,13 @@ const CALCULATE_BUDGET_SUMMARY = (
 const getBudgetsByTrip = (
   budgets: Record<string, Budget>
 ): Record<string, string[]> => {
-  return Object.values(budgets).reduce<Record<string, string[]>>(
-    (acc, budget) => {
-      if (budget.tripId) {
-        if (!acc[budget.tripId]) acc[budget.tripId] = [];
-        acc[budget.tripId].push(budget.id);
-      }
-      return acc;
-    },
-    {}
-  );
+  return Object.values(budgets).reduce<Record<string, string[]>>((acc, budget) => {
+    if (budget.tripId) {
+      if (!acc[budget.tripId]) acc[budget.tripId] = [];
+      acc[budget.tripId].push(budget.id);
+    }
+    return acc;
+  }, {});
 };
 
 /** Compute derived budget properties. */
@@ -339,7 +336,7 @@ export const useBudgetStore = create<BudgetState>()(
                 [budgetId]: [...currentExpenses, newExpense],
               },
             };
-        }),
+          }),
         alerts: {},
         baseCurrency: "USD",
         budgetSummary: null,
