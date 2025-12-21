@@ -36,68 +36,22 @@ const compareByTimestampDesc = (a: TimestampedExpense, b: TimestampedExpense): n
 const selectRecentExpensesFromExpenses = (
   expensesByBudget: Record<string, Expense[]>
 ): Expense[] => {
-  const heap: TimestampedExpense[] = [];
-
-  const swap = (i: number, j: number) => {
-    const tmp = heap[i];
-    heap[i] = heap[j];
-    heap[j] = tmp;
-  };
-
-  const siftUp = (index: number) => {
-    let i = index;
-    while (i > 0) {
-      const parent = Math.floor((i - 1) / 2);
-      if (heap[parent].timestamp <= heap[i].timestamp) break;
-      swap(parent, i);
-      i = parent;
-    }
-  };
-
-  const siftDown = (index: number) => {
-    let i = index;
-    for (;;) {
-      const left = i * 2 + 1;
-      const right = i * 2 + 2;
-      let smallest = i;
-
-      if (left < heap.length && heap[left].timestamp < heap[smallest].timestamp) {
-        smallest = left;
-      }
-      if (right < heap.length && heap[right].timestamp < heap[smallest].timestamp) {
-        smallest = right;
-      }
-      if (smallest === i) break;
-
-      swap(i, smallest);
-      i = smallest;
-    }
-  };
-
-  const pushRecentCandidate = (candidate: TimestampedExpense) => {
-    if (heap.length < SELECT_RECENT_EXPENSES_LIMIT) {
-      heap.push(candidate);
-      siftUp(heap.length - 1);
-      return;
-    }
-
-    if (candidate.timestamp <= heap[0].timestamp) return;
-
-    heap[0] = candidate;
-    siftDown(0);
-  };
+  const candidates: TimestampedExpense[] = [];
 
   for (const expenses of Object.values(expensesByBudget)) {
     for (const expense of expenses) {
       const parsedTimestamp = Date.parse(expense.date);
-      pushRecentCandidate({
+      candidates.push({
         expense,
         timestamp: Number.isFinite(parsedTimestamp) ? parsedTimestamp : 0,
       });
     }
   }
 
-  return heap.sort(compareByTimestampDesc).map((entry) => entry.expense);
+  return candidates
+    .sort(compareByTimestampDesc)
+    .slice(0, SELECT_RECENT_EXPENSES_LIMIT)
+    .map((entry) => entry.expense);
 };
 
 /**

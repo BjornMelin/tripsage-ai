@@ -222,7 +222,7 @@ const createDataState = () => ({
  */
 export const useAgentStatusStore = create<AgentStatusState>()(
   devtools(
-    withComputed({ compute: computeAgentState }, (set, _get) => ({
+    withComputed({ compute: computeAgentState }, (set) => ({
       ...createDataState(),
       recordActivity: (activity) => {
         set((state) => {
@@ -330,10 +330,11 @@ export const useAgentStatusStore = create<AgentStatusState>()(
         set((state) => {
           if (!state.agentsById[agentId]) return state;
 
-          const { [agentId]: _removed, ...rest } = state.agentsById;
+          const agentsById = { ...state.agentsById };
+          delete agentsById[agentId];
           return {
             agentOrder: state.agentOrder.filter((id) => id !== agentId),
-            agentsById: rest,
+            agentsById,
             lastEventAt: nowIso(),
           };
         });

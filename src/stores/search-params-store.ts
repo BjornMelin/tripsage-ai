@@ -26,6 +26,7 @@ import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { DIRTY_CHECK_MAX_DEPTH, deepEqualJsonLike } from "@/lib/utils/deep-equal";
+import { isPlainObject } from "@/lib/utils/type-guards";
 import { withComputed } from "@/stores/middleware/computed";
 import { registerAllHandlers } from "./search-params/handlers";
 import { getHandler } from "./search-params/registry";
@@ -172,9 +173,6 @@ const computeDerivedState = (state: SearchParamsState): Partial<SearchParamsStat
     hasValidParams: hasRequiredParams(currentParams, state.currentSearchType),
   };
 };
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const stripDefaultsToInputShape = (
   input: unknown,

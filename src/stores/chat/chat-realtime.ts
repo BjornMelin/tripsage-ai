@@ -108,7 +108,7 @@ export const useChatRealtime = create<ChatRealtimeState>()(
         });
       },
 
-      handleRealtimeMessage: (_sessionId, _payload) => {
+      handleRealtimeMessage: () => {
         // Intentionally a no-op: message addition is handled by the calling hook via the
         // messages slice (this slice only tracks realtime connection state).
       },
@@ -119,7 +119,7 @@ export const useChatRealtime = create<ChatRealtimeState>()(
         }
 
         if (payload.isTyping) {
-          get().setUserTyping(sessionId, payload.userId, payload.username);
+          get().setUserTyping(sessionId, payload.userId);
         } else {
           get().removeUserTyping(sessionId, payload.userId);
         }
@@ -176,10 +176,24 @@ export const useChatRealtime = create<ChatRealtimeState>()(
       },
 
       setRealtimeEnabled: (enabled) => {
-        set({ isRealtimeEnabled: enabled });
         if (!enabled) {
-          get().resetRealtimeState();
+          set(() => {
+            for (const timeout of typingTimeouts.values()) {
+              clearTimeout(timeout);
+            }
+            typingTimeouts.clear();
+
+            return {
+              agentStatuses: {},
+              connectionStatus: "disconnected",
+              isRealtimeEnabled: false,
+              pendingMessages: [],
+              typingUsers: {},
+            };
+          });
+          return;
         }
+        set({ isRealtimeEnabled: true });
       },
 
       setUserTyping: (sessionId, userId, username) => {

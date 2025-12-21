@@ -19,6 +19,8 @@ import { createSavedSearchesSlice } from "./saved";
 import { createSuggestionsSlice } from "./suggestions";
 import type { SearchAnalytics, SearchHistoryState } from "./types";
 
+const MS_PER_DAY = 86_400_000;
+
 /**
  * Build a fixed-length (N days) search trend series from per-day counts.
  *
@@ -38,7 +40,7 @@ export const buildSearchTrends = (
   const trends: Array<{ date: string; count: number }> = [];
 
   for (let i = days - 1; i >= 0; i -= 1) {
-    const date = new Date(baseUtcMs - i * 86_400_000);
+    const date = new Date(baseUtcMs - i * MS_PER_DAY);
     const dateStr = date.toISOString().slice(0, 10);
     trends.push({ count: searchesByDay.get(dateStr) ?? 0, date: dateStr });
   }
@@ -74,7 +76,7 @@ const computeSearchAnalytics = (
     const dateKey = ts.toISOString().slice(0, 10);
     searchesByDay.set(dateKey, (searchesByDay.get(dateKey) ?? 0) + 1);
 
-    const hour = ts.getHours();
+    const hour = ts.getUTCHours();
     if (!Number.isFinite(hour)) continue;
     searchesByHour[hour] += 1;
   }

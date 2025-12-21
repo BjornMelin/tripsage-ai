@@ -19,7 +19,7 @@ import { withComputed } from "@/stores/middleware/computed";
 
 const logger = createStoreLogger({ storeName: "chat-messages" });
 const chatSessionImportSchema = chatSessionSchema.extend({
-  agentId: z.string().prefault("default-agent"),
+  agentId: z.string().default("default-agent"),
 });
 
 /** Chat messages state interface. */

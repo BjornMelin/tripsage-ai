@@ -70,7 +70,15 @@ export const createCurrencyConversionSlice =
 
         if (fromCurrency === state.baseCurrency) {
           const exchangeRate = state.exchangeRates[toCurrency];
-          if (!exchangeRate) return null;
+          if (!exchangeRate) {
+            logger.warn("Missing exchange rate for target currency", {
+              amount,
+              baseCurrency: state.baseCurrency,
+              fromCurrency,
+              toCurrency,
+            });
+            return null;
+          }
           if (
             typeof exchangeRate.rate !== "number" ||
             !Number.isFinite(exchangeRate.rate) ||
@@ -97,7 +105,15 @@ export const createCurrencyConversionSlice =
 
         if (toCurrency === state.baseCurrency) {
           const exchangeRate = state.exchangeRates[fromCurrency];
-          if (!exchangeRate) return null;
+          if (!exchangeRate) {
+            logger.warn("Missing exchange rate for source currency", {
+              amount,
+              baseCurrency: state.baseCurrency,
+              fromCurrency,
+              toCurrency,
+            });
+            return null;
+          }
           if (
             typeof exchangeRate.rate !== "number" ||
             !Number.isFinite(exchangeRate.rate) ||
@@ -125,7 +141,17 @@ export const createCurrencyConversionSlice =
         const fromExchangeRate = state.exchangeRates[fromCurrency];
         const toExchangeRate = state.exchangeRates[toCurrency];
 
-        if (!fromExchangeRate || !toExchangeRate) return null;
+        if (!fromExchangeRate || !toExchangeRate) {
+          logger.warn("Missing exchange rate for cross-currency conversion", {
+            amount,
+            baseCurrency: state.baseCurrency,
+            fromCurrency,
+            hasFromRate: Boolean(fromExchangeRate),
+            hasToRate: Boolean(toExchangeRate),
+            toCurrency,
+          });
+          return null;
+        }
         if (
           typeof fromExchangeRate.rate !== "number" ||
           !Number.isFinite(fromExchangeRate.rate) ||

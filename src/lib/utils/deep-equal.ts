@@ -5,6 +5,8 @@
  * Treats `undefined` object properties as absent (matching JSON serialization).
  */
 
+import { isPlainObject } from "@/lib/utils/type-guards";
+
 export const DIRTY_CHECK_MAX_DEPTH = 20;
 export const SLOW_DIRTY_CHECK_MS = 2;
 
@@ -19,8 +21,6 @@ export const DIRTY_CHECK_PRIORITY_KEYS = [
   "query",
 ] as const;
 
-type PlainObject = Record<string, unknown>;
-
 export interface DeepEqualLogger {
   warn: (message: string, meta?: Record<string, unknown>) => void;
 }
@@ -32,14 +32,6 @@ export interface DeepEqualJsonLikeOptions {
   priorityKeys?: readonly string[];
   slowThresholdMs?: number;
 }
-
-const isPlainObject = (value: unknown): value is PlainObject => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === null || prototype === Object.prototype;
-};
 
 const defaultNowMs = (): number =>
   typeof performance !== "undefined" ? performance.now() : Date.now();
