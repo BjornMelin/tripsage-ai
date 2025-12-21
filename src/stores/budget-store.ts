@@ -189,7 +189,7 @@ const CALCULATE_BUDGET_SUMMARY = (
 const getBudgetsByTrip = (
   budgets: Record<string, Budget>
 ): Record<string, string[]> => {
-  return Object.values(budgets).reduce(
+  return Object.values(budgets).reduce<Record<string, string[]>>(
     (acc, budget) => {
       if (budget.tripId) {
         if (!acc[budget.tripId]) acc[budget.tripId] = [];
@@ -197,7 +197,7 @@ const getBudgetsByTrip = (
       }
       return acc;
     },
-    {} as Record<string, string[]>
+    {}
   );
 };
 
@@ -228,7 +228,7 @@ export const useBudgetStore = create<BudgetState>()(
     persist(
       withComputed({ compute: computeBudgetState }, (set) => ({
         // Computed properties - initial values (updated via withComputed)
-        activeBudget: null as Budget | null,
+        activeBudget: null,
         activeBudgetId: null,
 
         /**
@@ -339,12 +339,12 @@ export const useBudgetStore = create<BudgetState>()(
                 [budgetId]: [...currentExpenses, newExpense],
               },
             };
-          }),
+        }),
         alerts: {},
         baseCurrency: "USD",
-        budgetSummary: null as BudgetSummary | null,
+        budgetSummary: null,
         budgets: {},
-        budgetsByTrip: {} as Record<string, string[]>,
+        budgetsByTrip: {},
 
         /**
          * Clear the alerts for a budget.
@@ -392,7 +392,7 @@ export const useBudgetStore = create<BudgetState>()(
             };
           }),
 
-        recentExpenses: [] as Expense[],
+        recentExpenses: [],
 
         /**
          * Remove a budget.
