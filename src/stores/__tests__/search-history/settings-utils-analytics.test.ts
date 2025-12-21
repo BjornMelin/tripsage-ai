@@ -170,7 +170,10 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
       const analytics = result.current.getSearchAnalytics();
 
-      expect(analytics.topDestinations[0]).toEqual({ count: 2, destination: "Paris, France" });
+      expect(analytics.topDestinations[0]).toEqual({
+        count: 2,
+        destination: "Paris, France",
+      });
       expect(analytics.topDestinations).toEqual(
         expect.arrayContaining([
           { count: 2, destination: "Paris, France" },
