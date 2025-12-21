@@ -5,7 +5,7 @@ import { AccommodationsService } from "@domain/accommodations/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseFactory } from "@/test/mocks/supabase";
-import { googlePlacesHandlers } from "@/test/msw/handlers/google-places";
+import { googlePlacesHandlers } from "@/test/msw/handlers/google";
 import { stripeHandlers } from "@/test/msw/handlers/stripe";
 import { composeHandlers } from "@/test/msw/handlers/utils";
 import { server } from "@/test/msw/server";

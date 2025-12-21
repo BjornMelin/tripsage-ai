@@ -7,5 +7,6 @@ import type { HttpHandler } from "msw";
 /**
  * Flatten multiple handler groups into a single array for `server.use(...)`.
  */
-export const composeHandlers = (...groups: HttpHandler[][]): HttpHandler[] =>
-  groups.flat();
+export const composeHandlers = (
+  ...groups: ReadonlyArray<HttpHandler>[]
+): HttpHandler[] => groups.flatMap((group) => [...group]);
