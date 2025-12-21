@@ -1,3 +1,15 @@
+## [1.22.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.3...v1.22.4) (2025-12-21)
+
+### Bug Fixes
+
+* **chat:** forward typing username ([1e7d622](https://github.com/BjornMelin/tripsage-ai/commit/1e7d622b68ed547ea3f3aa29a410efab0ed75948))
+* **search-history:** compute destination analytics ([2404bb6](https://github.com/BjornMelin/tripsage-ai/commit/2404bb6350b91f9588663dcefb1ed2f2dbf11421))
+* **search-history:** share analytics computation ([d371a07](https://github.com/BjornMelin/tripsage-ai/commit/d371a076ee54a63e560ffd7b981e020b8a7bf8fa))
+
+### Performance Improvements
+
+* **deep-equal:** reuse key sets by depth ([40b6f8d](https://github.com/BjornMelin/tripsage-ai/commit/40b6f8da188ffc007dc88e7ccbac28a29590398e))
+
 ## [1.22.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.2...v1.22.3) (2025-12-20)
 
 ### Bug Fixes
