@@ -284,7 +284,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
           for (const [agentId, agent] of Object.entries(state.agentsById)) {
             const updatedAt = Date.parse(agent.updatedAt);
             if (!Number.isFinite(updatedAt)) {
-              logger.warn("Invalid agent updatedAt treated as stale", {
+              logger.error("Invalid agent updatedAt treated as stale", {
                 agentId: maskIdentifierForLogs(agentId),
                 updatedAt: maskIsoTimestampForLogs(agent.updatedAt),
               });
