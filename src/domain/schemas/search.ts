@@ -9,7 +9,7 @@ import { CABIN_CLASS_ENUM } from "./flights";
 import { primitiveSchemas } from "./registry";
 import { CURRENCY_CODE_SCHEMA } from "./shared/money";
 import { DURATION_RANGE_SCHEMA, PRICE_RANGE_SCHEMA } from "./shared/ranges";
-import { ISO_DATE_STRING } from "./shared/time";
+import { FUTURE_DATE_SCHEMA, ISO_DATE_STRING } from "./shared/time";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for search functionality
@@ -449,17 +449,6 @@ export type SortOption = z.infer<typeof sortOptionSchema>;
 
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
-
-// Common form validation patterns
-const FUTURE_DATE_SCHEMA = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Please enter a valid date (YYYY-MM-DD)" })
-  .refine((date) => !Number.isNaN(new Date(date).getTime()), {
-    error: "Please enter a valid date",
-  })
-  .refine((date) => new Date(date) > new Date(), {
-    error: "Date must be in the future",
-  });
 
 /** Optional future date schema that treats empty strings as undefined for optional form fields. */
 const OPTIONAL_FUTURE_DATE_SCHEMA = z.preprocess(

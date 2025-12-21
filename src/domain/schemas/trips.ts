@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA } from "./shared/person";
+import { FUTURE_DATE_SCHEMA } from "./shared/time";
 import { tripStatusSchema, tripTypeSchema } from "./supabase";
 
 // ===== CORE SCHEMAS =====
@@ -246,17 +247,8 @@ export type ItineraryItemUpdateInput = z.infer<typeof itineraryItemUpdateSchema>
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
 
-// Common form validation patterns
+// Common form validation patterns - using shared primitives
 const CURRENCY_SCHEMA = primitiveSchemas.isoCurrency;
-const FUTURE_DATE_SCHEMA = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Please enter a valid date (YYYY-MM-DD)" })
-  .refine((date) => !Number.isNaN(new Date(date).getTime()), {
-    error: "Please enter a valid date",
-  })
-  .refine((date) => new Date(date) > new Date(), {
-    error: "Date must be in the future",
-  });
 
 /**
  * Form schema for creating new trips.

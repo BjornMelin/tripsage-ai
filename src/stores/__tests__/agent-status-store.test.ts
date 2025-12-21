@@ -2,8 +2,17 @@
 
 import type { Agent } from "@schemas/agent-status";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
-import { useAgentStatusStore } from "../agent-status-store";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const storeLogger = vi.hoisted(() => ({
+  error: vi.fn(),
+}));
+
+vi.mock("@/lib/telemetry/store-logger", () => ({
+  createStoreLogger: () => storeLogger,
+}));
+
+let useAgentStatusStore: typeof import("../agent-status-store").useAgentStatusStore;
 
 const mockAgent = (overrides: Partial<Agent> = {}): Agent => ({
   createdAt: "2025-01-01T00:00:00.000Z",
@@ -20,9 +29,14 @@ const mockAgent = (overrides: Partial<Agent> = {}): Agent => ({
 });
 
 describe("useAgentStatusStore", () => {
+  beforeAll(async () => {
+    ({ useAgentStatusStore } = await import("../agent-status-store"));
+  });
+
   beforeEach(() => {
     const store = useAgentStatusStore.getState();
     store.resetAgentStatusState();
+    storeLogger.error.mockClear();
   });
 
   it("registers agents and derives active list", () => {
@@ -298,5 +312,35 @@ describe("useAgentStatusStore", () => {
     expect(result.current.agents).toHaveLength(0);
     expect(result.current.isMonitoring).toBe(false);
     expect(typeof result.current.registerAgents).toBe("function");
+  });
+
+  it("removes agents older than the provided ttl", () => {
+    const { result } = renderHook(() => useAgentStatusStore());
+    const nowMs = Date.now();
+
+    act(() => {
+      result.current.registerAgents([
+        mockAgent({ id: "fresh", updatedAt: new Date(nowMs - 5_000).toISOString() }),
+        mockAgent({ id: "stale", updatedAt: new Date(nowMs - 60_000).toISOString() }),
+      ]);
+      result.current.removeStaleAgents(30_000);
+    });
+
+    expect(result.current.agentsById.fresh).toBeDefined();
+    expect(result.current.agentsById.stale).toBeUndefined();
+  });
+
+  it("treats invalid updatedAt timestamps as stale and logs an error", () => {
+    const { result } = renderHook(() => useAgentStatusStore());
+
+    act(() => {
+      result.current.registerAgents([
+        mockAgent({ id: "bad-ts", updatedAt: "not-a-date" }),
+      ]);
+      result.current.removeStaleAgents(30_000);
+    });
+
+    expect(result.current.agentsById["bad-ts"]).toBeUndefined();
+    expect(storeLogger.error).toHaveBeenCalledTimes(1);
   });
 });

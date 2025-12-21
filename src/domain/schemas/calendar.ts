@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
+import { ISO_DATE_STRING } from "./shared/time";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for calendar management
@@ -43,12 +44,16 @@ export const reminderMethodSchema = z.enum(["email", "popup", "sms"]);
 export type ReminderMethod = z.infer<typeof reminderMethodSchema>;
 
 /** Zod schema for Google Calendar event date/time with timezone support. */
+const EVENT_DATE_SCHEMA = z.preprocess((value) => {
+  if (!(value instanceof Date)) return value;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}, ISO_DATE_STRING.optional());
+
 export const eventDateTimeSchema = z.object({
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date must be in YYYY-MM-DD format" })
-    .optional()
-    .or(z.date().transform((d) => d.toISOString().split("T")[0])),
+  date: EVENT_DATE_SCHEMA,
   dateTime: z
     .union([z.date(), z.iso.datetime()])
     .optional()

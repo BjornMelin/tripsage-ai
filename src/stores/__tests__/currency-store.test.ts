@@ -5,10 +5,10 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCurrencyStore } from "../currency-store";
 
-// Mock the store to avoid persistence issues in tests
+// Mock the store to avoid persistence/devtools issues in tests
 vi.mock("zustand/middleware", () => ({
-  // biome-ignore lint/suspicious/noExplicitAny: Test mock doesn't need type safety
-  persist: (fn: any) => fn,
+  devtools: (fn: unknown) => fn,
+  persist: (fn: unknown) => fn,
 }));
 
 describe("useCurrencyStore", () => {

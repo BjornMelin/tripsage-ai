@@ -6,7 +6,9 @@ import type { SearchType } from "@schemas/search";
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { withComputed } from "@/stores/middleware/computed";
 import { createAnalyticsSlice } from "./analytics";
+import { computeSearchAnalytics, createSearchTypeRecord } from "./analytics-utils";
 import { createCollectionsSlice } from "./collections";
 import { createQuickSearchesSlice } from "./quick";
 import {
@@ -16,12 +18,48 @@ import {
 } from "./recent";
 import { createSavedSearchesSlice } from "./saved";
 import { createSuggestionsSlice } from "./suggestions";
-import type { SearchHistoryState } from "./types";
+import type { SearchAnalytics, SearchHistoryState } from "./types";
+
+export { buildSearchTrends } from "./analytics-utils";
+
+/** Compute derived search history properties. */
+const computeSearchHistory = (
+  state: SearchHistoryState
+): Partial<SearchHistoryState> => {
+  // Compute favoriteSearches
+  const favoriteSearches: ValidatedSavedSearch[] = state.savedSearches.filter(
+    (search) => search.isFavorite
+  );
+
+  // Compute recentSearchesByType
+  const recentSearchesByType = createSearchTypeRecord<SearchHistoryItem[]>(
+    (): SearchHistoryItem[] => []
+  );
+  state.recentSearches.forEach((search) => {
+    recentSearchesByType[search.searchType].push(search);
+  });
+
+  // Compute searchAnalytics
+  const searchAnalytics: SearchAnalytics = computeSearchAnalytics(
+    state.recentSearches,
+    state.savedSearches
+  );
+
+  // Compute totalSavedSearches
+  const totalSavedSearches = state.savedSearches.length;
+
+  return {
+    favoriteSearches,
+    recentSearchesByType,
+    searchAnalytics,
+    totalSavedSearches,
+  };
+};
 
 export const useSearchHistoryStore = create<SearchHistoryState>()(
   devtools(
     persist(
-      (...args) => {
+      withComputed({ compute: computeSearchHistory }, (...args) => {
         const [set, get] = args;
 
         // Compose all slices
@@ -53,25 +91,11 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             });
           },
 
-          get favoriteSearches(): ValidatedSavedSearch[] {
-            return get().savedSearches.filter((search) => search.isFavorite);
-          },
-
-          get recentSearchesByType() {
-            const { recentSearches } = get();
-            const grouped: Record<SearchType, SearchHistoryItem[]> = {
-              accommodation: [],
-              activity: [],
-              destination: [],
-              flight: [],
-            };
-
-            recentSearches.forEach((search) => {
-              grouped[search.searchType].push(search);
-            });
-
-            return grouped;
-          },
+          // Computed properties - initial values (updated via withComputed)
+          favoriteSearches: [] satisfies ValidatedSavedSearch[],
+          recentSearchesByType: createSearchTypeRecord<SearchHistoryItem[]>(
+            (): SearchHistoryItem[] => []
+          ) satisfies Record<SearchType, SearchHistoryItem[]>,
 
           reset: () => {
             set({
@@ -88,15 +112,17 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               searchSuggestions: [],
             });
           },
-
-          get searchAnalytics() {
-            return get().getSearchAnalytics();
-          },
-
-          // Computed properties (defined at composition level where get() is available)
-          get totalSavedSearches() {
-            return get().savedSearches.length;
-          },
+          searchAnalytics: {
+            averageSearchDuration: 0,
+            mostUsedSearchTypes: [],
+            popularSearchTimes: [],
+            savedSearchUsage: [],
+            searchesByType: createSearchTypeRecord(() => 0),
+            searchTrends: [],
+            topDestinations: [],
+            totalSearches: 0,
+          } satisfies SearchAnalytics,
+          totalSavedSearches: 0,
 
           // Settings management
           updateSettings: (settings) => {
@@ -112,7 +138,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             }
           },
         };
-      },
+      }),
       {
         name: "search-history-storage",
         partialize: (state) => ({

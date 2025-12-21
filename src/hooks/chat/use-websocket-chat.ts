@@ -37,6 +37,8 @@ export interface ChatTypingBroadcastPayload {
   userId: string;
   /** Whether the user is currently typing. */
   isTyping: boolean;
+  /** Optional username for UI display. */
+  username?: string;
 }
 
 /**
@@ -157,6 +159,7 @@ export function useWebSocketChat({
         handleTypingUpdate(effectiveSessionId, {
           isTyping: data.isTyping,
           userId: data.userId,
+          username: data.username,
         } as ChatTypingBroadcastPayload);
       }
     },
@@ -219,14 +222,14 @@ export function useWebSocketChat({
       return;
     }
     const effectiveSessionId = sessionId ?? `user:${user.id}`;
-    setUserTyping(effectiveSessionId, user.id, user.email);
+    setUserTyping(effectiveSessionId, user.id);
     sendBroadcast("chat:typing", {
       isTyping: true,
       userId: user.id,
     } as ChatTypingBroadcastPayload).catch(() => {
       // Best-effort typing indicator; ignore failures.
     });
-  }, [sendBroadcast, sessionId, setUserTyping, topic, user?.id, user?.email]);
+  }, [sendBroadcast, sessionId, setUserTyping, topic, user?.id]);
 
   /**
    * Stops typing indicator for the current user.

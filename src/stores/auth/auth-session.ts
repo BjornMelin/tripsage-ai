@@ -9,6 +9,7 @@ import type { AuthSession } from "@schemas/stores";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { timeUntil } from "@/stores/helpers";
+import { withComputed } from "@/stores/middleware/computed";
 
 /**
  * Auth session state interface.
@@ -30,20 +31,23 @@ interface AuthSessionState {
  */
 export const useAuthSession = create<AuthSessionState>()(
   devtools(
-    (set, get) => ({
-      resetSession: () => {
-        set({ session: null });
+    withComputed(
+      {
+        compute: (state) => ({
+          sessionTimeRemaining: timeUntil(state.session?.expiresAt ?? null),
+        }),
       },
-      session: null,
-
-      get sessionTimeRemaining() {
-        return timeUntil(get().session?.expiresAt ?? null);
-      },
-
-      setSession: (session) => {
-        set({ session });
-      },
-    }),
+      (set) => ({
+        resetSession: () => {
+          set({ session: null });
+        },
+        session: null,
+        sessionTimeRemaining: 0,
+        setSession: (session) => {
+          set({ session });
+        },
+      })
+    ),
     { name: "AuthSession" }
   )
 );

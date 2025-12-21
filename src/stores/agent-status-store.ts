@@ -13,8 +13,25 @@ import type {
   ResourceUsage,
 } from "@schemas/agent-status";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
 import { nowIso, secureId } from "@/lib/security/random";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { withComputed } from "@/stores/middleware/computed";
+
+const logger = createStoreLogger({ storeName: "agent-status-store" });
+
+const maskIdentifierForLogs = (value: string): string => {
+  if (!value) return "***";
+  if (value.length <= 4) return "***";
+  return `${value.slice(0, 2)}…${value.slice(-2)}`;
+};
+
+const maskIsoTimestampForLogs = (value: string): string => {
+  if (!value) return "***";
+  if (value.length >= 10) return `${value.slice(0, 10)}…`;
+  return "***";
+};
 
 /**
  * Task update payload dispatched from realtime events.
@@ -89,6 +106,10 @@ export interface AgentStatusState {
   agentOrder: string[];
   /** Register or refresh a batch of agents from server snapshots. */
   registerAgents: (agents: Agent[]) => void;
+  /** Remove a single agent from the store. */
+  unregisterAgent: (agentId: string) => void;
+  /** Remove agents whose updates are older than the provided TTL. */
+  removeStaleAgents: (ttlMs: number) => void;
   /** Update agent lifecycle & progress from realtime broadcasts. */
   updateAgentStatus: (
     agentId: string,
@@ -140,6 +161,13 @@ const deriveAgents = (map: Record<string, Agent>, order: string[]): Agent[] =>
 const deriveActiveAgents = (agents: Agent[]): Agent[] =>
   agents.filter((agent) => ACTIVE_STATUSES.has(agent.status));
 
+/** Compute derived agent collections from internal state. */
+const computeAgentState = (state: AgentStatusState): Partial<AgentStatusState> => {
+  const agents = deriveAgents(state.agentsById, state.agentOrder);
+  const activeAgents = deriveActiveAgents(agents);
+  return { activeAgents, agents };
+};
+
 const ensureAgent = (
   map: Record<string, Agent>,
   agentId: string,
@@ -162,17 +190,6 @@ const ensureAgent = (
     tasks: overrides?.tasks ?? [],
     type: overrides?.type ?? "unknown",
     updatedAt: timestamp,
-  };
-};
-
-const withDerivedCollections = (
-  state: Omit<AgentStatusState, "agents" | "activeAgents">
-): AgentStatusState => {
-  const agents = deriveAgents(state.agentsById, state.agentOrder);
-  return {
-    ...state,
-    activeAgents: deriveActiveAgents(agents),
-    agents,
   };
 };
 
@@ -203,178 +220,229 @@ const createDataState = () => ({
  * @returns Bound store interface with state selectors and mutators for agent
  * telemetry.
  */
-export const useAgentStatusStore = create<AgentStatusState>()((set, _get) => ({
-  ...createDataState(),
-  recordActivity: (activity) => {
-    set((state) => {
-      const timestamp = nowIso();
-      const entry: AgentActivity = {
-        id: secureId(12),
-        timestamp,
-        ...activity,
-      };
-      const activities = [...state.activities, entry].slice(-MAX_ACTIVITIES);
-      return {
-        ...state,
-        activities,
-        lastEventAt: timestamp,
-      };
-    });
-  },
-  recordResourceUsage: (usage) => {
-    set((state) => {
-      const timestamp = nowIso();
-      const sample: ResourceUsage = {
-        ...usage,
-        timestamp,
-      };
-      const resourceUsage = [...state.resourceUsage, sample].slice(
-        -MAX_RESOURCE_SAMPLES
-      );
-      return {
-        ...state,
-        lastEventAt: timestamp,
-        resourceUsage,
-      };
-    });
-  },
-  registerAgents: (agents) => {
-    if (!agents.length) {
-      return;
-    }
-    set((state) => {
-      const agentsById = { ...state.agentsById };
-      const agentOrder = [...state.agentOrder];
-      for (const agent of agents) {
-        agentsById[agent.id] = agent;
-        if (!agentOrder.includes(agent.id)) {
-          agentOrder.push(agent.id);
-        }
-      }
-      return withDerivedCollections({
-        ...state,
-        agentOrder,
-        agentsById,
-        lastEventAt: nowIso(),
-      });
-    });
-  },
-  resetAgentStatusState: () =>
-    set((state) => ({
-      ...state,
+export const useAgentStatusStore = create<AgentStatusState>()(
+  devtools(
+    withComputed({ compute: computeAgentState }, (set) => ({
       ...createDataState(),
+      recordActivity: (activity) => {
+        set((state) => {
+          const timestamp = nowIso();
+          const entry: AgentActivity = {
+            id: secureId(12),
+            timestamp,
+            ...activity,
+          };
+          const activities = [...state.activities, entry].slice(-MAX_ACTIVITIES);
+          return {
+            activities,
+            lastEventAt: timestamp,
+          };
+        });
+      },
+      recordResourceUsage: (usage) => {
+        set((state) => {
+          const timestamp = nowIso();
+          const sample: ResourceUsage = {
+            ...usage,
+            timestamp,
+          };
+          const resourceUsage = [...state.resourceUsage, sample].slice(
+            -MAX_RESOURCE_SAMPLES
+          );
+          return {
+            lastEventAt: timestamp,
+            resourceUsage,
+          };
+        });
+      },
+      registerAgents: (agents) => {
+        if (!agents.length) {
+          return;
+        }
+        set((state) => {
+          const agentsById = { ...state.agentsById };
+          const agentOrder = [...state.agentOrder];
+          for (const agent of agents) {
+            agentsById[agent.id] = agent;
+            if (!agentOrder.includes(agent.id)) {
+              agentOrder.push(agent.id);
+            }
+          }
+          return {
+            agentOrder,
+            agentsById,
+            lastEventAt: nowIso(),
+          };
+        });
+      },
+      removeStaleAgents: (ttlMs) =>
+        set((state) => {
+          if (ttlMs <= 0) return state;
+          const cutoff = Date.now() - ttlMs;
+          const staleIds: string[] = [];
+
+          for (const [agentId, agent] of Object.entries(state.agentsById)) {
+            const updatedAt = Date.parse(agent.updatedAt);
+            if (!Number.isFinite(updatedAt)) {
+              logger.error("Invalid agent updatedAt treated as stale", {
+                agentId: maskIdentifierForLogs(agentId),
+                updatedAt: maskIsoTimestampForLogs(agent.updatedAt),
+              });
+              staleIds.push(agentId);
+              continue;
+            }
+            if (updatedAt < cutoff) {
+              staleIds.push(agentId);
+            }
+          }
+
+          if (!staleIds.length) return state;
+
+          const agentsById = { ...state.agentsById };
+          for (const agentId of staleIds) {
+            delete agentsById[agentId];
+          }
+
+          const staleSet = new Set(staleIds);
+          return {
+            agentOrder: state.agentOrder.filter((id) => !staleSet.has(id)),
+            agentsById,
+            lastEventAt: nowIso(),
+          };
+        }),
+      resetAgentStatusState: () => set(() => createDataState()),
+      setAgentStatusConnection: (update) => {
+        set((state) => {
+          const timestamp = nowIso();
+          return {
+            connection: {
+              ...state.connection,
+              ...update,
+              lastChangedAt: timestamp,
+            },
+          };
+        });
+      },
+      setMonitoring: (enabled) => {
+        set({ isMonitoring: enabled });
+      },
+      unregisterAgent: (agentId) => {
+        set((state) => {
+          if (!state.agentsById[agentId]) return state;
+
+          const agentsById = { ...state.agentsById };
+          delete agentsById[agentId];
+          return {
+            agentOrder: state.agentOrder.filter((id) => id !== agentId),
+            agentsById,
+            lastEventAt: nowIso(),
+          };
+        });
+      },
+      updateAgentStatus: (agentId, status, options) => {
+        set((state) => {
+          const timestamp = nowIso();
+          const agentsById = { ...state.agentsById };
+          const baseAgent = ensureAgent(agentsById, agentId, options);
+          const nextAgent: Agent = {
+            ...baseAgent,
+            description: options?.description ?? baseAgent.description,
+            metadata: options?.metadata ?? baseAgent.metadata,
+            name: options?.name ?? baseAgent.name,
+            progress: clampProgress(options?.progress, baseAgent.progress),
+            status,
+            type: options?.type ?? baseAgent.type,
+            updatedAt: timestamp,
+          };
+          agentsById[agentId] = nextAgent;
+          const agentOrder = state.agentOrder.includes(agentId)
+            ? state.agentOrder
+            : [...state.agentOrder, agentId];
+          return {
+            agentOrder,
+            agentsById,
+            lastEventAt: timestamp,
+          };
+        });
+      },
+      updateAgentTask: (agentId, update) => {
+        set((state) => {
+          const timestamp = nowIso();
+          const agentsById = { ...state.agentsById };
+          const currentAgent = ensureAgent(agentsById, agentId);
+          const tasks = [...currentAgent.tasks];
+          let currentTaskId = currentAgent.currentTaskId;
+
+          if (update.type === "start") {
+            const taskId = update.taskId ?? secureId(12);
+            const newTask: AgentTask = {
+              createdAt: timestamp,
+              description: update.description ?? update.title,
+              id: taskId,
+              status: "in_progress",
+              title: update.title,
+              updatedAt: timestamp,
+            };
+            tasks.push(newTask);
+            currentTaskId = taskId;
+          } else {
+            const taskIndex = tasks.findIndex((task) => task.id === update.taskId);
+            if (taskIndex === -1) {
+              logger.error("updateAgentTask called for missing task", {
+                maskedAgentId: maskIdentifierForLogs(agentId),
+                maskedTaskId: maskIdentifierForLogs(update.taskId),
+                updateType: update.type,
+              });
+              return state;
+            }
+            const task = { ...tasks[taskIndex] };
+            if (update.type === "progress") {
+              if (typeof update.progress === "number") {
+                task.progress = clampProgress(update.progress, task.progress ?? 0);
+              }
+              if (update.status) {
+                task.status = update.status;
+              }
+              task.updatedAt = timestamp;
+            } else {
+              task.status = update.error ? "failed" : "completed";
+              task.completedAt = timestamp;
+              task.error = update.error;
+              task.updatedAt = timestamp;
+              if (currentTaskId === task.id) {
+                currentTaskId = tasks.find(
+                  (t) => t.id !== task.id && t.status === "in_progress"
+                )?.id;
+              }
+            }
+            tasks[taskIndex] = task;
+          }
+
+          const nextAgent: Agent = {
+            ...currentAgent,
+            currentTaskId,
+            tasks,
+            updatedAt: timestamp,
+          };
+          agentsById[agentId] = nextAgent;
+          const agentOrder = state.agentOrder.includes(agentId)
+            ? state.agentOrder
+            : [...state.agentOrder, agentId];
+
+          return {
+            agentOrder,
+            agentsById,
+            lastEventAt: timestamp,
+          };
+        });
+      },
     })),
-  setAgentStatusConnection: (update) => {
-    set((state) => {
-      const timestamp = nowIso();
-      return {
-        ...state,
-        connection: {
-          ...state.connection,
-          ...update,
-          lastChangedAt: timestamp,
-        },
-      };
-    });
-  },
-  setMonitoring: (enabled) => {
-    set((state) => ({
-      ...state,
-      isMonitoring: enabled,
-    }));
-  },
-  updateAgentStatus: (agentId, status, options) => {
-    set((state) => {
-      const timestamp = nowIso();
-      const agentsById = { ...state.agentsById };
-      const baseAgent = ensureAgent(agentsById, agentId, options);
-      const nextAgent: Agent = {
-        ...baseAgent,
-        description: options?.description ?? baseAgent.description,
-        metadata: options?.metadata ?? baseAgent.metadata,
-        name: options?.name ?? baseAgent.name,
-        progress: clampProgress(options?.progress, baseAgent.progress),
-        status,
-        type: options?.type ?? baseAgent.type,
-        updatedAt: timestamp,
-      };
-      agentsById[agentId] = nextAgent;
-      const agentOrder = state.agentOrder.includes(agentId)
-        ? state.agentOrder
-        : [...state.agentOrder, agentId];
-      return withDerivedCollections({
-        ...state,
-        agentOrder,
-        agentsById,
-        lastEventAt: timestamp,
-      });
-    });
-  },
-  updateAgentTask: (agentId, update) => {
-    set((state) => {
-      const timestamp = nowIso();
-      const agentsById = { ...state.agentsById };
-      const currentAgent = ensureAgent(agentsById, agentId);
-      const tasks = [...currentAgent.tasks];
-      let currentTaskId = currentAgent.currentTaskId;
+    { name: "AgentStatus" }
+  )
+);
 
-      if (update.type === "start") {
-        const taskId = update.taskId ?? secureId(12);
-        const newTask: AgentTask = {
-          createdAt: timestamp,
-          description: update.description ?? update.title,
-          id: taskId,
-          status: "in_progress",
-          title: update.title,
-          updatedAt: timestamp,
-        };
-        tasks.push(newTask);
-        currentTaskId = taskId;
-      } else {
-        const taskIndex = tasks.findIndex((task) => task.id === update.taskId);
-        if (taskIndex === -1) {
-          return state;
-        }
-        const task = { ...tasks[taskIndex] };
-        if (update.type === "progress") {
-          if (typeof update.progress === "number") {
-            task.progress = clampProgress(update.progress, task.progress ?? 0);
-          }
-          if (update.status) {
-            task.status = update.status;
-          }
-          task.updatedAt = timestamp;
-        } else {
-          task.status = update.error ? "failed" : "completed";
-          task.completedAt = timestamp;
-          task.error = update.error;
-          task.updatedAt = timestamp;
-          if (currentTaskId === task.id) {
-            currentTaskId = tasks.find(
-              (t) => t.id !== task.id && t.status === "in_progress"
-            )?.id;
-          }
-        }
-        tasks[taskIndex] = task;
-      }
-
-      const nextAgent: Agent = {
-        ...currentAgent,
-        currentTaskId,
-        tasks,
-        updatedAt: timestamp,
-      };
-      agentsById[agentId] = nextAgent;
-      const agentOrder = state.agentOrder.includes(agentId)
-        ? state.agentOrder
-        : [...state.agentOrder, agentId];
-
-      return withDerivedCollections({
-        ...state,
-        agentOrder,
-        agentsById,
-        lastEventAt: timestamp,
-      });
-    });
-  },
-}));
+export const useAgents = () => useAgentStatusStore((state) => state.agents);
+export const useActiveAgents = () => useAgentStatusStore((state) => state.activeAgents);
+export const useAgentConnection = () =>
+  useAgentStatusStore((state) => state.connection);
+export const useIsMonitoring = () => useAgentStatusStore((state) => state.isMonitoring);

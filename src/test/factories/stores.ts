@@ -106,10 +106,12 @@ export function createMockAgentStatusState(
     recordActivity: () => undefined,
     recordResourceUsage: () => undefined,
     registerAgents: () => undefined,
+    removeStaleAgents: () => undefined,
     resetAgentStatusState: () => undefined,
     resourceUsage: [],
     setAgentStatusConnection: () => undefined,
     setMonitoring: () => undefined,
+    unregisterAgent: () => undefined,
     updateAgentStatus: () => undefined,
     updateAgentTask: () => undefined,
   };

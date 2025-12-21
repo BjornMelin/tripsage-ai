@@ -5,12 +5,22 @@
  * Client-only slice - no direct Supabase clients or server logic.
  */
 
-import type { ChatSession, Message } from "@schemas/chat";
+"use client";
+
+import { type ChatSession, chatSessionSchema, type Message } from "@schemas/chat";
+import { z } from "zod";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { devtools, persist } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "@/stores/helpers";
+import { withComputed } from "@/stores/middleware/computed";
 
 // Memory sync handled server-side via orchestrator - no client-side memory store needed
+
+const logger = createStoreLogger({ storeName: "chat-messages" });
+const chatSessionImportSchema = chatSessionSchema.extend({
+  agentId: z.string().default("default-agent"),
+});
 
 /** Chat messages state interface. */
 export interface ChatMessagesState {
@@ -55,24 +65,88 @@ export interface ChatMessagesState {
 // Track object URLs for attachment cleanup
 const objectUrls = new Map<string, Set<string>>(); // sessionId -> Set<objectUrl>
 
-const deriveCurrentSession = (
-  sessions: ChatSession[],
-  currentSessionId: string | null
-): ChatSession | null => {
-  if (!currentSessionId) {
-    return null;
+const MAX_URL_LENGTH = 2048;
+const MAX_URL_DEBUG_LENGTH = 200;
+
+type DroppedAttachmentUrlReason =
+  | "empty"
+  | "blob"
+  | "too long"
+  | "unsupported protocol"
+  | "malformed";
+
+const getAttachmentUrlDebugValue = (value: string): string => {
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    parsed.hash = "";
+    parsed.search = "";
+    return parsed.toString().slice(0, MAX_URL_DEBUG_LENGTH);
+  } catch {
+    return trimmed.slice(0, MAX_URL_DEBUG_LENGTH);
+  }
+};
+
+const logDroppedAttachmentUrl = (
+  value: string,
+  reason: DroppedAttachmentUrlReason
+): void => {
+  if (process.env.NODE_ENV !== "development") return;
+  try {
+    console.debug(
+      "[chat-messages] Dropped attachment URL",
+      JSON.stringify({ reason, value: getAttachmentUrlDebugValue(value) })
+    );
+  } catch {
+    // Ignore debug logging failures (stringify, URL parsing, etc.)
+  }
+};
+
+const sanitizeExportedAttachmentUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    logDroppedAttachmentUrl(value, "empty");
+    return "";
+  }
+  if (trimmed.startsWith("blob:")) {
+    logDroppedAttachmentUrl(value, "blob");
+    return "";
+  }
+  if (trimmed.length > MAX_URL_LENGTH) {
+    logDroppedAttachmentUrl(value, "too long");
+    return "";
   }
 
-  return sessions.find((session) => session.id === currentSessionId) || null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      return trimmed;
+    }
+    logDroppedAttachmentUrl(value, "unsupported protocol");
+  } catch {
+    logDroppedAttachmentUrl(value, "malformed");
+    // Ignore malformed URLs: return empty string to indicate invalid/unsupported URL.
+  }
+
+  return "";
+};
+
+/** Compute derived chat session from state. */
+const computeChatState = (state: ChatMessagesState): Partial<ChatMessagesState> => {
+  if (!state.currentSessionId) {
+    return { currentSession: null };
+  }
+  const session = state.sessions.find((s) => s.id === state.currentSessionId) || null;
+  return { currentSession: session };
 };
 
 /**
  * Chat messages store hook.
  */
 export const useChatMessages = create<ChatMessagesState>()(
-  persist(
-    (set, get) => {
-      return {
+  devtools(
+    persist(
+      withComputed({ compute: computeChatState }, (set, get) => ({
         addMessage: (sessionId, message) => {
           const timestamp = getCurrentTimestamp();
           const messageId = generateId();
@@ -93,11 +167,7 @@ export const useChatMessages = create<ChatMessagesState>()(
                   }
                 : session
             );
-
-            return {
-              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
-              sessions,
-            };
+            return { sessions };
           });
 
           return messageId;
@@ -129,11 +199,7 @@ export const useChatMessages = create<ChatMessagesState>()(
                   }
                 : session
             );
-
-            return {
-              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
-              sessions,
-            };
+            return { sessions };
           });
         },
 
@@ -160,10 +226,7 @@ export const useChatMessages = create<ChatMessagesState>()(
                 : session
             );
 
-            return {
-              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
-              sessions,
-            };
+            return { sessions };
           });
         },
 
@@ -182,7 +245,6 @@ export const useChatMessages = create<ChatMessagesState>()(
           };
 
           set((state) => ({
-            currentSession: newSession,
             currentSessionId: sessionId,
             sessions: [newSession, ...state.sessions],
           }));
@@ -206,7 +268,7 @@ export const useChatMessages = create<ChatMessagesState>()(
           set((state) => {
             const sessions = state.sessions.filter((s) => s.id !== sessionId);
 
-            const currentSessionId =
+            const newCurrentSessionId =
               state.currentSessionId === sessionId
                 ? sessions.length > 0
                   ? sessions[0].id
@@ -214,8 +276,7 @@ export const useChatMessages = create<ChatMessagesState>()(
                 : state.currentSessionId;
 
             return {
-              currentSession: deriveCurrentSession(sessions, currentSessionId),
-              currentSessionId,
+              currentSessionId: newCurrentSessionId,
               sessions,
             };
           });
@@ -236,7 +297,7 @@ export const useChatMessages = create<ChatMessagesState>()(
                 contentType: att.contentType,
                 id: att.id,
                 name: att.name,
-                url: att.url.startsWith("blob:") ? "" : att.url,
+                url: sanitizeExportedAttachmentUrl(att.url),
               })),
             })),
           };
@@ -248,14 +309,16 @@ export const useChatMessages = create<ChatMessagesState>()(
           try {
             const data = JSON.parse(jsonData);
 
-            // Basic validation
-            if (
-              !data.id ||
-              !data.title ||
-              !Array.isArray(data.messages) ||
-              !data.createdAt ||
-              !data.updatedAt
-            ) {
+            const parsed = chatSessionImportSchema.safeParse(data);
+            if (!parsed.success) {
+              const details =
+                typeof data === "object" && data !== null
+                  ? {
+                      error: parsed.error,
+                      payloadKeys: Object.keys(data as Record<string, unknown>),
+                    }
+                  : { error: parsed.error, payloadType: typeof data };
+              logger.error("Invalid imported session data format", details);
               set({ error: "Invalid session data format" });
               return null;
             }
@@ -264,20 +327,20 @@ export const useChatMessages = create<ChatMessagesState>()(
             const sessionId = generateId();
 
             const importedSession: ChatSession = {
-              ...data,
+              ...parsed.data,
               id: sessionId,
-              title: `${data.title} (Imported)`,
+              title: `${parsed.data.title ?? "Imported Session"} (Imported)`,
               updatedAt: timestamp,
             };
 
             set((state) => ({
-              currentSession: importedSession,
               currentSessionId: sessionId,
               sessions: [importedSession, ...state.sessions],
             }));
 
             return sessionId;
           } catch (error) {
+            logger.error("Failed to import session data", { error });
             set({
               error:
                 error instanceof Error
@@ -296,21 +359,12 @@ export const useChatMessages = create<ChatMessagesState>()(
                 ? { ...session, title, updatedAt: getCurrentTimestamp() }
                 : session
             );
-
-            return {
-              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
-              sessions,
-            };
+            return { sessions };
           });
         },
         sessions: [],
 
-        setCurrentSession: (sessionId) => {
-          set((state) => ({
-            currentSession: deriveCurrentSession(state.sessions, sessionId),
-            currentSessionId: sessionId,
-          }));
-        },
+        setCurrentSession: (currentSessionId) => set({ currentSessionId }),
 
         updateMessage: (sessionId, messageId, updates) => {
           set((state) => {
@@ -325,41 +379,30 @@ export const useChatMessages = create<ChatMessagesState>()(
                   }
                 : session
             );
-
-            return {
-              currentSession: deriveCurrentSession(sessions, state.currentSessionId),
-              sessions,
-            };
+            return { sessions };
           });
         },
-      };
-    },
-    {
-      name: "chat-messages-storage",
-      partialize: (state) => ({
-        currentSessionId: state.currentSessionId,
-        sessions: state.sessions,
-      }),
-    }
+      })),
+      {
+        name: "chat-messages-storage",
+        partialize: (state) => ({
+          currentSessionId: state.currentSessionId,
+          sessions: state.sessions.map((session) => ({
+            ...session,
+            messages: (session.messages || []).map((message) => ({
+              ...message,
+              attachments: message.attachments?.map((attachment) => ({
+                ...attachment,
+                url: sanitizeExportedAttachmentUrl(attachment.url),
+              })),
+            })),
+          })),
+        }),
+      }
+    ),
+    { name: "ChatMessages" }
   )
 );
-
-let syncingCurrentSession = false;
-
-useChatMessages.subscribe((state) => {
-  if (syncingCurrentSession) {
-    return;
-  }
-
-  const derivedSession = deriveCurrentSession(state.sessions, state.currentSessionId);
-  if (state.currentSession === derivedSession) {
-    return;
-  }
-
-  syncingCurrentSession = true;
-  useChatMessages.setState({ currentSession: derivedSession });
-  syncingCurrentSession = false;
-});
 
 // Selectors
 export const useCurrentSession = () => useChatMessages((state) => state.currentSession);

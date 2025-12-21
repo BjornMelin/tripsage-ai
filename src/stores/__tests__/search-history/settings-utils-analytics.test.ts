@@ -3,7 +3,7 @@
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSearchHistoryStore } from "@/stores/search-history";
+import { buildSearchTrends, useSearchHistoryStore } from "@/stores/search-history";
 
 describe("Search History Store - Settings, Utils, and Analytics", () => {
   beforeEach(() => {
@@ -137,6 +137,64 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
 
       expect(analytics.searchTrends).toHaveLength(30); // Last 30 days
       expect(analytics.popularSearchTimes).toHaveLength(24); // 24 hours
+    });
+
+    it("computes topDestinations from destination searches", () => {
+      const destinationSearches: SearchHistoryItem[] = [
+        {
+          id: "dest-1",
+          location: { city: "Paris", country: "France" },
+          params: {},
+          searchType: "destination",
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: "dest-2",
+          location: { city: "Paris", country: "France" },
+          params: {},
+          searchType: "destination",
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: "dest-3",
+          params: { query: "Tokyo" },
+          searchType: "destination",
+          timestamp: new Date().toISOString(),
+        },
+      ];
+
+      act(() => {
+        useSearchHistoryStore.setState({ recentSearches: destinationSearches });
+      });
+
+      const { result } = renderHook(() => useSearchHistoryStore());
+      const analytics = result.current.getSearchAnalytics();
+
+      expect(analytics.topDestinations[0]).toEqual({
+        count: 2,
+        destination: "Paris, France",
+      });
+      expect(analytics.topDestinations).toEqual(
+        expect.arrayContaining([
+          { count: 2, destination: "Paris, France" },
+          { count: 1, destination: "Tokyo" },
+        ])
+      );
+    });
+
+    it("buildSearchTrends is deterministic with a fixed now", () => {
+      const searchesByDay = new Map<string, number>([
+        ["2025-01-28", 1],
+        ["2025-01-30", 2],
+      ]);
+      const now = new Date("2025-01-30T12:00:00.000Z");
+
+      const trends = buildSearchTrends(searchesByDay, now, 3);
+      expect(trends).toEqual([
+        { count: 1, date: "2025-01-28" },
+        { count: 0, date: "2025-01-29" },
+        { count: 2, date: "2025-01-30" },
+      ]);
     });
 
     it("gets most used searches", () => {

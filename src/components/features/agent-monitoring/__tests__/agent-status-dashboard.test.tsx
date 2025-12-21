@@ -84,6 +84,7 @@ const CREATE_STATE = (): AgentStatusState => ({
   recordActivity: vi.fn(),
   recordResourceUsage: vi.fn(),
   registerAgents: vi.fn(),
+  removeStaleAgents: vi.fn(),
   resetAgentStatusState: vi.fn(),
   resourceUsage: [
     {
@@ -96,6 +97,7 @@ const CREATE_STATE = (): AgentStatusState => ({
   ],
   setAgentStatusConnection: vi.fn(),
   setMonitoring: vi.fn(),
+  unregisterAgent: vi.fn(),
   updateAgentStatus: vi.fn(),
   updateAgentTask: vi.fn(),
 });

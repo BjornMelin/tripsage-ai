@@ -144,7 +144,9 @@ describe("UI Store - UI State Management", () => {
         result.current.setTheme("system");
       });
 
-      expect(result.current.isDarkMode).toBe(false);
+      // When matchMedia returns matches:true for "(prefers-color-scheme: dark)",
+      // isDarkMode should be true for system theme
+      expect(result.current.isDarkMode).toBe(true);
     });
   });
 
