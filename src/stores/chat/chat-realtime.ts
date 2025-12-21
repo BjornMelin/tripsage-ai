@@ -6,6 +6,8 @@
  * stays in hooks/route handlers.
  */
 
+"use client";
+
 import type { Message } from "@schemas/chat";
 import type {
   AgentStatusBroadcastPayload,
@@ -15,7 +17,13 @@ import type {
 } from "@schemas/realtime";
 import { CONNECTION_STATUS_SCHEMA } from "@schemas/realtime";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { getCurrentTimestamp } from "@/stores/helpers";
+
+const logger = createStoreLogger({ storeName: "chat-realtime" });
+const TYPING_TIMEOUT_MS = 3000;
+const typingTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 /**
  * Chat realtime state interface.
@@ -63,134 +71,167 @@ export interface ChatRealtimeState {
 /**
  * Chat realtime store hook.
  */
-export const useChatRealtime = create<ChatRealtimeState>()((set, get) => ({
-  addPendingMessage: (message) => {
-    set((state) => ({
-      pendingMessages: [...state.pendingMessages, message],
-    }));
-  },
-  agentStatuses: {},
-
-  clearTypingUsers: (sessionId) => {
-    set((state) => {
-      const newTypingUsers = { ...state.typingUsers };
-      for (const key of Object.keys(newTypingUsers)) {
-        if (key.startsWith(`${sessionId}_`)) {
-          delete newTypingUsers[key];
-        }
-      }
-      return { typingUsers: newTypingUsers };
-    });
-  },
-  connectionStatus: "disconnected",
-
-  handleAgentStatusUpdate: (sessionId, payload) => {
-    get().updateAgentStatus(sessionId, {
-      currentTask: payload.currentTask,
-      isActive: payload.isActive,
-      progress: payload.progress,
-      statusMessage: payload.statusMessage,
-    });
-  },
-
-  handleRealtimeMessage: (_sessionId, payload) => {
-    // This handler is called by hooks that manage actual Supabase channels
-    // The slice just tracks state - actual message addition goes through messages slice
-    if (!payload.content) {
-      return;
-    }
-    // Note: Actual message addition should be handled by the calling hook
-    // which will use the messages slice's addMessage action
-  },
-
-  handleTypingUpdate: (sessionId, payload) => {
-    if (!payload.userId) {
-      return;
-    }
-
-    if (payload.isTyping) {
-      get().setUserTyping(sessionId, payload.userId);
-    } else {
-      get().removeUserTyping(sessionId, payload.userId);
-    }
-  },
-  isRealtimeEnabled: true,
-  pendingMessages: [],
-
-  removePendingMessage: (messageId) => {
-    set((state) => ({
-      pendingMessages: state.pendingMessages.filter((m) => m.id !== messageId),
-    }));
-  },
-
-  removeUserTyping: (sessionId, userId) => {
-    set((state) => {
-      const newTypingUsers = { ...state.typingUsers };
-      delete newTypingUsers[`${sessionId}_${userId}`];
-      return { typingUsers: newTypingUsers };
-    });
-  },
-
-  resetRealtimeState: () =>
-    set({
-      connectionStatus: "disconnected",
-      pendingMessages: [],
-      typingUsers: {},
-    }),
-
-  setChatConnectionStatus: (status) => {
-    // Validate status matches schema
-    const parsed = CONNECTION_STATUS_SCHEMA.safeParse(status);
-    if (parsed.success) {
-      set({ connectionStatus: parsed.data });
-    }
-  },
-
-  setRealtimeEnabled: (enabled) => {
-    set({ isRealtimeEnabled: enabled });
-    if (!enabled) {
-      get().resetRealtimeState();
-    }
-  },
-
-  setUserTyping: (sessionId, userId, username) => {
-    const timestamp = getCurrentTimestamp();
-    set((state) => ({
-      typingUsers: {
-        ...state.typingUsers,
-        [`${sessionId}_${userId}`]: {
-          timestamp,
-          userId,
-          username,
-        },
+export const useChatRealtime = create<ChatRealtimeState>()(
+  devtools(
+    (set, get) => ({
+      addPendingMessage: (message) => {
+        set((state) => ({
+          pendingMessages: [...state.pendingMessages, message],
+        }));
       },
-    }));
+      agentStatuses: {},
 
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      get().removeUserTyping(sessionId, userId);
-    }, 3000);
-  },
-  typingUsers: {},
+      clearTypingUsers: (sessionId) => {
+        set((state) => {
+          const newTypingUsers = { ...state.typingUsers };
+          for (const key of Object.keys(newTypingUsers)) {
+            if (key.startsWith(`${sessionId}_`)) {
+              const existingTimeout = typingTimeouts.get(key);
+              if (existingTimeout) {
+                clearTimeout(existingTimeout);
+                typingTimeouts.delete(key);
+              }
+              delete newTypingUsers[key];
+            }
+          }
+          return { typingUsers: newTypingUsers };
+        });
+      },
+      connectionStatus: "disconnected",
 
-  updateAgentStatus: (sessionId, status) => {
-    set((state) => {
-      const existing = state.agentStatuses[sessionId] || {
-        isActive: false,
-        progress: 0,
-      };
-      return {
-        agentStatuses: {
-          ...state.agentStatuses,
-          [sessionId]: {
-            ...existing,
-            ...status,
+      handleAgentStatusUpdate: (sessionId, payload) => {
+        get().updateAgentStatus(sessionId, {
+          currentTask: payload.currentTask,
+          isActive: payload.isActive,
+          progress: payload.progress,
+          statusMessage: payload.statusMessage,
+        });
+      },
+
+      handleRealtimeMessage: (_sessionId, _payload) => {
+        // Intentionally a no-op: message addition is handled by the calling hook via the
+        // messages slice (this slice only tracks realtime connection state).
+      },
+
+      handleTypingUpdate: (sessionId, payload) => {
+        if (!payload.userId) {
+          return;
+        }
+
+        if (payload.isTyping) {
+          get().setUserTyping(sessionId, payload.userId, payload.username);
+        } else {
+          get().removeUserTyping(sessionId, payload.userId);
+        }
+      },
+      isRealtimeEnabled: true,
+      pendingMessages: [],
+
+      removePendingMessage: (messageId) => {
+        set((state) => ({
+          pendingMessages: state.pendingMessages.filter((m) => m.id !== messageId),
+        }));
+      },
+
+      removeUserTyping: (sessionId, userId) => {
+        const key = `${sessionId}_${userId}`;
+        const existingTimeout = typingTimeouts.get(key);
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+          typingTimeouts.delete(key);
+        }
+
+        set((state) => {
+          const newTypingUsers = { ...state.typingUsers };
+          delete newTypingUsers[key];
+          return { typingUsers: newTypingUsers };
+        });
+      },
+
+      resetRealtimeState: () =>
+        set(() => {
+          for (const timeout of typingTimeouts.values()) {
+            clearTimeout(timeout);
+          }
+          typingTimeouts.clear();
+
+          return {
+            agentStatuses: {},
+            connectionStatus: "disconnected",
+            pendingMessages: [],
+            typingUsers: {},
+          };
+        }),
+
+      setChatConnectionStatus: (status) => {
+        // Validate status matches schema
+        const parsed = CONNECTION_STATUS_SCHEMA.safeParse(status);
+        if (parsed.success) return set({ connectionStatus: parsed.data });
+
+        logger.error("Invalid connection status update dropped", {
+          error: parsed.error,
+          status,
+        });
+        return;
+      },
+
+      setRealtimeEnabled: (enabled) => {
+        set({ isRealtimeEnabled: enabled });
+        if (!enabled) {
+          get().resetRealtimeState();
+        }
+      },
+
+      setUserTyping: (sessionId, userId, username) => {
+        const key = `${sessionId}_${userId}`;
+        const existingTimeout = typingTimeouts.get(key);
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+          typingTimeouts.delete(key);
+        }
+
+        const timestamp = getCurrentTimestamp();
+        set((state) => ({
+          typingUsers: {
+            ...state.typingUsers,
+            [key]: {
+              timestamp,
+              userId,
+              username,
+            },
           },
-        },
-      };
-    });
-  },
-}));
+        }));
+
+        // Auto-remove after 3 seconds
+        const timeout = setTimeout(() => {
+          typingTimeouts.delete(key);
+          get().removeUserTyping(sessionId, userId);
+        }, TYPING_TIMEOUT_MS);
+        typingTimeouts.set(key, timeout);
+      },
+      typingUsers: {},
+
+      updateAgentStatus: (sessionId, status) => {
+        set((state) => {
+          const existing = state.agentStatuses[sessionId] || {
+            isActive: false,
+            progress: 0,
+          };
+          return {
+            agentStatuses: {
+              ...state.agentStatuses,
+              [sessionId]: {
+                ...existing,
+                ...status,
+              },
+            },
+          };
+        });
+      },
+    }),
+    { name: "chat-realtime" }
+  )
+);
 
 // Selectors
 export const useConnectionStatus = () =>

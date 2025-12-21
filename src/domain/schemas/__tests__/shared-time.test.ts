@@ -2,7 +2,7 @@
 
 import {
   DATE_RANGE_SCHEMA,
-  FUTURE_DATE_STRING,
+  FUTURE_DATE_SCHEMA,
   ISO_DATE_STRING,
   ISO_DATETIME_STRING,
   type IsoDateString,
@@ -182,7 +182,7 @@ describe("ISO_DATETIME_STRING", () => {
   });
 });
 
-describe("FUTURE_DATE_STRING", () => {
+describe("FUTURE_DATE_SCHEMA", () => {
   describe("valid future dates", () => {
     it.concurrent("should accept date in the future", () => {
       // Create a date 1 year from now
@@ -190,14 +190,14 @@ describe("FUTURE_DATE_STRING", () => {
       futureDate.setFullYear(futureDate.getFullYear() + 1);
       const dateStr = futureDate.toISOString().split("T")[0];
 
-      const result = FUTURE_DATE_STRING.safeParse(dateStr);
+      const result = FUTURE_DATE_SCHEMA.safeParse(dateStr);
       expect(result.success).toBe(true);
     });
   });
 
   describe("invalid dates", () => {
     it.concurrent("should reject date in the past", () => {
-      const result = FUTURE_DATE_STRING.safeParse("2020-01-01");
+      const result = FUTURE_DATE_SCHEMA.safeParse("2020-01-01");
       expect(result.success).toBe(false);
     });
 
@@ -206,7 +206,7 @@ describe("FUTURE_DATE_STRING", () => {
       yesterday.setDate(yesterday.getDate() - 1);
       const dateStr = yesterday.toISOString().split("T")[0];
 
-      const result = FUTURE_DATE_STRING.safeParse(dateStr);
+      const result = FUTURE_DATE_SCHEMA.safeParse(dateStr);
       expect(result.success).toBe(false);
     });
   });

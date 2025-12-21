@@ -2,6 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { StateCreator, StoreMutatorIdentifier } from "zustand";
 import { useCurrencyStore } from "@/stores/currency-store";
 import {
   useCurrency,
@@ -11,9 +12,20 @@ import {
   useExchangeRates,
 } from "../use-currency";
 
-// Mock the store to avoid persistence issues in tests
+// Mock the store to avoid persistence/devtools issues in tests
+type MiddlewarePassthrough = <
+  T,
+  Mps extends [StoreMutatorIdentifier, unknown][] = [],
+  Mcs extends [StoreMutatorIdentifier, unknown][] = [],
+  U = T,
+>(
+  initializer: StateCreator<T, Mps, Mcs, U>,
+  ..._args: unknown[]
+) => StateCreator<T, Mps, Mcs, U>;
+
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: unknown) => fn,
+  devtools: ((initializer) => initializer) as MiddlewarePassthrough,
+  persist: ((initializer) => initializer) as MiddlewarePassthrough,
 }));
 
 // Mock TanStack Query

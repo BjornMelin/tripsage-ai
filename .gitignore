@@ -36,8 +36,15 @@ Thumbs.db
 .cursorindexingignore
 CLAUDE.md
 
-# repomix
+# repomix and AI-assisted code review artifacts
 repomix-output.*
+context-review*.md
+GEMINI-REVIEW*.md
+IMPLEMENTATION-PROMPTS*.md
+QUICK-START*.md
+CONTEXT-OPTIMIZATION*.md
+COMPREHENSIVE-REVIEW*.md
+AI-REVIEW*.md
 
 # Logs
 dev-debug.log

@@ -2,6 +2,8 @@
  * @fileoverview Search parameters store.
  */
 
+"use client";
+
 import type {
   ActivitySearchParams,
   FlightSearchParams,
@@ -23,6 +25,8 @@ import {
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { DIRTY_CHECK_MAX_DEPTH, deepEqualJsonLike } from "@/lib/utils/deep-equal";
+import { withComputed } from "@/stores/middleware/computed";
 import { registerAllHandlers } from "./search-params/handlers";
 import { getHandler } from "./search-params/registry";
 
@@ -60,6 +64,7 @@ interface SearchParamsState {
   accommodationParams: Partial<ValidatedAccommodationParams>;
   activityParams: Partial<ValidatedActivityParams>;
   destinationParams: Partial<ValidatedDestinationParams>;
+  savedParams: Record<SearchType, Partial<SearchParams>>;
 
   // Validation states
   isValidating: Record<SearchType, boolean>;
@@ -153,16 +158,7 @@ const getParamsForType = (
 };
 
 /** Compute derived current params and validity for the given state snapshot. */
-const computeDerivedState = (
-  state: Pick<
-    SearchParamsState,
-    | "accommodationParams"
-    | "activityParams"
-    | "currentSearchType"
-    | "destinationParams"
-    | "flightParams"
-  >
-): Pick<SearchParamsState, "currentParams" | "hasValidParams"> => {
+const computeDerivedState = (state: SearchParamsState): Partial<SearchParamsState> => {
   if (!state.currentSearchType) {
     return { currentParams: null, hasValidParams: false };
   }
@@ -177,11 +173,82 @@ const computeDerivedState = (
   };
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stripDefaultsToInputShape = (
+  input: unknown,
+  parsed: Record<string, unknown>
+): Partial<SearchParams> => {
+  if (!isPlainObject(input)) return parsed as Partial<SearchParams>;
+
+  const inputKeys = new Set(Object.keys(input));
+  const stripped: Record<string, unknown> = {};
+  for (const key of Object.keys(parsed)) {
+    if (inputKeys.has(key)) {
+      stripped[key] = parsed[key];
+    }
+  }
+  return stripped as Partial<SearchParams>;
+};
+
+const sanitizeHydratedSavedParams = (
+  hydrated: unknown
+): Record<SearchType, Partial<SearchParams>> => {
+  const record = isPlainObject(hydrated) ? hydrated : {};
+
+  const sanitized: Record<SearchType, Partial<SearchParams>> = {
+    accommodation: {},
+    activity: {},
+    destination: {},
+    flight: {},
+  };
+
+  for (const type of searchTypeSchema.options as readonly SearchType[]) {
+    const rawEntry = record[type];
+    const schema = PARAM_SCHEMAS[type];
+    const parsed = schema.safeParse(rawEntry);
+    if (parsed.success) {
+      sanitized[type] = stripDefaultsToInputShape(
+        rawEntry,
+        parsed.data as Record<string, unknown>
+      );
+    } else {
+      sanitized[type] = getDefaultParams(type);
+    }
+  }
+
+  return sanitized;
+};
+
+/** Compute isDirty property based on current params vs defaults. */
+const computeIsDirty = (state: SearchParamsState): Partial<SearchParamsState> => {
+  if (!state.currentSearchType) return { isDirty: false };
+
+  const savedParams =
+    state.savedParams[state.currentSearchType] ??
+    getDefaultParams(state.currentSearchType);
+  const currentParams = getParamsForType(state, state.currentSearchType);
+  return {
+    isDirty: !deepEqualJsonLike(currentParams, savedParams, {
+      logger,
+      maxDepth: DIRTY_CHECK_MAX_DEPTH,
+    }),
+  };
+};
+
+const computeSearchParamsState = (
+  state: SearchParamsState
+): Partial<SearchParamsState> => ({
+  ...computeDerivedState(state),
+  ...computeIsDirty(state),
+});
+
 /** Create a search params store instance. */
 export const useSearchParamsStore = create<SearchParamsState>()(
   devtools(
     persist(
-      (set, get) => ({
+      withComputed({ compute: computeSearchParamsState }, (set, get) => ({
         accommodationParams: {},
         activityParams: {},
 
@@ -220,15 +287,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         flightParams: {},
 
         hasValidParams: false,
-
-        get isDirty() {
-          const state = get();
-          if (!state.currentSearchType) return false;
-
-          const defaultParams = getDefaultParams(state.currentSearchType);
-          const currentParams = getParamsForType(state, state.currentSearchType);
-          return JSON.stringify(currentParams) !== JSON.stringify(defaultParams);
-        },
+        isDirty: false,
 
         /** Validation states. */
         isValidating: {
@@ -265,8 +324,15 @@ export const useSearchParamsStore = create<SearchParamsState>()(
         },
 
         markClean: () => {
-          // This getter will automatically update the isDirty computed property
-          get().isDirty;
+          const { currentSearchType } = get();
+          if (!currentSearchType) return;
+
+          set((state) => ({
+            savedParams: {
+              ...state.savedParams,
+              [currentSearchType]: getParamsForType(state, currentSearchType),
+            },
+          }));
         },
 
         reset: () => {
@@ -283,6 +349,12 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               activity: false,
               destination: false,
               flight: false,
+            },
+            savedParams: {
+              accommodation: {},
+              activity: {},
+              destination: {},
+              flight: {},
             },
             validationErrors: {
               accommodation: null,
@@ -309,6 +381,12 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 activityParams: {},
                 destinationParams: {},
                 flightParams: {},
+                savedParams: {
+                  accommodation: {},
+                  activity: {},
+                  destination: {},
+                  flight: {},
+                },
               };
               const derived = computeDerivedState({ ...state, ...updates });
               return { ...updates, ...derived };
@@ -337,8 +415,21 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           set((state) => {
             const nextState = { ...state, ...stateUpdate } as SearchParamsState;
             const derived = computeDerivedState(nextState);
-            return { ...stateUpdate, ...derived };
+            return {
+              ...stateUpdate,
+              savedParams: {
+                ...state.savedParams,
+                [type]: defaults as Partial<SearchParams>,
+              },
+              ...derived,
+            };
           });
+        },
+        savedParams: {
+          accommodation: {},
+          activity: {},
+          destination: {},
+          flight: {},
         },
 
         setAccommodationParams: (params) => {
@@ -435,6 +526,19 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                   [key]: defaults,
                 } satisfies Partial<SearchParamsState>;
                 Object.assign(updatedState, defaultsUpdate);
+
+                const savedParams = state.savedParams[result.data] as Record<
+                  string,
+                  unknown
+                >;
+                if (Object.keys(savedParams).length === 0) {
+                  Object.assign(updatedState, {
+                    savedParams: {
+                      ...state.savedParams,
+                      [result.data]: defaults as Partial<SearchParams>,
+                    },
+                  } satisfies Partial<SearchParamsState>);
+                }
               }
 
               const nextState = { ...state, ...updatedState } as SearchParamsState;
@@ -521,9 +625,22 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           destination: null,
           flight: null,
         },
-      }),
+      })),
       {
         name: "search-params-storage",
+        onRehydrateStorage: () => (state, error) => {
+          if (error) {
+            logger.error("Failed to rehydrate", { error });
+            return;
+          }
+          if (!state) return;
+
+          const sanitized = sanitizeHydratedSavedParams(state.savedParams);
+          if (!deepEqualJsonLike(state.savedParams, sanitized, { logger })) {
+            logger.warn("Sanitized invalid persisted savedParams");
+          }
+          state.savedParams = sanitized;
+        },
         partialize: (state) => ({
           accommodationParams: state.accommodationParams,
           activityParams: state.activityParams,
@@ -531,6 +648,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
           currentSearchType: state.currentSearchType,
           destinationParams: state.destinationParams,
           flightParams: state.flightParams,
+          savedParams: state.savedParams,
         }),
       }
     ),

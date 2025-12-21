@@ -5,18 +5,13 @@
 
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
+import { CURRENCY_CODE_SCHEMA } from "./shared/money";
+
+// Re-export for backwards compatibility
+export { CURRENCY_CODE_SCHEMA };
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for currency management
-
-/**
- * Zod schema for ISO 4217 currency codes (3-letter uppercase).
- * Validates currency code format and structure.
- */
-export const CURRENCY_CODE_SCHEMA = z
-  .string()
-  .length(3)
-  .regex(/^[A-Z]{3}$/, { error: "Currency code must be a valid 3-letter ISO code" });
 
 /** TypeScript type for currency codes. */
 export type CurrencyCode = z.infer<typeof CURRENCY_CODE_SCHEMA>;

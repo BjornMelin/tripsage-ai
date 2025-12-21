@@ -2,6 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { selectCurrentParamsFrom, useSearchParamsStore } from "../search-params-store";
 
 describe("Search Params Store", () => {
@@ -19,6 +20,12 @@ describe("Search Params Store", () => {
         activity: false,
         destination: false,
         flight: false,
+      },
+      savedParams: {
+        accommodation: {},
+        activity: {},
+        destination: {},
+        flight: {},
       },
       validationErrors: {
         accommodation: null,
@@ -214,6 +221,165 @@ describe("Search Params Store", () => {
       };
 
       expect(result.current.accommodationParams).toEqual(defaultParams);
+    });
+  });
+
+  describe("Dirty tracking", () => {
+    it("handles deeply nested param snapshots without stringification", () => {
+      const { result } = renderHook(() => useSearchParamsStore());
+
+      const deepParams = {
+        components: {
+          country: ["US"],
+          extra: { level1: { level2: { level3: "a" } } },
+        },
+        query: "test",
+      };
+
+      act(() => {
+        result.current.setSearchType("destination");
+      });
+
+      act(() => {
+        useSearchParamsStore.setState((state) => ({
+          destinationParams: unsafeCast(deepParams),
+          savedParams: { ...state.savedParams, destination: unsafeCast(deepParams) },
+        }));
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(false);
+
+      act(() => {
+        useSearchParamsStore.setState({
+          destinationParams: unsafeCast({
+            ...deepParams,
+            components: {
+              ...deepParams.components,
+              extra: { level1: { level2: { level3: "b" } } },
+            },
+          }),
+        });
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(true);
+    });
+
+    it("detects deep changes for flight params", () => {
+      const { result } = renderHook(() => useSearchParamsStore());
+
+      const deepParams = {
+        departureDate: "2025-07-15",
+        destination: "LAX",
+        meta: { legs: [{ cabin: "economy", id: "leg-1" }] },
+        origin: "NYC",
+        passengers: { adults: 1, children: 0, infants: 0 },
+        returnDate: "2025-07-22",
+      };
+
+      act(() => {
+        result.current.setSearchType("flight");
+      });
+
+      act(() => {
+        useSearchParamsStore.setState((state) => ({
+          flightParams: unsafeCast(deepParams),
+          savedParams: { ...state.savedParams, flight: unsafeCast(deepParams) },
+        }));
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(false);
+
+      act(() => {
+        useSearchParamsStore.setState({
+          flightParams: unsafeCast({
+            ...deepParams,
+            passengers: { ...deepParams.passengers, adults: 2 },
+          }),
+        });
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(true);
+    });
+
+    it("detects deep changes for accommodation params", () => {
+      const { result } = renderHook(() => useSearchParamsStore());
+
+      const deepParams = {
+        amenities: ["wifi", "pool"],
+        checkIn: "2025-07-15",
+        checkOut: "2025-07-22",
+        destination: "Paris",
+        preferences: {
+          accessibility: { stepFree: true },
+          bedTypes: ["queen", "king"],
+        },
+        rooms: 1,
+      };
+
+      act(() => {
+        result.current.setSearchType("accommodation");
+      });
+
+      act(() => {
+        useSearchParamsStore.setState((state) => ({
+          accommodationParams: unsafeCast(deepParams),
+          savedParams: { ...state.savedParams, accommodation: unsafeCast(deepParams) },
+        }));
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(false);
+
+      act(() => {
+        useSearchParamsStore.setState({
+          accommodationParams: unsafeCast({
+            ...deepParams,
+            preferences: {
+              ...deepParams.preferences,
+              accessibility: {
+                ...deepParams.preferences.accessibility,
+                stepFree: false,
+              },
+            },
+          }),
+        });
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(true);
+    });
+
+    it("detects deep changes for activity params", () => {
+      const { result } = renderHook(() => useSearchParamsStore());
+
+      const deepParams = {
+        dateRange: { end: "2025-09-03", start: "2025-09-01" },
+        destination: "Tokyo",
+        duration: { max: 240, min: 120 },
+        filters: { price: { max: 50, min: 0 } },
+      };
+
+      act(() => {
+        result.current.setSearchType("activity");
+      });
+
+      act(() => {
+        useSearchParamsStore.setState((state) => ({
+          activityParams: unsafeCast(deepParams),
+          savedParams: { ...state.savedParams, activity: unsafeCast(deepParams) },
+        }));
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(false);
+
+      act(() => {
+        useSearchParamsStore.setState({
+          activityParams: unsafeCast({
+            ...deepParams,
+            duration: { ...deepParams.duration, min: 60 },
+          }),
+        });
+      });
+
+      expect(useSearchParamsStore.getState().isDirty).toBe(true);
     });
   });
 

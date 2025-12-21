@@ -5,14 +5,31 @@
  * This store only persists client-side itinerary/destination planning data keyed by trip id.
  */
 
-import type { TripDestination } from "@schemas/trips";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+"use client";
 
-type PersistedTripStoreV0 = {
-  currentTrip?: { id?: string; destinations?: TripDestination[] } | null;
-  trips?: Array<{ id?: string; destinations?: TripDestination[] }>;
-};
+import { type TripDestination, tripDestinationSchema } from "@schemas/trips";
+import { z } from "zod";
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+
+const logger = createStoreLogger({ storeName: "trip-itinerary" });
+
+const PERSISTED_V1_SCHEMA = z.strictObject({
+  destinationsByTripId: z.record(z.string(), z.array(tripDestinationSchema)),
+});
+
+const LEGACY_TRIP_SCHEMA = z.strictObject({
+  destinations: z.array(tripDestinationSchema).optional(),
+  id: z.string().optional(),
+});
+
+const PERSISTED_V0_SCHEMA = z.strictObject({
+  currentTrip: LEGACY_TRIP_SCHEMA.nullable().optional(),
+  trips: z.array(LEGACY_TRIP_SCHEMA).optional(),
+});
+
+type PersistedTripStoreV0 = z.infer<typeof PERSISTED_V0_SCHEMA>;
 
 interface TripItineraryState {
   destinationsByTripId: Record<string, TripDestination[]>;
@@ -29,99 +46,163 @@ interface TripItineraryState {
 }
 
 export const useTripItineraryStore = create<TripItineraryState>()(
-  persist(
-    (set) => ({
-      addDestination: (tripId, destination) =>
-        set((state) => {
-          const existing = state.destinationsByTripId[tripId] ?? [];
-          return {
+  devtools(
+    persist(
+      (set) => ({
+        addDestination: (tripId, destination) =>
+          set((state) => {
+            const existing = state.destinationsByTripId[tripId] ?? [];
+            return {
+              destinationsByTripId: {
+                ...state.destinationsByTripId,
+                [tripId]: [...existing, destination],
+              },
+            };
+          }),
+
+        clearTripItinerary: (tripId) =>
+          set((state) => {
+            const destinationsByTripId = { ...state.destinationsByTripId };
+            delete destinationsByTripId[tripId];
+            return { destinationsByTripId };
+          }),
+        destinationsByTripId: {},
+
+        removeDestination: (tripId, destinationId) =>
+          set((state) => {
+            const existing = state.destinationsByTripId[tripId] ?? [];
+            const next = existing.filter((dest) => dest.id !== destinationId);
+            if (next.length === 0) {
+              const destinationsByTripId = { ...state.destinationsByTripId };
+              delete destinationsByTripId[tripId];
+              return { destinationsByTripId };
+            }
+            return {
+              destinationsByTripId: { ...state.destinationsByTripId, [tripId]: next },
+            };
+          }),
+
+        setDestinations: (tripId, destinations) =>
+          set((state) => ({
             destinationsByTripId: {
               ...state.destinationsByTripId,
-              [tripId]: [...existing, destination],
+              [tripId]: destinations,
             },
-          };
-        }),
+          })),
 
-      clearTripItinerary: (tripId) =>
-        set((state) => {
-          const { [tripId]: _removed, ...rest } = state.destinationsByTripId;
-          return { destinationsByTripId: rest };
-        }),
+        updateDestination: (tripId, destinationId, update) =>
+          set((state) => {
+            const existing = state.destinationsByTripId[tripId] ?? [];
+            if (existing.length === 0) return state;
 
-      destinationsByTripId: {},
+            const next = existing.map((dest) =>
+              dest.id === destinationId ? { ...dest, ...update, id: dest.id } : dest
+            );
 
-      removeDestination: (tripId, destinationId) =>
-        set((state) => {
-          const existing = state.destinationsByTripId[tripId] ?? [];
-          const next = existing.filter((dest) => dest.id !== destinationId);
-          if (next.length === 0) {
-            const { [tripId]: _removed, ...rest } = state.destinationsByTripId;
-            return { destinationsByTripId: rest };
-          }
-          return {
-            destinationsByTripId: { ...state.destinationsByTripId, [tripId]: next },
-          };
-        }),
-
-      setDestinations: (tripId, destinations) =>
-        set((state) => ({
-          destinationsByTripId: {
-            ...state.destinationsByTripId,
-            [tripId]: destinations,
-          },
-        })),
-
-      updateDestination: (tripId, destinationId, update) =>
-        set((state) => {
-          const existing = state.destinationsByTripId[tripId] ?? [];
-          if (existing.length === 0) return state;
-
-          const next = existing.map((dest) =>
-            dest.id === destinationId ? { ...dest, ...update, id: dest.id } : dest
-          );
-
-          return {
-            destinationsByTripId: { ...state.destinationsByTripId, [tripId]: next },
-          };
-        }),
-    }),
-    {
-      migrate: (
-        persisted,
-        version
-      ): Pick<TripItineraryState, "destinationsByTripId"> => {
-        if (version >= 1) {
-          const maybeNext = persisted as {
-            destinationsByTripId?: Record<string, TripDestination[]>;
-          };
-          return { destinationsByTripId: maybeNext.destinationsByTripId ?? {} };
-        }
-
-        const legacy = persisted as PersistedTripStoreV0;
-        const destinationsByTripId: Record<string, TripDestination[]> = {};
-
-        const collect = (tripId?: string, destinations?: TripDestination[]) => {
-          if (!tripId) return;
-          if (!Array.isArray(destinations) || destinations.length === 0) return;
-          destinationsByTripId[tripId] = destinations;
-        };
-
-        for (const trip of legacy.trips ?? []) {
-          collect(trip?.id, trip?.destinations);
-        }
-        collect(legacy.currentTrip?.id, legacy.currentTrip?.destinations);
-
-        return { destinationsByTripId };
-      },
-      /**
-       * Use the legacy key name to preserve previously persisted trip itinerary
-       * state from the former `trip-store` implementation.
-       */
-      name: "trip-storage",
-      partialize: (state) => ({
-        destinationsByTripId: state.destinationsByTripId,
+            return {
+              destinationsByTripId: { ...state.destinationsByTripId, [tripId]: next },
+            };
+          }),
       }),
-      version: 1,
-    }
+      {
+        migrate: (
+          persisted: unknown,
+          version: number
+        ): Pick<TripItineraryState, "destinationsByTripId"> => {
+          try {
+            if (version >= 1) {
+              const parsed = PERSISTED_V1_SCHEMA.safeParse(persisted);
+              if (!parsed.success) {
+                logger.error("migration validation failed", {
+                  error: parsed.error,
+                  version,
+                });
+                return { destinationsByTripId: {} };
+              }
+
+              const { destinationsByTripId } = parsed.data;
+              logger.info("migration succeeded", {
+                keyCount: Object.keys(destinationsByTripId).length,
+                version,
+              });
+              return { destinationsByTripId };
+            }
+
+            const parsedLegacy = PERSISTED_V0_SCHEMA.safeParse(persisted);
+            if (!parsedLegacy.success) {
+              logger.error("migration validation failed", {
+                error: parsedLegacy.error,
+                version,
+              });
+              return { destinationsByTripId: {} };
+            }
+
+            const legacy: PersistedTripStoreV0 = parsedLegacy.data;
+            const destinationsByTripId: Record<string, TripDestination[]> = {};
+
+            const collect = (tripId?: string, destinations?: TripDestination[]) => {
+              if (!tripId) return;
+              if (!destinations?.length) return;
+              destinationsByTripId[tripId] = destinations;
+            };
+
+            for (const trip of legacy.trips ?? []) {
+              collect(trip?.id, trip?.destinations);
+            }
+            collect(legacy.currentTrip?.id, legacy.currentTrip?.destinations);
+
+            logger.info("migration succeeded", {
+              keyCount: Object.keys(destinationsByTripId).length,
+              version,
+            });
+
+            return { destinationsByTripId };
+          } catch (error) {
+            logger.error("migration failed", { error, version });
+            return { destinationsByTripId: {} };
+          }
+        },
+        /**
+         * Use the legacy key name to preserve previously persisted trip itinerary
+         * state from the former `trip-store` implementation.
+         */
+        name: "trip-storage",
+        partialize: (state) => ({
+          destinationsByTripId: state.destinationsByTripId,
+        }),
+        version: 1,
+      }
+    ),
+    { name: "trip-itinerary" }
   )
 );
+
+const EMPTY_DESTINATIONS: TripDestination[] = [];
+
+/**
+ * Returns the destinations for a specific trip ID.
+ * @param tripId Trip identifier.
+ * @returns Destinations list (empty array when none exist).
+ */
+export const useDestinationsForTrip = (tripId: string): TripDestination[] =>
+  useTripItineraryStore(
+    (state) => state.destinationsByTripId[tripId] ?? EMPTY_DESTINATIONS
+  );
+
+/**
+ * Returns whether a trip has any destinations.
+ * @param tripId Trip identifier.
+ * @returns True when at least one destination exists, otherwise false.
+ */
+export const useHasTripDestinations = (tripId: string): boolean =>
+  useTripItineraryStore(
+    (state) => (state.destinationsByTripId[tripId]?.length ?? 0) > 0
+  );
+
+/**
+ * Returns the number of destinations for a trip.
+ * @param tripId Trip identifier.
+ * @returns Destination count (0 when none exist).
+ */
+export const useTripDestinationCount = (tripId: string): number =>
+  useTripItineraryStore((state) => state.destinationsByTripId[tripId]?.length ?? 0);

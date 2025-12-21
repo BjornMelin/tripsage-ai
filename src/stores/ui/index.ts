@@ -4,8 +4,12 @@
  * This module composes multiple slices for better maintainability and tree-shaking.
  */
 
+"use client";
+
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { withComputed } from "@/stores/middleware/computed";
 import {
   createCommandPaletteSlice,
   DEFAULT_COMMAND_PALETTE_STATE,
@@ -19,11 +23,68 @@ import { createSidebarSlice, DEFAULT_SIDEBAR_STATE } from "./sidebar";
 import { createThemeSlice } from "./theme";
 import type { UiState } from "./types";
 
+const logger = createStoreLogger({ storeName: "ui" });
+
+let prefersDarkMediaQuery: MediaQueryList | null | undefined;
+let cachedMatchMediaFn: ((query: string) => MediaQueryList) | undefined;
+
+const getPrefersDarkMediaQuery = (): MediaQueryList | null => {
+  if (typeof window === "undefined") {
+    prefersDarkMediaQuery = null;
+    cachedMatchMediaFn = undefined;
+    return prefersDarkMediaQuery;
+  }
+
+  if (typeof window.matchMedia !== "function") {
+    prefersDarkMediaQuery = null;
+    cachedMatchMediaFn = undefined;
+    return prefersDarkMediaQuery;
+  }
+
+  // Recreate the cached MediaQueryList when the host function changes (e.g., test mocks).
+  if (prefersDarkMediaQuery !== undefined && cachedMatchMediaFn === window.matchMedia) {
+    return prefersDarkMediaQuery;
+  }
+
+  try {
+    prefersDarkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    cachedMatchMediaFn = window.matchMedia;
+  } catch (error) {
+    logger.warn("Failed to create prefers-color-scheme MediaQueryList", { error });
+    prefersDarkMediaQuery = null;
+    cachedMatchMediaFn = undefined;
+  }
+
+  return prefersDarkMediaQuery;
+};
+
+/** Compute derived UI properties. */
+const computeUiState = (state: UiState): Partial<UiState> => {
+  // Compute isDarkMode
+  let isDarkMode = false;
+  if (state.theme === "system") {
+    const mediaQuery = getPrefersDarkMediaQuery();
+    isDarkMode = mediaQuery?.matches ?? false;
+  } else {
+    isDarkMode = state.theme === "dark";
+  }
+
+  // Compute isLoading
+  const isLoading = Object.values(state.loadingStates).some(
+    (loadingState) => loadingState === "loading"
+  );
+
+  // Compute unreadNotificationCount
+  const unreadNotificationCount = state.notifications.filter((n) => !n.isRead).length;
+
+  return { isDarkMode, isLoading, unreadNotificationCount };
+};
+
 export const useUiStore = create<UiState>()(
   devtools(
     persist(
-      (...args) => {
-        const [set, get] = args;
+      withComputed({ compute: computeUiState }, (...args) => {
+        const [set] = args;
 
         // Compose all slices
         const themeSlice = createThemeSlice(...args);
@@ -46,26 +107,9 @@ export const useUiStore = create<UiState>()(
           ...commandPaletteSlice,
           ...featuresSlice,
 
-          // Computed properties (getters) - defined at the top level where get() is available
-          get isDarkMode() {
-            const { theme } = get();
-            if (theme === "system") {
-              if (typeof window === "undefined") return false;
-              try {
-                const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-                return mediaQuery?.matches ?? false;
-              } catch {
-                return false;
-              }
-            }
-            return theme === "dark";
-          },
-
-          get isLoading() {
-            return Object.values(get().loadingStates).some(
-              (state) => state === "loading"
-            );
-          },
+          // Computed properties - initial values (updated via withComputed)
+          isDarkMode: false,
+          isLoading: false,
 
           // Utility actions
           reset: () => {
@@ -78,12 +122,9 @@ export const useUiStore = create<UiState>()(
               sidebar: DEFAULT_SIDEBAR_STATE,
             });
           },
-
-          get unreadNotificationCount() {
-            return get().notifications.filter((n) => !n.isRead).length;
-          },
+          unreadNotificationCount: 0,
         };
-      },
+      }),
       {
         name: "ui-storage",
         partialize: (state) => ({

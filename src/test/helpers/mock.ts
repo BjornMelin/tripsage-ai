@@ -2,7 +2,7 @@
  * @fileoverview Generic mock helpers for React Query and other testing utilities.
  */
 
-import type { UseInfiniteQueryResult, UseQueryResult } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { vi } from "vitest";
 
 /**
@@ -52,39 +52,6 @@ export const createMockUseQueryResult = <T, E = Error>(
   } as UseQueryResult<T, E>;
 
   refetch.mockImplementation(async () => result);
-
-  return result;
-};
-
-/**
- * Creates a mock TanStack Query infinite query result for testing infinite scroll hooks.
- * Provides default values for all infinite query properties with optional overrides.
- *
- * @param overrides Optional properties to override in the mock result
- * @returns A complete UseInfiniteQueryResult mock with realistic default values
- */
-export const createMockInfiniteQueryResult = <T, E = Error>(
-  overrides: Partial<UseInfiniteQueryResult<T, E>> = {}
-): UseInfiniteQueryResult<T, E> => {
-  const result = {
-    data: undefined,
-    error: null,
-    fetchNextPage: vi.fn(),
-    fetchPreviousPage: vi.fn(),
-    fetchStatus: "idle",
-    hasNextPage: false,
-    hasPreviousPage: false,
-    isError: false,
-    isFetching: false,
-    isFetchingNextPage: false,
-    isFetchingPreviousPage: false,
-    isLoading: false,
-    isPending: false,
-    isSuccess: true,
-    refetch: vi.fn(),
-    status: "success",
-    ...overrides,
-  } as UseInfiniteQueryResult<T, E>;
 
   return result;
 };

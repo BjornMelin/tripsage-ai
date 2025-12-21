@@ -69,6 +69,7 @@ export type ChatMessageBroadcastPayload = z.infer<
 export const CHAT_TYPING_BROADCAST_PAYLOAD_SCHEMA = z.object({
   isTyping: z.boolean(),
   userId: z.string(),
+  username: z.string().optional(),
 });
 
 /** TypeScript type for chat typing broadcast payload. */
