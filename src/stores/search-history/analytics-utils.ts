@@ -8,6 +8,16 @@ import type { SearchAnalytics } from "./types";
 
 const MS_PER_DAY = 86_400_000;
 
+/**
+ * Creates a record with all search types as keys, initialized with the provided factory
+ * function.
+ *
+ * Useful for building type-safe search-related data structures (e.g., analytics records).
+ *
+ * @template T The value type for each search type entry.
+ * @param createValue Factory function that creates a new value for each search type.
+ * @returns A record mapping each SearchType to a value created by the factory function.
+ */
 export const createSearchTypeRecord = <T>(
   createValue: () => T
 ): Record<SearchType, T> => ({
@@ -58,6 +68,18 @@ export const buildSearchTrends = (
   return trends;
 };
 
+/**
+ * Compute comprehensive search analytics from recent and saved searches.
+ *
+ * Aggregates searches by type, time (daily/hourly), and destination, and computes usage
+ * statistics for saved searches.
+ *
+ * @param recentSearches - Array of recent search history items to analyze.
+ * @param savedSearches - Array of validated saved searches to analyze.
+ * @param now - Reference time (defaults to `new Date()`).
+ * @param days - Number of days to include in search trends (defaults to `30`).
+ * @returns Comprehensive analytics object with aggregations, trends, and top items.
+ */
 export const computeSearchAnalytics = (
   recentSearches: SearchHistoryItem[],
   savedSearches: ValidatedSavedSearch[],
