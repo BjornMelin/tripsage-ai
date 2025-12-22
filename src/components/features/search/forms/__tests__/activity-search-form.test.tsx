@@ -29,6 +29,7 @@ describe("ActivitySearchForm", () => {
     expect(screen.getByLabelText(/end date \(range\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/adults/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/children/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/infants/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/activity category/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /search activities/i })
@@ -84,6 +85,7 @@ describe("ActivitySearchForm", () => {
           children: 0,
           date: futureDate,
           destination: "New York",
+          infants: 0,
         })
       );
     });
@@ -99,6 +101,7 @@ describe("ActivitySearchForm", () => {
     const dateInput = screen.getByLabelText(/^date$/i);
     const adultsInput = screen.getByLabelText(/adults/i);
     const childrenInput = screen.getByLabelText(/children/i);
+    const infantsInput = screen.getByLabelText(/infants/i);
     const submitButton = screen.getByRole("button", {
       name: /search activities/i,
     });
@@ -107,6 +110,7 @@ describe("ActivitySearchForm", () => {
     fireEvent.change(dateInput, { target: { value: futureDate } });
     fireEvent.change(adultsInput, { target: { value: "2" } });
     fireEvent.change(childrenInput, { target: { value: "1" } });
+    fireEvent.change(infantsInput, { target: { value: "1" } });
 
     fireEvent.click(submitButton);
 
@@ -116,6 +120,7 @@ describe("ActivitySearchForm", () => {
           adults: 2,
           children: 1,
           destination: "Paris",
+          infants: 1,
         })
       );
     });
@@ -179,6 +184,7 @@ describe("ActivitySearchForm", () => {
       participants: {
         adults: 3,
         children: 2,
+        infants: 1,
       },
     };
 
@@ -189,6 +195,8 @@ describe("ActivitySearchForm", () => {
     expect(screen.getByDisplayValue("Tokyo")).toBeInTheDocument();
     expect(screen.getByDisplayValue("3")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2")).toBeInTheDocument();
+    expect(screen.getByLabelText(/infants/i)).toHaveValue(1);
+    expect(screen.getByLabelText(/min duration/i)).toHaveValue(1);
   });
 
   it("validates number input ranges", async () => {

@@ -1,11 +1,17 @@
 /**
- * @fileoverview MSW handlers for Google Places (New) API endpoints used in tests.
+ * @fileoverview MSW handlers for Google APIs (Places, Geocoding, Routes) used in tests.
  */
 
 import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
 
 const defaultPhotoName = "places/placeholder/photos/primary";
+const activitySearchTerms = ["activities", "things to do"] as const;
+
+function isActivitySearchQuery(query: string) {
+  const normalized = query.toLowerCase();
+  return activitySearchTerms.some((term) => normalized.includes(term));
+}
 
 /** Shared 404 error response for invalid resources. */
 const RESOURCE_NOT_FOUND_ERROR = {
@@ -58,11 +64,7 @@ export const googlePlacesHandlers: HttpHandler[] = [
       }
 
       // Handle activity searches differently
-      const isActivitySearch =
-        textQuery.toLowerCase().includes("activities") ||
-        textQuery.toLowerCase().includes("things to do");
-
-      if (isActivitySearch) {
+      if (isActivitySearchQuery(textQuery)) {
         return HttpResponse.json({
           places: [
             {
@@ -142,7 +144,7 @@ export const googlePlacesHandlers: HttpHandler[] = [
     HttpResponse.json(RESOURCE_NOT_FOUND_ERROR, { status: 404 })
   ),
 
-  // Backward compatibility: generic invalid path
+  // Explicit invalid path for error-handling tests
   http.get("https://places.googleapis.com/v1/invalid", () =>
     HttpResponse.json(RESOURCE_NOT_FOUND_ERROR, { status: 404 })
   ),
@@ -155,4 +157,127 @@ export const googlePlacesHandlers: HttpHandler[] = [
       uri: `https://images.example.com/${name}`,
     });
   }),
+];
+
+/** MSW handlers for Google Geocoding API endpoints used in tests. */
+export const googleGeocodingHandlers: HttpHandler[] = [
+  http.get("https://maps.googleapis.com/maps/api/geocode/json", ({ request }) => {
+    const url = new URL(request.url);
+    const address = url.searchParams.get("address");
+    const latlng = url.searchParams.get("latlng");
+
+    const location = latlng
+      ? (() => {
+          const [lat, lng] = latlng.split(",").map((part) => Number(part.trim()));
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return { lat, lng };
+        })()
+      : null;
+
+    const normalizedAddress = address?.trim() ?? "";
+
+    if (normalizedAddress.toLowerCase().includes("zero results")) {
+      return HttpResponse.json({ results: [], status: "ZERO_RESULTS" });
+    }
+
+    return HttpResponse.json({
+      results: [
+        {
+          // biome-ignore lint/style/useNamingConvention: match upstream Geocoding API payload
+          formatted_address:
+            normalizedAddress || (location ? `(${location.lat}, ${location.lng})` : ""),
+          geometry: {
+            location: location ?? {
+              lat: 40.7128,
+              lng: -74.006,
+            },
+          },
+          // biome-ignore lint/style/useNamingConvention: match upstream Geocoding API payload
+          place_id: "place_123",
+        },
+      ],
+      status: "OK",
+    });
+  }),
+
+  http.get("https://maps.googleapis.com/maps/api/timezone/json", () => {
+    return HttpResponse.json({
+      dstOffset: 0,
+      rawOffset: 0,
+      status: "OK",
+      timeZoneId: "Etc/UTC",
+      timeZoneName: "UTC",
+    });
+  }),
+];
+
+/** MSW handlers for Google Routes API endpoints used in tests. */
+export const googleRoutesHandlers: HttpHandler[] = [
+  http.post("https://routes.googleapis.com/directions/v2:computeRoutes", () => {
+    return HttpResponse.json({
+      routes: [
+        {
+          distanceMeters: 1000,
+          duration: "600s",
+          legs: [{ stepCount: 0 }],
+          polyline: { encodedPolyline: "" },
+          routeLabels: [],
+        },
+      ],
+    });
+  }),
+
+  http.post(
+    "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
+    async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as null | {
+        destinations?: unknown[];
+        origins?: unknown[];
+      };
+
+      const originCount =
+        body && Array.isArray(body.origins) ? Math.max(0, body.origins.length) : 1;
+      const destinationCount =
+        body && Array.isArray(body.destinations)
+          ? Math.max(0, body.destinations.length)
+          : 1;
+
+      const entries: Array<{
+        condition: "ROUTE_EXISTS";
+        destinationIndex: number;
+        distanceMeters: number;
+        duration: string;
+        originIndex: number;
+      }> = [];
+
+      for (let originIndex = 0; originIndex < originCount; originIndex++) {
+        for (
+          let destinationIndex = 0;
+          destinationIndex < destinationCount;
+          destinationIndex++
+        ) {
+          const ordinal = originIndex * destinationCount + destinationIndex + 1;
+          entries.push({
+            condition: "ROUTE_EXISTS",
+            destinationIndex,
+            distanceMeters: 1000 * ordinal,
+            duration: `${60 * ordinal}s`,
+            originIndex,
+          });
+        }
+      }
+
+      const ndjson = `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`;
+      return HttpResponse.text(ndjson, {
+        headers: { "Content-Type": "application/x-ndjson" },
+      });
+    }
+  ),
+];
+
+/** Consolidated MSW handlers for all Google API mocks used in tests. */
+export const googleHandlers: HttpHandler[] = [
+  ...googlePlacesHandlers,
+  ...googleGeocodingHandlers,
+  ...googleRoutesHandlers,
 ];

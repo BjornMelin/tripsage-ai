@@ -1,3 +1,11 @@
+## [1.22.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.4...v1.22.5) (2025-12-22)
+
+### Bug Fixes
+
+* **ui:** address review feedback for unified search forms ([a9dda08](https://github.com/BjornMelin/tripsage-ai/commit/a9dda080bb1254a0582720d6180fbc6323d45485))
+* **ui:** address SearchFormShell + destination autocomplete issues ([902261a](https://github.com/BjornMelin/tripsage-ai/commit/902261a49bbdf6faa9277529cc143ed7da9f6749))
+* **ui:** resolve latest PR review threads ([0d8f57e](https://github.com/BjornMelin/tripsage-ai/commit/0d8f57e7b4c72f6bbdbaf3087f04ec5d2018a89d))
+
 ## [1.22.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.3...v1.22.4) (2025-12-21)
 
 ### Bug Fixes

@@ -4,7 +4,9 @@
  * Provides default mock responses for AI provider integrations.
  */
 
+import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
+import { MSW_FIXED_UNIX_SECONDS } from "../constants";
 
 /**
  * Default AI provider handlers providing happy-path responses.
@@ -12,7 +14,7 @@ import { HttpResponse, http } from "msw";
  * Note: These are placeholder handlers. Actual AI SDK streaming
  * should be mocked using official AI SDK test utilities (MockLanguageModelV3).
  */
-export const providersHandlers = [
+export const aiProviderHandlers: HttpHandler[] = [
   // OpenAI API mock (for direct API calls, not AI SDK)
   http.post("https://api.openai.com/v1/chat/completions", () => {
     return HttpResponse.json({
@@ -27,7 +29,7 @@ export const providersHandlers = [
           },
         },
       ],
-      created: Date.now(),
+      created: MSW_FIXED_UNIX_SECONDS,
       id: "chatcmpl-mock",
       model: "gpt-4o-mini",
       object: "chat.completion",

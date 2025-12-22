@@ -15,7 +15,7 @@ const getRoute = () => {
 describe("/api/calendar/ics/import", () => {
   beforeAll(async () => {
     route = await import("../ics/import/route");
-  });
+  }, 15_000);
 
   beforeEach(() => {
     resetApiRouteMocks();

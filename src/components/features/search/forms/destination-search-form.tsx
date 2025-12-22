@@ -8,11 +8,11 @@ import {
   type DestinationSearchFormData,
   type DestinationSearchParams,
   destinationSearchFormSchema,
+  destinationSearchParamsSchema,
 } from "@schemas/search";
-import { ClockIcon, MapPinIcon, StarIcon, TrendingUpIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ClockIcon, StarIcon, TrendingUpIcon } from "lucide-react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -21,7 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Form,
   FormControl,
   FormDescription,
   FormField,
@@ -33,7 +32,10 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
-import { initTelemetry, withClientTelemetrySpan } from "@/lib/telemetry/client";
+import { initTelemetry } from "@/lib/telemetry/client";
+import { useSearchHistoryStore } from "@/stores/search-history";
+import { buildRecentQuickSelectItems } from "../common/recent-items";
+import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
 /** Type for destination search form values. */
@@ -119,6 +121,7 @@ export function DestinationSearchForm({
   showMemoryRecommendations = true,
 }: DestinationSearchFormProps) {
   const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
 
   // Memory-based recommendations
   const { data: memoryContext, isLoading: _memoryLoading } = useMemoryContext(
@@ -129,11 +132,13 @@ export function DestinationSearchForm({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cacheRef = useRef<Map<string, { places: PlacesApiPlace[]; timestamp: number }>>(
     new Map()
   );
+  const suggestionsListId = useId();
   const { toast } = useToast();
   const CacheTtlMs = 2 * 60_000;
 
@@ -153,6 +158,17 @@ export function DestinationSearchForm({
   }, []);
 
   const query = form.watch("query");
+  const watchedTypes = form.watch("types");
+  const watchedLimit = form.watch("limit");
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   /**
    * Fetches autocomplete suggestions from `/api/places/search` with abort support.
@@ -257,6 +273,7 @@ export function DestinationSearchForm({
         setSuggestions(mappedSuggestions);
         setSuggestionsError(null);
         setShowSuggestions(true);
+        setActiveSuggestionIndex(-1);
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
@@ -271,6 +288,7 @@ export function DestinationSearchForm({
           variant: "destructive",
         });
         setSuggestions([]);
+        setActiveSuggestionIndex(-1);
         setShowSuggestions(true);
       } finally {
         setIsLoadingSuggestions(false);
@@ -293,6 +311,7 @@ export function DestinationSearchForm({
       }, 300);
     } else {
       setSuggestions([]);
+      setActiveSuggestionIndex(-1);
       setShowSuggestions(false);
       setIsLoadingSuggestions(false);
       if (abortControllerRef.current) {
@@ -317,35 +336,104 @@ export function DestinationSearchForm({
     form.setValue("query", suggestion.description);
     setShowSuggestions(false);
     setSuggestions([]);
+    setActiveSuggestionIndex(-1);
   };
 
-  /** Prefills the query with a popular destination and focuses the input. */
-  const handlePopularDestinationClick = (destination: string) => {
-    form.setValue("query", destination);
+  const recentSearchesByType = useSearchHistoryStore(
+    (state) => state.recentSearchesByType.destination
+  );
+  const recentSearches = useMemo(
+    () => recentSearchesByType.slice(0, 4),
+    [recentSearchesByType]
+  );
+
+  const defaultLimit = watchedLimit ?? 10;
+  const defaultTypes = watchedTypes ?? ["locality", "country"];
+
+  const recentItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
+    return buildRecentQuickSelectItems<
+      DestinationSearchFormValues,
+      DestinationSearchParams
+    >(recentSearches, destinationSearchParamsSchema, (params, search) => {
+      const description = params.types?.join(", ");
+
+      const item: QuickSelectItem<DestinationSearchFormValues> = {
+        id: search.id,
+        label: params.query,
+        params: {
+          language: params.language,
+          limit: params.limit ?? defaultLimit,
+          query: params.query,
+          region: params.region,
+          types: params.types ?? defaultTypes,
+        },
+        ...(description ? { description } : {}),
+      };
+
+      return item;
+    });
+  }, [defaultLimit, defaultTypes, recentSearches]);
+
+  const popularItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
+    return PopularDestinations.map((destination) => ({
+      id: destination,
+      label: destination,
+      params: { query: destination },
+    }));
+  }, []);
+
+  const handleQuickSelectDestination = (
+    values: Partial<DestinationSearchFormValues>
+  ) => {
+    if (values.query !== undefined) {
+      form.setValue("query", values.query, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.types !== undefined) {
+      form.setValue("types", values.types, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.limit !== undefined) {
+      form.setValue("limit", values.limit, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.language !== undefined) {
+      form.setValue("language", values.language, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.region !== undefined) {
+      form.setValue("region", values.region, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
     inputRef.current?.focus();
+    setShowSuggestions(false);
   };
 
-  /** Submits the search values to the parent callback. */
-  const handleSubmit = (data: DestinationSearchFormValues) =>
-    withClientTelemetrySpan(
-      "search.destination.form.submit",
-      { searchType: "destination" },
-      async () => {
-        try {
-          if (onSearch) {
-            await onSearch(mapDestinationValuesToParams(data));
-          }
-        } catch (error) {
-          toast({
-            description:
-              error instanceof Error ? error.message : "Destination search failed",
-            title: "Search Error",
-            variant: "destructive",
-          });
-          throw error;
-        }
-      }
-    );
+  const handleSubmit = async (data: DestinationSearchFormValues) => {
+    if (onSearch) {
+      await onSearch(mapDestinationValuesToParams(data));
+    }
+  };
 
   return (
     <Card>
@@ -356,8 +444,26 @@ export function DestinationSearchForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <SearchFormShell
+          form={form}
+          onSubmit={handleSubmit}
+          telemetrySpanName="search.destination.form.submit"
+          telemetryAttributes={{ searchType: "destination" }}
+          telemetryErrorMetadata={{
+            action: "submit",
+            context: "DestinationSearchForm",
+          }}
+          submitLabel="Search Destinations"
+          loadingLabel="Searching destinations..."
+          className="space-y-6"
+          popularItems={popularItems}
+          popularLabel="Popular Destinations"
+          onPopularItemSelect={(item) => handleQuickSelectDestination(item.params)}
+          recentItems={recentItems}
+          recentLabel="Recent searches"
+          onRecentItemSelect={(item) => handleQuickSelectDestination(item.params)}
+        >
+          {(form) => (
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -375,14 +481,66 @@ export function DestinationSearchForm({
                           placeholder="Search for cities, countries, or landmarks..."
                           {...fieldProps}
                           autoComplete="off"
+                          role="combobox"
+                          aria-autocomplete="list"
+                          aria-expanded={showSuggestions}
+                          aria-controls={suggestionsListId}
+                          aria-activedescendant={
+                            activeSuggestionIndex >= 0 &&
+                            suggestions[activeSuggestionIndex]
+                              ? `destination-suggestion-${suggestions[activeSuggestionIndex].placeId}`
+                              : undefined
+                          }
+                          onKeyDown={(event) => {
+                            if (!showSuggestions) return;
+
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              setShowSuggestions(false);
+                              setActiveSuggestionIndex(-1);
+                              return;
+                            }
+
+                            if (suggestions.length === 0) return;
+
+                            if (event.key === "ArrowDown") {
+                              event.preventDefault();
+                              setActiveSuggestionIndex((prev) =>
+                                Math.min(prev + 1, suggestions.length - 1)
+                              );
+                              return;
+                            }
+
+                            if (event.key === "ArrowUp") {
+                              event.preventDefault();
+                              setActiveSuggestionIndex((prev) => Math.max(prev - 1, 0));
+                              return;
+                            }
+
+                            if (event.key === "Enter" && activeSuggestionIndex >= 0) {
+                              event.preventDefault();
+                              const suggestion = suggestions[activeSuggestionIndex];
+                              if (suggestion) handleSuggestionSelect(suggestion);
+                            }
+                          }}
                           onFocus={() => {
+                            if (blurTimeoutRef.current) {
+                              clearTimeout(blurTimeoutRef.current);
+                              blurTimeoutRef.current = null;
+                            }
                             if (suggestions.length > 0) {
                               setShowSuggestions(true);
                             }
                           }}
                           onBlur={() => {
                             // Delay hiding suggestions to allow for clicks
-                            setTimeout(() => setShowSuggestions(false), 200);
+                            if (blurTimeoutRef.current) {
+                              clearTimeout(blurTimeoutRef.current);
+                            }
+                            blurTimeoutRef.current = setTimeout(() => {
+                              setShowSuggestions(false);
+                              setActiveSuggestionIndex(-1);
+                            }, 200);
                           }}
                         />
 
@@ -391,7 +549,11 @@ export function DestinationSearchForm({
                           (suggestions.length > 0 ||
                             isLoadingSuggestions ||
                             (!isLoadingSuggestions && (query?.length ?? 0) >= 2)) && (
-                            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div
+                              id={suggestionsListId}
+                              role="listbox"
+                              className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                            >
                               {isLoadingSuggestions ? (
                                 <div className="p-3 text-sm text-gray-500">
                                   Loading suggestions...
@@ -401,12 +563,23 @@ export function DestinationSearchForm({
                                   {suggestionsError}
                                 </div>
                               ) : suggestions.length > 0 ? (
-                                suggestions.map((suggestion) => (
-                                  <button
+                                suggestions.map((suggestion, index) => (
+                                  <div
                                     key={suggestion.placeId}
-                                    type="button"
-                                    className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
-                                    onClick={() => handleSuggestionSelect(suggestion)}
+                                    aria-label={suggestion.mainText}
+                                    role="option"
+                                    id={`destination-suggestion-${suggestion.placeId}`}
+                                    aria-selected={activeSuggestionIndex === index}
+                                    className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 data-[active=true]:bg-gray-50"
+                                    tabIndex={-1}
+                                    onMouseDown={(event) => {
+                                      event.preventDefault();
+                                      handleSuggestionSelect(suggestion);
+                                    }}
+                                    onMouseEnter={() => {
+                                      setActiveSuggestionIndex(index);
+                                    }}
+                                    data-active={activeSuggestionIndex === index}
                                   >
                                     <div className="font-medium text-sm">
                                       {suggestion.mainText}
@@ -414,7 +587,7 @@ export function DestinationSearchForm({
                                     <div className="text-xs text-gray-500">
                                       {suggestion.secondaryText}
                                     </div>
-                                  </button>
+                                  </div>
                                 ))
                               ) : (
                                 <div className="p-3 text-sm text-gray-500">
@@ -448,7 +621,9 @@ export function DestinationSearchForm({
                           key={destination}
                           variant="outline"
                           className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
-                          onClick={() => handlePopularDestinationClick(destination)}
+                          onClick={() =>
+                            handleQuickSelectDestination({ query: destination })
+                          }
                         >
                           <StarIcon className="h-3 w-3 mr-1" />
                           {destination}
@@ -474,7 +649,9 @@ export function DestinationSearchForm({
                             key={destination}
                             variant="outline"
                             className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
-                            onClick={() => handlePopularDestinationClick(destination)}
+                            onClick={() =>
+                              handleQuickSelectDestination({ query: destination })
+                            }
                           >
                             <TrendingUpIcon className="h-3 w-3 mr-1" />
                             {destination}
@@ -510,7 +687,9 @@ export function DestinationSearchForm({
                             key={memory.content}
                             variant="outline"
                             className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
-                            onClick={() => handlePopularDestinationClick(destination)}
+                            onClick={() =>
+                              handleQuickSelectDestination({ query: destination })
+                            }
                           >
                             <ClockIcon className="h-3 w-3 mr-1" />
                             {destination}
@@ -522,26 +701,6 @@ export function DestinationSearchForm({
               )}
 
               {showMemoryRecommendations && memoryContext?.context && <Separator />}
-
-              {/* Popular Destinations Quick Select */}
-              <div className="space-y-3">
-                <FormLabel className="text-sm font-medium flex items-center gap-2">
-                  <MapPinIcon className="h-4 w-4 text-gray-500" />
-                  Popular Destinations
-                </FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  {PopularDestinations.map((destination) => (
-                    <Badge
-                      key={destination}
-                      variant="secondary"
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                      onClick={() => handlePopularDestinationClick(destination)}
-                    >
-                      {destination}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
 
               {/* Destination Types Filter */}
               <FormField
@@ -562,32 +721,35 @@ export function DestinationSearchForm({
                           <input
                             type="checkbox"
                             value={type.id}
-                            checked={form
-                              .watch("types")
-                              .includes(
-                                type.id as
-                                  | "locality"
-                                  | "country"
-                                  | "administrative_area"
-                                  | "establishment"
-                              )}
+                            checked={watchedTypes.includes(
+                              type.id as
+                                | "locality"
+                                | "country"
+                                | "administrative_area"
+                                | "establishment"
+                            )}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const types = form.getValues("types");
 
                               if (checked) {
-                                form.setValue("types", [
-                                  ...types,
-                                  type.id as
-                                    | "locality"
-                                    | "country"
-                                    | "administrative_area"
-                                    | "establishment",
-                                ]);
+                                form.setValue(
+                                  "types",
+                                  [
+                                    ...types,
+                                    type.id as
+                                      | "locality"
+                                      | "country"
+                                      | "administrative_area"
+                                      | "establishment",
+                                  ],
+                                  { shouldDirty: true, shouldValidate: true }
+                                );
                               } else {
                                 form.setValue(
                                   "types",
-                                  types.filter((t) => t !== type.id)
+                                  types.filter((t) => t !== type.id),
+                                  { shouldDirty: true, shouldValidate: true }
                                 );
                               }
                             }}
@@ -666,12 +828,8 @@ export function DestinationSearchForm({
                 />
               </div>
             </div>
-
-            <Button type="submit" className="w-full">
-              Search Destinations
-            </Button>
-          </form>
-        </Form>
+          )}
+        </SearchFormShell>
       </CardContent>
     </Card>
   );

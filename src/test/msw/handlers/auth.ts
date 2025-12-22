@@ -10,19 +10,18 @@
  */
 
 import { HttpResponse, http } from "msw";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+import { MSW_FIXED_ISO_DATE } from "../constants";
 
 /**
  * Default auth handlers providing happy-path responses.
  */
 export const authHandlers = [
   // GET /api/auth/me - Current user endpoint
-  http.get(`${BASE_URL}/api/auth/me`, () => {
+  http.get("/api/auth/me", () => {
     return HttpResponse.json({
       user: {
         // biome-ignore lint/style/useNamingConvention: align with Supabase response fields
-        created_at: new Date().toISOString(),
+        created_at: MSW_FIXED_ISO_DATE,
         email: "test@example.com",
         id: "mock-user-id",
       },
@@ -30,7 +29,7 @@ export const authHandlers = [
   }),
 
   // POST /api/auth/login - Login endpoint
-  http.post(`${BASE_URL}/api/auth/login`, () => {
+  http.post("/api/auth/login", () => {
     return HttpResponse.json({
       session: {
         // biome-ignore lint/style/useNamingConvention: align with Supabase response fields
@@ -46,7 +45,7 @@ export const authHandlers = [
   }),
 
   // POST /api/auth/register - Registration endpoint
-  http.post(`${BASE_URL}/api/auth/register`, () => {
+  http.post("/api/auth/register", () => {
     return HttpResponse.json({
       user: {
         email: "test@example.com",
@@ -56,12 +55,12 @@ export const authHandlers = [
   }),
 
   // POST /api/auth/logout - Logout endpoint
-  http.post(`${BASE_URL}/api/auth/logout`, () => {
+  http.post("/api/auth/logout", () => {
     return HttpResponse.json({ success: true });
   }),
 
   // GET /api/auth/callback - OAuth callback endpoint
-  http.get(`${BASE_URL}/api/auth/callback`, () => {
-    return HttpResponse.redirect(`${BASE_URL}/dashboard`);
+  http.get("/api/auth/callback", () => {
+    return HttpResponse.redirect("/dashboard");
   }),
 ];

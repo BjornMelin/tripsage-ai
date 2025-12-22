@@ -10,6 +10,8 @@
  */
 
 import { setupServer } from "msw/node";
+import { aiProviderHandlers } from "./handlers/ai-providers";
+import { aiRouteHandlers } from "./handlers/ai-routes";
 import { amadeusHandlers } from "./handlers/amadeus";
 import { apiRouteHandlers } from "./handlers/api-routes";
 import { authHandlers } from "./handlers/auth";
@@ -17,28 +19,29 @@ import { authRouteHandlers } from "./handlers/auth-routes";
 import { chatHandlers } from "./handlers/chat";
 import { errorReportingHandlers } from "./handlers/error-reporting";
 import { externalApiHandlers } from "./handlers/external-apis";
-import { googlePlacesHandlers } from "./handlers/google-places";
-import { providersHandlers } from "./handlers/providers";
+import { googleHandlers } from "./handlers/google";
 import { stripeHandlers } from "./handlers/stripe";
 import { supabaseHandlers } from "./handlers/supabase";
 import { telemetryHandlers } from "./handlers/telemetry";
 import { upstashHandlers } from "./handlers/upstash";
+import { composeHandlers } from "./handlers/utils";
 
-const handlers = [
-  ...apiRouteHandlers,
-  ...authHandlers,
-  ...authRouteHandlers,
-  ...chatHandlers,
-  ...amadeusHandlers,
-  ...externalApiHandlers,
-  ...errorReportingHandlers,
-  ...googlePlacesHandlers,
-  ...providersHandlers,
-  ...stripeHandlers,
-  ...supabaseHandlers,
-  ...upstashHandlers,
-  ...telemetryHandlers,
-];
+const handlers = composeHandlers(
+  apiRouteHandlers,
+  aiRouteHandlers,
+  authHandlers,
+  authRouteHandlers,
+  chatHandlers,
+  amadeusHandlers,
+  externalApiHandlers,
+  errorReportingHandlers,
+  googleHandlers,
+  aiProviderHandlers,
+  stripeHandlers,
+  supabaseHandlers,
+  upstashHandlers,
+  telemetryHandlers
+);
 
 /**
  * MSW server instance configured with default request handlers.
