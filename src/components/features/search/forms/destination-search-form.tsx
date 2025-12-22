@@ -428,18 +428,8 @@ export function DestinationSearchForm({
   };
 
   const handleSubmit = async (data: DestinationSearchFormValues) => {
-    try {
-      if (onSearch) {
-        await onSearch(mapDestinationValuesToParams(data));
-      }
-    } catch (error) {
-      toast({
-        description:
-          error instanceof Error ? error.message : "Destination search failed",
-        title: "Search Error",
-        variant: "destructive",
-      });
-      throw error;
+    if (onSearch) {
+      await onSearch(mapDestinationValuesToParams(data));
     }
   };
 
@@ -572,15 +562,18 @@ export function DestinationSearchForm({
                                 </div>
                               ) : suggestions.length > 0 ? (
                                 suggestions.map((suggestion, index) => (
-                                  <button
+                                  <div
                                     key={suggestion.placeId}
-                                    type="button"
                                     aria-label={suggestion.mainText}
                                     role="option"
                                     id={`destination-suggestion-${suggestion.placeId}`}
                                     aria-selected={activeSuggestionIndex === index}
                                     className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 data-[active=true]:bg-gray-50"
-                                    onClick={() => handleSuggestionSelect(suggestion)}
+                                    tabIndex={-1}
+                                    onMouseDown={(event) => {
+                                      event.preventDefault();
+                                      handleSuggestionSelect(suggestion);
+                                    }}
                                     onMouseEnter={() => {
                                       setActiveSuggestionIndex(index);
                                     }}
@@ -592,7 +585,7 @@ export function DestinationSearchForm({
                                     <div className="text-xs text-gray-500">
                                       {suggestion.secondaryText}
                                     </div>
-                                  </button>
+                                  </div>
                                 ))
                               ) : (
                                 <div className="p-3 text-sm text-gray-500">

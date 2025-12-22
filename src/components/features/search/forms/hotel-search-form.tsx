@@ -171,16 +171,16 @@ export function HotelSearchForm({
             ? `${params.checkIn} → ${params.checkOut}`
             : undefined;
 
-        const mapped: Partial<HotelSearchFormData> = {
-          adults: params.adults ?? undefined,
-          amenities: params.amenities ?? undefined,
-          checkIn: params.checkIn ?? undefined,
-          checkOut: params.checkOut ?? undefined,
-          children: params.children ?? undefined,
-          currency: params.currency ?? undefined,
-          location: params.destination ?? undefined,
-          rooms: params.rooms ?? undefined,
-        };
+        const mapped: Partial<HotelSearchFormData> = {};
+
+        if (params.destination) mapped.location = params.destination;
+        if (params.checkIn) mapped.checkIn = params.checkIn;
+        if (params.checkOut) mapped.checkOut = params.checkOut;
+        if (params.rooms !== undefined) mapped.rooms = params.rooms;
+        if (params.adults !== undefined) mapped.adults = params.adults;
+        if (params.children !== undefined) mapped.children = params.children;
+        if (params.amenities) mapped.amenities = params.amenities;
+        if (params.currency) mapped.currency = params.currency;
 
         if (params.minRating !== undefined) {
           mapped.rating = Math.max(0, Math.min(5, Math.round(params.minRating)));
@@ -257,10 +257,10 @@ export function HotelSearchForm({
           recentItems={recentItems}
           footer={
             showRecommendations
-              ? () => (
+              ? (_form, _state) => (
                   <>
                     <Separator />
-                    <div className="bg-linear-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
+                    <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <SparklesIcon
@@ -290,7 +290,7 @@ export function HotelSearchForm({
               : undefined
           }
         >
-          {(form, _state) => (
+          {(form) => (
             <>
               <div className="space-y-2">
                 <Label htmlFor={locationId} className="text-sm font-medium">

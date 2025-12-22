@@ -34,6 +34,14 @@ export const Progress = React.forwardRef<
     ? undefined
     : Math.round(((clampedValue ?? 0) / max) * 100);
 
+  const ariaValueText =
+    props["aria-valuetext"] ??
+    (isIndeterminate
+      ? "Loading"
+      : percent !== undefined
+        ? `${percent} percent`
+        : undefined);
+
   return (
     <ProgressPrimitive.Root
       ref={ref}
@@ -46,17 +54,15 @@ export const Progress = React.forwardRef<
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={clampedValue}
-      aria-valuetext={
-        isIndeterminate && props["aria-valuetext"] === undefined
-          ? "Loading"
-          : props["aria-valuetext"]
-      }
+      aria-valuetext={ariaValueText}
       {...props}
     >
       <ProgressPrimitive.Indicator
         className={cn(
-          "h-full flex-1 bg-primary transition-all",
-          isIndeterminate ? "w-full animate-pulse" : "w-full"
+          "h-full flex-1 bg-primary",
+          isIndeterminate
+            ? "w-1/2 animate-[progress-indeterminate_1.5s_ease-in-out_infinite]"
+            : "w-full transition-transform"
         )}
         style={
           isIndeterminate

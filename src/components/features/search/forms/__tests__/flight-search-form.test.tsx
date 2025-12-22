@@ -1,13 +1,25 @@
 /** @vitest-environment jsdom */
 
+import type { SearchHistoryItem } from "@schemas/stores";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { FlightSearchForm } from "../flight-search-form";
 
 // Mock the onSearch function
 const MockOnSearch = vi.fn();
+
+const MockSearchHistory = vi.hoisted(() => ({
+  recentFlight: [] as SearchHistoryItem[],
+}));
+
+vi.mock("@/stores/search-history", () => ({
+  useSearchHistoryStore: (
+    selector: (state: {
+      recentSearchesByType: { flight: SearchHistoryItem[] };
+    }) => unknown
+  ) => selector({ recentSearchesByType: { flight: MockSearchHistory.recentFlight } }),
+}));
 
 function RenderWithQueryClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -27,10 +39,12 @@ describe("FlightSearchForm", () => {
     // MSW handlers in src/test/msw/handlers/api-routes.ts provide
     // /api/flights/popular-destinations responses
     MockOnSearch.mockClear();
+    MockSearchHistory.recentFlight = [];
     vi.restoreAllMocks();
   });
 
-  it("renders the form correctly (aligned with current UI)", () => {
+  it("renders the form correctly (aligned with current UI)", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
     RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Title and trip type buttons
@@ -57,6 +71,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("handles form submission with valid data", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
     RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Fill in required fields matching current placeholders/labels
@@ -103,7 +118,8 @@ describe("FlightSearchForm", () => {
     });
   });
 
-  it("keeps placeholders intact when autocomplete-like selections occur", () => {
+  it("keeps placeholders intact when autocomplete-like selections occur", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
     RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     const originInput = screen.getByPlaceholderText(
@@ -125,6 +141,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("fills destination when selecting a popular destination chip", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
     RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     const destinationChip = await screen.findByText("New York");
@@ -135,5 +152,97 @@ describe("FlightSearchForm", () => {
     ) as HTMLInputElement;
 
     await waitFor(() => expect(destinationInput.value).toBe("NYC"));
+  });
+
+  it("normalizes legacy passenger fields when selecting a recent search", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
+    MockSearchHistory.recentFlight = [
+      {
+        id: "recent-legacy-1",
+        params: {
+          adults: 2,
+          cabinClass: "economy",
+          departureDate: "2099-08-15",
+          destination: "LHR",
+          directOnly: false,
+          excludedAirlines: [],
+          maxStops: undefined,
+          origin: "SFO",
+          preferredAirlines: [],
+        },
+        searchType: "flight",
+        timestamp: "2025-01-01T00:00:00.000Z",
+      },
+    ];
+
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+
+    const recentButton = await screen.findByRole("button", { name: /SFO.*LHR/ });
+    fireEvent.click(recentButton);
+
+    const submitBtn = screen.getByRole("button", { name: "Search Flights" });
+    await waitFor(() => expect(submitBtn).not.toBeDisabled());
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => expect(MockOnSearch).toHaveBeenCalledTimes(1));
+    expect(MockOnSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: "LHR",
+        origin: "SFO",
+        passengers: { adults: 2, children: 0, infants: 0 },
+        tripType: "one-way",
+      })
+    );
+  });
+
+  it("prefers nested passengers when selecting a recent search", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
+    MockSearchHistory.recentFlight = [
+      {
+        id: "recent-passengers-1",
+        params: {
+          adults: 1,
+          cabinClass: "economy",
+          departureDate: "2099-08-15",
+          destination: "LHR",
+          origin: "SFO",
+          passengers: { adults: 3, children: 1, infants: 0 },
+        },
+        searchType: "flight",
+        timestamp: "2025-01-01T00:00:00.000Z",
+      },
+    ];
+
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+
+    const recentButton = await screen.findByRole("button", { name: /SFO.*LHR/ });
+    fireEvent.click(recentButton);
+
+    const submitBtn = screen.getByRole("button", { name: "Search Flights" });
+    await waitFor(() => expect(submitBtn).not.toBeDisabled());
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => expect(MockOnSearch).toHaveBeenCalledTimes(1));
+    expect(MockOnSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        passengers: { adults: 3, children: 1, infants: 0 },
+      })
+    );
+  });
+
+  it("does not render recent quick-select items when stored params are invalid", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
+    MockSearchHistory.recentFlight = [
+      {
+        id: "recent-invalid-1",
+        params: { origin: 123 },
+        searchType: "flight",
+        timestamp: "2025-01-01T00:00:00.000Z",
+      },
+    ];
+
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+
+    expect(screen.queryByText(/Recent searches/i)).not.toBeInTheDocument();
   });
 });

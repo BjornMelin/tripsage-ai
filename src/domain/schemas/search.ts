@@ -485,7 +485,7 @@ export const flightSearchFormSchema = z
       infants: z.number().int().min(0).max(20, { error: "Too many passengers" }),
     }),
     preferredAirlines: z.array(z.string()).optional(),
-    returnDate: FUTURE_DATE_SCHEMA.optional(),
+    returnDate: OPTIONAL_FUTURE_DATE_SCHEMA,
     tripType: z.enum(["round-trip", "one-way", "multi-city"]),
   })
   .refine(

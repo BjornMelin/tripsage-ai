@@ -21,6 +21,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useMemo } from "react";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,12 +59,16 @@ interface SearchSuggestion {
   popular?: boolean;
 }
 
-interface PopularDestination {
-  code: string;
-  name: string;
-  savings?: string;
-  country?: string;
-}
+const PopularDestinationSchema = z.looseObject({
+  code: z.string(),
+  country: z.string().optional(),
+  name: z.string(),
+  savings: z.string().optional(),
+});
+
+const PopularDestinationsSchema = z.array(PopularDestinationSchema);
+
+type PopularDestination = z.infer<typeof PopularDestinationSchema>;
 
 const POPULAR_DESTINATIONS_QUERY_KEY = ["flights", "popular-destinations"] as const;
 
@@ -126,7 +131,12 @@ export function FlightSearchForm({
         if (!response.ok) {
           throw new Error("Failed to fetch popular destinations");
         }
-        return (await response.json()) as PopularDestination[];
+        const json: unknown = await response.json();
+        const parsed = PopularDestinationsSchema.safeParse(json);
+        if (!parsed.success) {
+          throw new Error("Invalid popular destinations response");
+        }
+        return parsed.data;
       },
       queryKey: POPULAR_DESTINATIONS_QUERY_KEY,
       staleTime: 60 * 60 * 1000, // 1 hour
@@ -288,10 +298,10 @@ export function FlightSearchForm({
           }
           footer={
             showSmartBundles
-              ? () => (
+              ? (_form, _state) => (
                   <>
                     <Separator />
-                    <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+                    <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <SparklesIcon className="h-5 w-5 text-blue-600" />

@@ -162,9 +162,11 @@ export function SearchFormShell<TParams extends FieldValues>({
     }
   });
 
-  const isSubmitting = isPending || disabled;
+  // `isSubmitting` is used by consumers as a general "block interactions" flag
+  // (pending submit or explicitly disabled).
+  const isInteractionDisabled = isPending || disabled;
   const isSubmitDisabled =
-    isSubmitting || (disableSubmitWhenInvalid && !form.formState.isValid);
+    isInteractionDisabled || (disableSubmitWhenInvalid && !form.formState.isValid);
 
   const applyQuickSelectParams = (item: QuickSelectItem<TParams>) => {
     Object.entries(item.params).forEach(([key, value]) => {
@@ -179,7 +181,7 @@ export function SearchFormShell<TParams extends FieldValues>({
   const renderState: SearchFormShellRenderState = {
     isPending,
     isSubmitDisabled,
-    isSubmitting,
+    isSubmitting: isInteractionDisabled,
   };
 
   const renderQuickSelectSection = (
@@ -208,7 +210,7 @@ export function SearchFormShell<TParams extends FieldValues>({
                 }
                 applyQuickSelectParams(item);
               }}
-              disabled={isSubmitting || item.disabled}
+              disabled={isInteractionDisabled || item.disabled}
               className={cn(
                 "h-auto py-2 px-3 flex flex-col items-start",
                 item.description ? "gap-0.5" : "gap-0"

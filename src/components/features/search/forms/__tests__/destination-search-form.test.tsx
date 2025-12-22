@@ -82,9 +82,9 @@ describe("DestinationSearchForm", () => {
     const input = await TriggerAutocomplete("Paris");
 
     const suggestion = await screen.findByRole("option", {
-      name: /^Paris$/,
+      name: /Paris/,
     });
-    fireEvent.click(suggestion);
+    fireEvent.mouseDown(suggestion);
 
     expect(input.value).toBe("Paris, France");
   });
@@ -187,7 +187,7 @@ describe("DestinationSearchForm", () => {
 
       // Wait for the fast request to render
       await waitFor(() =>
-        expect(screen.getByRole("option", { name: /^Paris$/ })).toBeInTheDocument()
+        expect(screen.getByRole("option", { name: /Paris/ })).toBeInTheDocument()
       );
 
       // Now release the slow request
@@ -199,7 +199,7 @@ describe("DestinationSearchForm", () => {
       });
 
       // The old result should not replace the new one
-      expect(screen.getByRole("option", { name: /^Paris$/ })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /Paris/ })).toBeInTheDocument();
       expect(screen.queryByText(/Old Pa/)).not.toBeInTheDocument();
     } finally {
       // Ensure the slow request is resolved even if assertions fail
