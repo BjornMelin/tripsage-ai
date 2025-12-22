@@ -4,7 +4,12 @@
 
 "use client";
 
-import { type HotelSearchFormData, hotelSearchFormSchema } from "@schemas/search";
+import {
+  type HotelSearchFormData,
+  hotelSearchFormSchema,
+  type SearchAccommodationParams,
+  searchAccommodationParamsSchema,
+} from "@schemas/search";
 import {
   BedIcon,
   Building2Icon,
@@ -12,9 +17,7 @@ import {
   CarIcon,
   CoffeeIcon,
   DumbbellIcon,
-  Loader2Icon,
   MapPinIcon,
-  SearchIcon,
   SparklesIcon,
   StarIcon,
   TrendingUpIcon,
@@ -24,13 +27,12 @@ import {
   WifiIcon,
   WindIcon,
 } from "lucide-react";
-import { useId, useOptimistic, useState, useTransition } from "react";
+import { useId, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -39,12 +41,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { withClientTelemetrySpan } from "@/lib/telemetry/client";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { useSearchHistoryStore } from "@/stores/search-history";
+import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
-// React 19 optimistic update types for hotel search
 export type HotelSearchParams = HotelSearchFormData;
 
 /** Location suggestion interface. */
@@ -76,6 +77,15 @@ const Amenities = [
   { icon: WindIcon, id: "aircon", label: "Air Conditioning" },
 ];
 
+const DEFAULT_PRICE_RANGE = { max: 1000, min: 0 } as const;
+
+const TRENDING_DESTINATIONS: Array<{ name: string; deals: number }> = [
+  { deals: 234, name: "Paris" },
+  { deals: 156, name: "Tokyo" },
+  { deals: 298, name: "New York" },
+  { deals: 187, name: "London" },
+];
+
 /** Hotel search form component. */
 export function HotelSearchForm({
   onSearch,
@@ -83,13 +93,6 @@ export function HotelSearchForm({
   className,
   showRecommendations = true,
 }: HotelSearchFormProps) {
-  const [isPending, startTransition] = useTransition();
-  const [optimisticSearching, setOptimisticSearching] = useOptimistic(
-    false,
-    (_state, isSearching: boolean) => isSearching
-  );
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
   const form = useSearchForm(
     hotelSearchFormSchema,
     {
@@ -99,7 +102,7 @@ export function HotelSearchForm({
       checkOut: "",
       children: 0,
       location: "",
-      priceRange: { max: 1000, min: 0 },
+      priceRange: DEFAULT_PRICE_RANGE,
       rating: 0,
       rooms: 1,
     },
@@ -127,42 +130,6 @@ export function HotelSearchForm({
     return nights;
   };
 
-  const handleSearch = form.handleSubmit((data) =>
-    startTransition(async () => {
-      await withClientTelemetrySpan(
-        "search.hotel.form.submit",
-        { searchType: "hotel" },
-        async () => {
-          setOptimisticSearching(true);
-          try {
-            setSubmitError(null);
-            await onSearch({
-              adults: data.adults,
-              amenities: data.amenities,
-              checkIn: data.checkIn,
-              checkOut: data.checkOut,
-              children: data.children,
-              location: data.location,
-              priceRange: data.priceRange,
-              rating: data.rating,
-              rooms: data.rooms,
-            });
-          } catch (error) {
-            recordClientErrorOnActiveSpan(
-              error instanceof Error ? error : new Error(String(error)),
-              { action: "handleSearch", context: "HotelSearchForm" }
-            );
-            setSubmitError(
-              error instanceof Error ? error.message : "Failed to search hotels"
-            );
-          } finally {
-            setOptimisticSearching(false);
-          }
-        }
-      );
-    })
-  );
-
   const nights = calculateNights();
   const values = form.watch();
 
@@ -174,9 +141,71 @@ export function HotelSearchForm({
     form.setValue("amenities", next, { shouldDirty: true, shouldValidate: true });
   };
 
-  const handleQuickLocation = (location: string) => {
-    form.setValue("location", location, { shouldDirty: true, shouldValidate: true });
-  };
+  const popularItems: QuickSelectItem<HotelSearchFormData>[] | undefined =
+    useMemo(() => {
+      if (!showRecommendations) return undefined;
+      return TRENDING_DESTINATIONS.map((dest) => ({
+        description: `${dest.deals} hotels`,
+        id: dest.name,
+        label: dest.name,
+        params: { location: dest.name },
+      }));
+    }, [showRecommendations]);
+
+  const recentSearchesByType = useSearchHistoryStore(
+    (state) => state.recentSearchesByType.accommodation
+  );
+  const recentSearches = useMemo(
+    () => recentSearchesByType.slice(0, 4),
+    [recentSearchesByType]
+  );
+  const recentItems: QuickSelectItem<HotelSearchFormData>[] = useMemo(() => {
+    return recentSearches.flatMap((search) => {
+      const parsed = searchAccommodationParamsSchema.safeParse(search.params);
+      if (!parsed.success) return [];
+
+      const params: SearchAccommodationParams = parsed.data;
+      const destination = params.destination ?? "Destination";
+      const dateLabel =
+        params.checkIn && params.checkOut
+          ? `${params.checkIn} → ${params.checkOut}`
+          : undefined;
+
+      const mapped: Partial<HotelSearchFormData> = {
+        adults: params.adults ?? undefined,
+        amenities: params.amenities ?? undefined,
+        checkIn: params.checkIn ?? undefined,
+        checkOut: params.checkOut ?? undefined,
+        children: params.children ?? undefined,
+        currency: params.currency ?? undefined,
+        location: params.destination ?? undefined,
+        rooms: params.rooms ?? undefined,
+      };
+
+      if (params.minRating !== undefined) {
+        mapped.rating = Math.max(0, Math.min(5, Math.round(params.minRating)));
+      }
+
+      if (
+        params.priceRange?.min !== undefined ||
+        params.priceRange?.max !== undefined
+      ) {
+        mapped.priceRange = {
+          max: params.priceRange?.max ?? DEFAULT_PRICE_RANGE.max,
+          min: params.priceRange?.min ?? DEFAULT_PRICE_RANGE.min,
+        };
+      }
+
+      const item: QuickSelectItem<HotelSearchFormData> = {
+        id: search.id,
+        label: destination,
+        params: mapped,
+        ...(dateLabel ? { description: dateLabel } : {}),
+      };
+
+      return [item];
+    });
+  }, [recentSearches]);
 
   return (
     <Card className={cn("w-full max-w-4xl mx-auto", className)}>
@@ -209,312 +238,279 @@ export function HotelSearchForm({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {submitError && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {submitError}
-          </div>
-        )}
-
-        {/* Location Search */}
-        <div className="space-y-2">
-          <Label htmlFor={locationId} className="text-sm font-medium">
-            Destination
-          </Label>
-          <div className="relative">
-            <MapPinIcon
-              aria-hidden
-              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-            />
-            <Input
-              id={locationId}
-              placeholder="City, hotel name, or landmark"
-              {...form.register("location")}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Dates Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={checkInId} className="text-sm font-medium">
-              Check-in
-            </Label>
-            <div className="relative">
-              <CalendarIcon
-                aria-hidden
-                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-              />
-              <Input
-                id={checkInId}
-                type="date"
-                {...form.register("checkIn")}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={checkOutId} className="text-sm font-medium">
-              Check-out
-            </Label>
-            <div className="relative">
-              <CalendarIcon
-                aria-hidden
-                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-              />
-              <Input
-                id={checkOutId}
-                type="date"
-                {...form.register("checkOut")}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {nights > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Duration</Label>
-              <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
-                <BedIcon aria-hidden className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {nights} {nights === 1 ? "night" : "nights"}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Guests and Rooms */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={roomsId} className="text-sm font-medium">
-              Rooms
-            </Label>
-            <Select
-              value={values.rooms.toString()}
-              onValueChange={(value) =>
-                form.setValue("rooms", Number.parseInt(value, 10), {
-                  shouldDirty: true,
-                  shouldValidate: true,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} {num === 1 ? "Room" : "Rooms"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={adultsId} className="text-sm font-medium">
-              Adults
-            </Label>
-            <div className="relative">
-              <UsersIcon
-                aria-hidden
-                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-              />
-              <Select
-                value={values.adults.toString()}
-                onValueChange={(value) =>
-                  form.setValue("adults", Number.parseInt(value, 10), {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-              >
-                <SelectTrigger className="pl-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5, 6].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num} {num === 1 ? "Adult" : "Adults"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={childrenId} className="text-sm font-medium">
-              Children
-            </Label>
-            <Select
-              value={values.children.toString()}
-              onValueChange={(value) =>
-                form.setValue("children", Number.parseInt(value, 10), {
-                  shouldDirty: true,
-                  shouldValidate: true,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[0, 1, 2, 3, 4].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num === 0
-                      ? "No Children"
-                      : `${num} ${num === 1 ? "Child" : "Children"}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Star Rating */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Minimum Star Rating</Label>
-          <div className="flex gap-2">
-            {[0, 1, 2, 3, 4, 5].map((rating) => (
-              <Button
-                key={rating}
-                variant={values.rating === rating ? "default" : "outline"}
-                size="sm"
-                onClick={() =>
-                  form.setValue("rating", rating, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-                className="flex items-center gap-1"
-              >
-                {rating === 0 ? (
-                  "Any"
-                ) : (
+        <SearchFormShell
+          form={form}
+          onSubmit={onSearch}
+          telemetrySpanName="search.hotel.form.submit"
+          telemetryAttributes={{ searchType: "hotel" }}
+          telemetryErrorMetadata={{
+            action: "handleSearch",
+            context: "HotelSearchForm",
+          }}
+          submitLabel="Search Hotels"
+          loadingLabel="Searching hotels..."
+          disableSubmitWhenInvalid
+          className="space-y-6"
+          popularItems={popularItems}
+          popularLabel="Trending destinations"
+          recentItems={recentItems}
+          footer={
+            showRecommendations
+              ? () => (
                   <>
-                    {rating}{" "}
-                    <StarIcon
-                      aria-hidden
-                      className={cn(
-                        "h-3 w-3",
-                        values.rating >= rating && "fill-current"
-                      )}
-                    />
+                    <Separator />
+                    <div className="bg-linear-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <SparklesIcon
+                            aria-hidden
+                            className="h-5 w-5 text-orange-600"
+                          />
+                          <h3 className="font-semibold text-sm">
+                            All-Inclusive Hotels
+                          </h3>
+                          <Badge
+                            variant="secondary"
+                            className="bg-orange-100 text-orange-700"
+                          >
+                            Save 35%
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          avg $127/night
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Everything included: meals, drinks, activities, and more.
+                      </p>
+                    </div>
                   </>
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Amenities */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Popular Amenities</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {Amenities.map((amenity) => {
-              const Icon = amenity.icon;
-              const isSelected = values.amenities.includes(amenity.id);
-              return (
-                <Button
-                  key={amenity.id}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleAmenityToggle(amenity.id)}
-                  className="h-auto py-3 px-3 flex flex-col items-center gap-1"
-                >
-                  <Icon aria-hidden className="h-4 w-4" />
-                  <span className="text-xs text-center">{amenity.label}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Trending Destinations */}
-        {showRecommendations && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <TrendingUpIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Trending destinations</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { deals: 234, name: "Paris", type: "city" as const },
-                { deals: 156, name: "Tokyo", type: "city" as const },
-                { deals: 298, name: "New York", type: "city" as const },
-                { deals: 187, name: "London", type: "city" as const },
-              ].map((dest) => (
-                <Button
-                  key={dest.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickLocation(dest.name)}
-                  className="h-auto py-2 px-3 flex flex-col items-start"
-                >
-                  <span className="font-medium">{dest.name}</span>
-                  <span className="text-xs text-blue-600">{dest.deals} hotels</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* All-Inclusive Preview */}
-        {showRecommendations && (
-          <>
-            <Separator />
-            <div className="bg-linear-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <SparklesIcon aria-hidden className="h-5 w-5 text-orange-600" />
-                  <h3 className="font-semibold text-sm">All-Inclusive Hotels</h3>
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-700">
-                    Save 35%
-                  </Badge>
+                )
+              : undefined
+          }
+        >
+          {(form, _state) => (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor={locationId} className="text-sm font-medium">
+                  Destination
+                </Label>
+                <div className="relative">
+                  <MapPinIcon
+                    aria-hidden
+                    className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                  />
+                  <Input
+                    id={locationId}
+                    placeholder="City, hotel name, or landmark"
+                    {...form.register("location")}
+                    className="pl-10"
+                  />
                 </div>
-                <span className="text-xs text-muted-foreground">avg $127/night</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Everything included: meals, drinks, activities, and more.
-              </p>
-            </div>
-          </>
-        )}
 
-        {/* Search Button */}
-        <div className="flex gap-3 pt-2">
-          <Button
-            onClick={handleSearch}
-            disabled={isPending || optimisticSearching || !form.formState.isValid}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-            size="lg"
-          >
-            {isPending || optimisticSearching ? (
-              <>
-                <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
-                Searching hotels...
-              </>
-            ) : (
-              <>
-                <SearchIcon className="h-4 w-4 mr-2" />
-                Search Hotels
-              </>
-            )}
-          </Button>
-        </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={checkInId} className="text-sm font-medium">
+                    Check-in
+                  </Label>
+                  <div className="relative">
+                    <CalendarIcon
+                      aria-hidden
+                      className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                    />
+                    <Input
+                      id={checkInId}
+                      type="date"
+                      {...form.register("checkIn")}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
 
-        {/* Progress indicator for optimistic updates */}
-        {(isPending || optimisticSearching) && (
-          <div className="space-y-2">
-            <Progress value={75} className="h-2" />
-            <p className="text-xs text-muted-foreground text-center">
-              Searching 1M+ properties worldwide...
-            </p>
-          </div>
-        )}
+                <div className="space-y-2">
+                  <Label htmlFor={checkOutId} className="text-sm font-medium">
+                    Check-out
+                  </Label>
+                  <div className="relative">
+                    <CalendarIcon
+                      aria-hidden
+                      className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                    />
+                    <Input
+                      id={checkOutId}
+                      type="date"
+                      {...form.register("checkOut")}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {nights > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Duration</Label>
+                    <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
+                      <BedIcon
+                        aria-hidden
+                        className="h-4 w-4 mr-2 text-muted-foreground"
+                      />
+                      <span className="text-sm font-medium">
+                        {nights} {nights === 1 ? "night" : "nights"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={roomsId} className="text-sm font-medium">
+                    Rooms
+                  </Label>
+                  <Select
+                    value={values.rooms.toString()}
+                    onValueChange={(value) =>
+                      form.setValue("rooms", Number.parseInt(value, 10), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num} {num === 1 ? "Room" : "Rooms"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={adultsId} className="text-sm font-medium">
+                    Adults
+                  </Label>
+                  <div className="relative">
+                    <UsersIcon
+                      aria-hidden
+                      className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                    />
+                    <Select
+                      value={values.adults.toString()}
+                      onValueChange={(value) =>
+                        form.setValue("adults", Number.parseInt(value, 10), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="pl-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num} {num === 1 ? "Adult" : "Adults"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={childrenId} className="text-sm font-medium">
+                    Children
+                  </Label>
+                  <Select
+                    value={values.children.toString()}
+                    onValueChange={(value) =>
+                      form.setValue("children", Number.parseInt(value, 10), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[0, 1, 2, 3, 4].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num === 0
+                            ? "No Children"
+                            : `${num} ${num === 1 ? "Child" : "Children"}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Minimum Star Rating</Label>
+                <div className="flex gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((rating) => (
+                    <Button
+                      key={rating}
+                      variant={values.rating === rating ? "default" : "outline"}
+                      size="sm"
+                      onClick={() =>
+                        form.setValue("rating", rating, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                      className="flex items-center gap-1"
+                      type="button"
+                    >
+                      {rating === 0 ? (
+                        "Any"
+                      ) : (
+                        <>
+                          {rating}{" "}
+                          <StarIcon
+                            aria-hidden
+                            className={cn(
+                              "h-3 w-3",
+                              values.rating >= rating && "fill-current"
+                            )}
+                          />
+                        </>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Popular Amenities</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Amenities.map((amenity) => {
+                    const Icon = amenity.icon;
+                    const isSelected = values.amenities.includes(amenity.id);
+                    return (
+                      <Button
+                        key={amenity.id}
+                        variant={isSelected ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleAmenityToggle(amenity.id)}
+                        className="h-auto py-3 px-3 flex flex-col items-center gap-1"
+                        type="button"
+                      >
+                        <Icon aria-hidden className="h-4 w-4" />
+                        <span className="text-xs text-center">{amenity.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </SearchFormShell>
       </CardContent>
     </Card>
   );

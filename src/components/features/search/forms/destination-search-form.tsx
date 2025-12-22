@@ -8,11 +8,11 @@ import {
   type DestinationSearchFormData,
   type DestinationSearchParams,
   destinationSearchFormSchema,
+  destinationSearchParamsSchema,
 } from "@schemas/search";
-import { ClockIcon, MapPinIcon, StarIcon, TrendingUpIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ClockIcon, StarIcon, TrendingUpIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -21,7 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Form,
   FormControl,
   FormDescription,
   FormField,
@@ -33,7 +32,9 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
-import { initTelemetry, withClientTelemetrySpan } from "@/lib/telemetry/client";
+import { initTelemetry } from "@/lib/telemetry/client";
+import { useSearchHistoryStore } from "@/stores/search-history";
+import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
 /** Type for destination search form values. */
@@ -319,33 +320,111 @@ export function DestinationSearchForm({
     setSuggestions([]);
   };
 
-  /** Prefills the query with a popular destination and focuses the input. */
-  const handlePopularDestinationClick = (destination: string) => {
-    form.setValue("query", destination);
+  const recentSearchesByType = useSearchHistoryStore(
+    (state) => state.recentSearchesByType.destination
+  );
+  const recentSearches = useMemo(
+    () => recentSearchesByType.slice(0, 4),
+    [recentSearchesByType]
+  );
+  const recentItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
+    const defaultLimit = form.getValues("limit") ?? 10;
+    const defaultTypes = form.getValues("types") ?? ["locality", "country"];
+
+    return recentSearches.flatMap((search) => {
+      const parsed = destinationSearchParamsSchema.safeParse(search.params);
+      if (!parsed.success) return [];
+
+      const params = parsed.data;
+      const description = params.types?.join(", ");
+
+      const item: QuickSelectItem<DestinationSearchFormValues> = {
+        id: search.id,
+        label: params.query,
+        params: {
+          language: params.language,
+          limit: params.limit ?? defaultLimit,
+          query: params.query,
+          region: params.region,
+          types: params.types ?? defaultTypes,
+        },
+        ...(description ? { description } : {}),
+      };
+
+      return [item];
+    });
+  }, [form, recentSearches]);
+
+  const popularItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
+    return PopularDestinations.map((destination) => ({
+      id: destination,
+      label: destination,
+      params: { query: destination },
+    }));
+  }, []);
+
+  const handleQuickSelectDestination = (
+    values: Partial<DestinationSearchFormValues>
+  ) => {
+    if (values.query !== undefined) {
+      form.setValue("query", values.query, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.types !== undefined) {
+      form.setValue("types", values.types, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.limit !== undefined) {
+      form.setValue("limit", values.limit, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.language !== undefined) {
+      form.setValue("language", values.language, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (values.region !== undefined) {
+      form.setValue("region", values.region, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+
     inputRef.current?.focus();
+    setShowSuggestions(false);
   };
 
-  /** Submits the search values to the parent callback. */
-  const handleSubmit = (data: DestinationSearchFormValues) =>
-    withClientTelemetrySpan(
-      "search.destination.form.submit",
-      { searchType: "destination" },
-      async () => {
-        try {
-          if (onSearch) {
-            await onSearch(mapDestinationValuesToParams(data));
-          }
-        } catch (error) {
-          toast({
-            description:
-              error instanceof Error ? error.message : "Destination search failed",
-            title: "Search Error",
-            variant: "destructive",
-          });
-          throw error;
-        }
+  const handleSubmit = async (data: DestinationSearchFormValues) => {
+    try {
+      if (onSearch) {
+        await onSearch(mapDestinationValuesToParams(data));
       }
-    );
+    } catch (error) {
+      toast({
+        description:
+          error instanceof Error ? error.message : "Destination search failed",
+        title: "Search Error",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   return (
     <Card>
@@ -356,8 +435,26 @@ export function DestinationSearchForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <SearchFormShell
+          form={form}
+          onSubmit={handleSubmit}
+          telemetrySpanName="search.destination.form.submit"
+          telemetryAttributes={{ searchType: "destination" }}
+          telemetryErrorMetadata={{
+            action: "handleSubmit",
+            context: "DestinationSearchForm",
+          }}
+          submitLabel="Search Destinations"
+          loadingLabel="Searching destinations..."
+          className="space-y-6"
+          popularItems={popularItems}
+          popularLabel="Popular Destinations"
+          onPopularItemSelect={(item) => handleQuickSelectDestination(item.params)}
+          recentItems={recentItems}
+          recentLabel="Recent searches"
+          onRecentItemSelect={(item) => handleQuickSelectDestination(item.params)}
+        >
+          {(form) => (
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -405,6 +502,7 @@ export function DestinationSearchForm({
                                   <button
                                     key={suggestion.placeId}
                                     type="button"
+                                    aria-label={suggestion.mainText}
                                     className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
                                     onClick={() => handleSuggestionSelect(suggestion)}
                                   >
@@ -448,7 +546,9 @@ export function DestinationSearchForm({
                           key={destination}
                           variant="outline"
                           className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
-                          onClick={() => handlePopularDestinationClick(destination)}
+                          onClick={() =>
+                            handleQuickSelectDestination({ query: destination })
+                          }
                         >
                           <StarIcon className="h-3 w-3 mr-1" />
                           {destination}
@@ -474,7 +574,9 @@ export function DestinationSearchForm({
                             key={destination}
                             variant="outline"
                             className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
-                            onClick={() => handlePopularDestinationClick(destination)}
+                            onClick={() =>
+                              handleQuickSelectDestination({ query: destination })
+                            }
                           >
                             <TrendingUpIcon className="h-3 w-3 mr-1" />
                             {destination}
@@ -510,7 +612,9 @@ export function DestinationSearchForm({
                             key={memory.content}
                             variant="outline"
                             className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
-                            onClick={() => handlePopularDestinationClick(destination)}
+                            onClick={() =>
+                              handleQuickSelectDestination({ query: destination })
+                            }
                           >
                             <ClockIcon className="h-3 w-3 mr-1" />
                             {destination}
@@ -522,26 +626,6 @@ export function DestinationSearchForm({
               )}
 
               {showMemoryRecommendations && memoryContext?.context && <Separator />}
-
-              {/* Popular Destinations Quick Select */}
-              <div className="space-y-3">
-                <FormLabel className="text-sm font-medium flex items-center gap-2">
-                  <MapPinIcon className="h-4 w-4 text-gray-500" />
-                  Popular Destinations
-                </FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  {PopularDestinations.map((destination) => (
-                    <Badge
-                      key={destination}
-                      variant="secondary"
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                      onClick={() => handlePopularDestinationClick(destination)}
-                    >
-                      {destination}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
 
               {/* Destination Types Filter */}
               <FormField
@@ -666,12 +750,8 @@ export function DestinationSearchForm({
                 />
               </div>
             </div>
-
-            <Button type="submit" className="w-full">
-              Search Destinations
-            </Button>
-          </form>
-        </Form>
+          )}
+        </SearchFormShell>
       </CardContent>
     </Card>
   );
