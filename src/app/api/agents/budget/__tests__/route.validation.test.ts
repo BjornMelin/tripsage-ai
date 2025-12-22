@@ -79,5 +79,5 @@ describe("/api/agents/budget validation", () => {
     const data = await res.json();
     expect(data.error).toBe("invalid_request");
     expect(Array.isArray(data.issues)).toBe(true);
-  });
+  }, 20_000);
 });

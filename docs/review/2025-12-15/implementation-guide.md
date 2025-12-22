@@ -113,6 +113,7 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
   - Verify:
     - `node -e \"require.resolve('import-in-the-middle'); require.resolve('require-in-the-middle')\"`
     - `pnpm build` emits no warnings about these packages being unresolved.
+    - `pnpm start` (after build) starts without instrumentation module-resolution crashes.
   - References:
     - <https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages>
     - <https://nextjs.org/docs/app/guides/open-telemetry>
@@ -143,6 +144,7 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
       - Remove misleading thresholds and add a staged ramp plan with targeted thresholds for high-risk modules.
   - Verify:
     - `pnpm test:coverage` fails when coverage is below the configured thresholds.
+    - `pnpm test:coverage` reports and enforces critical-surface coverage (auth/payments/keys/webhooks/AI tool routing).
   - References:
     - <https://vitest.dev/guide/coverage.html>
 
@@ -328,6 +330,8 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Follow-up (2025-12-18):
     - Added a clear `400 invalid_request` path when a request body is already consumed (prevents ambiguous second-read errors).
     - Refactored auth JSON routes to call `parseJsonBody()` directly to standardize bounded parsing behavior.
+  - Follow-up (2025-12-22):
+    - Added `parseFormDataWithLimit()` (`src/lib/http/body.ts`) and migrated multipart routes (`src/app/auth/register/route.ts`, `src/app/api/chat/attachments/route.ts`) to enforce total upload size before `request.formData()`.
   - References:
     - <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
 

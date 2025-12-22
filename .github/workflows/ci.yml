@@ -102,6 +102,9 @@ jobs:
       - name: Reject new unknown casts
         run: pnpm check:no-new-unknown-casts
 
+      - name: Reject @fileoverview drift (changed files)
+        run: pnpm check:fileoverviews
+
       - name: Architecture boundary checks
         run: pnpm boundary:check
 

@@ -6,8 +6,10 @@ Authoritative testing reference for TripSage frontend.
 
 - Test behavior, not implementation; keep runs deterministic.
 - Choose the lightest test that proves behavior: unit → component → API → integration → E2E.
-- Coverage: ≥85% overall (branches 85%, functions 90%, lines 90%, statements 90%); critical paths 100%.
-- **Incremental targets:** See [Coverage Milestones](./coverage-milestones.md) for current baseline, phase-based targets, and how to track progress.
+- Coverage is enforced via:
+  - Global baseline thresholds in `vitest.config.ts`
+  - Critical-surface thresholds in `scripts/check-coverage-critical.mjs` (run by `pnpm test:coverage`)
+- **Incremental targets:** See [Coverage Milestones](./coverage-milestones.md) for current baseline, enforced thresholds, and raise plans.
 - Layout: co-locate tests in `__tests__/`; use `*.test.ts(x)` (unit), `*.spec.ts(x)` (integration), `*.integration.test.ts(x)` (cross-module), `*.e2e.*` (Playwright).
 
 ## Vitest Projects and Environments

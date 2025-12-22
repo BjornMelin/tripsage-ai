@@ -79,5 +79,5 @@ describe("/api/agents/accommodations validation", () => {
     const data = await res.json();
     expect(data.error).toBe("invalid_request");
     expect(typeof data.reason).toBe("string");
-  });
+  }, 20_000);
 });

@@ -98,9 +98,8 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "lcov"],
       thresholds: {
-        // Global thresholds - set to current actual coverage + small buffer
-        // Actual: Statements ~49%, Branches ~36%, Functions ~55%, Lines ~49%
-        // Will be raised incrementally as coverage improves
+        // Global baseline thresholds (raise incrementally).
+        // See docs/development/testing/coverage-milestones.md for current measurements and raise plan.
         branches: 35,
         functions: 50,
         lines: 45,

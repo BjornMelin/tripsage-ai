@@ -1,9 +1,5 @@
 /**
  * @fileoverview Supabase email/password registration route handler.
- *
- * Handles POST submissions from the /register page using Supabase SSR. This
- * route uses cookie-based sessions and sends confirmation links via Supabase
- * Auth email flows.
  */
 
 import "server-only";
@@ -11,6 +7,7 @@ import "server-only";
 import { registerFormSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { PayloadTooLargeError, parseFormDataWithLimit } from "@/lib/http/body";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -45,7 +42,15 @@ function redirectWithError(request: NextRequest, message: string): NextResponse 
  * confirmation link to /auth/confirm.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await parseFormDataWithLimit(request, 16 * 1024);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return redirectWithError(request, "Registration details are too large");
+    }
+    return redirectWithError(request, "Invalid registration request");
+  }
 
   const parsed = registerFormSchema.safeParse({
     acceptTerms: formData.get("acceptTerms") === "on",

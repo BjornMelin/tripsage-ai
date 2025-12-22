@@ -133,7 +133,11 @@
 
 - [x] `node -e \"require.resolve('import-in-the-middle'); require.resolve('require-in-the-middle')\"` succeeds from repo root.
 - [x] `pnpm build` (after REL-001 is fixed) emits zero warnings about these packages not being resolvable.
-- [ ] A production run (`pnpm start` after build) does not crash on module resolution during instrumentation init.
+- [x] A production run (`pnpm start` after build) does not crash on module resolution during instrumentation init.
+
+**Implementation note (2025-12-22):**
+
+- Verified production runtime by running `pnpm start` after `pnpm build` using the standalone output (`node .next/standalone/server.js`) with non-secret stub env vars required by `envSchema` in production (see verification report for exact command).
 
 **References:**  
 
@@ -171,8 +175,12 @@
 **Acceptance criteria:**
 
 - [x] A deliberate "bad coverage" run fails: `pnpm test:coverage` (or equivalent) exits non-zero when coverage is below thresholds.
-- [ ] The chosen enforcement strategy is documented (global/per-directory thresholds + excludes) and matches the actual numbers.
-- [ ] Coverage on critical surfaces (auth, payments, keys, webhooks, AI tool routing) has explicit targets and is measured.
+- [x] The chosen enforcement strategy is documented (global/per-directory thresholds + excludes) and matches the actual numbers.
+- [x] Coverage on critical surfaces (auth, payments, keys, webhooks, AI tool routing) has explicit targets and is measured.
+
+**Implementation note (2025-12-22):**
+
+- Added `scripts/check-coverage-critical.mjs` (missing-file enforcement + critical surface targets) and updated `pnpm test:coverage` to run it after Vitest coverage. Coverage targets and current numbers are documented under `docs/development/testing/`.
 
 **References:**  
 
@@ -1022,11 +1030,15 @@
 
 - [x] Touched files have short, accurate `@fileoverview` headers.  
 - [x] Template-style file header content is removed in touched areas.  
-- [ ] Any remaining file-level docs are kept in sync via tests or lint rules.
+- [x] Any remaining file-level docs are kept in sync via tests or lint rules.
 
 **Implementation note (2025-12-17):**
 
 - Kept `@fileoverview` headers by preference, but trimmed them to 1-sentence, technical summaries in touched files.
+
+**Implementation note (2025-12-22):**
+
+- Added `scripts/check-fileoverviews.mjs` + `pnpm check:fileoverviews` (diff-based) and enforced it in CI to prevent multi-line `@fileoverview` drift in changed non-test `src/**` code.
 
 **References:**  
 

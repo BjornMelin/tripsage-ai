@@ -136,4 +136,35 @@ describe("auth/register route", () => {
     expect(url.pathname).toBe("/register");
     expect(url.searchParams.get("error")).toBe("Email already in use");
   });
+
+  it("rejects oversized form submissions", async () => {
+    const hugeValue = "a".repeat(20_000);
+    const body = new URLSearchParams({
+      acceptTerms: "on",
+      confirmPassword: hugeValue,
+      email: "user@example.com",
+      firstName: hugeValue,
+      lastName: hugeValue,
+      password: hugeValue,
+    }).toString();
+
+    const req = createMockNextRequest({
+      body,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      method: "POST",
+      url: "https://app.example.com/auth/register",
+    });
+
+    const res = await POST(req);
+
+    expect(SIGN_UP_MOCK).not.toHaveBeenCalled();
+    expect(res.status).toBe(307);
+
+    const location = res.headers.get("location");
+    expect(location).toBeTruthy();
+    const url = new URL(location ?? "");
+
+    expect(url.pathname).toBe("/register");
+    expect(url.searchParams.get("error")).toBe("Registration details are too large");
+  });
 });
