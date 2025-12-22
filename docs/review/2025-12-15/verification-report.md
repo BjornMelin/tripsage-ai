@@ -65,6 +65,18 @@ This report provides repo-local traceability from each finding in `docs/review/2
 - `pnpm type-check`
 - `pnpm test:affected`
 - `NEXT_PUBLIC_SITE_URL='https://example.com' NEXT_PUBLIC_SUPABASE_URL='https://abcd1234.supabase.co' NEXT_PUBLIC_SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature' pnpm build`
+- `pnpm biome:fix`
+- `pnpm type-check`
+- `pnpm boundary:check`
+- `pnpm deps:cycles`
+- `pnpm ai-tools:check`
+- `pnpm check:no-unknown-casts`
+- `pnpm check:no-new-unknown-casts`
+- `pnpm check:fileoverviews`
+- `pnpm check:no-secrets:full`
+- `pnpm test:pr`
+- `pnpm lint`
+- `NEXT_PUBLIC_SITE_URL='https://example.com' NEXT_PUBLIC_SUPABASE_URL='https://abcd1234.supabase.co' NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY='sb_publishable_dummy' pnpm build`
 
 ## Decision records (required where options existed)
 
