@@ -4,28 +4,28 @@
 
 "use client";
 
-import { type FlightSearchFormData, flightSearchFormSchema } from "@schemas/search";
+import {
+  type FlightSearchFormData,
+  type FlightSearchParams as FlightSearchParamsSchema,
+  flightSearchFormSchema,
+  flightSearchParamsSchema,
+} from "@schemas/search";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircleIcon,
   ArrowRightIcon,
   CalendarIcon,
   ClockIcon,
-  Loader2Icon,
   MapPinIcon,
   PlaneIcon,
-  SearchIcon,
   SparklesIcon,
-  TrendingDownIcon,
   UsersIcon,
 } from "lucide-react";
-import React, { useOptimistic, useState, useTransition } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useMemo } from "react";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Form,
   FormControl,
   FormField,
   FormItem,
@@ -33,7 +33,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -42,9 +41,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { withClientTelemetrySpan } from "@/lib/telemetry/client";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
+import { useSearchHistoryStore } from "@/stores/search-history";
+import { buildRecentQuickSelectItems } from "../common/recent-items";
+import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
 // Flight search params type
@@ -59,12 +59,16 @@ interface SearchSuggestion {
   popular?: boolean;
 }
 
-interface PopularDestination {
-  code: string;
-  name: string;
-  savings?: string;
-  country?: string;
-}
+const PopularDestinationSchema = z.looseObject({
+  code: z.string(),
+  country: z.string().optional(),
+  name: z.string(),
+  savings: z.string().optional(),
+});
+
+const PopularDestinationsSchema = z.array(PopularDestinationSchema);
+
+type PopularDestination = z.infer<typeof PopularDestinationSchema>;
 
 const POPULAR_DESTINATIONS_QUERY_KEY = ["flights", "popular-destinations"] as const;
 
@@ -93,10 +97,6 @@ export function FlightSearchForm({
   showSmartBundles = true,
   initialParams,
 }: FlightSearchFormProps) {
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
-
-  // React Hook Form with Zod validation
   const form = useSearchForm(
     flightSearchFormSchema,
     {
@@ -120,32 +120,27 @@ export function FlightSearchForm({
     {}
   );
 
-  // Watch form values for dynamic behavior
   const tripType = form.watch("tripType");
   const isRoundTrip = tripType === "round-trip";
 
-  // Optimistic search state
-  const [optimisticSearching, setOptimisticSearching] = useOptimistic(
-    false,
-    (_state, isSearching: boolean) => isSearching
-  );
-
-  const {
-    data: popularDestinations = [],
-    isLoading: isLoadingPopularDestinations,
-    isError: isPopularDestinationsError,
-  } = useQuery<PopularDestination[]>({
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
-    queryFn: async () => {
-      const response = await fetch("/api/flights/popular-destinations");
-      if (!response.ok) {
-        throw new Error("Failed to fetch popular destinations");
-      }
-      return (await response.json()) as PopularDestination[];
-    },
-    queryKey: POPULAR_DESTINATIONS_QUERY_KEY,
-    staleTime: 60 * 60 * 1000, // 1 hour
-  });
+  const { data: popularDestinations = [], isLoading: isLoadingPopularDestinations } =
+    useQuery<PopularDestination[]>({
+      gcTime: 2 * 60 * 60 * 1000, // 2 hours
+      queryFn: async () => {
+        const response = await fetch("/api/flights/popular-destinations");
+        if (!response.ok) {
+          throw new Error("Failed to fetch popular destinations");
+        }
+        const json: unknown = await response.json();
+        const parsed = PopularDestinationsSchema.safeParse(json);
+        if (!parsed.success) {
+          throw new Error("Invalid popular destinations response");
+        }
+        return parsed.data;
+      },
+      queryKey: POPULAR_DESTINATIONS_QUERY_KEY,
+      staleTime: 60 * 60 * 1000, // 1 hour
+    });
 
   const destinationsToRender =
     popularDestinations.length > 0
@@ -158,35 +153,6 @@ export function FlightSearchForm({
     total: "$245",
   };
 
-  const handleSearch = form.handleSubmit((data: FlightSearchFormData) => {
-    startTransition(async () => {
-      await withClientTelemetrySpan(
-        "search.flight.form.submit",
-        { searchType: "flight" },
-        async () => {
-          setOptimisticSearching(true);
-          setFormError(null);
-
-          try {
-            await onSearch(data);
-          } catch (error) {
-            recordClientErrorOnActiveSpan(
-              error instanceof Error ? error : new Error(String(error)),
-              { action: "handleSearch", context: "FlightSearchForm" }
-            );
-            setFormError(
-              error instanceof Error
-                ? error.message
-                : "Search failed. Please try again."
-            );
-          } finally {
-            setOptimisticSearching(false);
-          }
-        }
-      );
-    });
-  });
-
   const handleSwapAirports = () => {
     const origin = form.getValues("origin");
     const destination = form.getValues("destination");
@@ -195,19 +161,82 @@ export function FlightSearchForm({
     form.setValue("destination", origin);
   };
 
-  const handleQuickFill = (destination: { code: string; name: string }) => {
-    form.setValue("destination", destination.code);
-  };
+  const popularItems: QuickSelectItem<FlightSearchFormData>[] = useMemo(() => {
+    if (isLoadingPopularDestinations) {
+      return POPULAR_DESTINATION_SKELETON_KEYS.map((key) => ({
+        description: "Fetching deals",
+        disabled: true,
+        id: `popular-destination-skeleton-${key}`,
+        label: "Loading…",
+        params: {},
+      }));
+    }
 
-  // Clear form error when form changes
-  React.useEffect(() => {
-    const subscription = form.watch(() => {
-      if (formError) {
-        setFormError(null);
+    return destinationsToRender.map((dest) => ({
+      description: dest.savings ? `Save ${dest.savings}` : "Popular now",
+      id: dest.code,
+      label: dest.name,
+      params: { destination: dest.code },
+    }));
+  }, [destinationsToRender, isLoadingPopularDestinations]);
+
+  const recentSearchesByType = useSearchHistoryStore(
+    (state) => state.recentSearchesByType.flight
+  );
+  const recentSearches = useMemo(
+    () => recentSearchesByType.slice(0, 4),
+    [recentSearchesByType]
+  );
+  const recentItems: QuickSelectItem<FlightSearchFormData>[] = useMemo(() => {
+    return buildRecentQuickSelectItems<FlightSearchFormData, FlightSearchParamsSchema>(
+      recentSearches,
+      flightSearchParamsSchema,
+      (params, search) => {
+        const passengers = params.passengers ?? {
+          adults: params.adults ?? 1,
+          children: params.children ?? 0,
+          infants: params.infants ?? 0,
+        };
+
+        const tripTypeValue: FlightSearchFormData["tripType"] = params.returnDate
+          ? "round-trip"
+          : "one-way";
+
+        const label = [
+          params.origin ?? "Origin",
+          "→",
+          params.destination ?? "Destination",
+        ].join(" ");
+
+        const description = params.departureDate
+          ? params.returnDate
+            ? `${params.departureDate} → ${params.returnDate}`
+            : params.departureDate
+          : undefined;
+
+        const item: QuickSelectItem<FlightSearchFormData> = {
+          id: search.id,
+          label,
+          params: {
+            cabinClass: params.cabinClass ?? "economy",
+            departureDate: params.departureDate ?? "",
+            destination: params.destination ?? "",
+            directOnly: params.directOnly ?? false,
+            excludedAirlines: params.excludedAirlines ?? [],
+            maxStops: params.maxStops,
+            origin: params.origin ?? "",
+            passengers,
+            preferredAirlines: params.preferredAirlines ?? [],
+            returnDate: params.returnDate ?? "",
+            tripType: tripTypeValue,
+          },
+          ...(description ? { description } : {}),
+        };
+
+        return item;
       }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, formError]);
+    );
+  }, [recentSearches]);
 
   return (
     <Card className={cn("w-full max-w-4xl mx-auto", className)}>
@@ -240,131 +269,178 @@ export function FlightSearchForm({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <Form {...form}>
-          <form onSubmit={handleSearch} className="space-y-6">
-            {/* Form Error Alert */}
-            {formError && (
-              <Alert variant="destructive">
-                <AlertCircleIcon className="h-4 w-4" />
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Trip Type Selector */}
-            <FormField
-              control={form.control}
-              name="tripType"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex gap-2">
-                    {(["round-trip", "one-way", "multi-city"] as const).map((type) => (
-                      <Button
-                        key={type}
-                        type="button"
-                        variant={field.value === type ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => field.onChange(type)}
-                        className="capitalize"
-                      >
-                        {type === "round-trip"
-                          ? "Round Trip"
-                          : type === "one-way"
-                            ? "One Way"
-                            : "Multi-City"}
-                      </Button>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Main Search Form */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* From/To Section */}
-              <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 relative">
-                <FormField
-                  control={form.control}
-                  name="origin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">From</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Departure city or airport"
-                            className="pl-10"
-                            {...field}
-                          />
+        <SearchFormShell
+          form={form}
+          onSubmit={onSearch}
+          telemetrySpanName="search.flight.form.submit"
+          telemetryAttributes={{ searchType: "flight" }}
+          telemetryErrorMetadata={{
+            action: "submit",
+            context: "FlightSearchForm",
+          }}
+          submitLabel="Search Flights"
+          loadingLabel="Searching flights..."
+          disableSubmitWhenInvalid
+          className="space-y-6"
+          popularItems={popularItems}
+          popularLabel="Popular destinations"
+          recentItems={recentItems}
+          secondaryAction={
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto px-6"
+              type="button"
+            >
+              <ClockIcon className="h-4 w-4 mr-2" />
+              Flexible Dates
+            </Button>
+          }
+          footer={
+            showSmartBundles
+              ? (_form, _state) => (
+                  <>
+                    <Separator />
+                    <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <SparklesIcon className="h-5 w-5 text-blue-600" />
+                          <h3 className="font-semibold text-sm">Smart Trip Bundle</h3>
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-700"
+                          >
+                            Save {smartBundles.total}
+                          </Badge>
                         </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Swap Button */}
-                <div className="hidden md:flex absolute left-1/2 top-8 transform -translate-x-1/2 z-10">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleSwapAirports}
-                    className="rounded-full bg-background border-2 shadow-md hover:shadow-lg transition-shadow"
-                  >
-                    <ArrowRightIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="destination"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">To</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Destination city or airport"
-                            className="pl-10"
-                            {...field}
-                          />
+                        <span className="text-xs text-muted-foreground">
+                          vs booking separately
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="text-center">
+                          <div className="font-medium">Flight + Hotel</div>
+                          <div className="text-green-600 font-semibold">
+                            Save {smartBundles.hotel}
+                          </div>
                         </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Dates Section */}
-              <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="departureDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">Departure</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input type="date" className="pl-10" {...field} />
+                        <div className="text-center">
+                          <div className="font-medium">+ Car Rental</div>
+                          <div className="text-green-600 font-semibold">
+                            Save {smartBundles.car}
+                          </div>
                         </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <div className="text-center">
+                          <div className="font-medium">Total Savings</div>
+                          <div className="text-green-600 font-semibold text-lg">
+                            {smartBundles.total}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )
+              : undefined
+          }
+        >
+          {(form, state) => (
+            <>
+              <FormField
+                control={form.control}
+                name="tripType"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex gap-2">
+                      {(["round-trip", "one-way", "multi-city"] as const).map(
+                        (type) => (
+                          <Button
+                            key={type}
+                            type="button"
+                            variant={field.value === type ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => field.onChange(type)}
+                            className="capitalize"
+                            disabled={state.isSubmitting}
+                          >
+                            {type === "round-trip"
+                              ? "Round Trip"
+                              : type === "one-way"
+                                ? "One Way"
+                                : "Multi-City"}
+                          </Button>
+                        )
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {isRoundTrip && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 relative">
                   <FormField
                     control={form.control}
-                    name="returnDate"
+                    name="origin"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">Return</FormLabel>
+                        <FormLabel className="text-sm font-medium">From</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Departure city or airport"
+                              className="pl-10"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="hidden md:flex absolute left-1/2 top-8 transform -translate-x-1/2 z-10">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleSwapAirports}
+                      disabled={state.isSubmitting}
+                      className="rounded-full bg-background border-2 shadow-md hover:shadow-lg transition-shadow"
+                    >
+                      <ArrowRightIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="destination"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">To</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Destination city or airport"
+                              className="pl-10"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="departureDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Departure</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -375,235 +451,123 @@ export function FlightSearchForm({
                       </FormItem>
                     )}
                   />
-                )}
-              </div>
 
-              {/* Passengers & Class */}
-              <div className="lg:col-span-2 space-y-4">
-                {/* Passengers */}
-                <FormField
-                  control={form.control}
-                  name="passengers.adults"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">Adults</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  {isRoundTrip && (
+                    <FormField
+                      control={form.control}
+                      name="returnDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">Return</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input type="date" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+
+                <div className="lg:col-span-2 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="passengers.adults"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Adults</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Select
+                              value={field.value.toString()}
+                              onValueChange={(value) =>
+                                field.onChange(Number.parseInt(value, 10))
+                              }
+                            >
+                              <SelectTrigger className="pl-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                                  <SelectItem key={num} value={num.toString()}>
+                                    {num} {num === 1 ? "Adult" : "Adults"}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="passengers.children"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          Children (2-11)
+                        </FormLabel>
+                        <FormControl>
                           <Select
                             value={field.value.toString()}
                             onValueChange={(value) =>
                               field.onChange(Number.parseInt(value, 10))
                             }
                           >
-                            <SelectTrigger className="pl-10">
+                            <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                                 <SelectItem key={num} value={num.toString()}>
-                                  {num} {num === 1 ? "Adult" : "Adults"}
+                                  {num} {num === 1 ? "Child" : "Children"}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Children */}
-                <FormField
-                  control={form.control}
-                  name="passengers.children"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">
-                        Children (2-11)
-                      </FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value.toString()}
-                          onValueChange={(value) =>
-                            field.onChange(Number.parseInt(value, 10))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
-                                {num} {num === 1 ? "Child" : "Children"}
+                  <FormField
+                    control={form.control}
+                    name="cabinClass"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Class</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="economy">Economy</SelectItem>
+                              <SelectItem value="premium_economy">
+                                Premium Economy
                               </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Cabin Class */}
-                <FormField
-                  control={form.control}
-                  name="cabinClass"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">Class</FormLabel>
-                      <FormControl>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="economy">Economy</SelectItem>
-                            <SelectItem value="premium-economy">
-                              Premium Economy
-                            </SelectItem>
-                            <SelectItem value="business">Business</SelectItem>
-                            <SelectItem value="first">First Class</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Popular Destinations */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <TrendingDownIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Popular destinations</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {isLoadingPopularDestinations
-                  ? POPULAR_DESTINATION_SKELETON_KEYS.map((key) => (
-                      <Button
-                        key={`popular-destination-skeleton-${key}`}
-                        variant="outline"
-                        size="sm"
-                        disabled
-                        className="h-auto py-2 px-3 flex flex-col items-start animate-pulse"
-                      >
-                        <span className="font-medium text-muted-foreground">
-                          Loading…
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Fetching deals
-                        </span>
-                      </Button>
-                    ))
-                  : destinationsToRender.map((dest) => (
-                      <Button
-                        key={dest.code}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuickFill(dest)}
-                        className="h-auto py-2 px-3 flex flex-col items-start"
-                      >
-                        <span className="font-medium">{dest.name}</span>
-                        <span className="text-xs text-green-600">
-                          {dest.savings ? `Save ${dest.savings}` : "Popular now"}
-                        </span>
-                      </Button>
-                    ))}
-              </div>
-              {isPopularDestinationsError && (
-                <p className="text-xs text-muted-foreground">
-                  Showing recent favorites while we refresh destination data.
-                </p>
-              )}
-            </div>
-
-            {/* Smart Bundle Preview */}
-            {showSmartBundles && (
-              <>
-                <Separator />
-                <div className="bg-linear-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <SparklesIcon className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-semibold text-sm">Smart Trip Bundle</h3>
-                      <Badge
-                        variant="secondary"
-                        className="bg-green-100 text-green-700"
-                      >
-                        Save {smartBundles.total}
-                      </Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      vs booking separately
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="font-medium">Flight + Hotel</div>
-                      <div className="text-green-600 font-semibold">
-                        Save {smartBundles.hotel}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium">+ Car Rental</div>
-                      <div className="text-green-600 font-semibold">
-                        Save {smartBundles.car}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium">Total Savings</div>
-                      <div className="text-green-600 font-semibold text-lg">
-                        {smartBundles.total}
-                      </div>
-                    </div>
-                  </div>
+                              <SelectItem value="business">Business</SelectItem>
+                              <SelectItem value="first">First Class</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </>
-            )}
-
-            {/* Search Button */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="submit"
-                disabled={isPending || optimisticSearching || !form.formState.isValid}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                size="lg"
-              >
-                {isPending || optimisticSearching ? (
-                  <>
-                    <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
-                    Searching flights...
-                  </>
-                ) : (
-                  <>
-                    <SearchIcon className="h-4 w-4 mr-2" />
-                    Search Flights
-                  </>
-                )}
-              </Button>
-
-              <Button variant="outline" size="lg" className="px-6" type="button">
-                <ClockIcon className="h-4 w-4 mr-2" />
-                Flexible Dates
-              </Button>
-            </div>
-
-            {/* Progress indicator for optimistic updates */}
-            {(isPending || optimisticSearching) && (
-              <div className="space-y-2">
-                <Progress value={66} className="h-2" />
-                <p className="text-xs text-muted-foreground text-center">
-                  Searching 500+ airlines for the best deals...
-                </p>
               </div>
-            )}
-          </form>
-        </Form>
+            </>
+          )}
+        </SearchFormShell>
       </CardContent>
     </Card>
   );

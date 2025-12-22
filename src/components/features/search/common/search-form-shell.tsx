@@ -1,43 +1,52 @@
 /**
  * @fileoverview Reusable search form shell component.
  *
- * Provides a consistent wrapper for search forms with form state management,
- * validation, loading states, and error handling.
+ * Provides a consistent wrapper for search forms with shared quick-select sections
+ * (popular + recent), optimistic progress indication, and error handling.
  */
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircleIcon, Loader2Icon, SearchIcon } from "lucide-react";
-import { useState, useTransition } from "react";
-import type { DefaultValues, FieldValues, Path, UseFormReturn } from "react-hook-form";
-import { useForm } from "react-hook-form";
-import type { z } from "zod";
+import { useState } from "react";
+import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { Progress } from "@/components/ui/progress";
 import { withClientTelemetrySpan } from "@/lib/telemetry/client";
+import type { ErrorSpanMetadata } from "@/lib/telemetry/client-errors";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
-/** Popular item for quick selection */
-export interface PopularItem<TParams> {
+export interface SearchFormShellRenderState {
+  isPending: boolean;
+  isSubmitting: boolean;
+  isSubmitDisabled: boolean;
+}
+
+/** Quick-select item for populating form fields. */
+export interface QuickSelectItem<TParams extends FieldValues> {
   id: string;
   label: string;
   params: Partial<TParams>;
+  description?: string;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 /** Props for the SearchFormShell component */
-export interface SearchFormShellProps<TSchema extends z.ZodType<FieldValues>> {
-  /** Zod schema for form validation */
-  schema: TSchema;
-  /** Default form values */
-  defaultValues: DefaultValues<z.infer<TSchema>>;
+export interface SearchFormShellProps<TParams extends FieldValues> {
+  /** React Hook Form instance (created via `useSearchForm` or `useForm`). */
+  form: UseFormReturn<TParams>;
   /** Handler called on form submission */
-  onSubmit: (params: z.infer<TSchema>) => Promise<void>;
+  onSubmit: (params: TParams) => Promise<void>;
   /** Telemetry span name for tracking submissions */
   telemetrySpanName?: string;
+  /** Telemetry span attributes */
+  telemetryAttributes?: Record<string, string | number | boolean>;
+  /** Telemetry metadata for errors recorded on the active span */
+  telemetryErrorMetadata?: ErrorSpanMetadata;
   /** Error message to display */
   error?: string | null;
   /** Custom submit button text */
@@ -46,17 +55,42 @@ export interface SearchFormShellProps<TSchema extends z.ZodType<FieldValues>> {
   loadingLabel?: string;
   /** Whether the form is disabled */
   disabled?: boolean;
+  /** Whether submit should be disabled when form is invalid */
+  disableSubmitWhenInvalid?: boolean;
   /** Additional className for the form */
   className?: string;
   /** Render function for form fields */
-  children: (form: UseFormReturn<z.infer<TSchema>>) => React.ReactNode;
+  children: (
+    form: UseFormReturn<TParams>,
+    state: SearchFormShellRenderState
+  ) => React.ReactNode;
+  /** Optional content rendered after quick-select sections and before submit. */
+  footer?: (
+    form: UseFormReturn<TParams>,
+    state: SearchFormShellRenderState
+  ) => React.ReactNode;
   /** Popular items for quick selection */
-  popularItems?: PopularItem<z.infer<TSchema>>[];
+  popularItems?: QuickSelectItem<TParams>[];
+  /** Recent search items for quick selection */
+  recentItems?: QuickSelectItem<TParams>[];
+  /** Popular section label */
+  popularLabel?: string;
+  /** Recent section label */
+  recentLabel?: string;
   /** Handler for popular item selection */
   onPopularItemSelect?: (
-    item: PopularItem<z.infer<TSchema>>,
-    form: UseFormReturn<z.infer<TSchema>>
+    item: QuickSelectItem<TParams>,
+    form: UseFormReturn<TParams>
   ) => void;
+  /** Handler for recent item selection */
+  onRecentItemSelect?: (
+    item: QuickSelectItem<TParams>,
+    form: UseFormReturn<TParams>
+  ) => void;
+  /** Secondary action rendered next to the submit button */
+  secondaryAction?: React.ReactNode;
+  /** Whether to show the optimistic progress bar while pending */
+  showProgress?: boolean;
 }
 
 /**
@@ -64,12 +98,9 @@ export interface SearchFormShellProps<TSchema extends z.ZodType<FieldValues>> {
  *
  * @example
  * ```tsx
- * <SearchFormShell
- *   schema={flightSearchSchema}
- *   defaultValues={{ origin: "", destination: "" }}
- *   onSubmit={handleSearch}
- *   telemetrySpanName="flight.search"
- * >
+ * const form = useSearchForm(flightSearchSchema, defaultValues);
+ *
+ * <SearchFormShell form={form} onSubmit={handleSearch} telemetrySpanName="flight.search">
  *   {(form) => (
  *     <>
  *       <FormField name="origin" control={form.control} ... />
@@ -79,91 +110,142 @@ export interface SearchFormShellProps<TSchema extends z.ZodType<FieldValues>> {
  * </SearchFormShell>
  * ```
  */
-export function SearchFormShell<TSchema extends z.ZodType<FieldValues>>({
-  schema,
-  defaultValues,
+export function SearchFormShell<TParams extends FieldValues>({
+  form,
   onSubmit,
   telemetrySpanName = "search.submit",
+  telemetryAttributes,
+  telemetryErrorMetadata,
   error,
   submitLabel = "Search",
   loadingLabel = "Searching...",
   disabled = false,
+  disableSubmitWhenInvalid = false,
   className,
   children,
+  footer,
   popularItems,
+  recentItems,
+  popularLabel = "Popular",
+  recentLabel = "Recent searches",
   onPopularItemSelect,
-}: SearchFormShellProps<TSchema>) {
-  const [isPending, startTransition] = useTransition();
+  onRecentItemSelect,
+  secondaryAction,
+  showProgress = true,
+}: SearchFormShellProps<TParams>) {
+  const [isPending, setIsPending] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  const form = useForm<z.infer<TSchema>>({
-    defaultValues,
-    mode: "onChange",
-    // biome-ignore lint/suspicious/noExplicitAny: zodResolver requires flexible schema typing for Zod v4 compatibility
-    resolver: zodResolver(schema as any),
-  });
-
-  const handleSubmit = form.handleSubmit((data) => {
+  const handleSubmit = form.handleSubmit(async (data) => {
     setSubmissionError(null);
-    startTransition(async () => {
-      try {
-        await withClientTelemetrySpan(telemetrySpanName, {}, async () => {
+    setIsPending(true);
+    try {
+      await withClientTelemetrySpan(
+        telemetrySpanName,
+        telemetryAttributes ?? {},
+        async () => {
           try {
             await onSubmit(data);
           } catch (err) {
             recordClientErrorOnActiveSpan(
-              err instanceof Error ? err : new Error(String(err))
+              err instanceof Error ? err : new Error(String(err)),
+              telemetryErrorMetadata
             );
             throw err;
           }
-        });
-      } catch (err) {
-        setSubmissionError(err instanceof Error ? err.message : String(err));
-      }
-    });
+        }
+      );
+    } catch (err) {
+      setSubmissionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsPending(false);
+    }
   });
 
-  const handlePopularItemClick = (item: PopularItem<z.infer<TSchema>>) => {
-    if (onPopularItemSelect) {
-      onPopularItemSelect(item, form);
-    } else {
-      // Default behavior: update provided fields while preserving metadata
-      Object.entries(item.params).forEach(([key, value]) => {
-        form.setValue(key as Path<z.infer<TSchema>>, value, {
-          shouldDirty: true,
-          shouldTouch: true,
-          shouldValidate: true,
-        });
+  // `isSubmitting` is used by consumers as a general "block interactions" flag
+  // (pending submit or explicitly disabled).
+  const isInteractionDisabled = isPending || disabled;
+  const isSubmitDisabled =
+    isInteractionDisabled || (disableSubmitWhenInvalid && !form.formState.isValid);
+
+  const applyQuickSelectParams = (item: QuickSelectItem<TParams>) => {
+    Object.entries(item.params).forEach(([key, value]) => {
+      form.setValue(key as Path<TParams>, value, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
       });
-    }
+    });
   };
 
-  const isSubmitting = isPending || disabled;
+  const renderState: SearchFormShellRenderState = {
+    isPending,
+    isSubmitDisabled,
+    isSubmitting: isInteractionDisabled,
+  };
+
+  const renderQuickSelectSection = (
+    sectionLabel: string,
+    items: QuickSelectItem<TParams>[],
+    onSelect:
+      | ((item: QuickSelectItem<TParams>, form: UseFormReturn<TParams>) => void)
+      | undefined
+  ) => {
+    if (items.length === 0) return null;
+
+    return (
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-muted-foreground">{sectionLabel}</div>
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <Button
+              key={item.id}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (onSelect) {
+                  onSelect(item, form);
+                  return;
+                }
+                applyQuickSelectParams(item);
+              }}
+              disabled={isInteractionDisabled || item.disabled}
+              className={cn(
+                "h-auto py-2 px-3 flex flex-col items-start",
+                item.description ? "gap-0.5" : "gap-0"
+              )}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                {item.icon}
+                <span className="font-medium">{item.label}</span>
+              </span>
+              {item.description && (
+                <span className="text-xs text-muted-foreground">
+                  {item.description}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
-        {children(form)}
+        {children(form, renderState)}
 
-        {popularItems && popularItems.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <span className="text-muted-foreground text-sm">Popular:</span>
-            {popularItems.map((item) => (
-              <Button
-                key={item.id}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handlePopularItemClick(item)}
-                disabled={isSubmitting}
-                className="h-7 text-xs"
-              >
-                {item.icon}
-                {item.label}
-              </Button>
-            ))}
-          </div>
-        )}
+        {popularItems
+          ? renderQuickSelectSection(popularLabel, popularItems, onPopularItemSelect)
+          : null}
+
+        {recentItems
+          ? renderQuickSelectSection(recentLabel, recentItems, onRecentItemSelect)
+          : null}
+
+        {footer ? footer(form, renderState) : null}
 
         {(submissionError || error) && (
           <Alert variant="destructive">
@@ -172,19 +254,32 @@ export function SearchFormShell<TSchema extends z.ZodType<FieldValues>>({
           </Alert>
         )}
 
-        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-          {isPending ? (
-            <>
-              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-              {loadingLabel}
-            </>
-          ) : (
-            <>
-              <SearchIcon className="mr-2 h-4 w-4" />
-              {submitLabel}
-            </>
-          )}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button
+            type="submit"
+            disabled={isSubmitDisabled}
+            className="w-full sm:w-auto"
+          >
+            {isPending ? (
+              <>
+                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                {loadingLabel}
+              </>
+            ) : (
+              <>
+                <SearchIcon className="mr-2 h-4 w-4" />
+                {submitLabel}
+              </>
+            )}
+          </Button>
+          {secondaryAction ? (
+            <div className="w-full sm:w-auto">{secondaryAction}</div>
+          ) : null}
+        </div>
+
+        {showProgress && isPending ? (
+          <Progress value={null} className="h-2" aria-valuetext="Searching" />
+        ) : null}
       </form>
     </Form>
   );
