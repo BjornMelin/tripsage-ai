@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useSearchHistoryStore } from "@/stores/search-history";
+import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
@@ -77,40 +78,40 @@ export function ActivitySearchForm({
     [recentSearchesByType]
   );
   const recentItems: QuickSelectItem<ActivitySearchFormData>[] = useMemo(() => {
-    return recentSearches.flatMap((search) => {
-      const parsed = activitySearchParamsSchema.safeParse(search.params);
-      if (!parsed.success) return [];
+    return buildRecentQuickSelectItems<ActivitySearchFormData, ActivitySearchParams>(
+      recentSearches,
+      activitySearchParamsSchema,
+      (params, search) => {
+        const destination = params.destination ?? "Destination";
 
-      const params = parsed.data;
-      const destination = params.destination ?? "Destination";
+        const label = params.category
+          ? `${destination} · ${params.category}`
+          : destination;
+        const description = params.date ?? undefined;
 
-      const label = params.category
-        ? `${destination} · ${params.category}`
-        : destination;
-      const description = params.date ?? undefined;
-
-      const item: QuickSelectItem<ActivitySearchFormData> = {
-        id: search.id,
-        label,
-        params: {
-          category: params.category ?? "",
-          date: params.date ?? "",
-          dateRange: params.dateRange ?? undefined,
-          destination: params.destination ?? "",
-          difficulty: params.difficulty ?? undefined,
-          duration: params.duration ?? undefined,
-          indoor: params.indoor ?? undefined,
-          participants: {
-            adults: params.adults ?? 1,
-            children: params.children ?? 0,
+        const item: QuickSelectItem<ActivitySearchFormData> = {
+          id: search.id,
+          label,
+          params: {
+            category: params.category ?? "",
+            date: params.date ?? "",
+            dateRange: params.dateRange ?? undefined,
+            destination: params.destination ?? "",
+            difficulty: params.difficulty ?? undefined,
+            duration: params.duration ?? undefined,
+            indoor: params.indoor ?? undefined,
+            participants: {
+              adults: params.adults ?? 1,
+              children: params.children ?? 0,
+            },
+            priceRange: params.priceRange ?? undefined,
           },
-          priceRange: params.priceRange ?? undefined,
-        },
-        ...(description ? { description } : {}),
-      };
+          ...(description ? { description } : {}),
+        };
 
-      return [item];
-    });
+        return item;
+      }
+    );
   }, [recentSearches]);
 
   const handleSubmit = async (data: ActivitySearchFormData) => {
@@ -147,7 +148,7 @@ export function ActivitySearchForm({
           telemetrySpanName="search.activity.form.submit"
           telemetryAttributes={{ searchType: "activity" }}
           telemetryErrorMetadata={{
-            action: "handleSubmit",
+            action: "submit",
             context: "ActivitySearchForm",
           }}
           submitLabel="Search Activities"

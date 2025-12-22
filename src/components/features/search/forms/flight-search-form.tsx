@@ -42,6 +42,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useSearchHistoryStore } from "@/stores/search-history";
+import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
@@ -177,54 +178,54 @@ export function FlightSearchForm({
     [recentSearchesByType]
   );
   const recentItems: QuickSelectItem<FlightSearchFormData>[] = useMemo(() => {
-    return recentSearches.flatMap((search) => {
-      const parsed = flightSearchParamsSchema.safeParse(search.params);
-      if (!parsed.success) return [];
+    return buildRecentQuickSelectItems<FlightSearchFormData, FlightSearchParamsSchema>(
+      recentSearches,
+      flightSearchParamsSchema,
+      (params, search) => {
+        const passengers = params.passengers ?? {
+          adults: params.adults ?? 1,
+          children: params.children ?? 0,
+          infants: params.infants ?? 0,
+        };
 
-      const params: FlightSearchParamsSchema = parsed.data;
-      const passengers = params.passengers ?? {
-        adults: params.adults ?? 1,
-        children: params.children ?? 0,
-        infants: params.infants ?? 0,
-      };
+        const tripTypeValue: FlightSearchFormData["tripType"] = params.returnDate
+          ? "round-trip"
+          : "one-way";
 
-      const tripTypeValue: FlightSearchFormData["tripType"] = params.returnDate
-        ? "round-trip"
-        : "one-way";
+        const label = [
+          params.origin ?? "Origin",
+          "→",
+          params.destination ?? "Destination",
+        ].join(" ");
 
-      const label = [
-        params.origin ?? "Origin",
-        "→",
-        params.destination ?? "Destination",
-      ].join(" ");
+        const description = params.departureDate
+          ? params.returnDate
+            ? `${params.departureDate} → ${params.returnDate}`
+            : params.departureDate
+          : undefined;
 
-      const description = params.departureDate
-        ? params.returnDate
-          ? `${params.departureDate} → ${params.returnDate}`
-          : params.departureDate
-        : undefined;
+        const item: QuickSelectItem<FlightSearchFormData> = {
+          id: search.id,
+          label,
+          params: {
+            cabinClass: params.cabinClass ?? "economy",
+            departureDate: params.departureDate ?? "",
+            destination: params.destination ?? "",
+            directOnly: params.directOnly ?? false,
+            excludedAirlines: params.excludedAirlines ?? [],
+            maxStops: params.maxStops,
+            origin: params.origin ?? "",
+            passengers,
+            preferredAirlines: params.preferredAirlines ?? [],
+            returnDate: params.returnDate ?? "",
+            tripType: tripTypeValue,
+          },
+          ...(description ? { description } : {}),
+        };
 
-      const item: QuickSelectItem<FlightSearchFormData> = {
-        id: search.id,
-        label,
-        params: {
-          cabinClass: params.cabinClass ?? "economy",
-          departureDate: params.departureDate ?? "",
-          destination: params.destination ?? "",
-          directOnly: params.directOnly ?? false,
-          excludedAirlines: params.excludedAirlines ?? [],
-          maxStops: params.maxStops,
-          origin: params.origin ?? "",
-          passengers,
-          preferredAirlines: params.preferredAirlines ?? [],
-          returnDate: params.returnDate ?? "",
-          tripType: tripTypeValue,
-        },
-        ...(description ? { description } : {}),
-      };
-
-      return [item];
-    });
+        return item;
+      }
+    );
   }, [recentSearches]);
 
   return (
@@ -264,7 +265,7 @@ export function FlightSearchForm({
           telemetrySpanName="search.flight.form.submit"
           telemetryAttributes={{ searchType: "flight" }}
           telemetryErrorMetadata={{
-            action: "handleSearch",
+            action: "submit",
             context: "FlightSearchForm",
           }}
           submitLabel="Search Flights"

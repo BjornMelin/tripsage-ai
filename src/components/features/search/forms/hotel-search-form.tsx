@@ -43,6 +43,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useSearchHistoryStore } from "@/stores/search-history";
+import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
@@ -160,51 +161,51 @@ export function HotelSearchForm({
     [recentSearchesByType]
   );
   const recentItems: QuickSelectItem<HotelSearchFormData>[] = useMemo(() => {
-    return recentSearches.flatMap((search) => {
-      const parsed = searchAccommodationParamsSchema.safeParse(search.params);
-      if (!parsed.success) return [];
+    return buildRecentQuickSelectItems<HotelSearchFormData, SearchAccommodationParams>(
+      recentSearches,
+      searchAccommodationParamsSchema,
+      (params, search) => {
+        const destination = params.destination ?? "Destination";
+        const dateLabel =
+          params.checkIn && params.checkOut
+            ? `${params.checkIn} → ${params.checkOut}`
+            : undefined;
 
-      const params: SearchAccommodationParams = parsed.data;
-      const destination = params.destination ?? "Destination";
-      const dateLabel =
-        params.checkIn && params.checkOut
-          ? `${params.checkIn} → ${params.checkOut}`
-          : undefined;
-
-      const mapped: Partial<HotelSearchFormData> = {
-        adults: params.adults ?? undefined,
-        amenities: params.amenities ?? undefined,
-        checkIn: params.checkIn ?? undefined,
-        checkOut: params.checkOut ?? undefined,
-        children: params.children ?? undefined,
-        currency: params.currency ?? undefined,
-        location: params.destination ?? undefined,
-        rooms: params.rooms ?? undefined,
-      };
-
-      if (params.minRating !== undefined) {
-        mapped.rating = Math.max(0, Math.min(5, Math.round(params.minRating)));
-      }
-
-      if (
-        params.priceRange?.min !== undefined ||
-        params.priceRange?.max !== undefined
-      ) {
-        mapped.priceRange = {
-          max: params.priceRange?.max ?? DEFAULT_PRICE_RANGE.max,
-          min: params.priceRange?.min ?? DEFAULT_PRICE_RANGE.min,
+        const mapped: Partial<HotelSearchFormData> = {
+          adults: params.adults ?? undefined,
+          amenities: params.amenities ?? undefined,
+          checkIn: params.checkIn ?? undefined,
+          checkOut: params.checkOut ?? undefined,
+          children: params.children ?? undefined,
+          currency: params.currency ?? undefined,
+          location: params.destination ?? undefined,
+          rooms: params.rooms ?? undefined,
         };
+
+        if (params.minRating !== undefined) {
+          mapped.rating = Math.max(0, Math.min(5, Math.round(params.minRating)));
+        }
+
+        if (
+          params.priceRange?.min !== undefined ||
+          params.priceRange?.max !== undefined
+        ) {
+          mapped.priceRange = {
+            max: params.priceRange?.max ?? DEFAULT_PRICE_RANGE.max,
+            min: params.priceRange?.min ?? DEFAULT_PRICE_RANGE.min,
+          };
+        }
+
+        const item: QuickSelectItem<HotelSearchFormData> = {
+          id: search.id,
+          label: destination,
+          params: mapped,
+          ...(dateLabel ? { description: dateLabel } : {}),
+        };
+
+        return item;
       }
-
-      const item: QuickSelectItem<HotelSearchFormData> = {
-        id: search.id,
-        label: destination,
-        params: mapped,
-        ...(dateLabel ? { description: dateLabel } : {}),
-      };
-
-      return [item];
-    });
+    );
   }, [recentSearches]);
 
   return (
@@ -244,7 +245,7 @@ export function HotelSearchForm({
           telemetrySpanName="search.hotel.form.submit"
           telemetryAttributes={{ searchType: "hotel" }}
           telemetryErrorMetadata={{
-            action: "handleSearch",
+            action: "submit",
             context: "HotelSearchForm",
           }}
           submitLabel="Search Hotels"

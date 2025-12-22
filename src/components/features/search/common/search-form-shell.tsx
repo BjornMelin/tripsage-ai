@@ -8,7 +8,7 @@
 "use client";
 
 import { AlertCircleIcon, Loader2Icon, SearchIcon } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -133,32 +133,33 @@ export function SearchFormShell<TParams extends FieldValues>({
   secondaryAction,
   showProgress = true,
 }: SearchFormShellProps<TParams>) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  const handleSubmit = form.handleSubmit((data) => {
+  const handleSubmit = form.handleSubmit(async (data) => {
     setSubmissionError(null);
-    startTransition(async () => {
-      try {
-        await withClientTelemetrySpan(
-          telemetrySpanName,
-          telemetryAttributes ?? {},
-          async () => {
-            try {
-              await onSubmit(data);
-            } catch (err) {
-              recordClientErrorOnActiveSpan(
-                err instanceof Error ? err : new Error(String(err)),
-                telemetryErrorMetadata
-              );
-              throw err;
-            }
+    setIsPending(true);
+    try {
+      await withClientTelemetrySpan(
+        telemetrySpanName,
+        telemetryAttributes ?? {},
+        async () => {
+          try {
+            await onSubmit(data);
+          } catch (err) {
+            recordClientErrorOnActiveSpan(
+              err instanceof Error ? err : new Error(String(err)),
+              telemetryErrorMetadata
+            );
+            throw err;
           }
-        );
-      } catch (err) {
-        setSubmissionError(err instanceof Error ? err.message : String(err));
-      }
-    });
+        }
+      );
+    } catch (err) {
+      setSubmissionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsPending(false);
+    }
   });
 
   const isSubmitting = isPending || disabled;
@@ -274,7 +275,9 @@ export function SearchFormShell<TParams extends FieldValues>({
           ) : null}
         </div>
 
-        {showProgress && isPending ? <Progress value={66} className="h-2" /> : null}
+        {showProgress && isPending ? (
+          <Progress value={null} className="h-2" aria-valuetext="Searching" />
+        ) : null}
       </form>
     </Form>
   );
