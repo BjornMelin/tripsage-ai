@@ -7,8 +7,6 @@
 
 import { HttpResponse, http, type JsonBodyType } from "msw";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
 // ===== SHARED RESPONSE DATA =====
 
 const ACTIVITIES_SEARCH_RESPONSE = {
@@ -31,14 +29,13 @@ const POPULAR_DESTINATIONS_RESPONSE = [
 
 // ===== HANDLER FACTORY =====
 
-/** Creates handlers for both relative and absolute URL patterns. */
 function createHandler<T extends JsonBodyType>(
   method: "get" | "post",
   path: string,
   response: T
 ): ReturnType<typeof http.get>[] {
   const handler = () => HttpResponse.json(response);
-  return [http[method](path, handler), http[method](`${BASE_URL}${path}`, handler)];
+  return [http[method](path, handler)];
 }
 
 // ===== HANDLERS =====

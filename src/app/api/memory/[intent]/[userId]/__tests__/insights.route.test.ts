@@ -2,7 +2,7 @@
 
 import type { MemoryContextResponse } from "@schemas/chat";
 import type { MemoryInsightsResponse } from "@schemas/memory";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
@@ -152,6 +152,12 @@ async function importRoute() {
 describe("/api/memory/insights/[userId] route", () => {
   const userId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
+  let Get: Awaited<ReturnType<typeof importRoute>> | null = null;
+
+  beforeAll(async () => {
+    Get = await importRoute();
+  }, 15_000);
+
   beforeEach(() => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
@@ -197,12 +203,12 @@ describe("/api/memory/insights/[userId] route", () => {
       error: null,
     });
 
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: `http://localhost/api/memory/insights/${userId}`,
     });
 
+    if (!Get) throw new Error("route not loaded");
     const res = await Get(
       req,
       createRouteParamsContext({ intent: "insights", userId })
@@ -212,12 +218,12 @@ describe("/api/memory/insights/[userId] route", () => {
   });
 
   it("returns 403 when requesting another user's insights", async () => {
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: "http://localhost/api/memory/insights/other-user",
     });
 
+    if (!Get) throw new Error("route not loaded");
     const res = await Get(
       req,
       createRouteParamsContext({ intent: "insights", userId: "other-user" })
@@ -232,12 +238,12 @@ describe("/api/memory/insights/[userId] route", () => {
   it("serves cached insights without invoking AI generation", async () => {
     await setCachedJson(`memory:insights:${userId}`, aiInsightsFixture, 3600);
 
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: `http://localhost/api/memory/insights/${userId}`,
     });
 
+    if (!Get) throw new Error("route not loaded");
     const res = await Get(
       req,
       createRouteParamsContext({ intent: "insights", userId })
@@ -252,12 +258,12 @@ describe("/api/memory/insights/[userId] route", () => {
   it("generates insights, caches them, and returns success payload on cache miss", async () => {
     mockGenerateText.mockResolvedValueOnce({ output: aiInsightsFixture });
 
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: `http://localhost/api/memory/insights/${userId}`,
     });
 
+    if (!Get) throw new Error("route not loaded");
     const res = await Get(
       req,
       createRouteParamsContext({ intent: "insights", userId })
@@ -284,12 +290,12 @@ describe("/api/memory/insights/[userId] route", () => {
   it("returns fallback insights when AI generation fails and caches degraded result", async () => {
     mockGenerateText.mockRejectedValueOnce(new Error("ai-failure"));
 
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: `http://localhost/api/memory/insights/${userId}`,
     });
 
+    if (!Get) throw new Error("route not loaded");
     const res = await Get(
       req,
       createRouteParamsContext({ intent: "insights", userId })
@@ -331,12 +337,12 @@ describe("/api/memory/insights/[userId] route", () => {
     });
     mockGenerateText.mockResolvedValueOnce({ output: aiInsightsFixture });
 
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: `http://localhost/api/memory/insights/${userId}`,
     });
 
+    if (!Get) throw new Error("route not loaded");
     await Get(req, createRouteParamsContext({ intent: "insights", userId }));
 
     const call = mockGenerateText.mock.calls[0]?.[0];
@@ -371,12 +377,12 @@ describe("/api/memory/insights/[userId] route", () => {
     });
     mockGenerateText.mockResolvedValueOnce({ output: aiInsightsFixture });
 
-    const Get = await importRoute();
     const req = createMockNextRequest({
       method: "GET",
       url: `http://localhost/api/memory/insights/${userId}`,
     });
 
+    if (!Get) throw new Error("route not loaded");
     await Get(req, createRouteParamsContext({ intent: "insights", userId }));
 
     const call = mockGenerateText.mock.calls[0]?.[0];
