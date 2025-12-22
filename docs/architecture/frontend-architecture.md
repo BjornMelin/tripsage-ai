@@ -135,7 +135,9 @@ return data;
 
 **Constraint:** Cannot use `"use cache"` in routes that call any request-scoped APIs.
 
-If a Server Component must use time/random APIs (e.g. `Date.now()`, `new Date()`, `Math.random()`), force runtime rendering with `await connection()` instead of route-segment config overrides. This ensures dynamic values are computed at request time; route-segment `dynamic` overrides conflict with component-level caching and can cause build errors.
+If a Server Component must use time/random APIs (e.g. `Date.now()`, `new Date()`, `Math.random()`), force runtime rendering with `await connection()` instead of route-segment config overrides.
+
+This ensures values are computed at request time; route-segment `dynamic` overrides conflict with component-level caching and can cause build errors.
 
 **Files:**
 

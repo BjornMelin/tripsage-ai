@@ -17,7 +17,8 @@ import { readFileSync } from "node:fs";
 import { EXCLUDED_PATH_PARTS } from "./excluded-path-parts.mjs";
 
 const ALLOWLIST_MARKER = "fileoverview-ok:";
-const MODE = new Set(process.argv.slice(2)).has("--full") ? "full" : "diff";
+const ARGS = new Set(process.argv.slice(2));
+const MODE = ARGS.has("--full") ? "full" : "diff";
 
 const CHECKED_FILE_RE = /\.(c|m)?[tj]sx?$/;
 

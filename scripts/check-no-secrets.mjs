@@ -128,6 +128,7 @@ const TOKEN_PATTERNS = [
   { id: "openai_like_key", regex: /\bsk-[0-9A-Za-z]{40,}\b/g },
   { id: "aws_access_key_id", regex: /\bAKIA[0-9A-Z]{16}\b/g },
   { id: "google_api_key", regex: /\bAIza[0-9A-Za-z-_]{35}\b/g },
+  { id: "vercel_token", regex: /\bvercel_[0-9A-Za-z]{20,}\b/g },
 ];
 
 const ENV_ASSIGNMENT_NAMES = [

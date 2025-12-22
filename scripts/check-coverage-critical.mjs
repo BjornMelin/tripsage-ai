@@ -75,7 +75,34 @@ function walkSourceFiles(rootDir) {
 }
 
 function findMissingGroupFiles(coveredRelativePaths, roots) {
-  const expectedFiles = roots.flatMap((root) => walkSourceFiles(root));
+  const isErrno = (error, code) =>
+    Boolean(
+      error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error.code === code || String(error.code) === code)
+    );
+
+  const missingRoots = [];
+  const expectedFiles = roots.flatMap((root) => {
+    try {
+      return walkSourceFiles(root);
+    } catch (error) {
+      if (isErrno(error, "ENOENT")) {
+        missingRoots.push(root);
+        return [];
+      }
+      throw error;
+    }
+  });
+
+  if (missingRoots.length > 0) {
+    throw new Error(
+      "Critical surface root directory not found:\n" +
+        missingRoots.map((root) => `- ${root}`).join("\n") +
+        "\n\nUpdate scripts/check-coverage-critical.mjs GROUPS[].roots if surfaces were moved/renamed."
+    );
+  }
   const missing = expectedFiles.filter(
     (filePath) => !coveredRelativePaths.has(filePath)
   );
