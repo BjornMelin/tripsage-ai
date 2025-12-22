@@ -7,7 +7,7 @@ import "server-only";
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { toolRegistry } from "@ai/tools";
 import { wrapToolsWithUserId } from "@ai/tools/server/injection";
-import type { ModelMessage, ToolSet, UIMessage } from "ai";
+import type { ModelMessage, PrepareStepFunction, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
 import { z } from "zod";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
@@ -125,8 +125,18 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
 export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
+  config?: ChatAgentConfig & { useCallOptions?: false | undefined }
+): TripSageAgentResult<ToolSet, never>;
+export function createChatAgent(
+  deps: AgentDependencies,
+  messages: UIMessage[],
+  config: ChatAgentConfig & { useCallOptions: true }
+): TripSageAgentResult<ToolSet, ChatCallOptions>;
+export function createChatAgent(
+  deps: AgentDependencies,
+  messages: UIMessage[],
   config: ChatAgentConfig = {}
-): TripSageAgentResult<ToolSet, ChatCallOptions> {
+): TripSageAgentResult<ToolSet, ChatCallOptions> | TripSageAgentResult<ToolSet, never> {
   if (!deps.userId) {
     throw new Error(
       "Chat agent requires a valid userId for user-scoped tool operations"
@@ -189,48 +199,56 @@ export function createChatAgent(
     useCallOptions,
   });
 
-  // Use the centralized agent factory with AI SDK v6 features
-  return createTripSageAgent<ToolSet, ChatCallOptions>(deps, {
-    agentType: "router", // Chat agent acts as the main router
-    // AI SDK v6: Call options schema for dynamic configuration
-    ...(useCallOptions ? { callOptionsSchema: chatCallOptionsSchema } : {}),
+  const prepareStep: PrepareStepFunction<ToolSet> = ({
+    messages: stepMessages,
+    stepNumber,
+  }) => {
+    // Compress conversation history for longer loops to stay within context limits
+    if (stepMessages.length > 20) {
+      logger.info("Compressing chat context", {
+        originalCount: stepMessages.length,
+        stepNumber,
+      });
+      return {
+        messages: [
+          // Preserve earliest message to maintain conversational continuity
+          stepMessages[0],
+          ...stepMessages.slice(-15), // Keep last 15 messages
+        ],
+      };
+    }
+    return {};
+  };
+
+  const baseAgentConfig = {
+    agentType: "router" as const, // Chat agent acts as the main router
     defaultMessages: [],
     instructions,
     maxOutputTokens: maxTokens,
     maxSteps,
     name: "Chat Agent",
-    // AI SDK v6: Prepare call function for dynamic memory injection
-    ...(useCallOptions
-      ? {
-          prepareCall: ({ instructions: baseInstructions, options }) => {
-            // Inject memory summary into instructions at runtime
-            let finalInstructions = normalizeInstructions(baseInstructions);
-            if (options.memorySummary) {
-              finalInstructions += `\n\nUser memory (summary):\n${options.memorySummary}`;
-            }
-            return { instructions: finalInstructions };
-          },
-        }
-      : {}),
     // AI SDK v6: Prepare step for context management in long conversations
-    prepareStep: ({ messages: stepMessages, stepNumber }) => {
-      // Compress conversation history for longer loops to stay within context limits
-      if (stepMessages.length > 20) {
-        logger.info("Compressing chat context", {
-          originalCount: stepMessages.length,
-          stepNumber,
-        });
-        return {
-          messages: [
-            // Preserve earliest message to maintain conversational continuity
-            stepMessages[0],
-            ...stepMessages.slice(-15), // Keep last 15 messages
-          ],
-        };
-      }
-      return {};
-    },
+    prepareStep,
     tools: chatTools,
+  };
+
+  // Avoid exposing call options unless explicitly enabled (keeps downstream agent APIs type-safe).
+  if (!useCallOptions) {
+    return createTripSageAgent<ToolSet, never>(deps, baseAgentConfig);
+  }
+
+  // AI SDK v6: Call options schema + prepareCall enable dynamic memory injection.
+  return createTripSageAgent<ToolSet, ChatCallOptions>(deps, {
+    ...baseAgentConfig,
+    callOptionsSchema: chatCallOptionsSchema,
+    prepareCall: ({ instructions: baseInstructions, options }) => {
+      // Inject memory summary into instructions at runtime
+      let finalInstructions = normalizeInstructions(baseInstructions);
+      if (options.memorySummary) {
+        finalInstructions += `\n\nUser memory (summary):\n${options.memorySummary}`;
+      }
+      return { instructions: finalInstructions };
+    },
   });
 }
 

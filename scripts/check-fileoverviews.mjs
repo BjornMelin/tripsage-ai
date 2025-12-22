@@ -14,12 +14,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
+import { EXCLUDED_PATH_PARTS } from "./excluded-path-parts.mjs";
+
 const ALLOWLIST_MARKER = "fileoverview-ok:";
 const MODE = new Set(process.argv.slice(2)).has("--full") ? "full" : "diff";
 
 const CHECKED_FILE_RE = /\.(c|m)?[tj]sx?$/;
-
-const EXCLUDED_PATH_PARTS = ["/__tests__/", "src/test/", "src/mocks/", "/__mocks__/"];
 
 function isExcludedPath(filePath) {
   if (!filePath.startsWith("src/")) return true;
@@ -88,7 +88,17 @@ function readText(filePath) {
     return readFileSync(filePath, "utf8");
   } catch (error) {
     // Handle files deleted between listing and reading (rare race condition)
-    if (error.code === "ENOENT") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      // NodeJS errno codes are strings like "ENOENT"
+      (error.code === "ENOENT" || String(error.code) === "ENOENT")
+    ) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(
+        `[check-fileoverviews] skipped missing file: ${filePath} (${message})\n`
+      );
       return null;
     }
     throw error;

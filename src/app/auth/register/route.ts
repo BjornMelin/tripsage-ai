@@ -10,6 +10,8 @@ import { NextResponse } from "next/server";
 import { PayloadTooLargeError, parseFormDataWithLimit } from "@/lib/http/body";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+const MAX_REGISTRATION_FORM_SIZE = 16 * 1024; // 16 KB
+
 /**
  * Builds an absolute URL for a given path relative to the incoming request.
  *
@@ -44,7 +46,7 @@ function redirectWithError(request: NextRequest, message: string): NextResponse 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let formData: FormData;
   try {
-    formData = await parseFormDataWithLimit(request, 16 * 1024);
+    formData = await parseFormDataWithLimit(request, MAX_REGISTRATION_FORM_SIZE);
   } catch (error) {
     if (error instanceof PayloadTooLargeError) {
       return redirectWithError(request, "Registration details are too large");

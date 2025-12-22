@@ -1,22 +1,21 @@
 /** @vitest-environment node */
 
 import { NextRequest } from "next/server";
-import type { MockInstance } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AuthContext } from "@/lib/auth/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
-const REQUIRE_USER_MOCK = vi.hoisted(
-  () =>
-    vi.fn(async () => ({
+type RequireUserFn = (options?: { redirectTo?: string }) => Promise<AuthContext>;
+
+const REQUIRE_USER_MOCK = vi.hoisted(() =>
+  vi.fn<RequireUserFn>(async () =>
+    unsafeCast<AuthContext>({
       supabase: {
         auth: { resend: vi.fn(async () => ({ error: null })) },
       },
       user: { email: "user@example.com" },
-    })) as MockInstance<
-      (_args: { redirectTo: string }) => Promise<{
-        supabase: { auth: { resend: MockInstance } };
-        user: { email?: string };
-      }>
-    >
+    })
+  )
 );
 
 vi.mock("@/lib/auth/server", () => ({
@@ -31,10 +30,12 @@ describe("/auth/email/resend route", () => {
   });
 
   it("returns 400 when user email is missing", async () => {
-    REQUIRE_USER_MOCK.mockResolvedValueOnce({
-      supabase: { auth: { resend: vi.fn(async () => ({ error: null })) } },
-      user: { email: undefined },
-    });
+    REQUIRE_USER_MOCK.mockResolvedValueOnce(
+      unsafeCast<AuthContext>({
+        supabase: { auth: { resend: vi.fn(async () => ({ error: null })) } },
+        user: { email: undefined },
+      })
+    );
 
     const res = await POST(new NextRequest("http://localhost/auth/email/resend"));
     expect(res.status).toBe(400);
@@ -43,10 +44,12 @@ describe("/auth/email/resend route", () => {
 
   it("returns 400 when resend fails", async () => {
     const resend = vi.fn(async () => ({ error: { message: "Resend failed" } }));
-    REQUIRE_USER_MOCK.mockResolvedValueOnce({
-      supabase: { auth: { resend } },
-      user: { email: "user@example.com" },
-    });
+    REQUIRE_USER_MOCK.mockResolvedValueOnce(
+      unsafeCast<AuthContext>({
+        supabase: { auth: { resend } },
+        user: { email: "user@example.com" },
+      })
+    );
 
     const res = await POST(new NextRequest("http://localhost/auth/email/resend"));
     expect(res.status).toBe(400);
@@ -58,10 +61,12 @@ describe("/auth/email/resend route", () => {
 
   it("returns ok:true on success", async () => {
     const resend = vi.fn(async () => ({ error: null }));
-    REQUIRE_USER_MOCK.mockResolvedValueOnce({
-      supabase: { auth: { resend } },
-      user: { email: "user@example.com" },
-    });
+    REQUIRE_USER_MOCK.mockResolvedValueOnce(
+      unsafeCast<AuthContext>({
+        supabase: { auth: { resend } },
+        user: { email: "user@example.com" },
+      })
+    );
 
     const res = await POST(new NextRequest("http://localhost/auth/email/resend"));
     expect(res.status).toBe(200);

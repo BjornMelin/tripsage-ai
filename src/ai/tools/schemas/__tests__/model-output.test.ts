@@ -1,5 +1,3 @@
-/** @vitest-environment node */
-
 import { activityModelOutputSchema } from "@ai/tools/schemas/activities";
 import { flightModelOutputSchema } from "@ai/tools/schemas/flights";
 import { describe, expect, it } from "vitest";

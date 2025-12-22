@@ -9,8 +9,8 @@ import {
   validateChatMessages,
 } from "@ai/agents";
 import type { ProviderResolution } from "@schemas/providers";
-import type { Agent, ToolSet, UIMessage } from "ai";
-import { createAgentUIStreamResponse, type Output } from "ai";
+import type { UIMessage } from "ai";
+import { createAgentUIStreamResponse } from "ai";
 import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
@@ -175,7 +175,7 @@ export async function handleChatStream(
   }
 
   // Configure the chat agent
-  const chatConfig: ChatAgentConfig = {
+  const chatConfig = {
     desiredMaxTokens:
       Number.isFinite(payload.desiredMaxTokens) && (payload.desiredMaxTokens ?? 0) > 0
         ? Math.floor(payload.desiredMaxTokens as number)
@@ -183,7 +183,8 @@ export async function handleChatStream(
     maxSteps: 10,
     memorySummary,
     systemPrompt: CHAT_DEFAULT_SYSTEM_PROMPT,
-  };
+    useCallOptions: false,
+  } satisfies ChatAgentConfig & { useCallOptions?: false };
 
   deps.logger?.info?.("chat_stream:start", {
     model: provider.modelId,
@@ -205,14 +206,8 @@ export async function handleChatStream(
   );
 
   // Use createAgentUIStreamResponse for proper agent loop handling
-  // Cast agent via unknown - the chat agent doesn't use callOptionsSchema
-  // so it's runtime-compatible with Agent<never, ToolSet, never>
   const response = await createAgentUIStreamResponse({
-    agent: agent as unknown as Agent<
-      never,
-      ToolSet,
-      ReturnType<typeof Output.object<unknown>>
-    >,
+    agent,
 
     // Handle errors during streaming
     onError: (err) => {

@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { Ratelimit } from "@upstash/ratelimit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const GET_ENV_VAR = vi.hoisted(() => vi.fn());
@@ -46,7 +47,25 @@ describe("buildRateLimiter (keys)", () => {
     expect(() => buildRateLimiter()).toThrow(RateLimiterConfigurationError);
     expect(RECORD_EVENT).toHaveBeenCalledWith(
       "api.keys.rate_limit_config_error",
-      expect.objectContaining({ level: "error" })
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          hasToken: false,
+          hasUrl: false,
+          message: expect.stringContaining("UPSTASH_REDIS_REST_URL"),
+        }),
+        level: "error",
+      })
     );
+  });
+
+  it("returns a Ratelimit instance when Redis is available", () => {
+    GET_ENV_VAR.mockReturnValue("production");
+    GET_REDIS.mockReturnValue({});
+
+    const limiter = buildRateLimiter();
+
+    expect(limiter).toBeDefined();
+    expect(limiter).toBeInstanceOf(Ratelimit);
+    expect(RECORD_EVENT).not.toHaveBeenCalled();
   });
 });

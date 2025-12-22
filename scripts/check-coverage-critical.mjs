@@ -11,6 +11,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
+import { EXCLUDED_PATH_PARTS } from "./excluded-path-parts.mjs";
+
 const DEFAULT_COVERAGE_PATH = "coverage/coverage-final.json";
 
 const coverPath = process.argv[2] ?? DEFAULT_COVERAGE_PATH;
@@ -46,8 +48,6 @@ function buildCoveredRelativePaths(coverage) {
   return set;
 }
 
-// Consistent with check-fileoverviews.mjs - no leading slashes for src/ prefixed paths
-const EXCLUDED_PATH_PARTS = ["/__tests__/", "src/test/", "src/mocks/", "/__mocks__/"];
 const INCLUDED_FILE_RE = /\.(c|m)?[tj]sx?$/;
 
 function isExcludedSourceFile(filePath) {

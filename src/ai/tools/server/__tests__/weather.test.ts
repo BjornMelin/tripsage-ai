@@ -1,13 +1,11 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { server } from "@/test/msw/server";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
-const mockFetchWithRetry = vi.hoisted(() => vi.fn());
 const mockGetServerEnvVar = vi.hoisted(() => vi.fn());
-
-vi.mock("@/lib/http/retry", () => ({
-  fetchWithRetry: (...args: unknown[]) => mockFetchWithRetry(...args),
-}));
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (...args: unknown[]) => mockGetServerEnvVar(...args),
@@ -42,13 +40,6 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
   );
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    headers: { "content-type": "application/json" },
-    status,
-  });
-}
-
 describe("getCurrentWeather", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,25 +49,29 @@ describe("getCurrentWeather", () => {
   test("builds correct URL for city query and maps response fields", async () => {
     const { getCurrentWeather } = await import("@ai/tools/server/weather");
 
-    mockFetchWithRetry.mockResolvedValue(
-      jsonResponse({
-        clouds: { all: 20 },
-        main: {
-          feels_like: 21.8,
-          humidity: 65,
-          pressure: 1013,
-          temp: 22.5,
-          temp_max: 25.0,
-          temp_min: 20.0,
-        },
-        name: "Paris",
-        rain: { "1h": 0.5 },
-        snow: { "3h": 0.2 },
-        sys: { country: "FR", sunrise: 123, sunset: 456 },
-        timezone: 3600,
-        visibility: 10000,
-        weather: [{ description: "clear sky", icon: "01d" }],
-        wind: { deg: 180, gust: 5.2, speed: 3.5 },
+    let lastRequestUrl: URL | undefined;
+    server.use(
+      http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
+        lastRequestUrl = new URL(request.url);
+        return HttpResponse.json({
+          clouds: { all: 20 },
+          main: {
+            feels_like: 21.8,
+            humidity: 65,
+            pressure: 1013,
+            temp: 22.5,
+            temp_max: 25.0,
+            temp_min: 20.0,
+          },
+          name: "Paris",
+          rain: { "1h": 0.5 },
+          snow: { "3h": 0.2 },
+          sys: { country: "FR", sunrise: 123, sunset: 456 },
+          timezone: 3600,
+          visibility: 10000,
+          weather: [{ description: "clear sky", icon: "01d" }],
+          wind: { deg: 180, gust: 5.2, speed: 3.5 },
+        });
       })
     );
 
@@ -95,12 +90,13 @@ describe("getCurrentWeather", () => {
       mockContext
     );
 
-    const url = String(mockFetchWithRetry.mock.calls[0]?.[0] ?? "");
-    expect(url).toContain("https://api.openweathermap.org/data/2.5/weather");
-    expect(url).toContain("q=Paris");
-    expect(url).toContain("units=metric");
-    expect(url).toContain("lang=en");
-    expect(url).toContain("appid=test-key");
+    expect(lastRequestUrl?.toString()).toContain(
+      "https://api.openweathermap.org/data/2.5/weather"
+    );
+    expect(lastRequestUrl?.searchParams.get("q")).toBe("Paris");
+    expect(lastRequestUrl?.searchParams.get("units")).toBe("metric");
+    expect(lastRequestUrl?.searchParams.get("lang")).toBe("en");
+    expect(lastRequestUrl?.searchParams.get("appid")).toBe("test-key");
 
     expect(out).toMatchObject({
       city: "Paris",
@@ -135,8 +131,12 @@ describe("getCurrentWeather", () => {
 
   test("uses coordinates when provided", async () => {
     const { getCurrentWeather } = await import("@ai/tools/server/weather");
-    mockFetchWithRetry.mockResolvedValue(
-      jsonResponse({ main: { temp: 20 }, name: "X" })
+    let lastRequestUrl: URL | undefined;
+    server.use(
+      http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
+        lastRequestUrl = new URL(request.url);
+        return HttpResponse.json({ main: { temp: 20 }, name: "X" });
+      })
     );
 
     const execute = getCurrentWeather.execute;
@@ -154,15 +154,18 @@ describe("getCurrentWeather", () => {
       mockContext
     );
 
-    const url = String(mockFetchWithRetry.mock.calls[0]?.[0] ?? "");
-    expect(url).toContain("lat=48.8566");
-    expect(url).toContain("lon=2.3522");
+    expect(lastRequestUrl?.searchParams.get("lat")).toBe("48.8566");
+    expect(lastRequestUrl?.searchParams.get("lon")).toBe("2.3522");
   });
 
   test("uses zip when provided", async () => {
     const { getCurrentWeather } = await import("@ai/tools/server/weather");
-    mockFetchWithRetry.mockResolvedValue(
-      jsonResponse({ main: { temp: 20 }, name: "X" })
+    let lastRequestUrl: URL | undefined;
+    server.use(
+      http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
+        lastRequestUrl = new URL(request.url);
+        return HttpResponse.json({ main: { temp: 20 }, name: "X" });
+      })
     );
 
     const execute = getCurrentWeather.execute;
@@ -180,8 +183,7 @@ describe("getCurrentWeather", () => {
       mockContext
     );
 
-    const url = String(mockFetchWithRetry.mock.calls[0]?.[0] ?? "");
-    expect(url).toContain("zip=10001");
+    expect(lastRequestUrl?.searchParams.get("zip")).toBe("10001");
   });
 
   test("fails closed when not configured", async () => {
@@ -208,30 +210,78 @@ describe("getCurrentWeather", () => {
     ).rejects.toMatchObject({ code: "weather_not_configured" });
   });
 
-  test.each([
-    ["fetch_timeout", "weather_timeout"],
-    ["fetch_failed", "weather_failed"],
-  ])("maps %s to domain error code", async (code, expected) => {
-    const { getCurrentWeather } = await import("@ai/tools/server/weather");
-    mockFetchWithRetry.mockRejectedValue(Object.assign(new Error("boom"), { code }));
+  test(
+    "maps fetch_timeout to weather_timeout",
+    withFakeTimers(async () => {
+      const { getCurrentWeather } = await import("@ai/tools/server/weather");
 
-    const execute = getCurrentWeather.execute;
-    if (!execute) throw new Error("getCurrentWeather.execute is undefined");
+      server.use(
+        http.get(
+          "https://api.openweathermap.org/data/2.5/weather",
+          () => new Promise<Response>(() => undefined)
+        )
+      );
 
-    await expect(
-      execute(
-        {
-          city: "Paris",
-          coordinates: null,
-          fresh: true,
-          lang: null,
-          units: "metric",
-          zip: null,
-        },
-        mockContext
-      )
-    ).rejects.toMatchObject({ code: expected });
-  });
+      const execute = getCurrentWeather.execute;
+      if (!execute) throw new Error("getCurrentWeather.execute is undefined");
+
+      const pendingRequest = Promise.resolve(
+        execute(
+          {
+            city: "Paris",
+            coordinates: null,
+            fresh: true,
+            lang: null,
+            units: "metric",
+            zip: null,
+          },
+          mockContext
+        )
+      );
+
+      pendingRequest.catch(() => undefined);
+
+      await vi.advanceTimersByTimeAsync(12_500);
+
+      await expect(pendingRequest).rejects.toMatchObject({ code: "weather_timeout" });
+    })
+  );
+
+  test(
+    "maps fetch_failed to weather_failed",
+    withFakeTimers(async () => {
+      const { getCurrentWeather } = await import("@ai/tools/server/weather");
+
+      server.use(
+        http.get("https://api.openweathermap.org/data/2.5/weather", () => {
+          throw new Error("Network error");
+        })
+      );
+
+      const execute = getCurrentWeather.execute;
+      if (!execute) throw new Error("getCurrentWeather.execute is undefined");
+
+      const pendingRequest = Promise.resolve(
+        execute(
+          {
+            city: "Paris",
+            coordinates: null,
+            fresh: true,
+            lang: null,
+            units: "metric",
+            zip: null,
+          },
+          mockContext
+        )
+      );
+
+      pendingRequest.catch(() => undefined);
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(pendingRequest).rejects.toMatchObject({ code: "weather_failed" });
+    })
+  );
 
   test.each([
     [429, "weather_rate_limited"],
@@ -240,7 +290,12 @@ describe("getCurrentWeather", () => {
     [500, "weather_failed"],
   ])("maps HTTP %s to %s", async (status, expected) => {
     const { getCurrentWeather } = await import("@ai/tools/server/weather");
-    mockFetchWithRetry.mockResolvedValue(new Response("nope", { status }));
+
+    server.use(
+      http.get("https://api.openweathermap.org/data/2.5/weather", () => {
+        return new HttpResponse("nope", { status });
+      })
+    );
 
     const execute = getCurrentWeather.execute;
     if (!execute) throw new Error("getCurrentWeather.execute is undefined");

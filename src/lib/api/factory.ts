@@ -8,7 +8,13 @@ import type { AgentDependencies } from "@ai/agents/types";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { Agent, ToolSet } from "ai";
+import type {
+  Agent,
+  FinishReason,
+  LanguageModelResponseMetadata,
+  LanguageModelUsage,
+  ToolSet,
+} from "ai";
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
@@ -604,15 +610,9 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 /**
  * Represents the output specification for an AI SDK Agent.
  *
- * This mirrors the internal `Output<OUTPUT, PARTIAL>` interface from the AI SDK.
- * We define it here because the SDK exports `Output` as a namespace with factory
- * functions (e.g., `Output.text()`, `Output.object()`) rather than as a type.
- *
- * The Agent interface uses `OUTPUT extends Output` internally, but since we can't
- * import that type directly, we provide a compatible interface for type safety
- * in our generic factory functions.
- *
- * @see https://sdk.vercel.ai/docs/reference/ai-sdk-core/agent
+ * This mirrors the AI SDK `Output<OUTPUT, PARTIAL>` interface. The `ai` package
+ * exports `Output` as a runtime namespace (factory functions) rather than a
+ * directly importable type, so we use a structural type compatible with the SDK.
  */
 type AgentOutput<OutputType = unknown, PartialType = unknown> = {
   responseFormat: PromiseLike<
@@ -620,7 +620,11 @@ type AgentOutput<OutputType = unknown, PartialType = unknown> = {
   >;
   parseCompleteOutput: (
     options: { text: string },
-    context: unknown
+    context: {
+      response: LanguageModelResponseMetadata;
+      usage: LanguageModelUsage;
+      finishReason: FinishReason;
+    }
   ) => Promise<OutputType>;
   parsePartialOutput: (options: {
     text: string;
@@ -720,20 +724,13 @@ export function createAgentRoute<
           input
         );
 
-        const { createAgentUIStreamResponse, Output } = await import("ai");
+        const { createAgentUIStreamResponse } = await import("ai");
 
         const { createErrorHandler } = await import("@/lib/agents/error-recovery");
 
-        // Cast agent via unknown to satisfy createAgentUIStreamResponse type constraints
-        // The agent is runtime-compatible but TypeScript needs the explicit cast
-        type StreamableAgent = Agent<
-          never,
-          ToolSet,
-          ReturnType<typeof Output.object<unknown>>
-        >;
         return createAgentUIStreamResponse({
           abortSignal: req.signal,
-          agent: agent as unknown as StreamableAgent,
+          agent,
           onError: createErrorHandler(),
           uiMessages: defaultMessages,
         });
