@@ -57,6 +57,9 @@ const mockCreateAgentUIStreamResponse = vi.hoisted(() =>
 );
 vi.mock("ai", () => ({
   createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
+  InvalidToolInputError: { isInstance: () => false },
+  NoSuchToolError: { isInstance: () => false },
+  Output: { object: () => ({}) },
 }));
 
 // Mock Redis
@@ -115,7 +118,7 @@ describe("/api/agents/accommodations route", () => {
     expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         agent: expect.any(Object),
-        messages: expect.any(Array),
+        uiMessages: expect.any(Array),
       })
     );
   });

@@ -10,7 +10,7 @@ import type {
   MemoryAdapterContext,
   MemoryAdapterExecutionResult,
   MemoryIntent,
-} from "./orchestrator";
+} from "./types";
 
 /**
  * Cached Mem0 client wrapper to avoid recreating MemoryClient instances.

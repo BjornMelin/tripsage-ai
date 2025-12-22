@@ -14,7 +14,7 @@ import type {
   MemoryAdapterContext,
   MemoryAdapterExecutionResult,
   MemoryIntent,
-} from "./orchestrator";
+} from "./types";
 
 type AdminClient = SupabaseClient<Database>;
 type MemoryTurnRow = Database["memories"]["Tables"]["turns"]["Row"];

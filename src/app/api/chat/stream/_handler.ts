@@ -9,8 +9,8 @@ import {
   validateChatMessages,
 } from "@ai/agents";
 import type { ProviderResolution } from "@schemas/providers";
-import type { UIMessage } from "ai";
-import { createAgentUIStreamResponse } from "ai";
+import type { Agent, ToolSet, UIMessage } from "ai";
+import { createAgentUIStreamResponse, type Output } from "ai";
 import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
@@ -205,9 +205,14 @@ export async function handleChatStream(
   );
 
   // Use createAgentUIStreamResponse for proper agent loop handling
+  // Cast agent via unknown - the chat agent doesn't use callOptionsSchema
+  // so it's runtime-compatible with Agent<never, ToolSet, never>
   const response = await createAgentUIStreamResponse({
-    agent,
-    messages,
+    agent: agent as unknown as Agent<
+      never,
+      ToolSet,
+      ReturnType<typeof Output.object<unknown>>
+    >,
 
     // Handle errors during streaming
     onError: (err) => {
@@ -269,6 +274,7 @@ export async function handleChatStream(
         }
       }
     },
+    uiMessages: messages,
   });
 
   return response;

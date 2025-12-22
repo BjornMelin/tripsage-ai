@@ -1,12 +1,16 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { setRateLimitFactoryForTests } from "@/lib/api/factory";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
   resolveAgentConfig: vi.fn(async () => ({
@@ -87,6 +91,9 @@ const mockCreateAgentUIStreamResponse = vi.fn(() => {
 });
 vi.mock("ai", () => ({
   createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
+  InvalidToolInputError: { isInstance: () => false },
+  NoSuchToolError: { isInstance: () => false },
+  Output: { object: () => ({}) },
 }));
 
 // Mock Redis
@@ -109,6 +116,9 @@ describe("/api/agents/flights route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setRateLimitFactoryForTests(async () => mockLimitFn());
+    setSupabaseFactoryForTests(async () =>
+      createMockSupabaseClient({ user: { id: "user-1" } })
+    );
     mockLimitFn.mockResolvedValue({
       limit: 30,
       remaining: 29,
@@ -119,6 +129,7 @@ describe("/api/agents/flights route", () => {
 
   afterEach(() => {
     setRateLimitFactoryForTests(null);
+    setSupabaseFactoryForTests(null);
   });
 
   it("streams when valid and enabled", async () => {
@@ -141,7 +152,7 @@ describe("/api/agents/flights route", () => {
     expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         agent: expect.any(Object),
-        messages: expect.any(Array),
+        uiMessages: expect.any(Array),
       })
     );
   });

@@ -720,15 +720,22 @@ export function createAgentRoute<
           input
         );
 
-        const { createAgentUIStreamResponse } = await import("ai");
+        const { createAgentUIStreamResponse, Output } = await import("ai");
 
         const { createErrorHandler } = await import("@/lib/agents/error-recovery");
 
+        // Cast agent via unknown to satisfy createAgentUIStreamResponse type constraints
+        // The agent is runtime-compatible but TypeScript needs the explicit cast
+        type StreamableAgent = Agent<
+          never,
+          ToolSet,
+          ReturnType<typeof Output.object<unknown>>
+        >;
         return createAgentUIStreamResponse({
           abortSignal: req.signal,
-          agent,
-          messages: defaultMessages,
+          agent: agent as unknown as StreamableAgent,
           onError: createErrorHandler(),
+          uiMessages: defaultMessages,
         });
       }
     );

@@ -241,8 +241,8 @@ export { CHAT_DEFAULT_SYSTEM_PROMPT };
  * Converts UI messages to model messages for agent context.
  *
  * @param messages - UI messages to convert.
- * @returns Model messages for agent prompt.
+ * @returns Promise resolving to model messages for agent prompt.
  */
-export function toModelMessages(messages: UIMessage[]): ModelMessage[] {
+export function toModelMessages(messages: UIMessage[]): Promise<ModelMessage[]> {
   return convertToModelMessages(messages);
 }

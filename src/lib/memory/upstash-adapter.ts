@@ -15,7 +15,7 @@ import type {
   MemoryAdapterContext,
   MemoryAdapterExecutionResult,
   MemoryIntent,
-} from "./orchestrator";
+} from "./types";
 
 async function handleOnTurnCommitted(
   intent: Extract<MemoryIntent, { type: "onTurnCommitted" }>
