@@ -1,7 +1,5 @@
 /**
- * @fileoverview Hook that wires Supabase realtime agent status events into the agent
- * status store via the shared `useRealtimeChannel` helper. All direct channel
- * management has been deleted per FINAL-ONLY policy.
+ * @fileoverview Hook that wires Supabase realtime agent status events into the agent status store via the shared `useRealtimeChannel` helper. All direct channel management has been deleted per FINAL-ONLY policy.
  */
 
 "use client";

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Helpers for converting chat payloads into memory turns
- * and persisting them through the orchestrator.
+ * @fileoverview Helpers for converting chat payloads into memory turns and persisting them through the orchestrator.
  */
 
 import "server-only";

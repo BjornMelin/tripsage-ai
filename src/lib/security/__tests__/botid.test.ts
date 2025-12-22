@@ -7,6 +7,13 @@ vi.mock("botid/server", () => ({
   checkBotId: vi.fn(),
 }));
 
+const EMIT_ALERT_ONCE = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/telemetry/degraded-mode", () => ({
+  emitOperationalAlertOncePerWindow: (...args: unknown[]) => EMIT_ALERT_ONCE(...args),
+  resetDegradedModeAlertStateForTests: () => undefined,
+}));
+
 // Mock the logger to avoid side effects
 vi.mock("@/lib/telemetry/logger", () => ({
   createServerLogger: () => ({
@@ -231,6 +238,12 @@ describe("assertHumanOrThrow", () => {
     mockCheckBotId.mockRejectedValue(networkError);
 
     await expect(assertHumanOrThrow("chat.stream")).rejects.toThrow(networkError);
+    expect(EMIT_ALERT_ONCE).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "botid.service_failure",
+        severity: "error",
+      })
+    );
   });
 
   it("handles responses without verifiedBot fields", async () => {

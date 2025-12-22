@@ -1,6 +1,5 @@
 /**
- * @fileoverview Search functionality schemas with validation.
- * Includes search parameters, results, filters, and form validation for flights, accommodations, activities, and destinations.
+ * @fileoverview Search functionality schemas with validation. Includes search parameters, results, filters, and form validation for flights, accommodations, activities, and destinations.
  */
 
 import { z } from "zod";

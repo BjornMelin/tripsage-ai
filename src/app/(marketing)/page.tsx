@@ -1,7 +1,5 @@
 /**
- * @fileoverview Landing page component for TripSage AI, showcasing the main marketing
- * content, feature highlights, and call-to-action buttons for user registration
- * and demo access.
+ * @fileoverview Landing page component for TripSage AI, showcasing the main marketing content, feature highlights, and call-to-action buttons for user registration and demo access.
  */
 
 import Image from "next/image";

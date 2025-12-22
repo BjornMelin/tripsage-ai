@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hooks for currency management and conversion.
- *
- * Provides hooks for managing currencies, exchange rates, and currency conversion
- * with local state management and API synchronization.
  */
 
 "use client";

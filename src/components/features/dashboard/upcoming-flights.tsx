@@ -1,9 +1,5 @@
 /**
  * @fileoverview Upcoming flights dashboard component.
- *
- * Displays a card-based list of upcoming flights with departure/arrival times,
- * flight status, duration, and pricing information. Integrates with trip data
- * and provides links to associated trips and flight search functionality.
  */
 
 "use client";

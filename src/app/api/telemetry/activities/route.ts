@@ -1,7 +1,5 @@
 /**
  * @fileoverview Telemetry endpoint for activity booking events.
- *
- * Allows client-side booking interactions to be recorded via OTEL spans.
  */
 
 import "server-only";

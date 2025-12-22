@@ -1,8 +1,5 @@
 /**
  * @fileoverview Flight search API route.
- *
- * POST /api/flights/search
- * Searches for flights using Duffel provider.
  */
 
 import "server-only";

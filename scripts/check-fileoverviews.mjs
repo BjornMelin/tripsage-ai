@@ -5,7 +5,8 @@
  * to a single, stable sentence. Detailed docs belong in `docs/` (not per-file headers).
  *
  * Notes:
- * - Only checks files changed in the current diff (origin/main...HEAD or main...HEAD).
+ * - Only checks files changed in the current diff (BASE_REF...HEAD, defaulting to origin/main...HEAD or main...HEAD).
+ * - Use `--full` to scan all tracked `src/**` files.
  * - Excludes tests/mocks.
  * - Allow an exception by adding `fileoverview-ok:` on the `@fileoverview` line with a short justification.
  */
@@ -14,6 +15,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 const ALLOWLIST_MARKER = "fileoverview-ok:";
+const MODE = new Set(process.argv.slice(2)).has("--full") ? "full" : "diff";
 
 const CHECKED_FILE_RE = /\.(c|m)?[tj]sx?$/;
 
@@ -33,8 +35,24 @@ function runGitDiffNameOnly(range) {
   });
 }
 
+function getTrackedFiles() {
+  const out = execFileSync("git", ["ls-files", "--", "src"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function getChangedFiles() {
-  const candidates = ["origin/main...HEAD", "main...HEAD"];
+  const configuredBase = process.env.BASE_REF?.trim();
+  const candidates = [
+    ...(configuredBase ? [`${configuredBase}...HEAD`] : []),
+    "origin/main...HEAD",
+    "main...HEAD",
+  ];
   const errors = [];
 
   for (const range of candidates) {
@@ -168,7 +186,8 @@ function validateFileoverviewBlock(block) {
   return { ok: true };
 }
 
-const changedFiles = getChangedFiles().filter((filePath) => !isExcludedPath(filePath));
+const candidateFiles = MODE === "full" ? getTrackedFiles() : getChangedFiles();
+const changedFiles = candidateFiles.filter((filePath) => !isExcludedPath(filePath));
 
 const violations = [];
 
@@ -195,7 +214,9 @@ for (const filePath of changedFiles) {
 
 if (violations.length > 0) {
   process.stderr.write(
-    "Found non-compliant @fileoverview headers in changed non-test code.\n\n" +
+    `Found non-compliant @fileoverview headers in ${
+      MODE === "full" ? "tracked" : "changed"
+    } non-test code.\n\n` +
       "Required format:\n" +
       "  /**\n" +
       "   * @fileoverview One short sentence.\n" +
@@ -213,4 +234,8 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-process.stdout.write("OK: no @fileoverview drift detected in changed non-test code.\n");
+process.stdout.write(
+  `OK: no @fileoverview drift detected in ${
+    MODE === "full" ? "tracked" : "changed"
+  } non-test code.\n`
+);

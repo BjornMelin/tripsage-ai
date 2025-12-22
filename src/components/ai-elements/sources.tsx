@@ -1,6 +1,5 @@
 /**
- * @fileoverview AI Elements Sources components.
- * Minimal implementation using shadcn/ui Popover primitives.
+ * @fileoverview AI Elements Sources components. Minimal implementation using shadcn/ui Popover primitives.
  */
 
 "use client";

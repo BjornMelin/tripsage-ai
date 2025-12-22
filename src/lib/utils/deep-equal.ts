@@ -1,8 +1,5 @@
 /**
  * @fileoverview Deep equality for JSON-like values with guardrails.
- *
- * Used for dirty-checking persisted params without relying on stringification.
- * Treats `undefined` object properties as absent (matching JSON serialization).
  */
 
 import { isPlainObject } from "@/lib/utils/type-guards";

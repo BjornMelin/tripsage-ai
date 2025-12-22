@@ -1,6 +1,5 @@
 /**
- * @fileoverview Minimal AI SDK v6 demo page rendering a conversation area and
- * a PromptInput from AI Elements, wired to the demo streaming route.
+ * @fileoverview Minimal AI SDK v6 demo page rendering a conversation area and a PromptInput from AI Elements, wired to the demo streaming route.
  */
 
 "use client";

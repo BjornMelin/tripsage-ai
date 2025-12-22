@@ -1,7 +1,5 @@
 /**
  * @fileoverview Type definitions for activities domain.
- *
- * Reuses Zod schemas from @schemas/search.ts to avoid duplication.
  */
 
 import type { Activity, ActivitySearchParams } from "@schemas/search";

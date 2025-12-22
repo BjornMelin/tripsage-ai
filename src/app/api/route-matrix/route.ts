@@ -1,7 +1,5 @@
 /**
  * @fileoverview Google Maps Routes API computeRouteMatrix endpoint.
- *
- * Server-side route for Routes API computeRouteMatrix with quota-aware batching.
  */
 
 import "server-only";

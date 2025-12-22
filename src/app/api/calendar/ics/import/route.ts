@@ -1,8 +1,5 @@
 /**
  * @fileoverview ICS import endpoint.
- *
- * Parses ICS file/text and returns events payload. Optionally validates
- * without writing to calendar (requires approval for writes).
  */
 
 import "server-only";

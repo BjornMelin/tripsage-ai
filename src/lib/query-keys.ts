@@ -1,6 +1,5 @@
 /**
- * @fileoverview Query key factory for consistent caching patterns across the
- * application. Follows React Query v5 key composition guidance.
+ * @fileoverview Query key factory for consistent caching patterns across the application. Follows React Query v5 key composition guidance.
  */
 
 import type { TimeWindow } from "@schemas/dashboard";

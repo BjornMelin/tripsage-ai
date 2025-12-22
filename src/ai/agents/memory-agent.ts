@@ -1,15 +1,5 @@
 /**
  * @fileoverview Memory update agent using AI SDK v6 streaming.
- *
- * Wraps memory tools (addConversationMemory) with guardrails (rate limiting,
- * telemetry) and executes streaming text generation to confirm memory writes.
- *
- * Note: memory writes are intentionally not cached to avoid cross-user cache
- * collisions and unintended idempotency.
- *
- * Note: This agent uses streamText directly, not ToolLoopAgent, because
- * memory persistence is a batch operation followed by a summary - not
- * an agentic multi-step workflow.
  */
 
 import "server-only";

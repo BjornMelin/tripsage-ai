@@ -1,6 +1,5 @@
 /**
- * @fileoverview Realtime connection and backoff configuration schemas.
- * Includes connection status, backoff configuration, and broadcast payload schemas.
+ * @fileoverview Realtime connection and backoff configuration schemas. Includes connection status, backoff configuration, and broadcast payload schemas.
  */
 
 import { z } from "zod";

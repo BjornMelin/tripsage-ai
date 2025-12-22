@@ -1,11 +1,5 @@
 /**
  * @fileoverview Centralized rate limit registry for API routes.
- *
- * Single source of truth for route-level rate limit configurations across all
- * API routes. Used by withApiGuards factory. Per ADR-0032.
- *
- * Note: Agent tool-level rate limiting (within agent execution) is handled by
- * lib/ratelimit/config.ts. This registry is for HTTP route-level limits only.
  */
 
 /**

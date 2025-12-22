@@ -1,10 +1,5 @@
 /**
  * @fileoverview Shared AI prompt sanitization utilities.
- *
- * Provides functions to sanitize user inputs before interpolation into AI prompts,
- * preventing prompt injection attacks. Can be used across all AI-generating routes.
- *
- * @see https://owasp.org/www-project-top-ten/ (A03:2021 - Injection)
  */
 
 /**

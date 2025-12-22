@@ -1,6 +1,5 @@
 /**
- * @fileoverview Agent configuration version history API.
- * Route: GET /api/config/agents/[agentType]/versions
+ * @fileoverview Agent configuration version history API. Route: GET /api/config/agents/[agentType]/versions
  */
 
 import "server-only";

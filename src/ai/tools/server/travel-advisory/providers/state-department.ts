@@ -1,8 +1,5 @@
 /**
  * @fileoverview US State Department Travel Advisories API provider.
- *
- * Implements AdvisoryProvider for the US State Department's
- * official travel advisories API.
  */
 
 import { createServerLogger } from "@/lib/telemetry/logger";

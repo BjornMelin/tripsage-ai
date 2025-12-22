@@ -1,6 +1,5 @@
 /**
- * @fileoverview Authentication-level error boundary for the auth directory.
- * This catches errors within the auth layout and pages.
+ * @fileoverview Authentication-level error boundary for the auth directory. This catches errors within the auth layout and pages.
  */
 
 "use client";

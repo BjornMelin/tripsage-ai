@@ -1,6 +1,5 @@
 /**
- * @fileoverview BYOK delete route. Removes a user API key from Supabase Vault.
- * Route: DELETE /api/keys/[service]
+ * @fileoverview BYOK delete route. Removes a user API key from Supabase Vault. Route: DELETE /api/keys/[service]
  */
 
 import "server-only";

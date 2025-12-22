@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zustand store for trip itinerary (destinations) state.
- *
- * Trip core fields are owned by the backend and accessed via React Query (`use-trips`).
- * This store only persists client-side itinerary/destination planning data keyed by trip id.
  */
 
 "use client";

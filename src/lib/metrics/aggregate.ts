@@ -1,9 +1,5 @@
 /**
  * @fileoverview Dashboard metrics aggregation.
- *
- * Aggregates API metrics and trip statistics for the dashboard.
- * Implements cache-aside pattern with Upstash Redis.
- * Uses OpenTelemetry for tracing.
  */
 
 import "server-only";

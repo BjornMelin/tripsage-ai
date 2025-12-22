@@ -1,8 +1,5 @@
 /**
  * @fileoverview Upstash adapter for memory orchestrator.
- *
- * Delegates durable memory sync operations to QStash-backed jobs and uses
- * Upstash Redis for best-effort ephemeral state when available.
  */
 
 import "server-only";

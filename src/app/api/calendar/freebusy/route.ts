@@ -1,7 +1,5 @@
 /**
  * @fileoverview Free/busy query endpoint.
- *
- * Queries Google Calendar free/busy information for specified calendars.
  */
 
 import "server-only";

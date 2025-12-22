@@ -1,6 +1,5 @@
 /**
- * @fileoverview Reusable range validation schemas for min/max constraints.
- * Used for price ranges, duration ranges, and other numeric min/max validations.
+ * @fileoverview Reusable range validation schemas for min/max constraints. Used for price ranges, duration ranges, and other numeric min/max validations.
  */
 
 import { z } from "zod";

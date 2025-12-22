@@ -1,11 +1,5 @@
 /**
- * @fileoverview Hardened Next.js route handler for streaming chat responses.
- * - SSR auth via Supabase cookies
- * - Upstash Ratelimit sliding window (40/min)
- * - Provider registry + BYOK (SSR-only)
- * - Token clamping + usage metadata via messageMetadata
- * - Attachments mapping (image-only) and basic validation
- * - Minimal structured logs with redaction (no prompt logging)
+ * @fileoverview Hardened Next.js route handler for streaming chat responses. - SSR auth via Supabase cookies - Upstash Ratelimit sliding window (40/min) - Provider registry + BYOK (SSR-only) - Token clamping + usage metadata via messageMetadata - Attachments mapping (image-only) and basic validation - Minimal structured logs with redaction (no prompt logging)
  */
 
 import "server-only";

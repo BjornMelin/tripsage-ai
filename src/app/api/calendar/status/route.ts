@@ -1,8 +1,5 @@
 /**
  * @fileoverview Calendar connection status endpoint.
- *
- * Returns connection status, granted scopes, and list of calendars for the
- * authenticated user.
  */
 
 import "server-only";

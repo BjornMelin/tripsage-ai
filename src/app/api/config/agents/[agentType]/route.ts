@@ -1,9 +1,5 @@
 /**
- * @fileoverview Agent configuration read/update API.
- * Routes: GET/PUT /api/config/agents/[agentType]
- * - Authenticated admin-only via RLS + explicit check.
- * - GET resolves active config (cached) via resolver.
- * - PUT validates input, builds config payload, upserts via Supabase function, and bumps cache tags.
+ * @fileoverview Agent configuration read/update API. Routes: GET/PUT /api/config/agents/[agentType] - Authenticated admin-only via RLS + explicit check. - GET resolves active config (cached) via resolver. - PUT validates input, builds config payload, upserts via Supabase function, and bumps cache tags.
  */
 
 import "server-only";

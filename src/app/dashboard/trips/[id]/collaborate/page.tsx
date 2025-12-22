@@ -1,8 +1,5 @@
 /**
  * @fileoverview Trip collaboration page.
- *
- * Manages trip collaborators and real-time editing. Handles collaborator invitations,
- * permissions, sharing, and activity monitoring.
  */
 
 "use client";

@@ -1,7 +1,5 @@
 /**
- * @fileoverview React Query state management components.
- * Provides reusable components for handling loading, error, and empty states
- * in React Query operations.
+ * @fileoverview React Query state management components. Provides reusable components for handling loading, error, and empty states in React Query operations.
  */
 
 "use client";

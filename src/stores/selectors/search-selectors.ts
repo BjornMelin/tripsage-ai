@@ -1,7 +1,5 @@
 /**
  * @fileoverview Cross-store selectors for search domain.
- *
- * Provides unified access to search state across params, filters, results, and history stores.
  */
 
 "use client";

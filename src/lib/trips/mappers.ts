@@ -1,6 +1,5 @@
 /**
- * @fileoverview Canonical mapper functions for converting between database and UI trip representations.
- * Single source of truth for DB↔UI transformations.
+ * @fileoverview Canonical mapper functions for converting between database and UI trip representations. Single source of truth for DB↔UI transformations.
  */
 
 import type { TripsRow } from "@schemas/supabase";

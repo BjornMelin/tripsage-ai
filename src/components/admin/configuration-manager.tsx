@@ -1,6 +1,5 @@
 /**
- * @fileoverview Admin UI for managing agent configuration with version history.
- * Uses server actions for data access; no client-side fetching side effects.
+ * @fileoverview Admin UI for managing agent configuration with version history. Uses server actions for data access; no client-side fetching side effects.
  */
 
 "use client";

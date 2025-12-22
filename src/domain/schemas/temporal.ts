@@ -1,6 +1,5 @@
 /**
- * @fileoverview Temporal schemas for date/time, duration, ranges, and recurrence.
- * Includes date ranges, time ranges, durations, recurrence rules, and business hours.
+ * @fileoverview Temporal schemas for date/time, duration, ranges, and recurrence. Includes date ranges, time ranges, durations, recurrence rules, and business hours.
  */
 
 import { z } from "zod";

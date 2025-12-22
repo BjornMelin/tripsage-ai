@@ -1,9 +1,5 @@
 /**
  * @fileoverview Travel advisory and safety scoring tool.
- *
- * Provides safety scores and travel advisories for destinations using
- * US State Department Travel Advisories API with caching (7d TTL).
- * Falls back to stub if API unavailable.
  */
 
 import "server-only";

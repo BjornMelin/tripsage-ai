@@ -1,6 +1,5 @@
 /**
- * @fileoverview CVA variants for status and urgency colors with Tailwind classes.
- * Provides consistent styling for badges, pills, and status indicators across the application.
+ * @fileoverview CVA variants for status and urgency colors with Tailwind classes. Provides consistent styling for badges, pills, and status indicators across the application.
  */
 
 import { cva, type VariantProps } from "class-variance-authority";

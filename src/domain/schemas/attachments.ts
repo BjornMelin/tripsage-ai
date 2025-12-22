@@ -1,7 +1,5 @@
 /**
  * @fileoverview Attachment schemas for Supabase Storage.
- *
- * Defines Zod v4 schemas for attachment uploads, listings, and responses.
  */
 
 import { z } from "zod";

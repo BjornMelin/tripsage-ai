@@ -1,8 +1,5 @@
 /**
  * @fileoverview Polyline encoding/decoding utilities for Google Maps Routes.
- *
- * Provides utilities for decoding encoded polylines from Routes API responses
- * for client-side map rendering.
  */
 
 /**

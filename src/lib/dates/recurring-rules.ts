@@ -1,7 +1,5 @@
 /**
- * @fileoverview Recurring date generation utilities using date-fns v4.
- * Provides RecurringRule type and RecurringDateGenerator for creating
- * date sequences and parsing RRULE strings without external dependencies.
+ * @fileoverview Recurring date generation utilities using date-fns v4. Provides RecurringRule type and RecurringDateGenerator for creating date sequences and parsing RRULE strings without external dependencies.
  */
 
 import type { RecurrenceFrequency, RecurringRule } from "@schemas/temporal";

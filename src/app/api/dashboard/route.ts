@@ -1,11 +1,5 @@
 /**
  * @fileoverview Dashboard metrics API route handler.
- *
- * Returns aggregated dashboard metrics with time window filtering.
- * Uses aggregation with Redis cache-aside handled inside `aggregateDashboardMetrics`.
- *
- * Auth: Required
- * Rate limit: dashboard:metrics (30 req/min)
  */
 
 import "server-only";

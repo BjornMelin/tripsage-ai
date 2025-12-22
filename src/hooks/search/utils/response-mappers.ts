@@ -1,7 +1,5 @@
 /**
  * @fileoverview Response mappers for transforming API responses to SearchResults format.
- *
- * Extracted from use-search-orchestration.ts for better maintainability.
  */
 
 import { getCategoryFromChainCode } from "@domain/amadeus/chain-codes";

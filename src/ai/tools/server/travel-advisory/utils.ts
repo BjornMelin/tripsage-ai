@@ -1,8 +1,5 @@
 /**
  * @fileoverview Utility functions for travel advisory processing.
- *
- * Provides country code mapping, HTML parsing, and score conversion
- * utilities used by advisory providers.
  */
 
 import { convert } from "html-to-text";

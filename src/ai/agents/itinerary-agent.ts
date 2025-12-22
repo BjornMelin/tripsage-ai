@@ -1,9 +1,5 @@
 /**
  * @fileoverview Itinerary planning agent for travel plans.
- *
- * Reusable ToolLoopAgent that researches destinations, gathers POI information,
- * and creates day-by-day travel plans via multi-step tool calling with phased
- * tool selection for research, planning, and persistence.
  */
 
 import "server-only";

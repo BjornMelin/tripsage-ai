@@ -13,6 +13,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { getClientEnv } from "@/lib/env/client";
 import { getServerEnv } from "@/lib/env/server";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import {
@@ -70,7 +71,15 @@ function warnCookieAdapterFailureOnce(
   if (didWarnCookieAdapterFailure) return;
   didWarnCookieAdapterFailure = true;
 
-  if (process.env.NODE_ENV === "production") return;
+  if (process.env.NODE_ENV === "production") {
+    emitOperationalAlertOncePerWindow({
+      attributes: { operation },
+      event: "supabase.cookies.adapter_failure",
+      severity: "warning",
+      windowMs: 24 * 60 * 60 * 1000, // 24h
+    });
+    return;
+  }
 
   cookieLogger.warn("Supabase SSR cookie adapter failed", {
     errorName: error instanceof Error ? error.name : null,

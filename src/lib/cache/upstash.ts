@@ -1,21 +1,5 @@
 /**
  * @fileoverview Upstash Redis caching utilities for JSON payloads.
- *
- * Provides type-safe helpers for caching JSON data in Upstash Redis.
- * All operations gracefully handle Redis unavailability (returns null/void).
- *
- * @example
- * ```ts
- * // Store data with 5-minute TTL
- * await setCachedJson("user:123:trips", trips, 300);
- *
- * // Retrieve cached data
- * const cached = await getCachedJson<Trip[]>("user:123:trips");
- * if (cached) return NextResponse.json(cached);
- *
- * // Invalidate on mutation
- * await deleteCachedJson("user:123:trips");
- * ```
  */
 
 import type { z } from "zod";

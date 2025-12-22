@@ -1,11 +1,5 @@
 /**
  * @fileoverview Pure handler for chat streaming using AI SDK v6 ToolLoopAgent.
- *
- * The handler composes validation, memory hydration, and ToolLoopAgent-based
- * streaming. It is fully dependency-injected to ensure deterministic tests.
- *
- * Uses createAgentUIStreamResponse for proper agent loop handling with
- * autonomous multi-step tool execution.
  */
 
 import {

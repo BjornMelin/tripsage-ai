@@ -1,7 +1,5 @@
 /**
- * @fileoverview BYOK API keys management UI. Provides provider selection and secured
- * key storage operations via authenticated API. IDs are generated with `useId` to
- * avoid duplicate DOM identifiers when multiple instances are rendered.
+ * @fileoverview BYOK API keys management UI. Provides provider selection and secured key storage operations via authenticated API. IDs are generated with `useId` to avoid duplicate DOM identifiers when multiple instances are rendered.
  */
 
 "use client";

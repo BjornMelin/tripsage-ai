@@ -1,13 +1,7 @@
 /**
  * @fileoverview DI handlers for chat sessions/messages routes.
- *
- * These handlers encapsulate CRUD operations for chat sessions and messages.
- * Adapters (route.ts files) provide SSR-only dependencies and translate the
- * HTTP details to simple POJOs used here.
- *
- * All handlers accept `userId` as a parameter since the route adapter already
- * guarantees authentication via `withApiGuards({ auth: true })`.
  */
+
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { nowIso, secureUuid } from "@/lib/security/random";

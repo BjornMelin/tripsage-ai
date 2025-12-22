@@ -1,8 +1,5 @@
 /**
  * @fileoverview Controls bar component for search results.
- *
- * Provides sort, filter, and view mode controls with optional
- * comparison selection UI.
  */
 
 "use client";

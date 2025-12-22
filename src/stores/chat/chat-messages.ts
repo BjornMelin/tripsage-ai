@@ -1,8 +1,5 @@
 /**
  * @fileoverview Chat messages slice - sessions, messages, streaming.
- *
- * Manages chat sessions, message history, streaming state, and tool calls.
- * Client-only slice - no direct Supabase clients or server logic.
  */
 
 "use client";

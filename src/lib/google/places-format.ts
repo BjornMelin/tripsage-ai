@@ -1,7 +1,5 @@
 /**
  * @fileoverview Client-safe formatting utilities for Google Places data.
- *
- * Provides formatting functions that can be used in both client and server components.
  */
 
 /**

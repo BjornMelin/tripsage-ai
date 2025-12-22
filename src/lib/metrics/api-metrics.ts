@@ -1,9 +1,5 @@
 /**
  * @fileoverview API metrics recording helper.
- *
- * Fire-and-forget metrics recording for API routes. Records to both
- * Supabase (persistent) and Upstash Redis (real-time counters).
- * Uses OpenTelemetry for tracing.
  */
 
 import "server-only";

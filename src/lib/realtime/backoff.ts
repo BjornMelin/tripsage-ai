@@ -1,6 +1,5 @@
 /**
- * @fileoverview Exponential backoff helper for Realtime reconnection logic.
- * Pure, deterministic utility with no React or Supabase dependencies.
+ * @fileoverview Exponential backoff helper for Realtime reconnection logic. Pure, deterministic utility with no React or Supabase dependencies.
  */
 
 import type { BackoffConfig } from "@schemas/realtime";

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Chat-centric Supabase Realtime hook.
- *
- * Provides realtime chat capabilities backed by Supabase broadcast channels.
- * This hook wraps useRealtimeChannel with domain-specific chat event handling.
  */
 
 "use client";

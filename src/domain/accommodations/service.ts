@@ -1,7 +1,5 @@
 /**
  * @fileoverview Accommodations domain service orchestrating provider calls, caching, and booking.
- *
- * Provider-neutral implementation for Amadeus + Google Places hybrid stack.
  */
 
 import "server-only";

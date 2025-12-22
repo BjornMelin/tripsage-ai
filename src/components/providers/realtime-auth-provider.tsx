@@ -1,6 +1,5 @@
 /**
- * @fileoverview React provider that synchronizes Supabase Realtime authentication
- * with the current Supabase session token.
+ * @fileoverview React provider that synchronizes Supabase Realtime authentication with the current Supabase session token.
  */
 
 "use client";

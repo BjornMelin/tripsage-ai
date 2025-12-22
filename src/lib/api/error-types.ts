@@ -1,6 +1,5 @@
 /**
- * @fileoverview Consolidated error types for API and React Query integration.
- * Single ApiError class with error codes replaces separate error classes.
+ * @fileoverview Consolidated error types for API and React Query integration. Single ApiError class with error codes replaces separate error classes.
  */
 
 /** Standard error codes for API errors. */

@@ -1,7 +1,5 @@
 /**
  * @fileoverview Calendar integration abstraction layer.
- *
- * Unified interface for calendar providers with ICS import/export.
  */
 
 import type { CalendarEvent, EventDateTime } from "@schemas/calendar";

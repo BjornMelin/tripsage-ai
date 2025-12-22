@@ -1,8 +1,5 @@
 /**
  * @fileoverview Search orchestration hook that replaces the search-store.ts orchestrator.
- *
- * This hook composes the search params, results, filters, and history stores
- * to provide high-level search operations without cross-store getState() calls.
  */
 
 "use client";

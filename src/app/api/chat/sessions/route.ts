@@ -1,7 +1,5 @@
 /**
  * @fileoverview Chat sessions API route handlers.
- *
- * Methods: POST (create session), GET (list sessions for current user).
  */
 
 import "server-only";

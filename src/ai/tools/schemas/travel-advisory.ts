@@ -1,7 +1,5 @@
 /**
  * @fileoverview Centralized Zod schemas for travel advisory tools.
- *
- * Contains input validation schemas for getTravelAdvisory tool.
  */
 
 import { safetyResultSchema } from "@ai/tools/schemas/tools";

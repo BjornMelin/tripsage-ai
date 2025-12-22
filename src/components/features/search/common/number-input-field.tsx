@@ -1,6 +1,5 @@
 /**
- * @fileoverview Reusable number input field component for forms.
- * Integrates with React Hook Form and provides proper number parsing.
+ * @fileoverview Reusable number input field component for forms. Integrates with React Hook Form and provides proper number parsing.
  */
 
 "use client";

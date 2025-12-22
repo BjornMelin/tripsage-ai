@@ -1,8 +1,5 @@
 /**
  * @fileoverview Shared environment variable schema definitions.
- *
- * Central Zod schema for all environment variables. This module contains
- * only schema definitions and types; no process.env access or runtime logic.
  */
 
 import { z } from "zod";

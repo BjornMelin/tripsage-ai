@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Maps component with Advanced Markers.
- *
- * Client-side map component using Maps JavaScript API with Map ID, Advanced
- * Markers, and Places integration. Loads Maps JS via importLibrary.
  */
 
 "use client";

@@ -1,6 +1,5 @@
 /**
- * @fileoverview AI provider registry and model resolution schemas.
- * Includes provider identifiers, resolution results, and model mapper types.
+ * @fileoverview AI provider registry and model resolution schemas. Includes provider identifiers, resolution results, and model mapper types.
  */
 
 import type { LanguageModel } from "ai";

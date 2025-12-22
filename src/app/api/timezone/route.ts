@@ -1,7 +1,5 @@
 /**
  * @fileoverview Google Maps Time Zone API wrapper endpoint.
- *
- * Thin wrapper for Time Zone API with compliance and caching TTL limits.
  */
 
 import "server-only";

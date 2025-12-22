@@ -1,7 +1,7 @@
 /**
- * @fileoverview Textarea component for form fields.
- * Provides a styled textarea field with consistent styling and accessibility features.
+ * @fileoverview Textarea component for form fields. Provides a styled textarea field with consistent styling and accessibility features.
  */
+
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";

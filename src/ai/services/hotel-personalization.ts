@@ -1,11 +1,5 @@
 /**
  * @fileoverview AI-powered hotel personalization service.
- *
- * Uses AI SDK v6 structured output to produce personalized recommendations:
- * - Personalized tags based on user preferences
- * - Recommendation reason explaining the match
- * - Recommendation score (1-10)
- * - Vibe classification (luxury, business, family, romantic, adventure)
  */
 
 import "server-only";
@@ -16,7 +10,7 @@ import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { deleteCachedJson, getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { sanitizeArray, sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import packageJson from "../../../package.json";
 
@@ -303,12 +297,14 @@ export async function personalizeHotels(
           },
           level: "error",
         });
-        emitOperationalAlert("ai-sdk.structured-output.failure", {
+        emitOperationalAlertOncePerWindow({
           attributes: {
             model: (model as { modelId?: string }).modelId,
             version: AI_SDK_VERSION,
           },
+          event: "ai-sdk.structured-output.failure",
           severity: "warning",
+          windowMs: 60 * 60 * 1000, // 1h
         });
         const fallback = new Map<number, HotelPersonalization>();
         hotels.forEach((hotel, index) => {

@@ -1,9 +1,5 @@
 /**
  * @fileoverview Prompt input primitives for chat UIs.
- *
- * This module intentionally stays small and composable. It exports a minimal set of
- * components used by the app (chat + demo pages) and avoids speculative/unused
- * features to keep maintenance cost low.
  */
 
 "use client";

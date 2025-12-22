@@ -1,8 +1,5 @@
 /**
  * @fileoverview Centralized Zod schemas for weather tools.
- *
- * Core schemas: Weather API results and data structures.
- * Tool schemas: Input validation for weather tools (current weather).
  */
 
 import { z } from "zod";

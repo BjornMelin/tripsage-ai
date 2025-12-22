@@ -1,8 +1,5 @@
 /**
  * @fileoverview Multipart form data validation utilities.
- *
- * Provides canonical helpers for validating and extracting files from multipart
- * form data, consistent with the error handling pattern used in route-helpers.
  */
 
 import type { MultipartValidationOptions } from "@schemas/api";

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Provider mappers for flights.
- * Converts provider payloads to normalized FlightOffer DTOs.
+ * @fileoverview Provider mappers for flights. Converts provider payloads to normalized FlightOffer DTOs.
  */
 
 import { FLIGHT_OFFER_SCHEMA, type FlightOffer } from "@schemas/flights";

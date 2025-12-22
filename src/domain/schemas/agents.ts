@@ -1,9 +1,5 @@
 /**
  * @fileoverview Canonical Zod v4 schemas for Agent workflows (single source of truth).
- *
- * Defines request/response schemas for destination research, itinerary planning,
- * flight search, accommodation search, budget planning, memory updates, and
- * router classification workflows.
  */
 
 import { z } from "zod";

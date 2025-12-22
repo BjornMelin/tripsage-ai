@@ -1,9 +1,5 @@
 /**
  * @fileoverview Authenticated password change route handler.
- *
- * Allows a logged-in user to change their password using the Supabase SSR
- * client. Validates input and returns JSON responses suitable for the
- * AuthValidation store.
  */
 
 import "server-only";

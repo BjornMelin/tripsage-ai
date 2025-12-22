@@ -1,10 +1,5 @@
 /**
  * @fileoverview Main filter panel component for search pages.
- *
- * Integrates with Zustand search-filters-store and uses shadcn/ui
- * Accordion for collapsible filter sections.
- *
- * @see ADR-0057 for architecture decisions
  */
 
 "use client";

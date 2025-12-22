@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places API (New) Text Search endpoint.
- *
- * Server-side route for Places Text Search with field masks and location bias.
- * Complies with Google Maps Platform policies.
  */
 
 import "server-only";

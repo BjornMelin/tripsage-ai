@@ -1,6 +1,5 @@
 /**
- * @fileoverview Agent configuration rollback API.
- * Route: POST /api/config/agents/[agentType]/rollback/[versionId]
+ * @fileoverview Agent configuration rollback API. Route: POST /api/config/agents/[agentType]/rollback/[versionId]
  */
 
 import "server-only";

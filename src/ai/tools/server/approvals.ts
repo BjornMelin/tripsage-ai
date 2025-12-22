@@ -1,6 +1,5 @@
 /**
- * @fileoverview Minimal approval flow utilities backed by Upstash Redis.
- * Server-only: do not import from client components.
+ * @fileoverview Minimal approval flow utilities backed by Upstash Redis. Server-only: do not import from client components.
  */
 
 import "server-only";

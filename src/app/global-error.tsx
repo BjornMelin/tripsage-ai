@@ -1,6 +1,5 @@
 /**
- * @fileoverview Global error boundary for the app.
- * This catches errors in the root layout or template.
+ * @fileoverview Global error boundary for the app. This catches errors in the root layout or template.
  */
 
 "use client";

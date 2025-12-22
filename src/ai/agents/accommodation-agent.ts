@@ -1,9 +1,5 @@
 /**
  * @fileoverview Accommodation search agent for travel planning.
- *
- * Reusable ToolLoopAgent that autonomously searches for properties, retrieves
- * details, checks availability, and handles bookings via multi-step tool calling.
- * Uses AI SDK v6 structured output and phased tool selection.
  */
 
 import "server-only";

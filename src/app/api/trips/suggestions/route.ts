@@ -1,9 +1,5 @@
 /**
  * @fileoverview AI-generated trip suggestions with Upstash Redis caching.
- *
- * Generates trip suggestions using AI SDK v6 structured outputs.
- * Results cached per-user in Redis with 15-minute TTL to reduce
- * redundant AI calls while maintaining freshness.
  */
 
 import "server-only";

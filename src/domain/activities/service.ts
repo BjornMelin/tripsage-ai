@@ -1,8 +1,5 @@
 /**
- * @fileoverview Activities domain service orchestrating Google Places search,
- * caching, and optional AI/web fallback.
- *
- * Uses Supabase search_activities table as durable cache per SPEC-0030.
+ * @fileoverview Activities domain service orchestrating Google Places search, caching, and optional AI/web fallback.
  */
 
 import "server-only";

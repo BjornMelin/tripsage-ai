@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hooks for memory and conversation management.
- *
- * Provides hooks for managing user memories, conversation context, search,
- * insights, and memory statistics.
  */
 
 "use client";

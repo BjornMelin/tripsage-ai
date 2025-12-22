@@ -1,10 +1,5 @@
 /**
  * @fileoverview Google Maps Platform caching utilities with compliance enforcement.
- *
- * Enforces Google Maps Platform policies:
- * - place_id can be stored indefinitely
- * - lat/lng can be cached for max 30 days (2592000 seconds)
- * - Other Places content must not be persisted
  */
 
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Client IP extraction helpers for server-side requests.
- *
- * This module is intentionally header-only (accepts `Headers`) so it can be
- * reused from NextRequest, standard Request, and Next.js `headers()` calls.
  */
 
 /**

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zod schemas for web crawl API responses and web crawl tool inputs.
- *
- * Core schemas: Web crawl API parameters and data structures
- * Tool schemas: Input validation for web crawl tools (site crawling)
  */
 
 import { z } from "zod";

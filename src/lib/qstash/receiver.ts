@@ -1,8 +1,5 @@
 /**
  * @fileoverview QStash Receiver utilities for signature verification.
- *
- * Centralizes creation and verification logic to keep job route handlers
- * consistent and reduce security-critical duplication.
  */
 
 import "server-only";
@@ -13,12 +10,13 @@ import type { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { PayloadTooLargeError, readRequestBodyBytesWithLimit } from "@/lib/http/body";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { QSTASH_SIGNATURE_HEADER } from "./config";
 
 const DEFAULT_CLOCK_TOLERANCE_SECONDS = 30;
 const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
+const DEFAULT_KEY_ROTATION_ALERT_WINDOW_MS = 6 * 60 * 60 * 1000; // 6h
 const logger = createServerLogger("qstash.receiver");
 
 export type QstashVerifyFailureReason =
@@ -53,13 +51,17 @@ export function getQstashReceiver(): Receiver {
 
   const next = getServerEnvVarWithFallback("QSTASH_NEXT_SIGNING_KEY", "");
   if (!next) {
-    emitOperationalAlert("qstash.next_signing_key_missing", {
+    emitOperationalAlertOncePerWindow({
       attributes: {
+        "alert.category": "config_drift",
         "config.current_key_set": true,
         "config.next_key_set": false,
+        "docs.rotation_url": "https://upstash.com/docs/qstash/howto/roll-signing-keys",
         "docs.url": "https://upstash.com/docs/qstash/howto/signature",
       },
+      event: "qstash.next_signing_key_missing",
       severity: "warning",
+      windowMs: DEFAULT_KEY_ROTATION_ALERT_WINDOW_MS,
     });
   }
 

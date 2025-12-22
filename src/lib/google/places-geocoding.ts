@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places geocoding helper with policy-compliant caching.
- *
- * Resolves location strings to lat/lng coordinates using Google Places Text Search.
- * Caches results for up to 30 days per Google Maps Platform policy.
  */
 
 import "server-only";

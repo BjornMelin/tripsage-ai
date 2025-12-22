@@ -1,6 +1,5 @@
 /**
- * @fileoverview Currency store for managing currency data, exchange rates,
- * and currency conversion functionality using Zustand with persistence.
+ * @fileoverview Currency store for managing currency data, exchange rates, and currency conversion functionality using Zustand with persistence.
  */
 
 "use client";

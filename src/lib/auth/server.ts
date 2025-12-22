@@ -1,9 +1,5 @@
 /**
  * @fileoverview Server-side auth helpers for Next.js App Router.
- *
- * Provides `requireUser` and `getOptionalUser` helpers that wrap the Supabase
- * SSR client and unified getCurrentUser helper. These are intended for use in
- * Server Components, Route Handlers, and Server Actions.
  */
 
 import "server-only";

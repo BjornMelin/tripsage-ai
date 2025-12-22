@@ -1,9 +1,5 @@
 /**
  * @fileoverview Destination research agent for travel planning.
- *
- * Reusable ToolLoopAgent that gathers destination information including attractions,
- * weather, safety advisories, and local insights via multi-step tool calling.
- * Uses phased tool selection for comprehensive research workflows.
  */
 
 import "server-only";

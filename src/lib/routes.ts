@@ -1,8 +1,5 @@
 /**
  * @fileoverview Centralized application routes.
- *
- * Provides a single source of truth for all internal routes to ensure
- * consistency across the application.
  */
 
 export const ROUTES = {

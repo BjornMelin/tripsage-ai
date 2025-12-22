@@ -1,6 +1,5 @@
 /**
- * @fileoverview Query error boundary with OTEL-backed telemetry.
- * Refer to docs/development/observability.md for tracing and alerting standards.
+ * @fileoverview Query error boundary with OTEL-backed telemetry. Refer to docs/development/observability.md for tracing and alerting standards.
  */
 
 "use client";

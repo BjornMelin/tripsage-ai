@@ -1,6 +1,5 @@
 /**
- * @fileoverview Shared helpers for configuration API routes.
- * Provides canonical validation schemas and authorization utilities.
+ * @fileoverview Shared helpers for configuration API routes. Provides canonical validation schemas and authorization utilities.
  */
 
 import "server-only";

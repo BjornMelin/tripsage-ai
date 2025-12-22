@@ -1,7 +1,5 @@
 /**
- * @fileoverview Typed helper utilities for Supabase CRUD operations with Zod validation.
- * These helpers centralize runtime validation using Zod schemas while preserving
- * compile-time shapes using the generated `Database` types.
+ * @fileoverview Typed helper utilities for Supabase CRUD operations with Zod validation. These helpers centralize runtime validation using Zod schemas while preserving compile-time shapes using the generated `Database` types.
  */
 
 import { getSupabaseSchema } from "@schemas/supabase";

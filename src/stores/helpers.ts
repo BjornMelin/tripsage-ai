@@ -1,6 +1,5 @@
 /**
- * @fileoverview Shared helper functions for Zustand stores.
- * Centralizes common patterns to avoid duplication across stores.
+ * @fileoverview Shared helper functions for Zustand stores. Centralizes common patterns to avoid duplication across stores.
  */
 
 import { nowIso, secureId } from "@/lib/security/random";

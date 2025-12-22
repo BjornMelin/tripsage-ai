@@ -1,6 +1,5 @@
 /**
- * @fileoverview Memory-related schemas with validation.
- * Includes memory entities, user preferences, API requests/responses, and tool input validation.
+ * @fileoverview Memory-related schemas with validation. Includes memory entities, user preferences, API requests/responses, and tool input validation.
  */
 
 import { z } from "zod";

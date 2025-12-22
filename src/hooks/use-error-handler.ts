@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hook for error handling and reporting.
- *
- * Provides error handling utilities with automatic error reporting,
- * user context, and session tracking.
  */
 
 "use client";

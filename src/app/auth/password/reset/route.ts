@@ -1,8 +1,5 @@
 /**
  * @fileoverview Password reset route handler using Supabase SSR.
- *
- * Accepts a password reset token and new password, verifies the token using
- * Supabase Auth, and then updates the user's password.
  */
 
 import "server-only";

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Currency management and exchange rate schemas.
- * Includes currency codes, metadata, exchange rates, conversion results, and store state.
+ * @fileoverview Currency management and exchange rate schemas. Includes currency codes, metadata, exchange rates, conversion results, and store state.
  */
 
 import { z } from "zod";

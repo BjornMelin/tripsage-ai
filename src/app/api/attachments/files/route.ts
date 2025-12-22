@@ -1,8 +1,5 @@
 /**
  * @fileoverview Attachment files listing endpoint.
- *
- * Queries Supabase directly for attachment metadata with per-user Redis caching.
- * Generates signed URLs for private storage access. See ADR-0058 and SPEC-0036.
  */
 
 import "server-only";

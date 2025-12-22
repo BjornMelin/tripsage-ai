@@ -1,7 +1,5 @@
 /**
  * @fileoverview Shared utilities for Google Places API integration.
- *
- * Provides normalization and cache key helpers for Places queries.
  */
 
 import "server-only";

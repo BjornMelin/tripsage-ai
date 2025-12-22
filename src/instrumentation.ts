@@ -1,9 +1,5 @@
 /**
  * @fileoverview Next.js instrumentation hook for OpenTelemetry server-side tracing.
- *
- * This file is automatically executed by Next.js before the application starts.
- * It initializes @vercel/otel to enable automatic instrumentation of Route Handlers,
- * Server Components, and Middleware.
  */
 
 import { registerOTel } from "@vercel/otel";

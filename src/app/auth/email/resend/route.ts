@@ -1,8 +1,5 @@
 /**
  * @fileoverview Email verification resend route handler.
- *
- * Authenticated route that triggers Supabase Auth to resend a signup
- * verification email to the current user's email address.
  */
 
 import "server-only";

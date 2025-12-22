@@ -1,7 +1,7 @@
 /**
- * @fileoverview Server-only Supabase admin client factory using service role key.
- * Used exclusively by Next.js Route Handlers to call SECURITY DEFINER RPCs.
+ * @fileoverview Server-only Supabase admin client factory using service role key. Used exclusively by Next.js Route Handlers to call SECURITY DEFINER RPCs.
  */
+
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";

@@ -1,9 +1,5 @@
 /**
  * @fileoverview Canonical factory for AI SDK tools with guardrails.
- *
- * Provides a single entry point for creating AI tools that automatically
- * apply telemetry spans, optional rate limiting, and Redis caching. Inspired by
- * agent guardrails (lib/agents/guarded-tool.ts) but generalized for any tool.
  */
 
 import "server-only";

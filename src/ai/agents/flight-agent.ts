@@ -1,8 +1,5 @@
 /**
  * @fileoverview Flight search agent for travel planning.
- *
- * Reusable ToolLoopAgent that searches flights, resolves airport codes,
- * and summarizes options via multi-step tool calling with phased tool selection.
  */
 
 import "server-only";

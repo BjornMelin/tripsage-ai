@@ -1,7 +1,5 @@
 /**
  * @fileoverview Booking payment processing utilities.
- *
- * Handles payment authorization/charge and refunds for accommodation bookings.
  */
 
 import { createPaymentIntent, getPaymentIntent, refundPayment } from "./stripe-client";

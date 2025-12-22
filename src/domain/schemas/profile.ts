@@ -1,6 +1,5 @@
 /**
- * @fileoverview User profile and settings form validation schemas.
- * Includes personal info, preferences, security settings, and email update forms.
+ * @fileoverview User profile and settings form validation schemas. Includes personal info, preferences, security settings, and email update forms.
  */
 
 import { z } from "zod";

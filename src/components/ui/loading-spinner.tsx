@@ -1,7 +1,5 @@
 /**
- * @fileoverview Loading spinner components with multiple visual variants including
- * default spinning circle, animated dots, bars, and pulsing circle styles,
- * supporting different sizes and colors with accessibility features.
+ * @fileoverview Loading spinner components with multiple visual variants including default spinning circle, animated dots, bars, and pulsing circle styles, supporting different sizes and colors with accessibility features.
  */
 
 import { cva, type VariantProps } from "class-variance-authority";

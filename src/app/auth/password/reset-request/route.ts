@@ -1,8 +1,5 @@
 /**
  * @fileoverview Password reset request route handler.
- *
- * Sends Supabase password reset emails using SSR Supabase client. This route is
- * public and does not require authentication.
  */
 
 import "server-only";

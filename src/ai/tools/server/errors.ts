@@ -1,9 +1,5 @@
 /**
  * @fileoverview Canonical tool error helpers for AI tools.
- *
- * Centralizes error codes and constructors to ensure consistent error handling
- * across all AI tools and agents. Runtime-only; schemas live under
- * `@ai/tools/schemas/tools`.
  */
 
 import "server-only";

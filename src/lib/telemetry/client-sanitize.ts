@@ -1,9 +1,5 @@
 /**
  * @fileoverview Client-side telemetry redaction helpers.
- *
- * Client spans can accidentally include user-provided values (error messages,
- * metadata, etc.). These helpers apply conservative redaction/truncation so we
- * avoid exporting secrets/PII via span status messages or exception events.
  */
 
 "use client";

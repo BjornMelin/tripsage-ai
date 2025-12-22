@@ -1,11 +1,5 @@
 /**
  * @fileoverview AI-powered hotel personalization endpoint.
- *
- * Generates personalized recommendations for hotels based on user preferences:
- * - Personalized tags
- * - Match explanations
- * - Recommendation scores (1-10)
- * - Vibe classifications
  */
 
 import "server-only";

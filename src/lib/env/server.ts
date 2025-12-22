@@ -11,6 +11,17 @@ import { isBuildPhase } from "@/lib/utils/build-phase";
 let envCache: ServerEnv | null = null;
 let parseError: Error | null = null;
 
+function normalizeOptionalEnvVar(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toLowerCase() === "undefined") {
+    return undefined;
+  }
+  return trimmed;
+}
+
 function createBuildPhaseServerEnvProxy(): ServerEnv {
   const handler: ProxyHandler<ServerEnv> = {
     get(_target, prop) {
@@ -46,7 +57,19 @@ function parseServerEnv(): ServerEnv {
   }
 
   try {
-    envCache = envSchema.parse(process.env);
+    const envForParse = { ...process.env };
+
+    // Supabase renamed "anon" to "publishable" keys; support both to reduce DX drift.
+    // Prefer publishable key when available.
+    const resolvedSupabaseKey =
+      normalizeOptionalEnvVar(envForParse.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
+      normalizeOptionalEnvVar(envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+    if (resolvedSupabaseKey) {
+      envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY = resolvedSupabaseKey;
+    }
+
+    envCache = envSchema.parse(envForParse);
     return envCache;
   } catch (error) {
     if (error instanceof Error && "issues" in error) {

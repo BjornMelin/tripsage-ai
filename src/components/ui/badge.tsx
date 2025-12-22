@@ -1,7 +1,7 @@
 /**
- * @fileoverview Badge component for displaying content in a badge-like format.
- * Provides a styled badge with various sizes and variants.
+ * @fileoverview Badge component for displaying content in a badge-like format. Provides a styled badge with various sizes and variants.
  */
+
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 

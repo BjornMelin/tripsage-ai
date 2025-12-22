@@ -1,8 +1,5 @@
 /**
  * @fileoverview Recharts-based metrics visualization component.
- *
- * Displays time-series data as an area chart with gradient fill.
- * Uses ResponsiveContainer for fluid layouts.
  */
 
 "use client";

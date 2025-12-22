@@ -1,8 +1,5 @@
 /**
  * @fileoverview Higher-order function factory for Next.js route handlers.
- *
- * Wraps route handlers with authentication, rate limiting, error handling, and
- * telemetry. Per ADR-0029 and ADR-0032.
  */
 
 import "server-only";

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Dependency container for accommodations domain.
- *
- * Centralizes construction of the accommodations service so callers (AI tools, routes)
- * do not hard-wire provider/configuration at import time.
  */
 
 import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "@domain/accommodations/constants";

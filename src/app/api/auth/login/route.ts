@@ -1,8 +1,5 @@
 /**
  * @fileoverview Login API route.
- *
- * Handles email/password login authentication using Supabase SSR.
- * Uses withApiGuards for rate limiting, validation, and telemetry.
  */
 
 import "server-only";

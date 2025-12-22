@@ -1,9 +1,5 @@
 /**
- * @fileoverview Small DOM-agnostic utilities for formatting and timing.
- * All helpers are pure and safe for both server and browser runtimes.
- *
- * NOTE: For session-related utilities that use browser storage,
- * see `@/lib/client/session.ts`.
+ * @fileoverview Small DOM-agnostic utilities for formatting and timing. All helpers are pure and safe for both server and browser runtimes.
  */
 
 import { type ClassValue, clsx } from "clsx";

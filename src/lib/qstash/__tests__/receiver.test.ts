@@ -1,6 +1,28 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const RECEIVER_CTOR = vi.hoisted(() => vi.fn());
+const EMIT_ALERT_ONCE = vi.hoisted(() => vi.fn());
+const GET_ENV = vi.hoisted(() => vi.fn());
+const GET_ENV_FALLBACK = vi.hoisted(() => vi.fn());
+
+vi.mock("@upstash/qstash", () => ({
+  Receiver: class Receiver {
+    constructor(args: unknown) {
+      RECEIVER_CTOR(args);
+    }
+  },
+}));
+
+vi.mock("@/lib/env/server", () => ({
+  getServerEnvVar: (...args: unknown[]) => GET_ENV(...args),
+  getServerEnvVarWithFallback: (...args: unknown[]) => GET_ENV_FALLBACK(...args),
+}));
+
+vi.mock("@/lib/telemetry/degraded-mode", () => ({
+  emitOperationalAlertOncePerWindow: (...args: unknown[]) => EMIT_ALERT_ONCE(...args),
+}));
 
 const LOGGER_ERROR = vi.hoisted(() => vi.fn());
 
@@ -12,6 +34,14 @@ vi.mock("@/lib/telemetry/logger", () => ({
     warn: vi.fn(),
   }),
 }));
+
+afterEach(() => {
+  RECEIVER_CTOR.mockReset();
+  EMIT_ALERT_ONCE.mockReset();
+  GET_ENV.mockReset();
+  GET_ENV_FALLBACK.mockReset();
+  LOGGER_ERROR.mockReset();
+});
 
 describe("verifyQstashRequest", () => {
   it("does not log raw signature on verification errors", async () => {
@@ -93,5 +123,59 @@ describe("verifyQstashRequest", () => {
     expect(result.reason).toBe("body_read_error");
     expect(result.response.status).toBe(400);
     expect(receiver.verify).not.toHaveBeenCalled();
+  });
+});
+
+describe("getQstashReceiver", () => {
+  it("throws when QSTASH_CURRENT_SIGNING_KEY is missing", async () => {
+    GET_ENV.mockReturnValue("");
+    GET_ENV_FALLBACK.mockReturnValue("");
+
+    const { getQstashReceiver } = await import("@/lib/qstash/receiver");
+
+    expect(() => getQstashReceiver()).toThrow(/QSTASH_CURRENT_SIGNING_KEY/);
+    expect(RECEIVER_CTOR).not.toHaveBeenCalled();
+  });
+
+  it("emits a deduped alert when QSTASH_NEXT_SIGNING_KEY is missing", async () => {
+    GET_ENV.mockReturnValue("current");
+    GET_ENV_FALLBACK.mockReturnValue("");
+
+    const { getQstashReceiver } = await import("@/lib/qstash/receiver");
+
+    getQstashReceiver();
+
+    expect(EMIT_ALERT_ONCE).toHaveBeenCalledWith({
+      attributes: expect.objectContaining({
+        "alert.category": "config_drift",
+        "config.current_key_set": true,
+        "config.next_key_set": false,
+        "docs.rotation_url": "https://upstash.com/docs/qstash/howto/roll-signing-keys",
+        "docs.url": "https://upstash.com/docs/qstash/howto/signature",
+      }),
+      event: "qstash.next_signing_key_missing",
+      severity: "warning",
+      windowMs: 6 * 60 * 60 * 1000,
+    });
+
+    expect(RECEIVER_CTOR).toHaveBeenCalledWith({
+      currentSigningKey: "current",
+      nextSigningKey: "current",
+    });
+  });
+
+  it("does not emit a key-rotation alert when QSTASH_NEXT_SIGNING_KEY is present", async () => {
+    GET_ENV.mockReturnValue("current");
+    GET_ENV_FALLBACK.mockReturnValue("next");
+
+    const { getQstashReceiver } = await import("@/lib/qstash/receiver");
+
+    getQstashReceiver();
+
+    expect(EMIT_ALERT_ONCE).not.toHaveBeenCalled();
+    expect(RECEIVER_CTOR).toHaveBeenCalledWith({
+      currentSigningKey: "current",
+      nextSigningKey: "next",
+    });
   });
 });

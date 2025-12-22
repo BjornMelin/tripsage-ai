@@ -1,12 +1,5 @@
 /**
  * @fileoverview DI handlers for BYOK key routes (POST/GET).
- *
- * These handlers encapsulate the business logic for API key storage and
- * retrieval. The Next.js route adapters handle SSR-only concerns and pass in
- * typed dependencies.
- *
- * All handlers accept `userId` as a parameter since the route adapter already
- * guarantees authentication via `withApiGuards({ auth: true })`.
  */
 
 import type { PostKeyBody } from "@schemas/api";

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Loading components index
- * Exports all loading-related components for easy importing
+ * @fileoverview Loading components index Exports all loading-related components for easy importing
  */
 
 // Hooks

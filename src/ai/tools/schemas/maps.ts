@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zod schemas for maps API responses and maps tool inputs.
- *
- * Core schemas: Maps/geocoding API parameters and data structures
- * Tool schemas: Input validation for maps tools (geocode, distance matrix)
  */
 
 import { upstreamGeocodeResultSchema } from "@schemas/api";

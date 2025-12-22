@@ -1,8 +1,5 @@
 /**
  * @fileoverview Trips management page with filtering, sorting, and search.
- *
- * Provides comprehensive UI for managing user trips including status filtering,
- * search functionality, sorting options, and grid/list view modes.
  */
 
 "use client";

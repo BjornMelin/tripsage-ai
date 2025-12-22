@@ -1,7 +1,7 @@
 /**
- * @fileoverview AI Elements Response component.
- * Renders markdown content using Streamdown with sensible defaults.
+ * @fileoverview AI Elements Response component. Renders markdown content using Streamdown with sensible defaults.
  */
+
 "use client";
 
 import { type ComponentProps, memo } from "react";

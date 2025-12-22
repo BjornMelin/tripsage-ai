@@ -1,7 +1,5 @@
 /**
  * @fileoverview Provider-agnostic accommodation adapter types.
- *
- * Replaces Expedia-specific DTOs with neutral contracts used by Amadeus + Google Places stack.
  */
 
 import type { ProviderError } from "@domain/accommodations/errors";

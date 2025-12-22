@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Calendar REST API v3 client wrapper.
- *
- * Thin wrapper around Google Calendar REST API using Supabase OAuth tokens.
- * All methods require server-side execution and authenticated user sessions.
  */
 
 import "server-only";

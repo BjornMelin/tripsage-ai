@@ -1,8 +1,5 @@
 /**
  * @fileoverview Reusable search form shell component.
- *
- * Provides a consistent wrapper for search forms with form state management,
- * validation, loading states, and error handling.
  */
 
 "use client";

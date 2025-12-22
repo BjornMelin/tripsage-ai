@@ -1,12 +1,5 @@
 /**
  * @fileoverview Core Supabase Realtime channel hook.
- *
- * This is the single low-level abstraction for all Supabase Realtime channels in the frontend.
- * All feature code must use this hook or its thin wrappers (e.g., useWebSocketChat, useTripRealtime).
- * Never call `supabase.channel(...)` directly in feature code.
- *
- * This hook is domain-agnostic and does not know about specific event types like `chat:message`
- * or `agent_status_update`. Domain hooks translate generic events into store updates.
  */
 
 "use client";

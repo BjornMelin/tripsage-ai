@@ -1,9 +1,5 @@
 /**
  * @fileoverview Supabase-centric memory orchestrator.
- *
- * Defines MemoryIntent, adapter interfaces, and the orchestrator pipeline
- * that fans out to Supabase, Upstash, and Mem0 adapters with telemetry and
- * basic PII redaction for non-canonical providers.
  */
 
 import "server-only";

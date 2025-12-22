@@ -1,6 +1,5 @@
 /**
- * @fileoverview Simplified API client with Zod validation. Provides runtime
- * type safety for requests and responses with retry/timeout behavior.
+ * @fileoverview Simplified API client with Zod validation. Provides runtime type safety for requests and responses with retry/timeout behavior.
  */
 
 "use client";

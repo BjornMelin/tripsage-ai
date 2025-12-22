@@ -1,8 +1,5 @@
 /**
  * @fileoverview Stripe client for payment processing.
- *
- * Server-only module for creating payment intents and processing refunds.
- * Used for accommodation booking payments.
  */
 
 import "server-only";

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places Autocomplete component with session tokens.
- *
- * Client-side autocomplete component using Places Autocomplete Data API with
- * session token lifecycle management and debounced input handling.
  */
 
 "use client";

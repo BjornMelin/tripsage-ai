@@ -1,6 +1,5 @@
 /**
- * @fileoverview Travel-specific skeleton components for flight, hotel, trip, and
- * destination search results.
+ * @fileoverview Travel-specific skeleton components for flight, hotel, trip, and destination search results.
  */
 
 import * as React from "react";

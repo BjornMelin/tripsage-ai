@@ -1,7 +1,5 @@
 /**
- * @fileoverview Token counting and clamping utilities for AI SDK calls.
- * Prefers provider-reported usage where available; these helpers provide
- * fallback estimation and safe max token clamping.
+ * @fileoverview Token counting and clamping utilities for AI SDK calls. Prefers provider-reported usage where available; these helpers provide fallback estimation and safe max token clamping.
  */
 
 import type { ClampResult, TokenChatMessage } from "@schemas/tokens";

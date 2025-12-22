@@ -1,9 +1,5 @@
 /**
  * @fileoverview Chat agent for travel planning conversations.
- *
- * Reusable AI SDK v6 ToolLoopAgent that provides autonomous multi-step reasoning
- * over all travel planning tools. Supports dynamic memory injection, context window
- * management, and type-safe runtime configuration via callOptionsSchema/prepareCall/prepareStep.
  */
 
 import "server-only";

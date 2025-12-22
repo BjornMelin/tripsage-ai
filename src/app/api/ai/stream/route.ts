@@ -1,6 +1,5 @@
 /**
- * @fileoverview Demo streaming route using AI SDK v6. Returns a UI Message Stream
- * suitable for AI Elements and AI SDK UI readers.
+ * @fileoverview Demo streaming route using AI SDK v6. Returns a UI Message Stream suitable for AI Elements and AI SDK UI readers.
  */
 
 import "server-only";

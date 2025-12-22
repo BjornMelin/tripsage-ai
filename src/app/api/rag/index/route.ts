@@ -1,8 +1,5 @@
 /**
  * @fileoverview RAG document indexing endpoint.
- *
- * Batch indexes documents with chunking and embedding generation.
- * POST /api/rag/index
  */
 
 import "server-only";

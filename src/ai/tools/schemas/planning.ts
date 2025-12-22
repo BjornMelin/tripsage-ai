@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zod schemas for travel planning API responses and travel planning tool inputs.
- *
- * Core schemas: Travel planning API parameters and data structures
- * Tool schemas: Input validation for travel planning tools (create plan, combine results, save plan)
  */
 
 import { z } from "zod";

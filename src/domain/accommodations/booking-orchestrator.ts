@@ -1,8 +1,5 @@
 /**
  * @fileoverview Booking orchestrator with compensation.
- *
- * Executes booking workflow: approval -> payment -> provider booking -> persistence.
- * Handles refunds and alerts on failure paths.
  */
 
 import type {

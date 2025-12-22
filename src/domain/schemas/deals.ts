@@ -1,6 +1,5 @@
 /**
- * @fileoverview Travel deals schemas with validation.
- * Includes deal entities, alerts, filters, store state, and statistics.
+ * @fileoverview Travel deals schemas with validation. Includes deal entities, alerts, filters, store state, and statistics.
  */
 
 import { z } from "zod";

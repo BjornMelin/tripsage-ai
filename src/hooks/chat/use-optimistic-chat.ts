@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hook for optimistic chat updates.
- *
- * Provides optimistic UI updates for chat messages, showing messages
- * immediately while sending in the background.
  */
 
 "use client";

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Configuration management schemas with validation.
- * Includes agent configurations, model names, version identifiers, and configuration scopes.
+ * @fileoverview Configuration management schemas with validation. Includes agent configurations, model names, version identifiers, and configuration scopes.
  */
 
 import { z } from "zod";

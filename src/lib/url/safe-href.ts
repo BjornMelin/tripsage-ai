@@ -1,8 +1,5 @@
 /**
  * @fileoverview Safe href sanitizer for AI/tool-derived links.
- *
- * React does not sanitize URL protocols in href/src attributes. This helper
- * enforces a small allow-list for untrusted links before rendering.
  */
 
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);

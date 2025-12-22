@@ -1,11 +1,5 @@
 /**
  * @fileoverview Shared hook for results list state management.
- *
- * Encapsulates common patterns across flight/hotel/activity results:
- * - Sorting with configurable fields and direction
- * - View mode toggling (list/grid)
- * - Selection set for comparison or wishlist
- * - Optimistic selection with transition
  */
 
 "use client";

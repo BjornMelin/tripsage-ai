@@ -1,9 +1,5 @@
 /**
  * @fileoverview Pluggable reranker interface with Together.ai implementation.
- *
- * Provides cross-encoder reranking to improve RAG result relevance.
- * Primary: Together.ai with Mixedbread mxbai-rerank-large-v2
- * Fallback: NoOp reranker returns documents unchanged
  */
 
 import "server-only";

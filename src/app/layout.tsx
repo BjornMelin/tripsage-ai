@@ -1,8 +1,5 @@
 /**
  * @fileoverview Next.js root layout component with theme, query, and performance providers.
- *
- * Sets up providers for theming, data fetching, performance monitoring, and navigation.
- * Includes global font loading and metadata.
  */
 
 import { BotIdClient } from "botid/client";

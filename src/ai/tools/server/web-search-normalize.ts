@@ -1,9 +1,5 @@
 /**
  * @fileoverview Normalization utilities for web search tool results.
- *
- * Strips extra fields from Firecrawl API responses to ensure strict schema
- * compliance. Firecrawl may return additional fields (for example content,
- * score, source) that are not part of our strict output schema.
  */
 
 import type { WebSearchSource } from "@ai/tools/schemas/web-search";

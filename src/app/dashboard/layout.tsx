@@ -1,10 +1,5 @@
 /**
- * @fileoverview Dashboard root layout (RSC shell) enforcing auth and providing the
- * shared dashboard chrome.
- *
- * Caching is handled at the app level via `cacheComponents`; this layout intentionally
- * does not opt into per-file caching directives because it relies on authenticated
- * user context.
+ * @fileoverview Dashboard root layout (RSC shell) enforcing auth and providing the shared dashboard chrome.
  */
 
 import { Suspense } from "react";

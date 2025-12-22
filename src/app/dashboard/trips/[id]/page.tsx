@@ -1,6 +1,5 @@
 /**
- * @fileoverview Trip details dashboard page that renders itinerary, budget,
- * and export actions for a specific trip id sourced from the store.
+ * @fileoverview Trip details dashboard page that renders itinerary, budget, and export actions for a specific trip id sourced from the store.
  */
 
 "use client";

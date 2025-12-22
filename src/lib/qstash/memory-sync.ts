@@ -1,7 +1,5 @@
 /**
- * @fileoverview QStash memory sync job enqueue utilities.
- * Provides typed helpers for enqueuing memory sync operations with proper
- * deduplication and error handling.
+ * @fileoverview QStash memory sync job enqueue utilities. Provides typed helpers for enqueuing memory sync operations with proper deduplication and error handling.
  */
 
 import "server-only";

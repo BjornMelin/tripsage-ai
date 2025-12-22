@@ -1,9 +1,5 @@
 /**
  * @fileoverview Calendar connection status card component.
- *
- * Client component that fetches calendar status via API route to avoid
- * server/client boundary violations. Displays connection status and list
- * of connected calendars.
  */
 
 "use client";

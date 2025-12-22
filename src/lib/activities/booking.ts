@@ -1,7 +1,5 @@
 /**
  * @fileoverview Activity booking helpers.
- *
- * Provides external booking link resolution and minimal booking flow support.
  */
 
 import type { Activity } from "@schemas/search";

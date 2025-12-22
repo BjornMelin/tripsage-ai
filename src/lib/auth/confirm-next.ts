@@ -1,7 +1,5 @@
 /**
  * @fileoverview Hardened sanitizer for the auth confirm `next` query parameter.
- *
- * Prevents open redirect by allowlisting internal, app-relative paths.
  */
 
 import "server-only";

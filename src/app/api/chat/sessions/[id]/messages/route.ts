@@ -1,7 +1,5 @@
 /**
  * @fileoverview Chat session messages API route handlers.
- *
- * Methods: GET (list messages), POST (create message).
  */
 
 import "server-only";

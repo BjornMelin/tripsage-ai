@@ -1,17 +1,5 @@
 /**
  * @fileoverview Next.js Cache Components helpers for public endpoints.
- *
- * IMPORTANT: Do NOT use "use cache" in modules that access:
- * - cookies() or headers()
- * - params or searchParams
- * - supabase.auth.getUser() or any auth state
- *
- * For auth-protected routes, use Upstash Redis caching instead.
- * See: docs/development/backend/cache-versioned-keys.md
- *
- * Currently, no routes in this codebase qualify for Cache Components because
- * all data routes are auth-protected. This module provides infrastructure
- * for future public endpoints that may benefit from HTTP-level caching.
  */
 
 import { cacheLife, cacheTag } from "next/cache";

@@ -1,9 +1,5 @@
 /**
  * @fileoverview Google Places enrichment helper with policy-compliant caching.
- *
- * Enriches hotel-like listings with Google Places data. Only caches place_id
- * (indefinite) and lat/lng (30 days max) per Google Maps Platform policy.
- * Full place details are always fetched fresh and never persisted.
  */
 
 import "server-only";

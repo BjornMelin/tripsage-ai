@@ -1,6 +1,5 @@
 /**
- * @fileoverview TanStack Query provider with OTEL-backed telemetry.
- * Refer to docs/development/observability.md for tracing and alerting standards.
+ * @fileoverview TanStack Query provider with OTEL-backed telemetry. Refer to docs/development/observability.md for tracing and alerting standards.
  */
 
 "use client";

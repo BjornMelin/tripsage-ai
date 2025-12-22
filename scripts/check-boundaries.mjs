@@ -83,6 +83,10 @@ const DOMAIN_IMPORT_ALLOWLIST = new Set([
   // Example: "src/domain/example/legacy.ts",
 ]);
 
+// Domain schemas should remain a leaf (pure Zod definitions): they must not depend on
+// Next.js/app/lib modules or `server-only` boundaries.
+const DOMAIN_SCHEMAS_DIR = "src/domain/schemas";
+
 let hardViolationsCount = 0;
 let warningsFound = 0;
 let allowlistedDomainViolations = 0;
@@ -195,6 +199,58 @@ function findDomainViolations(specifiers, filePath, repoRoot = REPO_ROOT) {
   }
 
   return { appViolations, nextViolations };
+}
+
+function findDomainSchemaViolations(specifiers, filePath, repoRoot = REPO_ROOT) {
+  const appViolations = [];
+  const libViolations = [];
+  const nextViolations = [];
+  const serverOnlyViolations = [];
+  const relativeEscapeViolations = [];
+
+  const schemasRoot = path.join(repoRoot, "src", "domain", "schemas");
+
+  for (const specifier of specifiers) {
+    if (specifier === "server-only") {
+      serverOnlyViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier.startsWith("next/")) {
+      nextViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier === "@/app" || specifier.startsWith("@/app/")) {
+      appViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier === "src/app" || specifier.startsWith("src/app/")) {
+      appViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier === "@/lib" || specifier.startsWith("@/lib/")) {
+      libViolations.push(specifier);
+      continue;
+    }
+
+    if (specifier.startsWith(".")) {
+      const resolved = path.resolve(path.dirname(filePath), specifier);
+      if (!resolved.startsWith(schemasRoot)) {
+        relativeEscapeViolations.push(specifier);
+      }
+    }
+  }
+
+  return {
+    appViolations,
+    libViolations,
+    nextViolations,
+    relativeEscapeViolations,
+    serverOnlyViolations,
+  };
 }
 
 function checkBoundaries() {
@@ -345,6 +401,52 @@ function checkBoundaries() {
 
       const specifiers = getImportSpecifiers(content);
       if (specifiers.length === 0) continue;
+
+      if (normalizedPath.startsWith(`${DOMAIN_SCHEMAS_DIR}/`)) {
+        const schemaViolations = findDomainSchemaViolations(
+          specifiers,
+          file,
+          REPO_ROOT
+        );
+        const hasSchemaViolation =
+          schemaViolations.appViolations.length > 0 ||
+          schemaViolations.libViolations.length > 0 ||
+          schemaViolations.nextViolations.length > 0 ||
+          schemaViolations.serverOnlyViolations.length > 0 ||
+          schemaViolations.relativeEscapeViolations.length > 0;
+
+        if (hasSchemaViolation) {
+          console.error(`❌ BOUNDARY VIOLATION: ${normalizedPath}`);
+          if (schemaViolations.appViolations.length > 0) {
+            console.error(
+              `   Domain schemas import app layer: ${schemaViolations.appViolations.join(", ")}`
+            );
+          }
+          if (schemaViolations.libViolations.length > 0) {
+            console.error(
+              `   Domain schemas import lib layer: ${schemaViolations.libViolations.join(", ")}`
+            );
+          }
+          if (schemaViolations.nextViolations.length > 0) {
+            console.error(
+              `   Domain schemas import Next.js: ${schemaViolations.nextViolations.join(", ")}`
+            );
+          }
+          if (schemaViolations.serverOnlyViolations.length > 0) {
+            console.error(
+              `   Domain schemas import server-only modules: ${schemaViolations.serverOnlyViolations.join(", ")}`
+            );
+          }
+          if (schemaViolations.relativeEscapeViolations.length > 0) {
+            console.error(
+              `   Domain schemas import outside schemas/: ${schemaViolations.relativeEscapeViolations.join(", ")}`
+            );
+          }
+          console.error("");
+          hardViolationsCount += 1;
+          continue;
+        }
+      }
 
       const { appViolations, nextViolations } = findDomainViolations(
         specifiers,

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Trip budget form component with Zod validation and dynamic
- * category allocation.
+ * @fileoverview Trip budget form component with Zod validation and dynamic category allocation.
  */
 
 "use client";

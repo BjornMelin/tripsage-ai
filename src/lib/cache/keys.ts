@@ -1,18 +1,5 @@
 /**
  * @fileoverview Cache key generation utilities for consistent key canonicalization.
- *
- * Ensures cache keys are deterministic by sorting and normalizing input
- * parameters. Handles arrays, primitives, and filters null/undefined values.
- *
- * @example
- * ```ts
- * // Same filters in different order produce same key
- * canonicalizeParamsForCache({ status: "active", limit: 10 }, "trips");
- * // => "trips:limit:10|status:active"
- *
- * canonicalizeParamsForCache({ limit: 10, status: "active" }, "trips");
- * // => "trips:limit:10|status:active" (same result)
- * ```
  */
 
 /**

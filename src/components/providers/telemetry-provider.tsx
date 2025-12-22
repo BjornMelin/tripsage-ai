@@ -1,8 +1,5 @@
 /**
  * @fileoverview React provider that initializes client-side OpenTelemetry tracing.
- *
- * This component initializes the WebTracerProvider and FetchInstrumentation
- * when mounted in the browser. It renders nothing and is purely for side effects.
  */
 
 "use client";

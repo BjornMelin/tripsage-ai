@@ -1,6 +1,5 @@
 /**
- * @fileoverview JSON Schema generation utilities for Zod schemas.
- * Uses Zod v4.2.0 native .toJSONSchema() for OpenAPI documentation.
+ * @fileoverview JSON Schema generation utilities for Zod schemas. Uses Zod v4.2.0 native .toJSONSchema() for OpenAPI documentation.
  */
 
 import { z } from "zod";

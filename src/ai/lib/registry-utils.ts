@@ -1,8 +1,5 @@
 /**
  * @fileoverview Registry utilities for AI tools with telemetry and validation.
- *
- * Provides strongly-typed helpers for accessing and executing tools from
- * the shared tool registry with validation and telemetry integration.
  */
 
 import "server-only";

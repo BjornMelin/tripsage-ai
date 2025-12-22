@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hooks for deals management and filtering.
- *
- * Provides hooks for accessing deals, managing filters, saving deals,
- * and handling deal alerts with local state management.
  */
 
 "use client";

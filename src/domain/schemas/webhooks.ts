@@ -1,6 +1,5 @@
 /**
- * @fileoverview Webhook payload and job schemas with validation.
- * Includes webhook payloads, notification jobs, and memory sync jobs.
+ * @fileoverview Webhook payload and job schemas with validation. Includes webhook payloads, notification jobs, and memory sync jobs.
  */
 
 import { z } from "zod";

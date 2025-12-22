@@ -1,13 +1,5 @@
 /**
  * @fileoverview Consolidated memory API route (intent-only).
- *
- * Supports memory endpoints that do not require a userId path segment.
- * This keeps per-intent rate limiting/telemetry via `withApiGuards`, while
- * reducing `src/app/api/memory/*` directory sprawl.
- *
- * Supported intents:
- * - `POST /api/memory/search`
- * - `POST /api/memory/conversations`
  */
 
 import "server-only";

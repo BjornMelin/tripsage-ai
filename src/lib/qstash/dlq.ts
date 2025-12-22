@@ -1,12 +1,5 @@
 /**
  * @fileoverview Dead Letter Queue (DLQ) implementation for failed QStash jobs.
- *
- * Per ADR-0048, failed jobs after max retries are stored in Redis for later review.
- * Implements:
- * - Payload sanitization to prevent PII exposure
- * - Alerting via telemetry events for monitoring
- * - Atomic LREM operations for thread-safe removal
- * - Error stack trace preservation for debugging
  */
 
 import "server-only";

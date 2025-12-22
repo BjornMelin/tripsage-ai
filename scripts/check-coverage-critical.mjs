@@ -180,10 +180,16 @@ const GROUPS = [
     thresholds: { branches: 55, functions: 70, lines: 70, statements: 70 },
   },
   {
+    id: "ai_agents",
+    prefixes: ["/src/ai/agents/"],
+    roots: ["src/ai/agents"],
+    thresholds: { branches: 50, functions: 57, lines: 59, statements: 58 },
+  },
+  {
     id: "ai_tool_routing",
     prefixes: ["/src/ai/tools/", "/src/ai/lib/", "/src/app/api/chat/"],
     roots: ["src/ai/tools", "src/ai/lib", "src/app/api/chat"],
-    thresholds: { branches: 37, functions: 58, lines: 55, statements: 53 },
+    thresholds: { branches: 50, functions: 65, lines: 65, statements: 65 },
   },
 ];
 
