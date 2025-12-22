@@ -47,7 +47,7 @@
     "@ai-sdk/anthropic": "3.0.0-beta.83",
     "@ai-sdk/openai": "3.0.0-beta.96",
     "@ai-sdk/react": "3.0.0-beta.153",
-    "@ai-sdk/togetherai": "2.0.0-beta.49",
+    "@ai-sdk/togetherai": "2.0.0-beta.60",
     "@ai-sdk/xai": "3.0.0-beta.55",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
