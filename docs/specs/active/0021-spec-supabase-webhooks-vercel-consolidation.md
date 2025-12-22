@@ -170,7 +170,7 @@ Notes:
 Vercel env:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
 - `SUPABASE_SERVICE_ROLE_KEY` (or restricted service key)
 - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 - `RESEND_API_KEY`
@@ -229,7 +229,8 @@ Implementation detail: handler code can throw typed errors from `src/lib/webhook
 |----------|----------|-------------|
 | `HMAC_SECRET` | Yes | Shared secret for Supabase→Vercel webhook signatures |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key for client-side access |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase public key for client-side access (preferred) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Legacy public key name (fallback if publishable key is unset) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for admin operations |
 | `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis URL for idempotency/cache |
 | `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis token |
@@ -240,6 +241,8 @@ Implementation detail: handler code can throw typed errors from `src/lib/webhook
 | `EMBEDDINGS_API_KEY` | No | Internal key to enable `/api/embeddings` (disabled unless configured) |
 | `IDEMPOTENCY_FAIL_OPEN` | No | Global default for non-privileged idempotency; webhook/job handlers must fail closed |
 | `COLLAB_WEBHOOK_URL` | No | Downstream webhook URL |
+
+Note: set exactly one Supabase public key variable: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy).
 
 ### Supabase Database Configuration
 

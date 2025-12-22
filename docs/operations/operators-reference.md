@@ -5,7 +5,7 @@ All runtime is Next.js 16 with AI SDK v6 route handlers.
 ## Prerequisites
 
 - Node.js 24+, pnpm 9+
-- Supabase project (URL, anon key, service role key, JWT secret)
+- Supabase project (URL, public key, service role key, JWT secret)
 - Upstash Redis + QStash
 - Model provider keys or Vercel AI Gateway
 
@@ -16,7 +16,7 @@ Align with root `.env.example`:
 | Category | Variables |
 |----------|-----------|
 | Core | `NODE_ENV`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_BASE_PATH` |
-| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` |
+| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` |
 | Upstash | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` |
 | AI | `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY` |
 | External | `GOOGLE_MAPS_SERVER_API_KEY`, `OPENWEATHERMAP_API_KEY`, `DUFFEL_ACCESS_TOKEN`, `RESEND_API_KEY` |

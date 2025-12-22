@@ -11,7 +11,7 @@ This report provides repo-local traceability from each finding in `docs/review/2
 ## Repo + toolchain snapshot
 
 - Branch: `chore/review-2025-12-15-finalize`
-- Commit (verified): `446ebd4dc7bca71fde7835ca7e1e11a34075aa99`
+- Commit (verified): `110d8e356355c59ee323bdcd9acee54158235548`
 - Node: `v24.11.0`
 - pnpm: `10.26.0`
 
@@ -33,6 +33,38 @@ This report provides repo-local traceability from each finding in `docs/review/2
 - `node -e "require.resolve('import-in-the-middle'); require.resolve('require-in-the-middle')"`
 - `NEXT_PUBLIC_SITE_URL='https://example.com' NEXT_PUBLIC_SUPABASE_URL='https://abcd1234.supabase.co' NEXT_PUBLIC_SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature' pnpm build`
 - `PORT=3102 NEXT_PUBLIC_SITE_URL='https://example.com' NEXT_PUBLIC_SUPABASE_URL='https://abcd1234.supabase.co' NEXT_PUBLIC_SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature' SUPABASE_JWT_SECRET='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' TELEMETRY_HASH_SECRET='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' timeout 15s pnpm start; test $? -eq 124`
+- `pnpm check:fileoverviews:full`
+- `pnpm check:no-secrets`
+- `pnpm check:no-secrets:full`
+- `pnpm vitest run src/lib/qstash/__tests__/receiver.test.ts`
+- `node scripts/check-coverage-critical.mjs`
+- `pnpm check:no-new-domain-infra-imports`
+- `pnpm vitest run src/lib/telemetry/__tests__/redis.test.ts src/lib/security/__tests__/botid.test.ts src/lib/agents/__tests__/config-resolver.test.ts src/ai/services/__tests__/hotel-personalization.test.ts`
+- `pnpm vitest run src/ai/tools/server/__tests__/web-crawl.test.ts src/ai/tools/server/__tests__/weather.test.ts`
+- `pnpm add -D simple-git-hooks`
+- `pnpm run prepare`
+- `pnpm biome:fix`
+- `pnpm type-check`
+- `pnpm test:affected`
+- `NEXT_PUBLIC_SITE_URL='https://example.com' NEXT_PUBLIC_SUPABASE_URL='https://abcd1234.supabase.co' NEXT_PUBLIC_SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature' pnpm build`
+- `pnpm boundary:check`
+- `pnpm deps:cycles`
+- `pnpm ai-tools:check`
+- `pnpm check:no-unknown-casts`
+- `pnpm check:no-new-unknown-casts`
+- `pnpm check:fileoverviews`
+- `pnpm check:fileoverviews:full`
+- `pnpm check:no-secrets`
+- `pnpm check:no-secrets:full`
+- `pnpm check:no-secrets:staged`
+- `pnpm check:no-new-domain-infra-imports`
+- `pnpm check:no-new-unknown-casts`
+- `pnpm test:coverage`
+- `pnpm lint`
+- `pnpm biome:fix`
+- `pnpm type-check`
+- `pnpm test:affected`
+- `NEXT_PUBLIC_SITE_URL='https://example.com' NEXT_PUBLIC_SUPABASE_URL='https://abcd1234.supabase.co' NEXT_PUBLIC_SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature' pnpm build`
 
 ## Decision records (required where options existed)
 
@@ -68,6 +100,17 @@ This report provides repo-local traceability from each finding in `docs/review/2
 - Chosen: **Option B** (with a minimal global baseline)
 - Rationale: Enforce meaningful targets where it matters most (auth/payments/keys/webhooks/AI tool routing) without blocking unrelated work on repo-wide thresholds; keep a low global baseline to prevent regressions elsewhere.
 
+### AI-002 (Zen) — full-repo `@fileoverview` scan
+
+| Option | Leverage(35) | Value(30) | Maintain(25) | Adapt(10) | Weighted Total |
+|---|---:|---:|---:|---:|---:|
+| A — report-only full scan | 6 | 3 | 5 | 6 | 4.85 |
+| B — strict full scan + one-time cleanup | 8 | 8 | 9 | 7 | 8.15 |
+| C — strict full scan + allowlists/exclusions | 7 | 6 | 6 | 6 | 6.35 |
+
+- Chosen: **Option B**
+- Rationale: Keep one invariant repo-wide (single-line `@fileoverview` blocks) without permanent exception machinery; full scan is available via `pnpm check:fileoverviews:full` while CI stays diff-based for speed.
+
 ## Traceability matrix
 
 Each entry links back to a finding ID in `docs/review/2025-12-15/review-log.md`.
@@ -92,15 +135,15 @@ Each entry links back to a finding ID in `docs/review/2025-12-15/review-log.md`.
 
 ### DX-002 — CI build gating
 
-- Code: `.github/workflows/ci.yml`
-- Tests/evidence: CI includes a `Production build` step on PRs touching build-affecting paths.
+- Code: `.github/workflows/ci.yml`, `src/app/dashboard/admin/configuration/page.tsx`
+- Tests/evidence: CI includes a `Production build` step on PRs touching build-affecting paths; `/dashboard/admin/configuration` forces runtime rendering via `await connection()` to avoid Cache Components build-time `Date.now()` restrictions.
 - Verification command(s): `NEXT_PUBLIC_* pnpm build` (local parity)
 
 ### ARCH-001 — Layering boundaries
 
-- Code: `docs/development/architecture/layering.md`, `scripts/check-boundaries.mjs`
-- Tests/evidence: boundary checker enforced in CI and passes locally.
-- Verification command(s): `pnpm boundary:check`
+- Code: `docs/development/architecture/layering.md`, `scripts/check-boundaries.mjs`, `scripts/check-no-new-domain-infra-imports.mjs`
+- Tests/evidence: boundary checker enforced in CI and passes locally (including a leaf rule for `src/domain/schemas/**`). Diff-based guard blocks new Domain → Lib/Infra imports.
+- Verification command(s): `pnpm boundary:check`, `pnpm check:no-new-domain-infra-imports`
 
 ### AI-001 — Supabase factory doc drift / naming collision
 
@@ -201,12 +244,12 @@ Each entry links back to a finding ID in `docs/review/2025-12-15/review-log.md`.
 ### AI-002 — File-level doc drift guardrails
 
 - Code: `scripts/check-fileoverviews.mjs`, `.github/workflows/ci.yml`
-- Tests/evidence: diff-based enforcement on changed files; local check passes.
-- Verification command(s): `pnpm check:fileoverviews`
+- Tests/evidence: diff-based enforcement on changed files; full repo scan available; non-test `src/**` headers normalized to single-line blocks.
+- Verification command(s): `pnpm check:fileoverviews`, `pnpm check:fileoverviews:full`
 
 ### AI-003 — Webhook error typing (no heuristics)
 
-- Code: `src/lib/webhooks/handler.ts`, `src/lib/webhooks/errors.ts` (or equivalent)
+- Code: `src/lib/webhooks/handler.ts`, `src/lib/webhooks/errors.ts`
 - Tests/evidence: `src/lib/webhooks/__tests__/handler.test.ts`
 - Verification command(s): `pnpm test:affected`
 
@@ -217,6 +260,7 @@ Each entry links back to a finding ID in `docs/review/2025-12-15/review-log.md`.
 - Next.js docs: <https://nextjs.org/docs/app>
 - Next.js `use server` directive: <https://nextjs.org/docs/app/api-reference/directives/use-server>
 - Next.js `redirect()`: <https://nextjs.org/docs/app/api-reference/functions/redirect>
+- Next.js `connection()`: <https://nextjs.org/docs/app/api-reference/functions/connection>
 - Next.js `serverExternalPackages`: <https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages>
 - Next.js OpenTelemetry: <https://nextjs.org/docs/app/guides/open-telemetry>
 - Next.js Instrumentation: <https://nextjs.org/docs/app/guides/instrumentation>
@@ -229,7 +273,12 @@ Each entry links back to a finding ID in `docs/review/2025-12-15/review-log.md`.
 - AI SDK v6 MCP tools: <https://v6.ai-sdk.dev/docs/ai-sdk-core/mcp-tools>
 - AI SDK v6 ToolLoopAgent: <https://v6.ai-sdk.dev/docs/reference/ai-sdk-core/tool-loop-agent>
 - Supabase SSR client creation: <https://supabase.com/docs/guides/auth/server-side/creating-a-client>
-- Upstash QStash signature validation: <https://upstash.com/docs/qstash/howto/signature-validation>
+- Supabase API keys: <https://supabase.com/docs/guides/api/api-keys>
+- Supabase key changes announcement: <https://github.com/orgs/supabase/discussions/29260>
+- Note: Supabase MCP docs search required auth in this environment; relied on Supabase official guide URL above.
+- Upstash QStash signature verification: <https://upstash.com/docs/qstash/howto/signature>
+- Upstash QStash signing key rotation: <https://upstash.com/docs/qstash/howto/roll-signing-keys>
+- Note (2025-12-22): <https://upstash.com/docs/qstash/howto/signature-validation> returns 404; Upstash now documents signature verification under `/signature`.
 - Upstash Ratelimit timeout behavior: <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
 - Upstash Ratelimit `limit()` response: <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
 - OWASP Unvalidated Redirects & Forwards: <https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html>

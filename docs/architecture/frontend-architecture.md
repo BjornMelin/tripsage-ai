@@ -78,6 +78,8 @@ Avoid new barrels; import concrete modules.
 - **Provider precedence**: user gateway key → user provider key (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
 - **Caching & Limits**: Upstash Ratelimit/Redis in handlers; auth-bound routes are dynamic (no `'use cache'`).
   Routes accessing `cookies()` or `headers()` cannot use cache directives per Next.js Cache Components restrictions.
+  Server Components that need time-based APIs (directly or indirectly, e.g. `Date.now()` via telemetry helpers) should force runtime rendering with `await connection()`.
+  Do not use route-segment `dynamic` overrides when `cacheComponents: true` is enabled.
   See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
   Public data may use cache directives sparingly.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
@@ -132,6 +134,8 @@ return data;
 - No access to `cookies()`, `headers()`, `params`, `searchParams`, or auth state
 
 **Constraint:** Cannot use `"use cache"` in routes that call any request-scoped APIs.
+
+If a Server Component must use time/random APIs (e.g. `Date.now()`, `new Date()`, `Math.random()`), force runtime rendering with `await connection()` instead of route-segment config overrides.
 
 **Files:**
 

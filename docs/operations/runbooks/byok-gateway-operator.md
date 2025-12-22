@@ -21,7 +21,8 @@ Operational checklist for user BYOK, Vault, and team Gateway fallback.
 ```bash
 # Supabase (required)
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=... # preferred (sb_publishable_...)
+# Legacy support: set NEXT_PUBLIC_SUPABASE_ANON_KEY instead of publishable key
 SUPABASE_SERVICE_ROLE_KEY=...
 
 # Team Gateway fallback (optional)

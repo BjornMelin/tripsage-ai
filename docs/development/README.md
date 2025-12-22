@@ -40,13 +40,16 @@ Resources and guidelines for TripSage development.
 pnpm install && pnpm dev
 
 # Quality gates
-pnpm biome:check && pnpm type-check && pnpm test
+pnpm biome:check && pnpm type-check && pnpm boundary:check && pnpm test
+
+# Additional guardrails (run before merge)
+pnpm ai-tools:check && pnpm check:fileoverviews && pnpm check:no-secrets && pnpm check:no-new-domain-infra-imports
 ```
 
 ## Architecture
 
 - **Framework**: Next.js 16 (TypeScript) — server route handlers + React Server Components
-- **AI**: Vercel AI SDK v6 (`ai@6.0.0-beta.116`) with frontend-only agents
+- **AI**: Vercel AI SDK v6 (`ai@6.0.0-beta.150`) with frontend-only agents
 - **Database**: Supabase PostgreSQL with pgvector, RLS, Realtime
 - **Cache**: Upstash Redis (HTTP REST API) + QStash for async jobs
 - **State**: Zustand (client) + TanStack Query (server)

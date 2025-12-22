@@ -13,7 +13,7 @@
 ## Routes (Current Implementation)
 
 - `POST /api/chat/attachments` — Uploads files directly to Supabase Storage (bucket: `attachments`). Validates multipart form data with magic byte MIME verification, enforces 10MB per-file cap, max 5 files per request, and rejects requests advertising total payload >50MB via `Content-Length`. Auth is bound to the current Supabase session cookie (`sb-access-token`). Uses `withApiGuards` for auth and rate limiting (`chat:attachments`). Stores file metadata in Supabase `file_attachments` table. Returns signed URLs for secure file access. Revalidates `attachments` cache tag and bumps Redis tag version on success.
-- `GET /api/attachments/files` — Queries Supabase `file_attachments` table directly with pagination. Generates batch signed URLs for secure file access. Uses `withApiGuards` with rate limiting (`attachments:files`). Per-user Redis caching with 2-minute TTL. Participates in cache tag invalidation via Upstash tag versioning.
+- `GET /api/attachments/files` — Queries Supabase `file_attachments` table directly with pagination. Generates batch signed URLs for secure file access and **filters out** items whose signed URL generation fails (schema contract keeps `url` non-nullable). Uses `withApiGuards` with rate limiting (`attachments:files`). Per-user Redis caching with 2-minute TTL. Participates in cache tag invalidation via Upstash tag versioning.
 
 ## Routes (Target Implementation - Not Yet Migrated)
 
@@ -25,7 +25,7 @@
 
 - Storage: Supabase Storage bucket `attachments` with RLS via signed URLs.
 - Validation: MIME sniff + extension check; reject spoofed types.
-- Rate limits: upload 10/min/user, list 60/min/user.
+- Rate limits: upload 20/min/user, list 20/min/user.
 - Observability: spans `attachments.upload`, `attachments.sign`.
 
 ### Storage buckets & paths

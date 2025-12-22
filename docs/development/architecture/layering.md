@@ -10,6 +10,7 @@ safer.
 
 - Core business logic, domain services, and schemas.
 - Should be framework-agnostic and stable.
+- `src/domain/schemas/**` is a leaf: schemas must not import `next/*`, `server-only`, or `@/lib/**` (schemas may depend only on Zod and other schemas).
 
 ### 2) Lib/Infra (`src/lib`, `@/*`)
 
@@ -38,6 +39,7 @@ safer.
 Notes:
 - Domain **must not** import `next/*` or anything under `src/app/**`.
 - Domain importing Lib/Infra is legacy and should be burned down over time.
+- Domain schemas (`src/domain/schemas/**`) **must not** import Lib/Infra at all.
 - Server/Client boundaries still apply: client components must not import server-only modules.
 
 ## Examples
@@ -56,7 +58,11 @@ Forbidden:
 
 CI enforces boundaries via `scripts/check-boundaries.mjs`:
 - Domain → App/Next imports are blocked.
+- Domain schemas → Lib/Infra/Next/`server-only` imports are blocked.
 - Client components importing server-only modules are blocked.
+
+To prevent *new* Domain → Lib/Infra coupling while burning down legacy imports,
+CI also runs `scripts/check-no-new-domain-infra-imports.mjs` (diff-based; allow only with an inline `domain-infra-ok:` justification marker).
 
 Legacy exceptions live in `DOMAIN_IMPORT_ALLOWLIST` within `scripts/check-boundaries.mjs`.
 Add an entry only with a short rationale and a burn-down plan.

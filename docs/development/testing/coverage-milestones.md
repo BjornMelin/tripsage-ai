@@ -20,7 +20,7 @@ Computed from `coverage/coverage-final.json` emitted by `pnpm test:coverage`.
 
 | Scope | Statements | Branches | Functions | Lines |
 |---|---:|---:|---:|---:|
-| Global (repo-wide) | 69.64% | 55.46% | 69.04% | 71.27% |
+| Global (`src/**`, excluding tests) | 71.51% | 57.78% | 71.32% | 73.22% |
 
 ### Critical surfaces (2025-12-22)
 
@@ -33,8 +33,9 @@ coverage output (prevents “unmeasured” critical modules).
 | Auth (`src/app/auth/**`, `src/lib/auth/**`) | 80.00% | 54.55% | 91.67% | 81.45% |
 | Payments (`src/lib/payments/**`) | 100.00% | 100.00% | 100.00% | 100.00% |
 | Keys (`src/app/api/keys/**`) | 78.67% | 67.11% | 77.78% | 79.86% |
-| Webhooks (`src/lib/webhooks/**`, `src/app/api/hooks/**`, `src/lib/qstash/**`) | 75.98% | 60.47% | 75.44% | 76.80% |
-| AI tool routing (`src/ai/{lib,tools}/**`, `src/app/api/chat/**`) | 55.53% | 39.58% | 60.50% | 57.47% |
+| Webhooks (`src/lib/webhooks/**`, `src/app/api/hooks/**`, `src/lib/qstash/**`) | 76.47% | 61.66% | 75.44% | 77.30% |
+| AI agents (`src/ai/agents/**`) | 59.38% | 50.21% | 58.00% | 59.75% |
+| AI tool routing (`src/ai/{lib,tools}/**`, `src/app/api/chat/**`) | 68.05% | 52.71% | 67.65% | 70.55% |
 
 ## Enforced thresholds (current)
 
@@ -55,7 +56,8 @@ Enforced by `scripts/check-coverage-critical.mjs`:
 - Payments: statements/branches/functions/lines ≥ **95%**
 - Keys: statements ≥ **75%**, branches ≥ **60%**, functions ≥ **70%**, lines ≥ **75%**
 - Webhooks: statements ≥ **70%**, branches ≥ **55%**, functions ≥ **70%**, lines ≥ **70%**
-- AI tool routing: statements ≥ **53%**, branches ≥ **37%**, functions ≥ **58%**, lines ≥ **55%**
+- AI agents: statements ≥ **58%**, branches ≥ **50%**, functions ≥ **57%**, lines ≥ **59%**
+- AI tool routing: statements ≥ **65%**, branches ≥ **50%**, functions ≥ **65%**, lines ≥ **65%**
 
 ## Raise plan
 
