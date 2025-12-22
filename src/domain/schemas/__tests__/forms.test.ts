@@ -369,6 +369,7 @@ describe("forms schemas", () => {
         participants: {
           adults: 1,
           children: 0,
+          infants: 0,
         },
       });
       expect(result.success).toBe(true);
@@ -390,6 +391,7 @@ describe("forms schemas", () => {
         participants: {
           adults: 1,
           children: 0,
+          infants: 0,
         },
       });
       expect(result.success).toBe(true);
@@ -411,6 +413,7 @@ describe("forms schemas", () => {
         participants: {
           adults: 1,
           children: 0,
+          infants: 0,
         },
       });
       expect(result.success).toBe(false);

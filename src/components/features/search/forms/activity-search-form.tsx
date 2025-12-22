@@ -41,6 +41,9 @@ export function ActivitySearchForm({
   onSearch,
   initialValues,
 }: ActivitySearchFormProps) {
+  const { participants: initialParticipants, ...restInitialValues } =
+    initialValues ?? {};
+
   const form = useSearchForm(
     activitySearchFormSchema,
     {
@@ -60,12 +63,14 @@ export function ActivitySearchForm({
       participants: {
         adults: 1,
         children: 0,
+        infants: 0,
+        ...initialParticipants,
       },
       priceRange: {
         max: undefined,
         min: undefined,
       },
-      ...initialValues,
+      ...restInitialValues,
     },
     {}
   );
@@ -103,6 +108,7 @@ export function ActivitySearchForm({
             participants: {
               adults: params.adults ?? 1,
               children: params.children ?? 0,
+              infants: params.infants ?? 0,
             },
             priceRange: params.priceRange ?? undefined,
           },
@@ -125,6 +131,7 @@ export function ActivitySearchForm({
       difficulty: data.difficulty,
       duration: data.duration,
       indoor: data.indoor,
+      infants: data.participants.infants,
       priceRange: data.priceRange,
     };
 
@@ -220,7 +227,7 @@ export function ActivitySearchForm({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="participants.adults"
@@ -254,6 +261,33 @@ export function ActivitySearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Children (3-17)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={50}
+                            {...field}
+                            value={field.value ?? 0}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const parsed = Number.parseInt(value, 10);
+                              field.onChange(
+                                value === "" || Number.isNaN(parsed) ? 0 : parsed
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="participants.infants"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Infants (0-2)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"

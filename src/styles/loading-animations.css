@@ -100,7 +100,8 @@
   .animate-spin,
   .animate-ping,
   .skeleton-shimmer,
-  .wave-loader {
+  .wave-loader,
+  [class*="animate-[progress-indeterminate"] {
     animation: none;
   }
 

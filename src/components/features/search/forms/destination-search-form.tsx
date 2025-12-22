@@ -159,6 +159,7 @@ export function DestinationSearchForm({
 
   const query = form.watch("query");
   const watchedTypes = form.watch("types");
+  const watchedLimit = form.watch("limit");
 
   useEffect(() => {
     return () => {
@@ -345,10 +346,11 @@ export function DestinationSearchForm({
     () => recentSearchesByType.slice(0, 4),
     [recentSearchesByType]
   );
-  const recentItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
-    const defaultLimit = form.getValues("limit") ?? 10;
-    const defaultTypes = form.getValues("types") ?? ["locality", "country"];
 
+  const defaultLimit = watchedLimit ?? 10;
+  const defaultTypes = watchedTypes ?? ["locality", "country"];
+
+  const recentItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
     return buildRecentQuickSelectItems<
       DestinationSearchFormValues,
       DestinationSearchParams
@@ -370,7 +372,7 @@ export function DestinationSearchForm({
 
       return item;
     });
-  }, [form, recentSearches]);
+  }, [defaultLimit, defaultTypes, recentSearches]);
 
   const popularItems: QuickSelectItem<DestinationSearchFormValues>[] = useMemo(() => {
     return PopularDestinations.map((destination) => ({
