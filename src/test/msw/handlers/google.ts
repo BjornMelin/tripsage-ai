@@ -6,6 +6,12 @@ import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
 
 const defaultPhotoName = "places/placeholder/photos/primary";
+const activitySearchTerms = ["activities", "things to do"] as const;
+
+function isActivitySearchQuery(query: string) {
+  const normalized = query.toLowerCase();
+  return activitySearchTerms.some((term) => normalized.includes(term));
+}
 
 /** Shared 404 error response for invalid resources. */
 const RESOURCE_NOT_FOUND_ERROR = {
@@ -58,11 +64,7 @@ export const googlePlacesHandlers: HttpHandler[] = [
       }
 
       // Handle activity searches differently
-      const isActivitySearch =
-        textQuery.toLowerCase().includes("activities") ||
-        textQuery.toLowerCase().includes("things to do");
-
-      if (isActivitySearch) {
+      if (isActivitySearchQuery(textQuery)) {
         return HttpResponse.json({
           places: [
             {
@@ -142,7 +144,7 @@ export const googlePlacesHandlers: HttpHandler[] = [
     HttpResponse.json(RESOURCE_NOT_FOUND_ERROR, { status: 404 })
   ),
 
-  // Backward compatibility: generic invalid path
+  // Explicit invalid path for error-handling tests
   http.get("https://places.googleapis.com/v1/invalid", () =>
     HttpResponse.json(RESOURCE_NOT_FOUND_ERROR, { status: 404 })
   ),

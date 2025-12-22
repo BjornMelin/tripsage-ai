@@ -6,6 +6,7 @@
 
 import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
+import { MSW_FIXED_UNIX_SECONDS } from "../constants";
 
 /**
  * Default AI provider handlers providing happy-path responses.
@@ -28,7 +29,7 @@ export const aiProviderHandlers: HttpHandler[] = [
           },
         },
       ],
-      created: Date.now(),
+      created: MSW_FIXED_UNIX_SECONDS,
       id: "chatcmpl-mock",
       model: "gpt-4o-mini",
       object: "chat.completion",

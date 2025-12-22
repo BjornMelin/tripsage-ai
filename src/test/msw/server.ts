@@ -11,6 +11,7 @@
 
 import { setupServer } from "msw/node";
 import { aiProviderHandlers } from "./handlers/ai-providers";
+import { aiRouteHandlers } from "./handlers/ai-routes";
 import { amadeusHandlers } from "./handlers/amadeus";
 import { apiRouteHandlers } from "./handlers/api-routes";
 import { authHandlers } from "./handlers/auth";
@@ -27,6 +28,7 @@ import { composeHandlers } from "./handlers/utils";
 
 const handlers = composeHandlers(
   apiRouteHandlers,
+  aiRouteHandlers,
   authHandlers,
   authRouteHandlers,
   chatHandlers,

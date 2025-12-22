@@ -14,8 +14,11 @@ import {
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { MSW_SUPABASE_URL } from "./msw/constants";
 import { server } from "./msw/server";
 
+// Default to failing tests on unexpected network calls. For local debugging only,
+// you can relax this with `MSW_ON_UNHANDLED_REQUEST=warn` or `bypass`.
 const onUnhandledRequest =
   (process.env.MSW_ON_UNHANDLED_REQUEST as "bypass" | "error" | "warn" | undefined) ??
   "error";
@@ -25,7 +28,7 @@ const DEBUG_OPEN_HANDLES = process.env.VITEST_DEBUG_OPEN_HANDLES === "1";
 if (typeof process !== "undefined" && process.env) {
   const env = process.env as Record<string, string | undefined>;
   env.NODE_ENV ||= "test";
-  env.NEXT_PUBLIC_SUPABASE_URL ||= "http://localhost:54321";
+  env.NEXT_PUBLIC_SUPABASE_URL ||= MSW_SUPABASE_URL;
   env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";
 }
 
