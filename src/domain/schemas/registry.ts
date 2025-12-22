@@ -1,5 +1,5 @@
 /**
- * @fileoverview Centralized schema registry for TripSage AI Leverages Zod v4 advanced features: recursive schemas, template literals, refined generics Provides shared schemas, transforms, and validation patterns
+ * @fileoverview Centralized schema registry for TripSage AI. Leverages Zod v4 advanced features: recursive schemas, template literals, refined generics. Provides shared schemas, transforms, and validation patterns.
  */
 
 import { z } from "zod";

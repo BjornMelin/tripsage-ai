@@ -22,6 +22,30 @@ function normalizeOptionalEnvVar(value: string | undefined): string | undefined 
   return trimmed;
 }
 
+/**
+ * Detects obviously placeholder values that should not be used as real keys.
+ * Common placeholder patterns: "your-*", "changeme*", "*placeholder*", "*example*".
+ *
+ * @param value - Trimmed env var value
+ * @returns true if the value looks like a placeholder and should be ignored
+ */
+function isPlaceholderValue(value: string): boolean {
+  const lower = value.toLowerCase();
+  // Common placeholder patterns from .env.example templates
+  if (
+    lower.startsWith("your-") ||
+    lower.startsWith("your_") ||
+    lower.startsWith("changeme") ||
+    lower.includes("placeholder") ||
+    lower.includes("example") ||
+    lower === "your-publishable-key" ||
+    lower === "your-anon-key"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function createBuildPhaseServerEnvProxy(): ServerEnv {
   const handler: ProxyHandler<ServerEnv> = {
     get(_target, prop) {
@@ -60,10 +84,19 @@ function parseServerEnv(): ServerEnv {
     const envForParse = { ...process.env };
 
     // Supabase renamed "anon" to "publishable" keys; support both to reduce DX drift.
-    // Prefer publishable key when available.
+    // Prefer publishable key when available, but ignore obvious placeholder values.
+    const publishableKey = normalizeOptionalEnvVar(
+      envForParse.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    );
+    const anonKey = normalizeOptionalEnvVar(envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+    // Use publishable key only if it's not a placeholder; otherwise fall back to anon key
     const resolvedSupabaseKey =
-      normalizeOptionalEnvVar(envForParse.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
-      normalizeOptionalEnvVar(envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+      publishableKey && !isPlaceholderValue(publishableKey)
+        ? publishableKey
+        : anonKey && !isPlaceholderValue(anonKey)
+          ? anonKey
+          : undefined;
 
     if (resolvedSupabaseKey) {
       envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY = resolvedSupabaseKey;

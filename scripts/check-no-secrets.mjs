@@ -172,10 +172,7 @@ function isObviousPlaceholder(value) {
 function findEnvAssignments(text) {
   const findings = [];
   for (const name of ENV_ASSIGNMENT_NAMES) {
-    const re = new RegExp(
-      String.raw`\\b${name}\\b\\s*[:=]\\s*(['\"])([^'\\\"]+)\\1`,
-      "g"
-    );
+    const re = new RegExp(String.raw`\b${name}\b\s*[:=]\s*(['\"])([^'\"]+)\1`, "g");
     for (const match of text.matchAll(re)) {
       const value = match[2] ?? "";
       if (isObviousPlaceholder(value)) continue;

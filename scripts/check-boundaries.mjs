@@ -207,6 +207,7 @@ function findDomainSchemaViolations(specifiers, filePath, repoRoot = REPO_ROOT) 
   const nextViolations = [];
   const serverOnlyViolations = [];
   const relativeEscapeViolations = [];
+  const infraViolations = [];
 
   const schemasRoot = path.join(repoRoot, "src", "domain", "schemas");
 
@@ -236,6 +237,16 @@ function findDomainSchemaViolations(specifiers, filePath, repoRoot = REPO_ROOT) 
       continue;
     }
 
+    // Infrastructure aliases that domain schemas should not depend on
+    // @ai/* (tools, models, registry) and @domain/*/service are server-only infrastructure
+    if (
+      specifier.startsWith("@ai/") ||
+      (specifier.startsWith("@domain/") && specifier.includes("/service"))
+    ) {
+      infraViolations.push(specifier);
+      continue;
+    }
+
     if (specifier.startsWith(".")) {
       const resolved = path.resolve(path.dirname(filePath), specifier);
       if (!resolved.startsWith(schemasRoot)) {
@@ -246,6 +257,7 @@ function findDomainSchemaViolations(specifiers, filePath, repoRoot = REPO_ROOT) 
 
   return {
     appViolations,
+    infraViolations,
     libViolations,
     nextViolations,
     relativeEscapeViolations,
@@ -410,6 +422,7 @@ function checkBoundaries() {
         );
         const hasSchemaViolation =
           schemaViolations.appViolations.length > 0 ||
+          schemaViolations.infraViolations.length > 0 ||
           schemaViolations.libViolations.length > 0 ||
           schemaViolations.nextViolations.length > 0 ||
           schemaViolations.serverOnlyViolations.length > 0 ||
@@ -420,6 +433,11 @@ function checkBoundaries() {
           if (schemaViolations.appViolations.length > 0) {
             console.error(
               `   Domain schemas import app layer: ${schemaViolations.appViolations.join(", ")}`
+            );
+          }
+          if (schemaViolations.infraViolations.length > 0) {
+            console.error(
+              `   Domain schemas import infrastructure: ${schemaViolations.infraViolations.join(", ")}`
             );
           }
           if (schemaViolations.libViolations.length > 0) {

@@ -26,7 +26,7 @@ function readCoverageJson(filePath) {
 }
 
 function normalizePath(filePath) {
-  return String(filePath).replaceAll("\\\\", "/");
+  return String(filePath).replaceAll("\\", "/");
 }
 
 const PROJECT_ROOT = process.cwd();
@@ -46,7 +46,8 @@ function buildCoveredRelativePaths(coverage) {
   return set;
 }
 
-const EXCLUDED_PATH_PARTS = ["/__tests__/", "/src/test/", "/src/mocks/", "/__mocks__/"];
+// Consistent with check-fileoverviews.mjs - no leading slashes for src/ prefixed paths
+const EXCLUDED_PATH_PARTS = ["/__tests__/", "src/test/", "src/mocks/", "/__mocks__/"];
 const INCLUDED_FILE_RE = /\.(c|m)?[tj]sx?$/;
 
 function isExcludedSourceFile(filePath) {

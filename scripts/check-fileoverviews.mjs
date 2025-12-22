@@ -84,7 +84,15 @@ function getChangedFiles() {
 }
 
 function readText(filePath) {
-  return readFileSync(filePath, "utf8");
+  try {
+    return readFileSync(filePath, "utf8");
+  } catch (error) {
+    // Handle files deleted between listing and reading (rare race condition)
+    if (error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function extractFileoverviewBlock(lines, filePath) {
@@ -193,6 +201,7 @@ const violations = [];
 
 for (const filePath of changedFiles) {
   const text = readText(filePath);
+  if (text === null) continue; // Skip deleted files
   const lines = text.split("\n");
   const block = extractFileoverviewBlock(lines, filePath);
   if (!block) continue;

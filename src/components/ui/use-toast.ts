@@ -2,6 +2,8 @@
  * @fileoverview Toast notification wrapper providing backward-compatible API over Sonner. Maintains the same interface as the previous Radix-based toast.
  */
 
+"use client";
+
 import { toast as sonnerToast } from "sonner";
 
 type ToastVariant = "default" | "destructive";

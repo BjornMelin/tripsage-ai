@@ -78,8 +78,8 @@ Avoid new barrels; import concrete modules.
 - **Provider precedence**: user gateway key → user provider key (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
 - **Caching & Limits**: Upstash Ratelimit/Redis in handlers; auth-bound routes are dynamic (no `'use cache'`).
   Routes accessing `cookies()` or `headers()` cannot use cache directives per Next.js Cache Components restrictions.
-  Server Components that need time-based APIs (directly or indirectly, e.g. `Date.now()` via telemetry helpers) should force runtime rendering with `await connection()`.
-  Do not use route-segment `dynamic` overrides when `cacheComponents: true` is enabled.
+  Server Components that need time-based APIs (directly or indirectly, e.g. `Date.now()` via telemetry helpers) should force runtime rendering with `await connection()` to ensure values are computed at request time rather than build time.
+  Do not use route-segment `dynamic` overrides when `cacheComponents: true` is enabled; cache directives take precedence and config conflicts cause build errors.
   See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
   Public data may use cache directives sparingly.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
@@ -135,7 +135,7 @@ return data;
 
 **Constraint:** Cannot use `"use cache"` in routes that call any request-scoped APIs.
 
-If a Server Component must use time/random APIs (e.g. `Date.now()`, `new Date()`, `Math.random()`), force runtime rendering with `await connection()` instead of route-segment config overrides.
+If a Server Component must use time/random APIs (e.g. `Date.now()`, `new Date()`, `Math.random()`), force runtime rendering with `await connection()` instead of route-segment config overrides. This ensures dynamic values are computed at request time; route-segment `dynamic` overrides conflict with component-level caching and can cause build errors.
 
 **Files:**
 

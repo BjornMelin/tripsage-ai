@@ -268,6 +268,7 @@ export const POST = withApiGuards({
       });
     }
     return errorResponse({
+      err: error instanceof Error ? error : undefined,
       error: "invalid_request",
       reason: "Invalid multipart form data",
       status: 400,
