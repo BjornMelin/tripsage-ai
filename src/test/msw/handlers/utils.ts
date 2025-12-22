@@ -9,4 +9,4 @@ import type { HttpHandler } from "msw";
  */
 export const composeHandlers = (
   ...groups: ReadonlyArray<HttpHandler>[]
-): HttpHandler[] => groups.flatMap((group) => [...group]);
+): HttpHandler[] => groups.flat();
