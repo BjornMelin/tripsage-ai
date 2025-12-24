@@ -1,4 +1,6 @@
-/** @fileoverview Hardened Next.js route handler for streaming chat responses. */
+/**
+ * @fileoverview Hardened Next.js route handler for streaming chat responses.
+ */
 
 import "server-only";
 
