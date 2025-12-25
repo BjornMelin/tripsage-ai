@@ -1,8 +1,5 @@
 /**
- * @fileoverview Shared types for memory orchestrator and adapters.
- *
- * Extracted to a separate file to break circular dependencies between
- * orchestrator.ts and the adapter implementations.
+ * @fileoverview Shared types for the memory orchestrator and adapters to avoid circular dependencies.
  */
 
 import type { MemoryContextResponse, Message } from "@schemas/chat";

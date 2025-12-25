@@ -1,8 +1,5 @@
 /**
- * @fileoverview Reusable search form shell component.
- *
- * Provides a consistent wrapper for search forms with shared quick-select sections
- * (popular + recent), optimistic progress indication, and error handling.
+ * @fileoverview Reusable search form shell with shared quick-select UI, optimistic progress, and error handling.
  */
 
 "use client";
