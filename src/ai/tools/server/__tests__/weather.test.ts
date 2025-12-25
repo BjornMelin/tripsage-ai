@@ -30,6 +30,13 @@ const mockContext = {
   toolCallId: "test-call-id",
 };
 
+async function getWeatherExecute() {
+  const { getCurrentWeather } = await import("@ai/tools/server/weather");
+  const execute = getCurrentWeather.execute;
+  if (!execute) throw new Error("getCurrentWeather.execute is undefined");
+  return async (...args: Parameters<typeof execute>) => execute(...args);
+}
+
 function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
   return (
     typeof value === "object" &&
@@ -47,8 +54,7 @@ describe("getCurrentWeather", () => {
   });
 
   test("builds correct URL for city query and maps response fields", async () => {
-    const { getCurrentWeather } = await import("@ai/tools/server/weather");
-
+    const execute = await getWeatherExecute();
     let lastRequestUrl: URL | undefined;
     server.use(
       http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
@@ -74,9 +80,6 @@ describe("getCurrentWeather", () => {
         });
       })
     );
-
-    const execute = getCurrentWeather.execute;
-    if (!execute) throw new Error("getCurrentWeather.execute is undefined");
 
     const out = await execute(
       {
@@ -130,7 +133,7 @@ describe("getCurrentWeather", () => {
   });
 
   test("uses coordinates when provided", async () => {
-    const { getCurrentWeather } = await import("@ai/tools/server/weather");
+    const execute = await getWeatherExecute();
     let lastRequestUrl: URL | undefined;
     server.use(
       http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
@@ -138,9 +141,6 @@ describe("getCurrentWeather", () => {
         return HttpResponse.json({ main: { temp: 20 }, name: "X" });
       })
     );
-
-    const execute = getCurrentWeather.execute;
-    if (!execute) throw new Error("getCurrentWeather.execute is undefined");
 
     await execute(
       {
@@ -159,7 +159,7 @@ describe("getCurrentWeather", () => {
   });
 
   test("uses zip when provided", async () => {
-    const { getCurrentWeather } = await import("@ai/tools/server/weather");
+    const execute = await getWeatherExecute();
     let lastRequestUrl: URL | undefined;
     server.use(
       http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
@@ -167,9 +167,6 @@ describe("getCurrentWeather", () => {
         return HttpResponse.json({ main: { temp: 20 }, name: "X" });
       })
     );
-
-    const execute = getCurrentWeather.execute;
-    if (!execute) throw new Error("getCurrentWeather.execute is undefined");
 
     await execute(
       {
@@ -187,13 +184,10 @@ describe("getCurrentWeather", () => {
   });
 
   test("fails closed when not configured", async () => {
-    const { getCurrentWeather } = await import("@ai/tools/server/weather");
+    const execute = await getWeatherExecute();
     mockGetServerEnvVar.mockImplementation(() => {
       throw new Error("Missing env OPENWEATHERMAP_API_KEY");
     });
-
-    const execute = getCurrentWeather.execute;
-    if (!execute) throw new Error("getCurrentWeather.execute is undefined");
 
     await expect(
       execute(
@@ -213,8 +207,7 @@ describe("getCurrentWeather", () => {
   test(
     "maps fetch_timeout to weather_timeout",
     withFakeTimers(async () => {
-      const { getCurrentWeather } = await import("@ai/tools/server/weather");
-
+      const execute = await getWeatherExecute();
       server.use(
         http.get(
           "https://api.openweathermap.org/data/2.5/weather",
@@ -222,21 +215,16 @@ describe("getCurrentWeather", () => {
         )
       );
 
-      const execute = getCurrentWeather.execute;
-      if (!execute) throw new Error("getCurrentWeather.execute is undefined");
-
-      const pendingRequest = Promise.resolve(
-        execute(
-          {
-            city: "Paris",
-            coordinates: null,
-            fresh: true,
-            lang: null,
-            units: "metric",
-            zip: null,
-          },
-          mockContext
-        )
+      const pendingRequest = execute(
+        {
+          city: "Paris",
+          coordinates: null,
+          fresh: true,
+          lang: null,
+          units: "metric",
+          zip: null,
+        },
+        mockContext
       );
 
       pendingRequest.catch(() => undefined);
@@ -250,29 +238,23 @@ describe("getCurrentWeather", () => {
   test(
     "maps fetch_failed to weather_failed",
     withFakeTimers(async () => {
-      const { getCurrentWeather } = await import("@ai/tools/server/weather");
-
+      const execute = await getWeatherExecute();
       server.use(
         http.get("https://api.openweathermap.org/data/2.5/weather", () => {
           throw new Error("Network error");
         })
       );
 
-      const execute = getCurrentWeather.execute;
-      if (!execute) throw new Error("getCurrentWeather.execute is undefined");
-
-      const pendingRequest = Promise.resolve(
-        execute(
-          {
-            city: "Paris",
-            coordinates: null,
-            fresh: true,
-            lang: null,
-            units: "metric",
-            zip: null,
-          },
-          mockContext
-        )
+      const pendingRequest = execute(
+        {
+          city: "Paris",
+          coordinates: null,
+          fresh: true,
+          lang: null,
+          units: "metric",
+          zip: null,
+        },
+        mockContext
       );
 
       pendingRequest.catch(() => undefined);
@@ -289,16 +271,12 @@ describe("getCurrentWeather", () => {
     [404, "weather_not_found"],
     [500, "weather_failed"],
   ])("maps HTTP %s to %s", async (status, expected) => {
-    const { getCurrentWeather } = await import("@ai/tools/server/weather");
-
+    const execute = await getWeatherExecute();
     server.use(
       http.get("https://api.openweathermap.org/data/2.5/weather", () => {
         return new HttpResponse("nope", { status });
       })
     );
-
-    const execute = getCurrentWeather.execute;
-    if (!execute) throw new Error("getCurrentWeather.execute is undefined");
 
     await expect(
       execute(

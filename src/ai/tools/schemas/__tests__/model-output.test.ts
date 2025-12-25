@@ -20,6 +20,19 @@ describe("tool model output schemas", () => {
     });
 
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toMatchObject({
+        activities: [
+          {
+            id: "act-1",
+            location: "NYC",
+            name: "Museum",
+            type: "sightseeing",
+          },
+        ],
+        metadata: { primarySource: "googleplaces", total: 1 },
+      });
+    }
   });
 
   it("rejects activity model output with invalid metadata", () => {
@@ -29,6 +42,13 @@ describe("tool model output schemas", () => {
     });
 
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some(
+          (issue) => issue.path.join(".") === "metadata.primarySource"
+        )
+      ).toBe(true);
+    }
   });
 
   it("parses flight model output", () => {
@@ -62,5 +82,18 @@ describe("tool model output schemas", () => {
     });
 
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.currency).toBe("USD");
+      expect(result.data.itineraryCount).toBe(1);
+      expect(result.data.offers).toHaveLength(1);
+      expect(result.data.offers[0]).toMatchObject({
+        id: "offer-1",
+        provider: "test",
+      });
+      expect(result.data.offers[0].slices[0]?.segments[0]).toMatchObject({
+        destination: "LAX",
+        origin: "SFO",
+      });
+    }
   });
 });

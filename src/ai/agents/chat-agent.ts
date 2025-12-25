@@ -199,23 +199,163 @@ export function createChatAgent(
     useCallOptions,
   });
 
+  const extractTokenizableText = (message: ModelMessage): string[] => {
+    const content = message.content;
+    if (typeof content === "string") return [content];
+    if (!Array.isArray(content)) return [];
+
+    const texts: string[] = [];
+
+    for (const part of content as unknown[]) {
+      if (typeof part !== "object" || part === null) continue;
+      const obj = part as Record<string, unknown>;
+
+      if (typeof obj.text === "string") texts.push(obj.text);
+      if (typeof obj.content === "string") texts.push(obj.content);
+
+      if (obj.type === "tool-call") {
+        texts.push(
+          JSON.stringify({
+            input: obj.input,
+            toolName: obj.toolName,
+          })
+        );
+      }
+
+      if (obj.type === "tool-result") {
+        const output = obj.output;
+        if (typeof output === "object" && output !== null) {
+          const outObj = output as Record<string, unknown>;
+          if (outObj.type === "text" && typeof outObj.value === "string") {
+            texts.push(outObj.value);
+          } else if (Object.hasOwn(outObj, "value")) {
+            texts.push(JSON.stringify(outObj.value));
+          }
+        }
+      }
+    }
+
+    return texts;
+  };
+
+  const compressMessagesToTokenBudget = (
+    stepMessages: ModelMessage[],
+    promptTokenBudget: number
+  ): { kept: ModelMessage[]; originalCount: number; keptCount: number } => {
+    const originalCount = stepMessages.length;
+    if (originalCount <= 2) {
+      return { kept: stepMessages, keptCount: originalCount, originalCount };
+    }
+
+    const messageTokens = stepMessages.map((message) =>
+      countTokens(extractTokenizableText(message), deps.modelId)
+    );
+
+    const keepIndices = new Set<number>([0]);
+    let totalTokens = messageTokens[0] ?? 0;
+
+    const getAssistantToolCallIds = (message: ModelMessage): Set<string> => {
+      if (message.role !== "assistant") return new Set<string>();
+      if (!Array.isArray(message.content)) return new Set<string>();
+      const ids = new Set<string>();
+      for (const part of message.content as unknown[]) {
+        if (typeof part !== "object" || part === null) continue;
+        const obj = part as Record<string, unknown>;
+        if (obj.type === "tool-call" && typeof obj.toolCallId === "string") {
+          ids.add(obj.toolCallId);
+        }
+      }
+      return ids;
+    };
+
+    const getToolResultIds = (message: ModelMessage): Set<string> => {
+      if (message.role !== "tool") return new Set<string>();
+      if (!Array.isArray(message.content)) return new Set<string>();
+      const ids = new Set<string>();
+      for (const part of message.content as unknown[]) {
+        if (typeof part !== "object" || part === null) continue;
+        const obj = part as Record<string, unknown>;
+        if (obj.type === "tool-result" && typeof obj.toolCallId === "string") {
+          ids.add(obj.toolCallId);
+        }
+      }
+      return ids;
+    };
+
+    const intersects = (a: Set<string>, b: Set<string>): boolean => {
+      for (const v of a) if (b.has(v)) return true;
+      return false;
+    };
+
+    let i = originalCount - 1;
+    while (i >= 1) {
+      const message = stepMessages[i];
+      const isToolMessage = message.role === "tool";
+
+      // Keep tool call/result pairs together when they are adjacent.
+      let groupIndices: number[] = [i];
+      let nextIndex = i - 1;
+      if (isToolMessage && i - 1 >= 1) {
+        const toolResultIds = getToolResultIds(message);
+        const prev = stepMessages[i - 1];
+        const prevToolCallIds = getAssistantToolCallIds(prev);
+        if (toolResultIds.size > 0 && intersects(toolResultIds, prevToolCallIds)) {
+          groupIndices = [i - 1, i];
+          nextIndex = i - 2;
+        }
+      }
+
+      let groupTokens = 0;
+      for (const idx of groupIndices) {
+        if (keepIndices.has(idx)) continue;
+        groupTokens += messageTokens[idx] ?? 0;
+      }
+
+      // Always keep at least the first and the most recent group.
+      const mustKeepSomeRecentContext = keepIndices.size === 1;
+      if (!mustKeepSomeRecentContext && totalTokens + groupTokens > promptTokenBudget) {
+        i = nextIndex;
+        continue;
+      }
+
+      for (const idx of groupIndices) keepIndices.add(idx);
+      totalTokens += groupTokens;
+      i = nextIndex;
+    }
+
+    const kept = Array.from(keepIndices)
+      .sort((a, b) => a - b)
+      .map((idx) => stepMessages[idx])
+      .filter(Boolean);
+
+    return { kept, keptCount: kept.length, originalCount };
+  };
+
   const prepareStep: PrepareStepFunction<ToolSet> = ({
     messages: stepMessages,
     stepNumber,
   }) => {
-    // Compress conversation history for longer loops to stay within context limits
-    if (stepMessages.length > 20) {
+    // Token-based context management to stay within model context limits.
+    // Budget prompt tokens to leave room for tool-call overhead and max output tokens.
+    const promptTokenBudget = Math.max(1, modelLimit - maxTokens - 1024);
+    const estimatedPromptTokens = countTokens(
+      stepMessages.flatMap((m) => extractTokenizableText(m)),
+      deps.modelId
+    );
+
+    if (estimatedPromptTokens > promptTokenBudget) {
+      const { kept, keptCount, originalCount } = compressMessagesToTokenBudget(
+        stepMessages,
+        promptTokenBudget
+      );
       logger.info("Compressing chat context", {
-        originalCount: stepMessages.length,
+        estimatedPromptTokens,
+        keptCount,
+        originalCount,
+        promptTokenBudget,
         stepNumber,
       });
-      return {
-        messages: [
-          // Preserve earliest message to maintain conversational continuity
-          stepMessages[0],
-          ...stepMessages.slice(-15), // Keep last 15 messages
-        ],
-      };
+      return { messages: kept };
     }
     return {};
   };
