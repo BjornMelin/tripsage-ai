@@ -24,6 +24,73 @@ const logger = createServerLogger("chat-agent");
 
 export { extractTextFromContent, normalizeInstructions };
 
+const isUnknownArray = (value: unknown): value is unknown[] => Array.isArray(value);
+
+const textContentPartSchema = z.looseObject({
+  content: z.string().optional(),
+  text: z.string().optional(),
+  type: z.string().optional(),
+});
+
+const toolCallPartSchema = textContentPartSchema.extend({
+  input: z.unknown().optional(),
+  toolCallId: z.string().optional(),
+  toolName: z.string(),
+  type: z.literal("tool-call"),
+});
+
+const toolCallIdPartSchema = z.looseObject({
+  toolCallId: z.string(),
+  type: z.literal("tool-call"),
+});
+
+const toolResultPartSchema = textContentPartSchema.extend({
+  output: z.unknown().optional(),
+  toolCallId: z.string().optional(),
+  type: z.literal("tool-result"),
+});
+
+const toolResultIdPartSchema = z.looseObject({
+  toolCallId: z.string(),
+  type: z.literal("tool-result"),
+});
+
+const toolResultOutputSchema = z.looseObject({
+  type: z.string().optional(),
+  value: z.unknown().optional(),
+});
+
+const messageContentPartSchema = z.union([
+  toolCallPartSchema,
+  toolResultPartSchema,
+  textContentPartSchema,
+]);
+
+type MessageContentPart = z.infer<typeof messageContentPartSchema>;
+type ToolResultOutput = z.infer<typeof toolResultOutputSchema>;
+type ToolCallIdPart = z.infer<typeof toolCallIdPartSchema>;
+type ToolResultIdPart = z.infer<typeof toolResultIdPartSchema>;
+
+const parseMessageContentPart = (value: unknown): MessageContentPart | null => {
+  const parsed = messageContentPartSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
+
+const parseToolCallIdPart = (value: unknown): ToolCallIdPart | null => {
+  const parsed = toolCallIdPartSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
+
+const parseToolResultIdPart = (value: unknown): ToolResultIdPart | null => {
+  const parsed = toolResultIdPartSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
+
+const parseToolResultOutput = (value: unknown): ToolResultOutput | null => {
+  const parsed = toolResultOutputSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
+
 /**
  * Call options schema for the chat agent (AI SDK v6).
  *
@@ -202,35 +269,35 @@ export function createChatAgent(
   const extractTokenizableText = (message: ModelMessage): string[] => {
     const content = message.content;
     if (typeof content === "string") return [content];
-    if (!Array.isArray(content)) return [];
+    if (!isUnknownArray(content)) return [];
 
     const texts: string[] = [];
 
-    for (const part of content as unknown[]) {
-      if (typeof part !== "object" || part === null) continue;
-      const obj = part as Record<string, unknown>;
+    for (const part of content) {
+      const parsedPart = parseMessageContentPart(part);
+      if (!parsedPart) continue;
 
-      if (typeof obj.text === "string") texts.push(obj.text);
-      if (typeof obj.content === "string") texts.push(obj.content);
+      if (parsedPart.text) texts.push(parsedPart.text);
+      if (parsedPart.content) texts.push(parsedPart.content);
 
-      if (obj.type === "tool-call") {
+      if (parsedPart.type === "tool-call") {
         texts.push(
           JSON.stringify({
-            input: obj.input,
-            toolName: obj.toolName,
+            input: parsedPart.input,
+            toolName: parsedPart.toolName,
           })
         );
+        continue;
       }
 
-      if (obj.type === "tool-result") {
-        const output = obj.output;
-        if (typeof output === "object" && output !== null) {
-          const outObj = output as Record<string, unknown>;
-          if (outObj.type === "text" && typeof outObj.value === "string") {
-            texts.push(outObj.value);
-          } else if (Object.hasOwn(outObj, "value")) {
-            texts.push(JSON.stringify(outObj.value));
-          }
+      if (parsedPart.type === "tool-result") {
+        const parsedOutput = parseToolResultOutput(parsedPart.output);
+        if (!parsedOutput) continue;
+
+        if (parsedOutput.type === "text" && typeof parsedOutput.value === "string") {
+          texts.push(parsedOutput.value);
+        } else if (Object.hasOwn(parsedOutput, "value")) {
+          texts.push(JSON.stringify(parsedOutput.value));
         }
       }
     }
@@ -256,28 +323,26 @@ export function createChatAgent(
 
     const getAssistantToolCallIds = (message: ModelMessage): Set<string> => {
       if (message.role !== "assistant") return new Set<string>();
-      if (!Array.isArray(message.content)) return new Set<string>();
+      const content = message.content;
+      if (!isUnknownArray(content)) return new Set<string>();
       const ids = new Set<string>();
-      for (const part of message.content as unknown[]) {
-        if (typeof part !== "object" || part === null) continue;
-        const obj = part as Record<string, unknown>;
-        if (obj.type === "tool-call" && typeof obj.toolCallId === "string") {
-          ids.add(obj.toolCallId);
-        }
+      for (const part of content) {
+        const parsedPart = parseToolCallIdPart(part);
+        if (!parsedPart) continue;
+        ids.add(parsedPart.toolCallId);
       }
       return ids;
     };
 
     const getToolResultIds = (message: ModelMessage): Set<string> => {
       if (message.role !== "tool") return new Set<string>();
-      if (!Array.isArray(message.content)) return new Set<string>();
+      const content = message.content;
+      if (!isUnknownArray(content)) return new Set<string>();
       const ids = new Set<string>();
-      for (const part of message.content as unknown[]) {
-        if (typeof part !== "object" || part === null) continue;
-        const obj = part as Record<string, unknown>;
-        if (obj.type === "tool-result" && typeof obj.toolCallId === "string") {
-          ids.add(obj.toolCallId);
-        }
+      for (const part of content) {
+        const parsedPart = parseToolResultIdPart(part);
+        if (!parsedPart) continue;
+        ids.add(parsedPart.toolCallId);
       }
       return ids;
     };

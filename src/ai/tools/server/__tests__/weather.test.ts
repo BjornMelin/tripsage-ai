@@ -34,7 +34,7 @@ async function getWeatherExecute() {
   const { getCurrentWeather } = await import("@ai/tools/server/weather");
   const execute = getCurrentWeather.execute;
   if (!execute) throw new Error("getCurrentWeather.execute is undefined");
-  return async (...args: Parameters<typeof execute>) => execute(...args);
+  return execute;
 }
 
 function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
@@ -215,16 +215,18 @@ describe("getCurrentWeather", () => {
         )
       );
 
-      const pendingRequest = execute(
+      const pendingRequest: Promise<unknown> = Promise.resolve(
+        execute(
         {
           city: "Paris",
           coordinates: null,
-          fresh: true,
-          lang: null,
-          units: "metric",
-          zip: null,
-        },
-        mockContext
+            fresh: true,
+            lang: null,
+            units: "metric",
+            zip: null,
+          },
+          mockContext
+        )
       );
 
       pendingRequest.catch(() => undefined);
@@ -245,16 +247,18 @@ describe("getCurrentWeather", () => {
         })
       );
 
-      const pendingRequest = execute(
+      const pendingRequest: Promise<unknown> = Promise.resolve(
+        execute(
         {
           city: "Paris",
           coordinates: null,
-          fresh: true,
-          lang: null,
-          units: "metric",
-          zip: null,
-        },
-        mockContext
+            fresh: true,
+            lang: null,
+            units: "metric",
+            zip: null,
+          },
+          mockContext
+        )
       );
 
       pendingRequest.catch(() => undefined);
