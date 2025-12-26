@@ -19,7 +19,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 - **Framework:** `next@^16.0.10`, `react@^19.2.3`, `typescript@^5.9.3`
 - **AI SDK v6:** `ai@6.0.0-beta.150`, `@ai-sdk/react@3.0.0-beta.153`, connectors `@ai-sdk/openai@3.0.0-beta.96`, `@ai-sdk/anthropic@3.0.0-beta.83`, `@ai-sdk/xai@3.0.0-beta.55`, `@ai-sdk/togetherai@2.0.0-beta.49`
-- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.87.1`, `@supabase/postgrest-js@^2.87.1`
+- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.87.1`
 - **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.12`
 - **Caching/Jobs:** `@upstash/redis@^1.35.7`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@^2.8.4`
 - **UI:** Radix primitives, `tailwindcss@^4.1.18`, `lucide-react@^0.561.0`, `motion@^12.23.26`, `class-variance-authority@^0.7.1`, `clsx@^2.1.1`
