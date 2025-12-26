@@ -8,8 +8,6 @@
     "build:analyze": "pnpm build && next experimental-analyze --output",
     "start": "node .next/standalone/server.js",
     "prepare": "simple-git-hooks",
-    "lint": "biome lint ./src ./e2e ./scripts",
-    "format:biome": "biome format ./src --write",
     "biome:check": "biome check ./src ./e2e ./scripts",
     "biome:fix": "biome check ./src ./e2e ./scripts --fix",
     "type-check": "tsc --noEmit",

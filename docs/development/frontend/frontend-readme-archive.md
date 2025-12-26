@@ -345,9 +345,7 @@ pnpm start        # Start production server
 
 ```bash
 pnpm lint         # Lint code with Biome
-pnpm biome:check  # Lint and format check
-pnpm biome:fix    # Auto-fix linting issues
-pnpm format:biome # Format code with Biome
+pnpm biome:fix    # Auto-fix linting and formatting issues
 pnpm type-check   # TypeScript type checking
 ```
 

@@ -45,7 +45,7 @@ function useTrips() {
 }
 ```
 
-- Commands: `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`, `pnpm test`.
+- Commands: `pnpm biome:fix`, `pnpm type-check`, `pnpm test`.
 
 ## Import Paths
 
@@ -92,7 +92,7 @@ Troubleshooting: restart TS server, confirm path mapping, run `pnpm type-check` 
 
 ## Code Style
 
-- Formatter/linter: Biome. Use `pnpm biome:fix` to apply fixes; `pnpm format:biome` for formatting only.
+- Formatter/linter: Biome. Use `pnpm biome:fix` to apply fixes and format code.
 - Keep schemas, types, and exports documented with concise JSDoc when public.
 
 ## Zod Schemas (v4)
