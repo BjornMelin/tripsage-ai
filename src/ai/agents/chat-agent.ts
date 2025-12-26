@@ -384,6 +384,21 @@ export function createChatAgent(
 
       // Always keep at least the first and the most recent group.
       const mustKeepSomeRecentContext = keepIndices.size === 1;
+      const wouldExceedTokenBudget =
+        groupTokens > promptTokenBudget ||
+        totalTokens + groupTokens > promptTokenBudget;
+      if (mustKeepSomeRecentContext && wouldExceedTokenBudget) {
+        const groupKey = groupIndices.join(",");
+        const groupRoles = groupIndices.map((idx) => stepMessages[idx]?.role).join(",");
+        logger.warn("Keeping oversized recent context group", {
+          groupKey,
+          groupRoles,
+          groupTokens,
+          nextTotalTokens: totalTokens + groupTokens,
+          promptTokenBudget,
+          totalTokens,
+        });
+      }
       if (!mustKeepSomeRecentContext && totalTokens + groupTokens > promptTokenBudget) {
         i = nextIndex;
         continue;
