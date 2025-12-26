@@ -591,7 +591,8 @@ export default function TripDetailsPage() {
           <BudgetForm
             initialData={initialBudgetFormData}
             onCancel={() => setIsCreateBudgetDialogOpen(false)}
-            onSubmit={(data) => {
+            // biome-ignore lint/suspicious/useAwait: async for future await calls and Promise return type
+            onSubmit={async (data) => {
               try {
                 const budgetId = secureUuid();
                 const createdAt = nowIso();
@@ -645,7 +646,6 @@ export default function TripDetailsPage() {
                   variant: "destructive",
                 });
               }
-              return Promise.resolve();
             }}
           />
         </DialogContent>
