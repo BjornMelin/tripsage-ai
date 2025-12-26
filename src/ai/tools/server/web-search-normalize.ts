@@ -1,10 +1,4 @@
-/**
- * @fileoverview Normalization utilities for web search tool results.
- *
- * SECURITY: This module sanitizes external web content to prevent
- * indirect prompt injection attacks where malicious websites embed
- * hidden text designed to manipulate the AI agent.
- */
+/** @fileoverview Normalization utilities for web search tool results. */
 
 import type { WebSearchSource } from "@ai/tools/schemas/web-search";
 import { sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";

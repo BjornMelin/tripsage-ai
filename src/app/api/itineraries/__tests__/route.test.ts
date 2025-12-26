@@ -53,6 +53,9 @@ const baseItem: ItineraryItemsRow = {
 
 const { redis, ratelimit } = setupUpstashMocks();
 
+/** Fixed timestamp for deterministic rate limit mock responses. */
+const MOCK_RESET_TIMESTAMP = 1704067260000;
+
 type SupabaseMockOptions = {
   getUserId?: string;
   insertResult?: { data: ItineraryItemsRow | null; error: unknown | null };
@@ -150,7 +153,7 @@ describe("/api/itineraries", () => {
     setRateLimitFactoryForTests(async () => ({
       limit: 60,
       remaining: 59,
-      reset: Date.now() + 60_000,
+      reset: MOCK_RESET_TIMESTAMP,
       success: true,
     }));
   });

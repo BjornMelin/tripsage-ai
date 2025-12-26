@@ -25,15 +25,14 @@ export function RealtimeAuthProvider(): null {
       // Null check guards against initial client render before Supabase client is hydrated
       if (!supabase || !isMounted) return;
 
-      const client = supabase;
       cleanupClientAuth = () => {
-        client.realtime.setAuth("");
+        supabase.realtime.setAuth("");
       };
 
-      const { data: authListener } = client.auth.onAuthStateChange(
+      const { data: authListener } = supabase.auth.onAuthStateChange(
         (_event, session) => {
           const token = session?.access_token ?? null;
-          client.realtime.setAuth(token ?? "");
+          supabase.realtime.setAuth(token ?? "");
         }
       );
       cleanupSubscription = () => {
@@ -43,10 +42,10 @@ export function RealtimeAuthProvider(): null {
       try {
         const {
           data: { session },
-        } = await client.auth.getSession();
+        } = await supabase.auth.getSession();
         if (!isMounted) return;
         const token = session?.access_token ?? null;
-        client.realtime.setAuth(token ?? "");
+        supabase.realtime.setAuth(token ?? "");
       } catch (error: unknown) {
         // Allow UI to operate; realtime auth will refresh when a valid token exists.
         if (process.env.NODE_ENV === "development") {

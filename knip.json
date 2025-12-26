@@ -1,4 +1,5 @@
 {
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
     "src/app/**/{page,layout,template,loading,error,not-found,default,head}.{ts,tsx}!",
     "src/app/**/route.{ts,tsx}!",

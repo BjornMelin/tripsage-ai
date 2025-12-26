@@ -196,11 +196,17 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
  * });
  * ```
  */
+/**
+ * Creates a chat agent without call options (simpler API, no runtime memory injection).
+ */
 export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
   config?: ChatAgentConfig & { useCallOptions?: false | undefined }
 ): TripSageAgentResult<ToolSet, never>;
+/**
+ * Creates a chat agent with call options schema for runtime memory injection.
+ */
 export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
