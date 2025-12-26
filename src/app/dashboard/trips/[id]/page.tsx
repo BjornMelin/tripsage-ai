@@ -199,14 +199,23 @@ export default function TripDetailsPage() {
   const mergedTrip = trip ? { ...trip, destinations } : null;
 
   const initialBudgetFormData = useMemo(() => {
-    if (!mergedTrip) return undefined;
+    const currency = mergedTrip?.currency;
+    const endDate = mergedTrip?.endDate;
+    const startDate = mergedTrip?.startDate;
+    const title = mergedTrip?.title;
+    if (startDate === undefined || endDate === undefined) return undefined;
     return {
-      currency: mergedTrip.currency ?? "USD",
-      endDate: toIsoDateInputValue(mergedTrip.endDate),
-      name: `${mergedTrip.title || "Trip"} Budget`,
-      startDate: toIsoDateInputValue(mergedTrip.startDate),
+      currency: currency ?? "USD",
+      endDate: toIsoDateInputValue(endDate),
+      name: `${title || "Trip"} Budget`,
+      startDate: toIsoDateInputValue(startDate),
     };
-  }, [mergedTrip]);
+  }, [
+    mergedTrip?.currency,
+    mergedTrip?.endDate,
+    mergedTrip?.startDate,
+    mergedTrip?.title,
+  ]);
 
   // Parse start/end dates once to avoid duplicate telemetry/errors
   const parsedDates = useMemo(() => {
