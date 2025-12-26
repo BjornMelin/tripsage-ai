@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setRateLimitFactoryForTests } from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -97,6 +98,16 @@ vi.mock("@/lib/telemetry/span", () => ({
 describe("/api/chat/sessions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
+  });
+
+  afterEach(() => {
+    setRateLimitFactoryForTests(null);
   });
   it("creates and lists sessions", async () => {
     const resCreate = await SESS_POST(

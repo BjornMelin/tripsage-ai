@@ -13,7 +13,7 @@ import {
   TransformStream as NodeTransformStream,
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { MSW_SUPABASE_URL } from "./msw/constants";
 import { server } from "./msw/server";
 
@@ -30,6 +30,10 @@ if (typeof process !== "undefined" && process.env) {
   env.NODE_ENV ||= "test";
   env.NEXT_PUBLIC_SUPABASE_URL ||= MSW_SUPABASE_URL;
   env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";
+  // SECURITY: Simulate Vercel environment in tests so proxy headers (X-Forwarded-For,
+  // X-Real-IP) are trusted. In production, Vercel sets this automatically.
+  // Tests that need to verify untrusted proxy behavior should explicitly unset this.
+  env.VERCEL ||= "1";
 }
 
 // Provide Web Streams polyfills for environments missing them (used by
@@ -60,6 +64,25 @@ if (!globalAny.TransformStream) {
 beforeAll(() => {
   // Start MSW server to intercept HTTP requests.
   server.listen({ onUnhandledRequest });
+});
+
+beforeEach(async () => {
+  // Provide a default rate limit factory that always succeeds.
+  // Tests that need to override this can call setRateLimitFactoryForTests themselves.
+  // Use dynamic import and guard with try/catch since some tests mock this module.
+  try {
+    const factoryModule = await import("@/lib/api/factory");
+    if (typeof factoryModule.setRateLimitFactoryForTests === "function") {
+      factoryModule.setRateLimitFactoryForTests(async () => ({
+        limit: 100,
+        remaining: 99,
+        reset: Date.now() + 60_000,
+        success: true,
+      }));
+    }
+  } catch {
+    // Module mocked or unavailable - tests handle their own rate limiting
+  }
 });
 
 afterAll(() => {
@@ -99,8 +122,19 @@ afterAll(() => {
   timeout.unref();
 });
 
-afterEach(() => {
+afterEach(async () => {
   server.resetHandlers();
+
+  // Reset rate limit factory to avoid cross-test pollution.
+  // Note: beforeEach will set it again before the next test.
+  try {
+    const factoryModule = await import("@/lib/api/factory");
+    if (typeof factoryModule.setRateLimitFactoryForTests === "function") {
+      factoryModule.setRateLimitFactoryForTests(null);
+    }
+  } catch {
+    // Module mocked or unavailable
+  }
 
   // Only restore timers if they were explicitly enabled in the test.
   // Tests that need fake timers should use withFakeTimers() utility.

@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const emitOperationalAlertOncePerWindowMock = vi.hoisted(() => vi.fn());
 const recordTelemetryEventMock = vi.hoisted(() => vi.fn());
@@ -49,10 +49,15 @@ vi.mock("@upstash/ratelimit", () => {
 
 describe("webhook rate limiting - timeout handling", () => {
   beforeEach(() => {
+    vi.stubEnv("VERCEL", "1");
     vi.resetModules();
     emitOperationalAlertOncePerWindowMock.mockReset();
     recordTelemetryEventMock.mockReset();
     limitMock.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("fails closed when Upstash ratelimit times out", async () => {

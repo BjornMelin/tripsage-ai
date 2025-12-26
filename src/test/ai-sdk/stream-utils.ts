@@ -255,9 +255,19 @@ export function createMockUiMessageStreamResponse(options: {
   events.push(`data: ${JSON.stringify({ finishReason, type: "finish" })}\n\n`);
   events.push("data: [DONE]\n\n");
 
-  const stream = createMockStreamResponse({
-    chunkDelayMs: 5,
-    chunks: events,
+  const encoder = new TextEncoder();
+
+  // Response bodies in Node expect bytes (Uint8Array), not strings.
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (let index = 0; index < events.length; index++) {
+        controller.enqueue(encoder.encode(events[index]));
+        if (index < events.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+      }
+      controller.close();
+    },
   });
 
   return new Response(stream, {

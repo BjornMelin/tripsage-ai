@@ -81,6 +81,9 @@ describe("/api/activities routes", () => {
       reset: Date.now() + 60_000,
       success: true,
     });
+    MOCK_GET_REDIS.mockReset();
+    // Provide a Redis instance so rate limiting can execute via the Upstash mocks.
+    MOCK_GET_REDIS.mockReturnValue({} as never);
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -88,7 +91,9 @@ describe("/api/activities routes", () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const { setRateLimitFactoryForTests } = await import("@/lib/api/factory");
+    setRateLimitFactoryForTests(null);
     vi.clearAllMocks();
   });
 
@@ -173,6 +178,10 @@ describe("/api/activities routes", () => {
     });
 
     it("should enforce rate limiting", async () => {
+      // Clear the global rate limit factory to use Upstash mocks instead
+      const { setRateLimitFactoryForTests } = await import("@/lib/api/factory");
+      setRateLimitFactoryForTests(null);
+
       upstashMocks.ratelimit.__force({
         limit: 20,
         remaining: 0,

@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getClientIp } from "../rate-limit";
 
 const recordTelemetryEvent = vi.fn();
@@ -10,6 +10,14 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 describe("getClientIp", () => {
+  beforeEach(() => {
+    vi.stubEnv("VERCEL", "1");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("uses x-forwarded-for when present", () => {
     const req = new Request("https://example.com/api", {
       headers: { "x-forwarded-for": "1.1.1.1, 2.2.2.2" },
