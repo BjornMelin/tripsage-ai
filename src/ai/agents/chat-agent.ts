@@ -24,6 +24,12 @@ const logger = createServerLogger("chat-agent");
 
 export { extractTextFromContent, normalizeInstructions };
 
+/**
+ * Token buffer reserved for AI SDK tool-call/tool-result overhead (tool metadata + serialized args/outputs).
+ * Keeps the prompt under the model context window when tools are used.
+ */
+const TOOL_CALL_OVERHEAD_TOKENS = 1024;
+
 const isUnknownArray = (value: unknown): value is unknown[] => Array.isArray(value);
 
 const textContentPartSchema = z.looseObject({
@@ -402,7 +408,10 @@ export function createChatAgent(
   }) => {
     // Token-based context management to stay within model context limits.
     // Budget prompt tokens to leave room for tool-call overhead and max output tokens.
-    const promptTokenBudget = Math.max(1, modelLimit - maxTokens - 1024);
+    const promptTokenBudget = Math.max(
+      1,
+      modelLimit - maxTokens - TOOL_CALL_OVERHEAD_TOKENS
+    );
     const estimatedPromptTokens = countTokens(
       stepMessages.flatMap((m) => extractTokenizableText(m)),
       deps.modelId
