@@ -1,6 +1,5 @@
 /**
- * @fileoverview Client-side helpers for the security dashboard: local time rendering
- * and interactive session controls.
+ * @fileoverview Client-side helpers for the security dashboard: local time rendering and interactive session controls.
  */
 
 "use client";

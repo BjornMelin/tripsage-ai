@@ -1,8 +1,5 @@
 /**
  * @fileoverview Server-side safe redirect URL resolver for auth flows.
- *
- * Prevents open-redirect attacks by validating redirect paths and
- * computing origins from configured environment variables or request context.
  */
 
 import "server-only";

@@ -1,7 +1,5 @@
 /**
  * @fileoverview Chat route layout implementation.
- *
- * Implements and exports the ChatLayout component used by the chat route group.
  */
 
 import "server-only";

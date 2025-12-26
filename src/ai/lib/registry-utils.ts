@@ -1,14 +1,11 @@
 /**
  * @fileoverview Registry utilities for AI tools with telemetry and validation.
- *
- * Provides strongly-typed helpers for accessing and executing tools from
- * the shared tool registry with validation and telemetry integration.
  */
 
 import "server-only";
 
 import type { toolRegistry } from "@ai/tools";
-import type { Tool, ToolCallOptions } from "ai";
+import type { Tool, ToolExecutionOptions } from "ai";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Strongly typed view of a tool from the shared registry; enforces execute presence. */
@@ -19,7 +16,10 @@ export type RegisteredTool<Params = unknown, Result = unknown> = Tool<
   name?: string;
   description?: string;
   inputSchema?: unknown;
-  execute: (params: Params, callOptions?: ToolCallOptions) => Promise<Result> | Result;
+  execute: (
+    params: Params,
+    callOptions?: ToolExecutionOptions
+  ) => Promise<Result> | Result;
 };
 
 /** Validate a registry entry is present and executable. @throws Error if missing or lacks execute. */
@@ -46,7 +46,7 @@ export const getRegistryTool = <Params, Result>(
 export const invokeTool = <Params, Result>(
   tool: RegisteredTool<Params, Result>,
   params: Params,
-  callOptions?: ToolCallOptions
+  callOptions?: ToolExecutionOptions
 ): Promise<Result> => {
   return withTelemetrySpan(
     "agent.tool.execute",

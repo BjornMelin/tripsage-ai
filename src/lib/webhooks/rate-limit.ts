@@ -1,8 +1,5 @@
 /**
  * @fileoverview Rate limiting for webhook handlers.
- *
- * Uses Upstash Ratelimit with sliding window algorithm to protect against DoS
- * attacks and resource exhaustion. Configured for 100 requests per minute per IP.
  */
 
 import "server-only";

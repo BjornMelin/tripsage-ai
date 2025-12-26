@@ -1,8 +1,5 @@
 /**
  * @fileoverview Shared React Hook Form setup for search feature forms.
- *
- * Provides a thin, typed wrapper around react-hook-form with Zod v4 resolver.
- * Keeps configuration consistent across search forms.
  */
 
 "use client";

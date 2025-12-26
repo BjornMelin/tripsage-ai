@@ -1,8 +1,5 @@
 /**
  * @fileoverview Server-side URL origin resolution utilities.
- *
- * Provides safe origin resolution for server actions and API routes.
- * Prevents SSRF by using trusted environment variables instead of user input.
  */
 
 import "server-only";

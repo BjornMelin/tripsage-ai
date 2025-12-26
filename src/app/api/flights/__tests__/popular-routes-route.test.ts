@@ -2,7 +2,10 @@
 
 import type { Redis } from "@upstash/redis";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
 import { setRedisFactoryForTests } from "@/lib/redis";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
@@ -45,6 +48,12 @@ import { GET as getPopularRoutes } from "../popular-routes/route";
 describe("/api/flights/popular-routes", () => {
   beforeEach(() => {
     stubRateLimitDisabled();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
     redis.__reset();
     ratelimit.__reset();
     setRedisFactoryForTests(() =>
@@ -54,6 +63,7 @@ describe("/api/flights/popular-routes", () => {
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     setRedisFactoryForTests(null);
     redis.__reset();
     ratelimit.__reset();

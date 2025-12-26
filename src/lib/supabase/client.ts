@@ -1,6 +1,5 @@
 /**
- * @fileoverview Browser Supabase client factory and React hook.
- * Provides a singleton typed client for the Database schema.
+ * @fileoverview Browser Supabase client factory and React hook. Provides a singleton typed client for the Database schema.
  */
 
 "use client";
@@ -55,7 +54,7 @@ export function getBrowserClient(): TypedSupabaseClient | null {
   if (!supabaseUrl || !supabaseAnonKey) {
     if (process.env.NODE_ENV === "development") {
       console.warn(
-        "[supabase/client] Supabase env vars missing (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY). " +
+        "[supabase/client] Supabase env vars missing (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY). " +
           "This is expected during development or build with placeholder mode enabled."
       );
     }

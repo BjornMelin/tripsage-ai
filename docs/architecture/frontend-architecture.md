@@ -19,7 +19,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 - **Framework:** `next@^16.0.10`, `react@^19.2.3`, `typescript@^5.9.3`
 - **AI SDK v6:** `ai@6.0.0-beta.150`, `@ai-sdk/react@3.0.0-beta.153`, connectors `@ai-sdk/openai@3.0.0-beta.96`, `@ai-sdk/anthropic@3.0.0-beta.83`, `@ai-sdk/xai@3.0.0-beta.55`, `@ai-sdk/togetherai@2.0.0-beta.49`
-- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.87.1`, `@supabase/postgrest-js@^2.87.1`
+- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.87.1`
 - **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.12`
 - **Caching/Jobs:** `@upstash/redis@^1.35.7`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@^2.8.4`
 - **UI:** Radix primitives, `tailwindcss@^4.1.18`, `lucide-react@^0.561.0`, `motion@^12.23.26`, `class-variance-authority@^0.7.1`, `clsx@^2.1.1`
@@ -78,6 +78,8 @@ Avoid new barrels; import concrete modules.
 - **Provider precedence**: user gateway key → user provider key (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
 - **Caching & Limits**: Upstash Ratelimit/Redis in handlers; auth-bound routes are dynamic (no `'use cache'`).
   Routes accessing `cookies()` or `headers()` cannot use cache directives per Next.js Cache Components restrictions.
+  Server Components that need time-based APIs (directly or indirectly, e.g. `Date.now()` via telemetry helpers) should force runtime rendering with `await connection()` to ensure values are computed at request time rather than build time.
+  Do not use route-segment `dynamic` overrides when `cacheComponents: true` is enabled; cache directives take precedence and config conflicts cause build errors.
   See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
   Public data may use cache directives sparingly.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
@@ -132,6 +134,10 @@ return data;
 - No access to `cookies()`, `headers()`, `params`, `searchParams`, or auth state
 
 **Constraint:** Cannot use `"use cache"` in routes that call any request-scoped APIs.
+
+If a Server Component must use time/random APIs (e.g. `Date.now()`, `new Date()`, `Math.random()`), force runtime rendering with `await connection()` instead of route-segment config overrides.
+
+This ensures values are computed at request time; route-segment `dynamic` overrides conflict with component-level caching and can cause build errors.
 
 **Files:**
 

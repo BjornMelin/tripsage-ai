@@ -1,9 +1,5 @@
 /**
  * @fileoverview Client-side helpers for recording errors on the active span.
- *
- * This module is safe to import from client components and libraries. It
- * encapsulates direct OpenTelemetry API usage so that other modules do not
- * depend on `@opentelemetry/api` directly.
  */
 
 "use client";

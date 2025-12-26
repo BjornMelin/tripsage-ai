@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hooks for performance monitoring.
- *
- * Provides hooks for measuring page load times, component render times,
- * and web vitals tracking.
  */
 
 "use client";

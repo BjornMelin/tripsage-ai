@@ -1,8 +1,5 @@
 /**
  * @fileoverview Cache invalidation webhook handler for database changes.
- *
- * Uses the shared webhook handler abstraction and cache registry.
- * Adds idempotency to prevent unnecessary cache version bumps.
  */
 
 import "server-only";

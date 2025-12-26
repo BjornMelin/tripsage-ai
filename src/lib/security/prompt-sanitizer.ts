@@ -1,17 +1,109 @@
 /**
- * @fileoverview Shared AI prompt sanitization utilities.
- *
- * Provides functions to sanitize user inputs before interpolation into AI prompts,
- * preventing prompt injection attacks. Can be used across all AI-generating routes.
- *
- * @see https://owasp.org/www-project-top-ten/ (A03:2021 - Injection)
+ * @fileoverview Prompt injection defense via homoglyph normalization and pattern filtering.
  */
+
+// SECURITY: Defends against prompt injection attacks including:
+// - Unicode homoglyphs (Cyrillic "А" looks like Latin "A")
+// - Zero-width characters (invisible characters that break regex)
+// - Common injection patterns (SYSTEM:, ignore instructions, etc.)
 
 /**
  * Common prompt injection patterns to detect.
  * These patterns are commonly used to hijack LLM behavior.
  */
 export const FILTERED_MARKER = "[FILTERED]";
+
+/**
+ * Zero-width and invisible characters that can be used to bypass injection filters.
+ * These must be stripped before applying regex patterns.
+ *
+ * Uses alternation instead of character class to avoid combining character issues.
+ */
+const ZERO_WIDTH_CHARS =
+  /\u200B|\u200C|\u200D|\u2060|\u2061|\u2062|\u2063|\u2064|\uFEFF|\u00AD|\u180E|\u034F/g;
+
+/**
+ * Common Unicode homoglyphs that look like ASCII letters.
+ * Maps confusable characters to their ASCII equivalents.
+ *
+ * Note: This covers the most common attack vectors (Cyrillic, Greek).
+ * NFKC normalization handles many others (fullwidth, superscript, etc.)
+ *
+ * Uses Map to avoid Biome naming convention lint errors while allowing
+ * non-ASCII character keys for security purposes.
+ */
+const HOMOGLYPH_MAP = new Map<string, string>([
+  // Greek lookalikes
+  ["Α", "A"],
+  ["Β", "B"],
+  ["Ε", "E"],
+  ["Ζ", "Z"],
+  ["Η", "H"],
+  ["Ι", "I"],
+  ["Κ", "K"],
+  ["Μ", "M"],
+  ["Ν", "N"],
+  ["Ο", "O"],
+  ["Ρ", "P"],
+  ["Τ", "T"],
+  ["Υ", "Y"],
+  ["Χ", "X"],
+  ["ο", "o"],
+  ["Ѕ", "S"],
+  ["І", "I"],
+  ["Ј", "J"],
+  // Cyrillic lookalikes (most common in attacks)
+  ["А", "A"],
+  ["В", "B"],
+  ["Е", "E"],
+  ["К", "K"],
+  ["М", "M"],
+  ["Н", "H"],
+  ["О", "O"],
+  ["Р", "P"],
+  ["С", "C"],
+  ["Т", "T"],
+  ["Х", "X"],
+  ["а", "a"],
+  ["е", "e"],
+  ["о", "o"],
+  ["р", "p"],
+  ["с", "c"],
+  ["у", "y"],
+  ["х", "x"],
+  ["ѕ", "s"],
+  ["і", "i"],
+  ["ј", "j"],
+  ["Ү", "Y"],
+  ["ℐ", "I"],
+  ["ℑ", "I"],
+  ["ℒ", "L"],
+  // Latin Extended lookalikes
+  ["ℓ", "l"],
+  ["ℛ", "R"],
+  ["ℨ", "Z"],
+  ["ℳ", "M"],
+]);
+
+/**
+ * Normalize a string by replacing homoglyphs and stripping zero-width chars.
+ * This prevents bypassing injection filters with lookalike characters.
+ */
+function normalizeUnicodeForSecurity(input: string): string {
+  // First apply NFKC normalization (handles fullwidth, superscripts, etc.)
+  let result = input.normalize("NFKC");
+
+  // Strip zero-width and invisible characters
+  result = result.replace(ZERO_WIDTH_CHARS, "");
+
+  // Replace known homoglyphs with ASCII equivalents
+  result = result
+    .split("")
+    .map((char) => HOMOGLYPH_MAP.get(char) ?? char)
+    .join("");
+
+  return result;
+}
 
 export const INJECTION_PATTERNS: ReadonlyArray<{
   pattern: RegExp;
@@ -79,8 +171,14 @@ export function sanitizeForPrompt(input: string, maxLength = 200): string {
 /**
  * Sanitize a string with injection pattern detection.
  *
- * Applies basic sanitization and replaces known injection patterns
- * with safe placeholders. Use for high-risk inputs like user messages.
+ * Applies basic sanitization, Unicode normalization (including homoglyph
+ * replacement), and replaces known injection patterns with safe placeholders.
+ * Use for high-risk inputs like user messages.
+ *
+ * SECURITY: This function defends against:
+ * - Cyrillic/Greek homoglyphs ("IMPORTАNT" with Cyrillic А)
+ * - Zero-width character insertion ("IMP\u200BORTANT")
+ * - Common injection patterns (SYSTEM:, ignore instructions, etc.)
  *
  * @param input - The string to sanitize.
  * @param maxLength - Maximum allowed length (default: 1000).
@@ -101,8 +199,10 @@ export function sanitizeWithInjectionDetection(
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional - removing control chars for security
   const controlCharPattern = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
-  let sanitized = input
-    .normalize("NFKC")
+
+  // SECURITY: Apply homoglyph normalization BEFORE pattern matching
+  // This prevents bypasses like "IMPORTАNT:" with Cyrillic А
+  let sanitized = normalizeUnicodeForSecurity(input)
     .replace(controlCharPattern, "") // Remove control characters
     .replace(/\s+/g, " ") // Collapse whitespace
     .trim();
@@ -122,6 +222,9 @@ export function sanitizeWithInjectionDetection(
  * Returns true if any known injection patterns are detected.
  * Use for logging/monitoring without blocking.
  *
+ * SECURITY: Applies homoglyph normalization before checking patterns
+ * to detect bypasses like "IMPORTАNT:" with Cyrillic А.
+ *
  * @param input - The string to check.
  * @returns True if injection patterns detected.
  *
@@ -137,10 +240,13 @@ export function hasInjectionRisk(input: string): boolean {
     return false;
   }
 
+  // SECURITY: Normalize before checking to catch homoglyph bypasses
+  const normalized = normalizeUnicodeForSecurity(input);
+
   // Create fresh regex instances to avoid global flag state issues
   return INJECTION_PATTERNS.some(({ pattern }) => {
     const freshPattern = new RegExp(pattern.source, pattern.flags);
-    return freshPattern.test(input);
+    return freshPattern.test(normalized);
   });
 }
 

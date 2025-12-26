@@ -1,8 +1,5 @@
 /**
  * @fileoverview RAG document search endpoint.
- *
- * Hybrid search with vector similarity, lexical matching, and reranking.
- * POST /api/rag/search
  */
 
 import "server-only";

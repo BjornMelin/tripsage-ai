@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hook for dashboard metrics data fetching.
- *
- * Uses @tanstack/react-query with automatic polling for fresh data.
- * Validates API responses with Zod schema for type safety.
  */
 
 "use client";

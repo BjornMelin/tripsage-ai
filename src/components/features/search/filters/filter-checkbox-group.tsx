@@ -1,7 +1,5 @@
 /**
  * @fileoverview Multi-select checkbox group filter component.
- *
- * Uses shadcn/ui Checkbox for multi-select filters like airlines, amenities.
  */
 
 "use client";

@@ -1,7 +1,5 @@
 /**
  * @fileoverview Reusable range filter component with dual-thumb slider.
- *
- * Uses shadcn/ui Slider for price range, duration, and similar filters.
  */
 
 "use client";

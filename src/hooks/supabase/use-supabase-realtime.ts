@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hook for Supabase realtime connections.
- *
- * Provides realtime connection status and error handling for Supabase Realtime
- * channels by delegating to the shared channel and chat hooks.
  */
 
 "use client";

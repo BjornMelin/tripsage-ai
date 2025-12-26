@@ -1,10 +1,5 @@
 /**
  * @fileoverview Simple Redis-based idempotency helpers using Upstash REST.
- *
- * Implements configurable fail mode to control behavior when Redis
- * is unavailable:
- * - Fail open (default): Allow processing, may cause duplicates
- * - Fail closed: Throw error to prevent potential duplicate processing
  */
 
 import "server-only";

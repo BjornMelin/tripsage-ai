@@ -1,12 +1,5 @@
 /**
  * @fileoverview TypeScript declarations for the amadeus npm package.
- *
- * The amadeus package does not include TypeScript definitions, so we provide
- * minimal type declarations based on the actual API usage patterns.
- *
- * Note: API response validation is handled separately via Zod schemas in
- * `schemas.ts`. This declaration file only provides types for the SDK client
- * methods themselves.
  */
 
 declare module "amadeus" {

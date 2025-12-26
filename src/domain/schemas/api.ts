@@ -1,6 +1,5 @@
 /**
- * @fileoverview API request/response validation schemas.
- * Includes authentication, user profiles, chat, trips, API keys, Google Maps/Places, and WebSocket schemas.
+ * @fileoverview API request/response validation schemas. Includes authentication, user profiles, chat, trips, API keys, Google Maps/Places, and WebSocket schemas.
  */
 
 import { z } from "zod";

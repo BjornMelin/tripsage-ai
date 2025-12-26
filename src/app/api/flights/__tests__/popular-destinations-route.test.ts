@@ -1,7 +1,10 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
@@ -45,6 +48,12 @@ describe("/api/flights/popular-destinations", () => {
 
   beforeEach(() => {
     stubRateLimitDisabled();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
     redisStore.clear();
     redisClient.del.mockClear();
     redisClient.get.mockClear();
@@ -58,6 +67,7 @@ describe("/api/flights/popular-destinations", () => {
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     setSupabaseFactoryForTests(null);
     vi.clearAllMocks();
   });

@@ -1,7 +1,5 @@
 /**
- * @fileoverview Supabase email confirmation route.
- * Exchanges a token_hash for a session using Supabase SSR and redirects.
- * Reference: Supabase SSR Next.js guide (Auth confirmation).
+ * @fileoverview Supabase email confirmation route. Exchanges a token_hash for a session using Supabase SSR and redirects. Reference: Supabase SSR Next.js guide (Auth confirmation).
  */
 
 import "server-only";

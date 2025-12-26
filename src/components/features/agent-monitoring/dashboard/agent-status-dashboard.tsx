@@ -1,6 +1,5 @@
 /**
- * @fileoverview Deterministic agent monitoring dashboard backed by the
- * `useAgentStatusStore` + `useAgentStatusWebSocket` pair.
+ * @fileoverview Deterministic agent monitoring dashboard backed by the `useAgentStatusStore` + `useAgentStatusWebSocket` pair.
  */
 
 "use client";

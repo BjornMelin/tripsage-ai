@@ -1,9 +1,5 @@
 /**
  * @fileoverview Rate limit configuration for agent workflows.
- *
- * Provides rate limiting for agent tool execution within agent runtime.
- * Route-level rate limiting is handled by lib/ratelimit/routes.ts via
- * withApiGuards. Per ADR-0032.
  */
 
 import type { AgentWorkflowKind } from "@schemas/agents";

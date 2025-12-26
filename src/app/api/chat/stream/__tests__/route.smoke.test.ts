@@ -31,8 +31,8 @@ vi.mock("ai", () => ({
     if (!params.agent) {
       throw new Error("createAgentUIStreamResponse requires an agent");
     }
-    if (!Array.isArray(params.messages)) {
-      throw new Error("createAgentUIStreamResponse requires messages array");
+    if (!Array.isArray(params.uiMessages)) {
+      throw new Error("createAgentUIStreamResponse requires uiMessages array");
     }
     return new Response("ok", { status: 200 });
   }),

@@ -1,7 +1,5 @@
 /**
- * @fileoverview DashboardLayout components providing the main application layout
- * with sidebar navigation, header, and user account management for the dashboard
- * experience.
+ * @fileoverview DashboardLayout components providing the main application layout with sidebar navigation, header, and user account management for the dashboard experience.
  */
 
 import type { AuthUser } from "@schemas/stores";

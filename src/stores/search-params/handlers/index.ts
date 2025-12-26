@@ -1,7 +1,5 @@
 /**
- * @fileoverview Registry for all search parameter handlers
- * Each handler is responsible for a specific search type's parameter validation, defaults, and serialization.
- * Handlers are automatically registered when imported.
+ * @fileoverview Registry for all search parameter handlers Each handler is responsible for a specific search type's parameter validation, defaults, and serialization. Handlers are automatically registered when imported.
  */
 
 import { accommodationHandler } from "./accommodation-handler";

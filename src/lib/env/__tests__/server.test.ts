@@ -53,6 +53,14 @@ describe("env/server", () => {
       );
     });
 
+    it("should accept publishable Supabase key as a fallback for anon key", () => {
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
+
+      const env = getServerEnv();
+      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-publishable-key");
+    });
+
     it("should throw on invalid environment", () => {
       vi.stubEnv("NODE_ENV", "invalid");
 

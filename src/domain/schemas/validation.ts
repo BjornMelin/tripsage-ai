@@ -1,6 +1,5 @@
 /**
- * @fileoverview Validation error handling and result schemas.
- * Includes validation context, error structures, and form validation utilities.
+ * @fileoverview Validation error handling and result schemas. Includes validation context, error structures, and form validation utilities.
  */
 
 import { z } from "zod";

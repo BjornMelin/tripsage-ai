@@ -1,14 +1,10 @@
 /**
  * @fileoverview React provider that initializes client-side OpenTelemetry tracing.
- *
- * This component initializes the WebTracerProvider and FetchInstrumentation
- * when mounted in the browser. It renders nothing and is purely for side effects.
  */
 
 "use client";
 
 import { useEffect } from "react";
-import { initTelemetry } from "@/lib/telemetry/client";
 
 /**
  * TelemetryProvider component.
@@ -22,8 +18,17 @@ import { initTelemetry } from "@/lib/telemetry/client";
  */
 export function TelemetryProvider(): null {
   useEffect(() => {
-    // Initialize telemetry only in browser environment
-    initTelemetry();
+    // Lazy-load telemetry to keep OTEL libs out of the critical client bundle.
+    import("@/lib/telemetry/client")
+      .then(({ initTelemetry }) => {
+        initTelemetry();
+      })
+      .catch((error: unknown) => {
+        // Telemetry is optional on the client; swallow errors to avoid impacting UX.
+        if (process.env.NODE_ENV === "development") {
+          console.error("Telemetry initialization failed:", error);
+        }
+      });
   }, []);
 
   return null;

@@ -1,7 +1,5 @@
 /**
- * @fileoverview Loading state components for full-screen, container, and button loading states.
- * Provides overlay, state wrapper, button loading, and container loading components with
- * customizable visual styles, progress indicators, and fallback content.
+ * @fileoverview Loading state components for full-screen, container, and button loading states. Provides overlay, state wrapper, button loading, and container loading components with customizable visual styles, progress indicators, and fallback content.
  */
 
 import * as React from "react";

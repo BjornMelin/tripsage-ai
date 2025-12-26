@@ -36,7 +36,7 @@ This file is both:
 - Next.js Image SVG safety: <https://nextjs.org/docs/app/api-reference/components/image#dangerouslyallowsvg>
 - Vercel conformance rule (safe SVG images): <https://vercel.com/docs/conformance/rules/NEXTJS_SAFE_SVG_IMAGES>
 - Supabase SSR client creation: <https://supabase.com/docs/guides/auth/server-side/creating-a-client>
-- Upstash QStash signature validation (raw body required): <https://upstash.com/docs/qstash/howto/signature>
+- Upstash QStash signature verification (raw body required): <https://upstash.com/docs/qstash/howto/signature>
 - Upstash Ratelimit timeout behavior (allow-by-default): <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
 - Upstash Ratelimit `limit()` response (`reason: "timeout"`): <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
 - OWASP Unvalidated Redirects & Forwards: <https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html>
@@ -47,13 +47,15 @@ This file is both:
 - Zod v4 docs: <https://zod.dev/v4>
 - Vitest coverage docs (v4): <https://vitest.dev/guide/coverage.html>
 
-## Plan overview (fill after audit)
+## Plan overview (remediation completed)
 
-- Phase 0 (Safety + Baseline)
-- Phase 1 (AI slop removal + simplification)
-- Phase 2 (Correctness + security hardening)
-- Phase 3 (Performance + reliability)
-- Phase 4 (DX + tooling + long-term guardrails)
+The remediation was executed in phases to keep the repo merge-safe throughout:
+
+- Phase 0 — Safety + baseline: unblock `pnpm build`, fix Turbopack/OTEL externals, add CI build gate.
+- Phase 1 — AI slop removal + simplification: remove unsafe casts, normalize file headers, replace heuristic webhook errors with typed errors.
+- Phase 2 — Correctness + security hardening: bounded request parsing, explicit fail-closed policies, internal key gates, open-redirect fix, secret redaction, telemetry identifier hashing, disable SVG optimization.
+- Phase 3 — Performance + reliability: remove loopback fetch for ICS export, enforce attachments URL contract, break AI agent import cycle.
+- Phase 4 — DX + guardrails: boundary checks, AI tool guardrails, critical-surface coverage enforcement, secrets scanning, cycle checks.
 
 ## Stop-the-line criteria (implementation run)
 
@@ -113,6 +115,7 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
   - Verify:
     - `node -e \"require.resolve('import-in-the-middle'); require.resolve('require-in-the-middle')\"`
     - `pnpm build` emits no warnings about these packages being unresolved.
+    - `pnpm start` (after build) starts without instrumentation module-resolution crashes.
   - References:
     - <https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages>
     - <https://nextjs.org/docs/app/guides/open-telemetry>
@@ -128,7 +131,7 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
   - Verify:
     - `pnpm build` succeeds; the programmatic assertion in `next.config.ts` enforces the absolute-path contract automatically.
   - References:
-    - <https://nextjs.org/docs/pages/api-reference/config/next-config-js/turbopack>
+    - <https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack>
 
 ### 0.5 Make coverage thresholds real (or remove the illusion)
 
@@ -143,6 +146,7 @@ Goal: restore “merge-safe” invariants (build passes, CI enforces build, base
       - Remove misleading thresholds and add a staged ramp plan with targeted thresholds for high-risk modules.
   - Verify:
     - `pnpm test:coverage` fails when coverage is below the configured thresholds.
+    - `pnpm test:coverage` reports and enforces critical-surface coverage (auth/payments/keys/webhooks/AI tool routing).
   - References:
     - <https://vitest.dev/guide/coverage.html>
 
@@ -195,7 +199,8 @@ Goal: delete misleading docs, reduce type escapes, and force a single “correct
     - Make it 1 sentence, technical, and consistent with exports (no "key features" lists).
     - Remove lists of features; reference a doc or test if detail is needed.
   - Verify:
-    - Review touched files: `@fileoverview` is short and matches behavior.
+    - `pnpm check:fileoverviews`
+    - `pnpm check:fileoverviews:full`
   - References:
     - <https://genai.owasp.org/llmrisk2023-24/llm09-overreliance/>
 
@@ -328,6 +333,8 @@ Goal: close high-blast-radius holes (public cost-bearing routes, open redirects,
   - Follow-up (2025-12-18):
     - Added a clear `400 invalid_request` path when a request body is already consumed (prevents ambiguous second-read errors).
     - Refactored auth JSON routes to call `parseJsonBody()` directly to standardize bounded parsing behavior.
+  - Follow-up (2025-12-22):
+    - Added `parseFormDataWithLimit()` (`src/lib/http/body.ts`) and migrated multipart routes (`src/app/auth/register/route.ts`, `src/app/api/chat/attachments/route.ts`) to enforce total upload size before `request.formData()`.
   - References:
     - <https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/>
 
@@ -470,6 +477,7 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
   - Implementation notes (2025-12-19):
     - Added `docs/development/architecture/layering.md` and linked it from `standards.md` and `docs/development/README.md`.
     - Extended `scripts/check-boundaries.mjs` to block domain → app/next imports with an explicit allowlist.
+    - Extended `scripts/check-boundaries.mjs` to enforce `src/domain/schemas/**` as a leaf (no `@/lib/**`, `next/*`, or `server-only` imports).
     - Normalized allowlist path handling in `scripts/check-boundaries.mjs` for Windows compatibility.
     - CI now runs `pnpm boundary:check`.
 

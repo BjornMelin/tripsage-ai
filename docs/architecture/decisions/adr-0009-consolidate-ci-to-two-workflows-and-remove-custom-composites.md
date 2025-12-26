@@ -55,6 +55,13 @@ Partial simplification with some utility steps. Rejected: still adds maintenance
 - GitHub Docs: secret_scanning.yml paths-ignore (UNVERIFIED)
 - Internal CI analysis and security scanning review (this PR)
 
+## Implementation status (2025-12-22)
+
+Parts of this ADR have been implemented via `ci.yml` hardening rather than a separate `security.yml` workflow:
+
+- CI now runs a production build gate (`pnpm build`) on build-affecting changes.
+- Secret scanning is enforced via `scripts/check-no-secrets.mjs` (diff-based by default, `--full` for full tracked scan) and a hard gate against committing tracked `.env*` files (except `.env.example|.sample|.template`).
+
 ## Changelog
 
 - 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

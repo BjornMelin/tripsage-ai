@@ -1,8 +1,5 @@
 /**
  * @fileoverview Central tool registry.
- *
- * Exports all server-side tools for use in chat routes and agents and
- * provides a typed registry object for higher-level agents.
  */
 
 import type { ToolSet, TypedToolCall, TypedToolResult } from "ai";

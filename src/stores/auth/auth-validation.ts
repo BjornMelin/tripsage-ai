@@ -1,6 +1,5 @@
 /**
- * @fileoverview Auth validation slice - password reset, email verification.
- * Part of the composable auth store refactor (Phase 3).
+ * @fileoverview Auth validation slice - password reset, email verification. Part of the composable auth store refactor (Phase 3).
  */
 
 import { create } from "zustand";

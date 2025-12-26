@@ -1,8 +1,5 @@
 /**
  * @fileoverview Type definitions for TripSage AI agents using ToolLoopAgent.
- *
- * Defines configuration, dependencies, and result types for agent creation
- * and execution.
  */
 
 import "server-only";

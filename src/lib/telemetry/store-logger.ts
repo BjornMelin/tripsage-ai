@@ -1,9 +1,5 @@
 /**
  * @fileoverview Client-side logger for Zustand stores.
- *
- * Provides a structured logging interface for client-side stores that
- * integrates with OTEL tracing for error recording. Warnings and info
- * are no-op in production to avoid console pollution.
  */
 
 "use client";

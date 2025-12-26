@@ -1,8 +1,5 @@
 /**
  * @fileoverview Telemetry recording for agent tool execution events.
- *
- * Provides structured event recording with OpenTelemetry spans for agent
- * workflow tool execution, including cache hits, durations, and errors.
  */
 
 import type { AgentWorkflowKind } from "@schemas/agents";

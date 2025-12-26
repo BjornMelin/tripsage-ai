@@ -1,12 +1,5 @@
 /**
  * @fileoverview Error recovery adapter for agent tool execution.
- *
- * Maps common tool/HTTP errors to user-friendly messages and provides
- * error handlers for AI SDK v6 streaming responses.
- *
- * Handles AI SDK specific errors:
- * - NoSuchToolError: Model tried to call an unknown tool
- * - InvalidToolInputError: Model provided invalid tool arguments
  */
 
 import { InvalidToolInputError, NoSuchToolError } from "ai";

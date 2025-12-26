@@ -1,8 +1,5 @@
 /**
  * @fileoverview Dependency container for activities domain.
- *
- * Centralizes construction of the activities service so callers (AI tools, routes)
- * do not hard-wire dependencies at import time.
  */
 
 import { ActivitiesService } from "@domain/activities/service";

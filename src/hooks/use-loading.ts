@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hooks for managing loading states.
- *
- * Provides hooks for loading state management with timeout, progress tracking,
- * debouncing, and async operation handling.
  */
 
 "use client";

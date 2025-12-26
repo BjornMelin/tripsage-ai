@@ -1,6 +1,5 @@
 /**
- * @fileoverview Canonical Zod v4 schemas for flights.
- * Defines domain entities, tool inputs/outputs, and normalized offers.
+ * @fileoverview Canonical Zod v4 schemas for flights. Defines domain entities, tool inputs/outputs, and normalized offers.
  */
 
 import { z } from "zod";

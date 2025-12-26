@@ -1,9 +1,5 @@
 /**
  * @fileoverview Helpers to inject user context into AI SDK tools.
- *
- * Used by chat streaming to ensure selected tools always receive userId and
- * optional sessionId in their input payloads, without mutating the original
- * tool registry.
  */
 
 import "server-only";

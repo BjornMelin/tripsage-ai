@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Maps Geocoding API wrapper endpoint.
- *
- * Thin wrapper for Geocoding API with compliance and caching TTL limits.
- * Enforces 30-day max TTL for cached lat/lng per Google Maps Platform policy.
  */
 
 import "server-only";

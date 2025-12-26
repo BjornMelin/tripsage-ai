@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Maps Routes API computeRoutes endpoint.
- *
- * Server-side route for Routes API computeRoutes with explicit field masks
- * and retry/backoff logic.
  */
 
 import "server-only";

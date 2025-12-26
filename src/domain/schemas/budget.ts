@@ -1,6 +1,5 @@
 /**
- * @fileoverview Budget and expense management schemas with validation.
- * Includes budget allocation, expense tracking, currency conversion, and financial reporting.
+ * @fileoverview Budget and expense management schemas with validation. Includes budget allocation, expense tracking, currency conversion, and financial reporting.
  */
 
 import { z } from "zod";

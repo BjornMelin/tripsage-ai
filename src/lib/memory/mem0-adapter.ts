@@ -1,11 +1,5 @@
 /**
  * @fileoverview Mem0 adapter for memory orchestrator.
- *
- * Uses the official mem0ai Node SDK to enrich `fetchContext` intents by
- * retrieving user-specific memories for the current session.
- *
- * This adapter is optional and only enabled when MEM0_API_KEY is configured.
- * Uses MemoryClient for hosted Mem0 service.
  */
 
 import "server-only";
@@ -16,7 +10,7 @@ import type {
   MemoryAdapterContext,
   MemoryAdapterExecutionResult,
   MemoryIntent,
-} from "./orchestrator";
+} from "./types";
 
 /**
  * Cached Mem0 client wrapper to avoid recreating MemoryClient instances.

@@ -1,7 +1,5 @@
 /**
- * @fileoverview Input group primitives used by AI Elements prompt inputs.
- * Provides grouped controls, add-ons, and text/textarea fields with consistent
- * styling and focus/invalid states.
+ * @fileoverview Input group primitives used by AI Elements prompt inputs. Provides grouped controls, add-ons, and text/textarea fields with consistent styling and focus/invalid states.
  */
 
 "use client";

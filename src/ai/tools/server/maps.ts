@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Maps tools: geocode, distance matrix.
- *
- * Uses centralized client functions with retry logic and Zod validation.
- * Distance matrix uses Google Routes API computeRouteMatrix.
  */
 
 import "server-only";

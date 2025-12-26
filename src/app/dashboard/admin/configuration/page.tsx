@@ -7,6 +7,7 @@
 
 import type { AgentType } from "@schemas/configuration";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { fetchAgentBundle } from "@/components/admin/configuration-actions";
 import ConfigurationManager from "@/components/admin/configuration-manager";
@@ -22,6 +23,9 @@ export const metadata: Metadata = {
 const DEFAULT_AGENT: AgentType = "budgetAgent";
 
 export default async function ConfigurationPage() {
+  // Force dynamic rendering to avoid Cache Components build-time restrictions (e.g. `Date.now()`).
+  await connection();
+
   const logger = createServerLogger("admin.configuration.page");
   let initial: Awaited<ReturnType<typeof fetchAgentBundle>>;
   try {

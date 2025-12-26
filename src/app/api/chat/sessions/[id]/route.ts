@@ -1,7 +1,5 @@
 /**
  * @fileoverview Chat session detail API route handlers.
- *
- * Methods: GET (get session if owned), DELETE (delete session owner only).
  */
 
 import "server-only";

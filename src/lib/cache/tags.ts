@@ -1,22 +1,5 @@
 /**
  * @fileoverview Cache tag versioning for fine-grained invalidation.
- *
- * Implements a version-based cache invalidation strategy using Redis.
- * Each tag has a monotonically increasing version number. Cache keys
- * include the version, so bumping a tag's version effectively
- * invalidates all entries associated with that tag.
- *
- * @example
- * ```ts
- * // Create versioned cache key
- * const key = await versionedKey("trips", "user:123:list");
- * // => "trips:v1:user:123:list"
- *
- * // After bumping the tag version
- * await bumpTag("trips");
- * const newKey = await versionedKey("trips", "user:123:list");
- * // => "trips:v2:user:123:list" (new version, cache miss)
- * ```
  */
 
 import "server-only";

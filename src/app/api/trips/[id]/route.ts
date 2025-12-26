@@ -1,8 +1,5 @@
 /**
  * @fileoverview Trip detail route handlers (GET, PUT, DELETE).
- *
- * Provides per-trip CRUD for authenticated users with cache invalidation and
- * strict validation against Supabase schemas.
  */
 
 import "server-only";

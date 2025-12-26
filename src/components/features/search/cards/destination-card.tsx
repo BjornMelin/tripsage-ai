@@ -1,6 +1,5 @@
 /**
- * @fileoverview DestinationCard component for displaying travel destination information
- * with ratings, climate data, attractions, and interactive selection actions.
+ * @fileoverview DestinationCard component for displaying travel destination information with ratings, climate data, attractions, and interactive selection actions.
  */
 
 "use client";

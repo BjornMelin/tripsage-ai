@@ -51,6 +51,10 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+# Set ONE of these public keys:
+# - Preferred: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (sb_publishable_...)
+# - Legacy: NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_JWT_SECRET=your-jwt-secret

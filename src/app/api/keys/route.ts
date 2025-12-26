@@ -1,6 +1,5 @@
 /**
- * @fileoverview BYOK upsert route. Stores user-provided API keys in Supabase Vault via RPC.
- * Route: POST /api/keys
+ * @fileoverview BYOK upsert route. Stores user-provided API keys in Supabase Vault via RPC. Route: POST /api/keys
  */
 
 import "server-only";

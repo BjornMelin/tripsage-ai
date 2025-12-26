@@ -1,8 +1,5 @@
 /**
  * @fileoverview API payload builders for search filters.
- *
- * Transforms Zustand filter state into API request parameters.
- * Bridges the UI filter state to backend search APIs.
  */
 
 import type { FilterValue } from "@schemas/stores";

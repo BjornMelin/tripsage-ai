@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getTrustedRateLimitIdentifierFromHeaders,
   hashIdentifier,
@@ -8,6 +8,14 @@ import {
 } from "@/lib/ratelimit/identifier";
 
 describe("ratelimit identifier helpers", () => {
+  beforeEach(() => {
+    vi.stubEnv("VERCEL", "1");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("normalizes identifiers deterministically", () => {
     expect(normalizeIdentifier("  Foo\tBAR  ")).toBe("foo bar");
   });

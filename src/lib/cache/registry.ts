@@ -2,11 +2,6 @@
 
 /**
  * @fileoverview Cache tag registry for database table to cache tag mappings.
- *
- * Centralizes cache invalidation logic to avoid hardcoded mappings scattered
- * across handlers. Edit this file to add/modify cache relationships.
- *
- * @see SPEC-0021 for the full webhook flow mapping table
  */
 
 import "server-only";

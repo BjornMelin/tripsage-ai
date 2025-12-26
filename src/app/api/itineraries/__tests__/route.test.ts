@@ -1,7 +1,10 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import type { Database } from "@/lib/supabase/database.types";
 import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
 import {
@@ -49,6 +52,9 @@ const baseItem: ItineraryItemsRow = {
 };
 
 const { redis, ratelimit } = setupUpstashMocks();
+
+/** Fixed timestamp for deterministic rate limit mock responses. */
+const MOCK_RESET_TIMESTAMP = 1704067260000;
 
 type SupabaseMockOptions = {
   getUserId?: string;
@@ -144,9 +150,16 @@ describe("/api/itineraries", () => {
     redis.__reset?.();
     ratelimit.__reset?.();
     stubRateLimitDisabled();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: MOCK_RESET_TIMESTAMP,
+      success: true,
+    }));
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     setSupabaseFactoryForTests(null);
     unstubAllEnvs();
     vi.clearAllMocks();

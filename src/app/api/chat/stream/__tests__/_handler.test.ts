@@ -232,9 +232,9 @@ describe("handleChatStream", () => {
     expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         agent: expect.anything(),
-        messages,
         onError: expect.any(Function),
         onFinish: expect.any(Function),
+        uiMessages: messages,
       })
     );
   });

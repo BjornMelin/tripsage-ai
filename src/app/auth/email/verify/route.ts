@@ -1,9 +1,5 @@
 /**
  * @fileoverview Email verification route handler using Supabase SSR.
- *
- * Accepts a token payload and verifies the user's email via Supabase Auth.
- * This is primarily intended for programmatic verification flows driven by
- * the AuthValidation store.
  */
 
 import "server-only";

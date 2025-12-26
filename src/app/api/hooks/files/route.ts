@@ -1,7 +1,5 @@
 /**
  * @fileoverview File attachment webhook handler for upload status changes.
- *
- * Uses the shared webhook handler abstraction to reduce boilerplate.
  */
 
 import "server-only";

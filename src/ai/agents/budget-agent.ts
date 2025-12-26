@@ -1,9 +1,5 @@
 /**
  * @fileoverview Budget planning agent using AI SDK v6 ToolLoopAgent.
- *
- * Autonomously researches destinations, gathers pricing data, and generates
- * structured budget allocations through multi-step tool calling with phased
- * tool selection (research → pricing → allocation).
  */
 
 import "server-only";

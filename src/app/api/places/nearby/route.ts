@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places API (New) Nearby Search endpoint.
- *
- * Server-side route for finding nearby landmarks, transit, and points of interest.
- * Used to enrich hotel listings with location context.
  */
 
 import "server-only";

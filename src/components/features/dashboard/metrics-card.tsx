@@ -1,8 +1,5 @@
 /**
  * @fileoverview Single metric card component with value, label, and optional trend.
- *
- * Displays a single metric in a card format with support for trend indicators,
- * units, and descriptions.
  */
 
 "use client";

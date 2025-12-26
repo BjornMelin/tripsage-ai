@@ -1,8 +1,5 @@
 /**
  * @fileoverview Utility to parse schema cards from chat message text.
- *
- * Extracts JSON from text (handles codefenced and plain JSON) and identifies
- * schema versions for rendering appropriate UI components.
  */
 
 import {

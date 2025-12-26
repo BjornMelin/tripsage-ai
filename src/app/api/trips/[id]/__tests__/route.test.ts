@@ -2,7 +2,10 @@
 
 import type { TripsRow } from "@schemas/supabase";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setSupabaseFactoryForTests } from "@/lib/api/factory";
+import {
+  setRateLimitFactoryForTests,
+  setSupabaseFactoryForTests,
+} from "@/lib/api/factory";
 import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
 import {
   createMockNextRequest,
@@ -117,9 +120,16 @@ describe("/api/trips/[id]", () => {
     redis.__reset?.();
     ratelimit.__reset?.();
     stubRateLimitDisabled();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     setSupabaseFactoryForTests(null);
     unstubAllEnvs();
     vi.clearAllMocks();

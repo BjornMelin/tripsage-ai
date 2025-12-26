@@ -1,8 +1,5 @@
 /**
  * @fileoverview Trip timeline component for visualizing trip itinerary.
- *
- * Displays chronological timeline of destinations, activities, and events
- * with interactive editing capabilities and status indicators.
  */
 
 "use client";

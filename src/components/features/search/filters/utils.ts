@@ -1,8 +1,5 @@
 /**
  * @fileoverview Filter utility functions and type guards.
- *
- * Provides type-safe guards for filter value inspection and
- * reusable helpers for filter components.
  */
 
 import type { FilterValue } from "@schemas/stores";

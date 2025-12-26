@@ -1,6 +1,5 @@
 /**
- * @fileoverview Authentication form validation schemas.
- * Includes login, registration, password reset, and password change form schemas.
+ * @fileoverview Authentication form validation schemas. Includes login, registration, password reset, and password change form schemas.
  */
 
 import { z } from "zod";

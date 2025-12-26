@@ -1,9 +1,5 @@
 /**
  * @fileoverview Chat realtime slice - WebSocket, agent status, typing.
- *
- * Manages real-time connection status, typing indicators, agent status updates,
- * and pending message queues. Client-only slice - actual channel management
- * stays in hooks/route handlers.
  */
 
 "use client";

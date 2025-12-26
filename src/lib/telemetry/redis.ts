@@ -3,10 +3,14 @@
  */
 
 import "server-only";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import {
+  emitOperationalAlertOncePerWindow,
+  resetDegradedModeAlertStateForTests,
+} from "@/lib/telemetry/degraded-mode";
 import { recordErrorOnSpan, withTelemetrySpanSync } from "@/lib/telemetry/span";
 
 const warnedFeatures = new Set<string>();
+const ALERT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
 
 /**
  * Emits a telemetry span once per feature when Redis is not configured or encounters an error.
@@ -18,11 +22,18 @@ export function warnRedisUnavailable(
   feature: string,
   errorDetails?: { errorName?: string; errorMessage?: string }
 ): void {
-  if (warnedFeatures.has(feature)) return;
-  warnedFeatures.add(feature);
-
   const errorName = errorDetails?.errorName ?? "RedisUnavailable";
   const errorMessage = errorDetails?.errorMessage ?? "Redis client not configured";
+
+  emitOperationalAlertOncePerWindow({
+    attributes: { errorName, feature },
+    event: "redis.unavailable",
+    severity: "warning",
+    windowMs: ALERT_WINDOW_MS,
+  });
+
+  if (warnedFeatures.has(feature)) return;
+  warnedFeatures.add(feature);
 
   withTelemetrySpanSync(
     "redis.unavailable",
@@ -34,10 +45,6 @@ export function warnRedisUnavailable(
       recordErrorOnSpan(span, new Error(errorMessage));
     }
   );
-
-  emitOperationalAlert("redis.unavailable", {
-    attributes: { errorMessage, errorName, feature },
-  });
 }
 
 /**
@@ -45,4 +52,5 @@ export function warnRedisUnavailable(
  */
 export function resetRedisWarningStateForTests(): void {
   warnedFeatures.clear();
+  resetDegradedModeAlertStateForTests();
 }

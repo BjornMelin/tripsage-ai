@@ -1,10 +1,5 @@
 /**
  * @fileoverview Centralized Google API client helpers for server-side calls.
- *
- * Provides thin wrappers around Google APIs (Places, Routes, Geocoding, Timezone)
- * with retry logic, input validation, and consistent error handling.
- *
- * Includes NDJSON parsing for streaming endpoints like computeRouteMatrix.
  */
 
 import "server-only";

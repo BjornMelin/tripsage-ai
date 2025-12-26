@@ -1,8 +1,5 @@
 /**
  * @fileoverview Supabase authentication callback route handler.
- *
- * Handles OAuth callback, exchanges authorization code for session, and redirects users.
- * Uses hardened redirect utilities to prevent open-redirect attacks.
  */
 
 import "server-only";

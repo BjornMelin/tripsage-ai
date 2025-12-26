@@ -1,9 +1,5 @@
 /**
  * @fileoverview Provider abstraction for travel advisory APIs.
- *
- * Defines the interface for travel advisory providers, enabling
- * multiple data sources (State Department, GeoSure, etc.) with
- * a unified API.
  */
 
 import type { SafetyCategory, SafetyResult } from "@ai/tools/schemas/tools";

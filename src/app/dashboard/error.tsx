@@ -1,6 +1,5 @@
 /**
- * @fileoverview Dashboard-level error boundary for the dashboard directory.
- * This catches errors within the dashboard layout and pages.
+ * @fileoverview Dashboard-level error boundary for the dashboard directory. This catches errors within the dashboard layout and pages.
  */
 
 "use client";

@@ -28,6 +28,18 @@ describe("env/client", () => {
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TestApp");
     });
 
+    it("should accept publishable Supabase key as a fallback for anon key", async () => {
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
+
+      vi.resetModules();
+      const { getClientEnv: freshGetClientEnv } = await import("../client");
+
+      const env = freshGetClientEnv();
+      expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("https://test.supabase.co");
+      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-publishable-key");
+    });
+
     it("should throw on missing required variables in production", async () => {
       vi.stubEnv("NODE_ENV", "production");
       // Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY

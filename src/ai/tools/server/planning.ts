@@ -1,6 +1,5 @@
 /**
- * @fileoverview Travel planning tools implemented with AI SDK v6.
- * Server-only execution with Redis persistence and optional memory logging.
+ * @fileoverview Travel planning tools implemented with AI SDK v6. Server-only execution with Redis persistence and optional memory logging.
  */
 
 import "server-only";

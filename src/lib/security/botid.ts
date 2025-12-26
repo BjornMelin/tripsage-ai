@@ -1,20 +1,11 @@
 /**
  * @fileoverview BotID integration for bot detection on high-value API routes.
- *
- * Provides server-side bot detection using Vercel BotID to protect chat and
- * agent endpoints from sophisticated automated bots. Verified AI assistants
- * (ChatGPT, Perplexity, Claude, etc.) are allowed through while still being
- * subject to rate limiting.
- *
- * Per ADR-0059 and SPEC-0038.
- *
- * @see https://vercel.com/docs/botid
  */
 
 import "server-only";
 
 import { checkBotId } from "botid/server";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const botIdLogger = createServerLogger("security.botid");
@@ -154,9 +145,11 @@ export async function assertHumanOrThrow(
       });
     } catch (error) {
       botIdLogger.error("botid_service_error", { error, routeName });
-      emitOperationalAlert("botid.service_failure", {
+      emitOperationalAlertOncePerWindow({
         attributes: { routeName },
+        event: "botid.service_failure",
         severity: "error",
+        windowMs: 60 * 60 * 1000, // 1h
       });
       throw error;
     }

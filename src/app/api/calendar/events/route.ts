@@ -1,13 +1,5 @@
 /**
  * @fileoverview Calendar events CRUD endpoint.
- *
- * Handles GET (list), POST (create), PATCH (update), and DELETE operations
- * for calendar events via Google Calendar API.
- *
- * Note: Calendar data is NOT cached in Redis because:
- * 1. Google Calendar API has its own response caching
- * 2. Event changes can occur from multiple sources (mobile, web, etc.)
- * 3. Staleness risk outweighs caching benefits for real-time calendar data
  */
 
 import "server-only";

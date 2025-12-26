@@ -1,8 +1,5 @@
 /**
  * @fileoverview ICS export endpoint.
- *
- * Generates ICS file from events payload using shared generator.
- * Authentication required.
  */
 
 import "server-only";

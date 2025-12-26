@@ -1,9 +1,5 @@
 /**
  * @fileoverview Emits structured operational alerts for log-based monitoring.
- *
- * Alerts are recorded via OpenTelemetry for distributed tracing and integration
- * with external monitoring systems. Log drains can subscribe to OTEL events
- * to trigger alerting workflows.
  */
 
 import "server-only";

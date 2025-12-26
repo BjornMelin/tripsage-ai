@@ -1,6 +1,5 @@
 /**
- * @fileoverview Model context window limits (in tokens) and helpers.
- * Maintains per-model context limits for safe clamping in AI SDK calls.
+ * @fileoverview Model context window limits (in tokens) and helpers. Maintains per-model context limits for safe clamping in AI SDK calls.
  */
 
 import type { ModelLimitsTable } from "@schemas/tokens";

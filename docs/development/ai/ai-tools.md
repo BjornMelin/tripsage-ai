@@ -27,13 +27,13 @@ Use the AI SDK `tool()` helper only for non-server contexts (client-only
 helpers, tests, or prototypes). Do **not** use this in `src/ai/tools/server/**`.
 
 ```typescript
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 
 export const myTool = tool({
   description: "A simple tool description",
-  execute: async (params, callOptions: ToolCallOptions) => {
+  execute: async (params, callOptions: ToolExecutionOptions) => {
     // Tool implementation
     return { result: "ok" };
   },
@@ -50,14 +50,15 @@ Use `createAiTool` for production tools that need caching, rate-limiting, and te
 ```typescript
 import "server-only";
 
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
+
 import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 
 export const myTool = createAiTool({
   description: "A tool with guardrails",
-  execute: async (params, callOptions: ToolCallOptions) => {
+  execute: async (params, callOptions: ToolExecutionOptions) => {
     // Tool implementation
     return { result: "ok" };
   },
@@ -116,7 +117,7 @@ All tool `execute` functions follow this signature:
 ```typescript
 type ToolExecute<InputValue, OutputValue> = (
   params: InputValue,
-  callOptions: ToolCallOptions
+  callOptions: ToolExecutionOptions
 ) => Promise<OutputValue>;
 ```
 
@@ -268,7 +269,7 @@ function buildMyAgentTools(identifier: string): ToolSet {
 1. **Use `createAiTool`** for tools that need guardrails (caching, rate-limiting, telemetry)
 2. **Use `hashInput: true`** for cache keys when inputs are complex objects
 3. **Include workflow telemetry** when tools are used in agents
-4. **Accept `ToolCallOptions`** in all execute functions, even if unused
+4. **Accept `ToolExecutionOptions`** in all execute functions, even if unused
 5. **Use shared utilities**:
    - `hashInputForCache` from `@/lib/cache/hash` for consistent hashing
    - `getCachedJson`/`setCachedJson` from `@/lib/cache/upstash` for caching
@@ -327,10 +328,10 @@ export const myTool = createAiTool({
 Tools should be tested through AI SDK patterns. See `src/ai/lib/tool-factory.test.ts` for examples:
 
 ```typescript
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const callOptions: ToolCallOptions = {
+const callOptions: ToolExecutionOptions = {
   messages: [],
   toolCallId: "test-call",
 };

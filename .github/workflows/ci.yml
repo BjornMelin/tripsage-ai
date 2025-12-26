@@ -102,8 +102,22 @@ jobs:
       - name: Reject new unknown casts
         run: pnpm check:no-new-unknown-casts
 
+      - name: Reject @fileoverview drift (changed files)
+        run: pnpm check:fileoverviews
+
+      - name: Reject secrets (PR diff)
+        if: github.event_name == 'pull_request'
+        run: pnpm check:no-secrets
+
+      - name: Reject secrets (full scan)
+        if: github.event_name != 'pull_request'
+        run: pnpm check:no-secrets:full
+
       - name: Architecture boundary checks
         run: pnpm boundary:check
+
+      - name: Reject new Domain → Lib/Infra imports
+        run: pnpm check:no-new-domain-infra-imports
 
       - name: AI tool guardrails check
         run: pnpm ai-tools:check
@@ -117,7 +131,7 @@ jobs:
           # Stub required env vars for build (no secrets needed)
           NEXT_PUBLIC_SITE_URL: 'https://example.com'
           NEXT_PUBLIC_SUPABASE_URL: 'https://abcd1234.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjaV9idWlsZF9vbmx5IiwiaWF0IjoxNjAwMDAwMDAwfQ.dummysignature'
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_dummy'
 
       - name: Unit tests (quick, no coverage)
         env:

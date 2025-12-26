@@ -1,7 +1,5 @@
 /**
  * @fileoverview Toggle options filter component using shadcn/ui ToggleGroup.
- *
- * Used for filters like stops (Any/Nonstop/1/2+), time of day, etc.
  */
 
 "use client";

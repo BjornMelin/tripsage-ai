@@ -1,8 +1,5 @@
 /**
  * @fileoverview Auth session introspection route.
- *
- * Returns the current authenticated user in the frontend AuthUser shape using
- * Supabase SSR cookies as the session source of truth.
  */
 
 import "server-only";

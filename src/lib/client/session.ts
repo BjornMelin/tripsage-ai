@@ -1,6 +1,5 @@
 /**
- * @fileoverview Client-side session utilities.
- * Uses browser storage APIs - must only be imported in client components.
+ * @fileoverview Client-side session utilities. Uses browser storage APIs - must only be imported in client components.
  */
 
 "use client";

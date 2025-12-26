@@ -1,6 +1,5 @@
 /**
- * @fileoverview Zustand store that tracks realtime agent metrics, lifecycle
- * events, and resource usage for dashboard consumers.
+ * @fileoverview Zustand store that tracks realtime agent metrics, lifecycle events, and resource usage for dashboard consumers.
  */
 
 "use client";

@@ -1,14 +1,5 @@
 /**
  * @fileoverview Router agent for classifying user messages into workflows.
- *
- * Uses AI SDK v6 generateText with Output.object() to classify user messages
- * into agent workflows with confidence scores and reasoning. Enhanced with:
- * - Telemetry via experimental_telemetry
- * - Output.object() for structured schema validation (v6 unified API)
- *
- * Note: This agent uses generateText with structured output directly, not
- * ToolLoopAgent, because message classification is a single-shot structured
- * output operation - not an agentic multi-step workflow.
  */
 
 import "server-only";

@@ -1,7 +1,5 @@
 /**
  * @fileoverview Pure handler for RAG indexing requests.
- *
- * Business logic lives here; route.ts should only wrap and delegate.
  */
 
 import "server-only";

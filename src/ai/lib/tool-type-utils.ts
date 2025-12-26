@@ -1,8 +1,5 @@
 /**
  * @fileoverview AI SDK v6 type utilities and patterns.
- *
- * Re-exports AI SDK v6 type helpers and provides utility types
- * for common patterns in our tool/agent system.
  */
 
 export type {

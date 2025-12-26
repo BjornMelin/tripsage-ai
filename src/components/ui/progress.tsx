@@ -1,6 +1,5 @@
 /**
- * @fileoverview Progress bar component built on Radix UI primitives, providing
- * accessible progress indicators with customizable styling and smooth animations.
+ * @fileoverview Progress bar component built on Radix UI primitives, providing accessible progress indicators with customizable styling and smooth animations.
  */
 
 "use client";

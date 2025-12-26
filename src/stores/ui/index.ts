@@ -1,7 +1,5 @@
 /**
  * @fileoverview UI state management store using Zustand with TypeScript validation.
- *
- * This module composes multiple slices for better maintainability and tree-shaking.
  */
 
 "use client";

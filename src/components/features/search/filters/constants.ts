@@ -1,8 +1,5 @@
 /**
  * @fileoverview Filter constants and typed IDs for search filter components.
- *
- * Provides type-safe filter identifiers and option definitions used across
- * filter-panel and filter components.
  */
 
 /**

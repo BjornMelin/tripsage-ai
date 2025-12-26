@@ -1,8 +1,5 @@
 /**
  * @fileoverview Upstash adapter for memory orchestrator.
- *
- * Delegates durable memory sync operations to QStash-backed jobs and uses
- * Upstash Redis for best-effort ephemeral state when available.
  */
 
 import "server-only";
@@ -18,7 +15,7 @@ import type {
   MemoryAdapterContext,
   MemoryAdapterExecutionResult,
   MemoryIntent,
-} from "./orchestrator";
+} from "./types";
 
 async function handleOnTurnCommitted(
   intent: Extract<MemoryIntent, { type: "onTurnCommitted" }>

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Registry for search params handlers.
- *
- * Provides handler registration and lookup for the strategy pattern.
- * Consumers must import handler files separately to trigger registration.
  */
 
 import type { SearchType } from "@schemas/stores";

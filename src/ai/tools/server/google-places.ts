@@ -1,12 +1,5 @@
 /**
  * @fileoverview Google Places API POI lookup tool.
- *
- * Provides point-of-interest lookup using Google Places API (New) Text Search
- * with caching and rate limiting. Uses Google Maps Geocoding API for
- * destination-based lookups. Complies with Google Maps Platform policies:
- * - place_id can be stored indefinitely
- * - lat/lng cached for max 30 days
- * - Field masks used to minimize costs
  */
 
 import "server-only";

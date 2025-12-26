@@ -1,7 +1,5 @@
 /**
- * @fileoverview Supabase database table schemas.
- * Generated from database.types.ts for runtime validation of database operations.
- * Includes table row, insert, and update schemas for all Supabase tables.
+ * @fileoverview Supabase database table schemas. Generated from database.types.ts for runtime validation of database operations. Includes table row, insert, and update schemas for all Supabase tables.
  */
 
 import { z } from "zod";

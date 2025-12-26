@@ -1,8 +1,5 @@
 /**
  * @fileoverview Chat attachment upload endpoint using Supabase Storage.
- *
- * Handles multipart form data uploads directly to Supabase Storage bucket,
- * with metadata stored in Supabase file_attachments table. See ADR-0058 and SPEC-0036.
  */
 
 import "server-only";
@@ -22,6 +19,7 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
+import { PayloadTooLargeError, parseFormDataWithLimit } from "@/lib/http/body";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -250,19 +248,6 @@ export const POST = withApiGuards({
     });
   }
 
-  // Enforce total size limit before buffering
-  const contentLengthHeader = req.headers.get("content-length");
-  if (contentLengthHeader) {
-    const contentLength = Number.parseInt(contentLengthHeader, 10);
-    if (Number.isFinite(contentLength) && contentLength > ATTACHMENT_MAX_TOTAL_SIZE) {
-      return errorResponse({
-        error: "invalid_request",
-        reason: `Request payload exceeds maximum total size of ${Math.floor(ATTACHMENT_MAX_TOTAL_SIZE / (1024 * 1024))}MB`,
-        status: 413,
-      });
-    }
-  }
-
   // Extract and validate user ID
   const userResult = requireUserId(user);
   if ("error" in userResult) {
@@ -270,8 +255,25 @@ export const POST = withApiGuards({
   }
   const { userId } = userResult;
 
-  // Parse form data
-  const formData = await req.formData();
+  // Parse form data with hard size limit before buffering full payload
+  let formData: FormData;
+  try {
+    formData = await parseFormDataWithLimit(req, ATTACHMENT_MAX_TOTAL_SIZE);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return errorResponse({
+        error: "invalid_request",
+        reason: `Request payload exceeds maximum total size of ${Math.floor(ATTACHMENT_MAX_TOTAL_SIZE / (1024 * 1024))}MB`,
+        status: 413,
+      });
+    }
+    return errorResponse({
+      err: error instanceof Error ? error : undefined,
+      error: "invalid_request",
+      reason: "Invalid multipart form data",
+      status: 400,
+    });
+  }
 
   // Validate and extract files
   const validation = validateUploadFiles(formData);

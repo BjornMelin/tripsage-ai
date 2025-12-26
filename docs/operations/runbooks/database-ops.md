@@ -25,7 +25,7 @@ Task-focused guide for Supabase operations. For schema/design context, see `../.
 
 ### Required Environment Variables
 
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL` (team fallback)
 - Optional user-provided BYOK keys via Vault

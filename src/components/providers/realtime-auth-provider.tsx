@@ -1,12 +1,10 @@
 /**
- * @fileoverview React provider that synchronizes Supabase Realtime authentication
- * with the current Supabase session token.
+ * @fileoverview React provider that synchronizes Supabase Realtime authentication with the current Supabase session token.
  */
 
 "use client";
 
 import { useEffect } from "react";
-import { getBrowserClient } from "@/lib/supabase";
 
 /**
  * Keeps Supabase Realtime authorized with the latest access token, reacting to
@@ -16,41 +14,58 @@ import { getBrowserClient } from "@/lib/supabase";
  */
 export function RealtimeAuthProvider(): null {
   useEffect(() => {
-    const supabase = getBrowserClient();
-    // During SSR, supabase is null - skip auth setup
-    if (!supabase) return;
-
-    // Capture non-null reference for use in nested functions
-    const client = supabase;
     let isMounted = true;
+    let cleanupSubscription: (() => void) | null = null;
+    let cleanupClientAuth: (() => void) | null = null;
 
     // biome-ignore lint/style/useNamingConvention: Not a React hook
     async function initializeRealtimeAuthHandler(): Promise<void> {
+      const { getBrowserClient } = await import("@/lib/supabase");
+      const supabase = getBrowserClient();
+      // Null check guards against initial client render before Supabase client is hydrated
+      if (!supabase || !isMounted) return;
+
+      cleanupClientAuth = () => {
+        supabase.realtime.setAuth("");
+      };
+
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          if (!isMounted) return;
+          const token = session?.access_token ?? null;
+          supabase.realtime.setAuth(token ?? "");
+        }
+      );
+      cleanupSubscription = () => {
+        authListener?.subscription.unsubscribe();
+      };
+
       try {
         const {
           data: { session },
-        } = await client.auth.getSession();
+        } = await supabase.auth.getSession();
+        if (!isMounted) return;
         const token = session?.access_token ?? null;
-        if (!isMounted) {
-          return;
-        }
-        client.realtime.setAuth(token ?? "");
-      } catch {
+        supabase.realtime.setAuth(token ?? "");
+      } catch (error: unknown) {
         // Allow UI to operate; realtime auth will refresh when a valid token exists.
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to get initial session:", error);
+        }
       }
     }
 
-    const { data: subscription } = client.auth.onAuthStateChange((_event, session) => {
-      const token = session?.access_token ?? null;
-      client.realtime.setAuth(token ?? "");
+    initializeRealtimeAuthHandler().catch((error: unknown) => {
+      // Allow UI to operate; realtime auth will refresh when a valid token exists.
+      if (process.env.NODE_ENV === "development") {
+        console.error("initializeRealtimeAuthHandler failed:", error);
+      }
     });
-
-    initializeRealtimeAuthHandler();
 
     return () => {
       isMounted = false;
-      client.realtime.setAuth("");
-      subscription?.subscription.unsubscribe();
+      cleanupSubscription?.();
+      cleanupClientAuth?.();
     };
   }, []);
 

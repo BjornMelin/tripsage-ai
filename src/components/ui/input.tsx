@@ -1,7 +1,7 @@
 /**
- * @fileoverview Input component for form fields.
- * Provides a styled input field with consistent styling and accessibility features.
+ * @fileoverview Input component for form fields. Provides a styled input field with consistent styling and accessibility features.
  */
+
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";

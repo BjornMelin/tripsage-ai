@@ -1,6 +1,5 @@
 /**
- * @fileoverview Shared pagination schemas for query params and responses.
- * Supports offset-based pagination (limit/offset) for infinite scroll patterns.
+ * @fileoverview Shared pagination schemas for query params and responses. Supports offset-based pagination (limit/offset) for infinite scroll patterns.
  */
 
 import { z } from "zod";

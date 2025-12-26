@@ -1,9 +1,5 @@
 /**
- * @fileoverview Canonical Zod v4 schemas for calendar entities, Google Calendar API
- * integration, and calendar tool input validation.
- *
- * Core schemas: Calendar entities, events, API responses
- * Tool schemas: Input validation for calendar tools (create events, export ICS)
+ * @fileoverview Canonical Zod v4 schemas for calendar entities, Google Calendar API integration, and calendar tool input validation.
  */
 
 import { z } from "zod";

@@ -11,7 +11,7 @@
 TripSage requires a testing strategy that:
 
 - Achieves 80-90% code coverage across frontend and backend
-- Supports modern React 19 and Next.js 15 features
+- Supports modern React 19 and Next.js 16 features
 - Enables fast test execution for rapid development
 - Provides E2E testing for critical user journeys
 - Focuses on behavior over implementation details
@@ -19,7 +19,7 @@ TripSage requires a testing strategy that:
 Our current test suite has significant issues:
 
 - Legacy patterns incompatible with modern React
-- Poor coverage (~45% frontend, ~60% backend)
+- Coverage below target (see `docs/development/testing/coverage-milestones.md` for current baseline and enforced thresholds)
 - Slow execution times
 - Brittle tests tied to implementation
 
@@ -58,7 +58,7 @@ We will adopt a modern testing strategy:
 - **Speed**: Vitest is significantly faster than Jest
 - **Accuracy**: Browser mode tests real browser behavior
 - **Maintainability**: Behavior-focused tests are more stable
-- **Coverage**: Easier to achieve 90%+ coverage targets
+- **Coverage**: Supports incremental enforcement (critical surfaces first, then global baseline)
 - **DX**: Better error messages and debugging experience
 - **Modern**: Full support for React 19 features
 
@@ -116,6 +116,6 @@ Maintain and fix existing test suite.
 
 ## References
 
-- [Testing Guide](../../development/testing.md)
+- [Testing Guide](../../development/testing/testing.md)
 - [Vitest Documentation](https://vitest.dev/)
 - [Playwright Documentation](https://playwright.dev/)

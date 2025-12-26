@@ -5,7 +5,6 @@
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
-import withBundleAnalyzer from "@next/bundle-analyzer";
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
@@ -177,6 +176,4 @@ const nextConfig: NextConfig = {
   transpilePackages: ["shiki"],
 };
 
-export default withBundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-})(withBotId(nextConfig));
+export default withBotId(nextConfig);

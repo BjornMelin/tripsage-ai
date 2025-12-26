@@ -49,7 +49,8 @@ Set these in `.env` (local) and your deployment platform:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key # preferred (sb_publishable_...)
+# Legacy support: set NEXT_PUBLIC_SUPABASE_ANON_KEY instead of publishable key
 APP_BASE_URL=https://your-domain.com          # also set as Supabase Auth "Site URL"
 NEXT_PUBLIC_APP_URL=https://your-domain.com
 NEXT_PUBLIC_SITE_URL=https://your-domain.com

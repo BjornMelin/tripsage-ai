@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,template,loading,error,not-found,default,head}.{ts,tsx}!",
+    "src/app/**/route.{ts,tsx}!",
+    "scripts/**/*.{ts,tsx,js,mjs,cjs}"
+  ],
+  "ignoreDependencies": ["import-in-the-middle", "require-in-the-middle", "shiki"],
+  "ignoreFiles": ["src/test/mocks/rehype-harden.ts"],
+  "project": [
+    "src/**/*.{ts,tsx}!",
+    "postcss.config.mjs",
+    "tailwind.config.mjs",
+    "vitest.config.ts",
+    "next.config.ts",
+    "playwright.config.ts",
+    "scripts/**/*.{ts,tsx,js,mjs,cjs}",
+    "e2e/**/*.{ts,tsx}",
+    "!**/.next/**",
+    "!**/coverage/**",
+    "!**/playwright-report/**",
+    "!**/test-results/**"
+  ]
+}

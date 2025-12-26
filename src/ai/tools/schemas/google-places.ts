@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zod schemas for Google Places API responses and Google Places tool inputs.
- *
- * Core schemas: Google Places API parameters and data structures
- * Tool schemas: Input validation for Google Places tools (POI lookup)
  */
 
 import { z } from "zod";

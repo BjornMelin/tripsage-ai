@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { stubRateLimitDisabled } from "@/test/helpers/env";
+import { setRateLimitFactoryForTests } from "@/lib/api/factory";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -53,12 +53,18 @@ describe("/api/trips route", () => {
   });
 
   afterEach(() => {
+    setRateLimitFactoryForTests(null);
     vi.clearAllMocks();
   });
 
   it("returns 400 when filters are invalid", async () => {
     // Disable rate limiting for this test
-    stubRateLimitDisabled();
+    setRateLimitFactoryForTests(async () => ({
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
 
     const req = createMockNextRequest({
       method: "GET",

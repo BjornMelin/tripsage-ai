@@ -1,7 +1,7 @@
 /**
- * @fileoverview Message primitives for chat UIs. Includes container, content,
- * and avatar components used within conversation lists.
+ * @fileoverview Message primitives for chat UIs. Includes container, content, and avatar components used within conversation lists.
  */
+
 import type { UIMessage } from "ai";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, HTMLAttributes } from "react";

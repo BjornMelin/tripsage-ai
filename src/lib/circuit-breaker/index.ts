@@ -1,13 +1,5 @@
 /**
  * @fileoverview Circuit breaker pattern implementation using Upstash Redis.
- *
- * Prevents cascading failures during external service outages by:
- * - Tracking failure counts per service
- * - Opening circuit when threshold exceeded
- * - Allowing half-open probes after cooldown
- * - Auto-closing after successful probes
- *
- * @see https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker
  */
 
 import "server-only";

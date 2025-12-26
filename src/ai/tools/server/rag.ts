@@ -1,8 +1,5 @@
 /**
  * @fileoverview RAG search tool for AI agents (server-only).
- *
- * Provides semantic search with hybrid scoring and reranking
- * for knowledge base queries.
  */
 
 import "server-only";

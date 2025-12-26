@@ -1,8 +1,5 @@
 /**
- * @fileoverview Activities domain service orchestrating Google Places search,
- * caching, and optional AI/web fallback.
- *
- * Uses Supabase search_activities table as durable cache per SPEC-0030.
+ * @fileoverview Activities domain service orchestrating Google Places search, caching, and optional AI/web fallback.
  */
 
 import "server-only";
@@ -12,7 +9,7 @@ import { NotFoundError } from "@domain/activities/errors";
 import type { ActivitySearchResult, ServiceContext } from "@domain/activities/types";
 import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { activitySearchParamsSchema } from "@schemas/search";
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { hashInputForCache } from "@/lib/cache/hash";
 import {
   buildActivitySearchQuery,
@@ -205,6 +202,10 @@ export class ActivitiesService {
           try {
             // Call webSearch tool server-side
             const fallbackQuery = `things to do in ${destination}`;
+            const callOptions = {
+              messages: [],
+              toolCallId: `activities:webSearch:${queryHash}`,
+            } satisfies ToolExecutionOptions;
             const webSearchResult = await webSearch.execute?.(
               {
                 categories: null,
@@ -220,7 +221,7 @@ export class ActivitiesService {
                 timeoutMs: null,
                 userId: userId ?? null,
               },
-              {} as ToolCallOptions
+              callOptions
             );
 
             if (!webSearchResult) {

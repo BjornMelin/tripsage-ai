@@ -1,8 +1,5 @@
 /**
  * @fileoverview Telemetry span utilities.
- *
- * Provides OpenTelemetry span helpers with attribute redaction and lightweight event logging.
- * Client-side tracing setup still lives in `./client` (this module does not initialize OTEL).
  */
 
 import { type Span, SpanStatusCode, type Tracer, trace } from "@opentelemetry/api";

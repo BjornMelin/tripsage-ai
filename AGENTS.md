@@ -7,7 +7,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ## 0. Architecture and Stack
 
 - **Frontend-first:** All features at repository root. Next.js 16, React 19, TypeScript 5.9.
-- **AI SDK v6 (exact versions):** `ai@6.0.0-beta.150`, `@ai-sdk/react@3.0.0-beta.153`, `@ai-sdk/openai@3.0.0-beta.96`, `@ai-sdk/anthropic@3.0.0-beta.83`, `@ai-sdk/xai@3.0.0-beta.55`. Use these when researching.
+- **AI SDK v6 (exact versions):** `ai@6.0.3`, `@ai-sdk/react@3.0.3`, `@ai-sdk/openai@3.0.1`, `@ai-sdk/anthropic@3.0.1`, `@ai-sdk/xai@3.0.1`, `@ai-sdk/togetherai@2.0.1`. Use these when researching.
 - **Data/State:** Zod v4, Zustand v5, React Query v5, React Hook Form.
 - **Backend:** Supabase SSR, Upstash (Redis/Ratelimit/QStash), OpenTelemetry.
 - **UI:** Radix UI primitives, Tailwind CSS + CVA + clsx, Lucide icons.
@@ -43,7 +43,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ## 3. Project Layout and Responsibilities
 
-- **Primary app (root):** Next.js 16 workspace at repository root. Core AI in `src/app/api/**` route handlers. Shared schemas/types in `src/domain/schemas` (reuse server/client). Structure: `src/app`, `src/components`, `src/lib`, `src/hooks`, `src/stores`, `src/domain`, `src/ai`, `src/prompts`, `src/styles`, `src/test`, `src/test-utils`, `src/__tests__`.
+- **Primary app (root):** Next.js 16 workspace at repo root. Core AI in `src/app/api/**` route handlers. Shared schemas/types in `src/domain/schemas` (reuse server/client). Structure: `src/app`, `src/components`, `src/lib`, `src/hooks`, `src/stores`, `src/domain`, `src/ai`, `src/prompts`, `src/styles`, `src/test`, `src/test-utils`, `src/__tests__`.
 - **Infrastructure:** Scripts in `scripts/`; containers in `docker/`; tests in `src/**/__tests__`; docs in `docs/`; e2e tests in `e2e/`.
 
 ---
@@ -63,8 +63,9 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ### 4.2 TypeScript and frontend style
 
 - **TypeScript:** `strict: true`, `noUnusedLocals`, `noFallthroughCasesInSwitch`. Avoid `any`; use precise unions/generics. Handle `null`/`undefined` explicitly.
-- **Unsafe casts:** `as unknown as T` casts are forbidden in production code (`src/**` excluding tests). CI runs `pnpm check:no-new-unknown-casts` on PRs to reject new violations. Use type guards, schema validation, or `satisfies` instead. For test mocks requiring unsafe casts, use `unsafeCast<T>()` from `@/test/helpers/unsafe-cast`.
-- **Biome:** `pnpm format:biome`, `pnpm biome:check` (must pass), `pnpm biome:fix`. Do **not** edit `biome.json`; fix code instead.
+- **Unsafe casts:** `as unknown as T` casts are forbidden in production code (`src/**` excluding tests). CI runs `pnpm check:no-new-unknown-casts` to reject violations. Use type guards, schema validation, or `satisfies` instead. For test mocks requiring unsafe casts, use `unsafeCast<T>()` from `@/test/helpers/unsafe-cast`.
+- **Secret scanning:** CI runs `pnpm check:no-secrets` on PR diffs and `pnpm check:no-secrets:full` on pushes (see `.github/workflows/ci.yml`). The script `check:no-secrets:staged` exists but is not used in workflows.
+- **Biome:** `pnpm biome:fix`. Do **not** edit `biome.json`; fix code instead.
 - **File structure:**
   - Source (`.ts`, `.tsx`): Optional `@fileoverview`, blank line, `"use client"` (if needed), blank line, imports, implementation.
   - Test (`*.test.ts`, `*.spec.ts`): No `@fileoverview`. Use `@vitest-environment` only when overriding default.
@@ -136,6 +137,7 @@ Use standardized helpers from `@/lib/api/route-helpers` for all error responses:
 | 4xx/5xx | `errorResponse({ error, reason, status })` | Validation, rate limits, server errors |
 
 **Anti-patterns (avoid):**
+
 - `NextResponse.json({ error: "..." }, { status: 4xx })` → use `errorResponse()`
 - `new Response(JSON.stringify({ error }), ...)` → use `errorResponse()`
 
@@ -229,6 +231,12 @@ Do not return final response until all gates pass for code changes.
 **During iteration:** Prefer the smallest relevant shard (`pnpm test:unit`, `pnpm test:api`, `pnpm test:components`, `pnpm test:schemas`, `pnpm test:integration`). Run `pnpm test` only when changing test harness/config (e.g. `vitest.config.ts`, `src/test/**`) or before merging.
 
 **If Vitest hangs after finishing:** run `VITEST_DEBUG_OPEN_HANDLES=1 pnpm test` and ensure MSW is not bypassing unhandled requests (`MSW_ON_UNHANDLED_REQUEST=error`).
+
+### 6.3 Dependency and bundle hygiene (recommended)
+
+- **Unused deps (Knip):** `pnpm deps:report` (non-failing), `pnpm deps:audit` (failing), `pnpm deps:fix` (auto-removes unused deps from `package.json`).
+- **Unused files (Knip):** `pnpm exec knip --files --no-exit-code` (review before deleting; if you automate deletion, require explicit opt-in via `--allow-remove-files`).
+- **Bundle analysis (Next 16):** `pnpm build:analyze` (writes to `.next/diagnostics/analyze`).
 
 ### Upstash testing
 

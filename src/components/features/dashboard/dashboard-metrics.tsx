@@ -1,8 +1,5 @@
 /**
  * @fileoverview Composite dashboard metrics component.
- *
- * Displays a grid of metric cards with a time window selector.
- * Fetches data using useDashboardMetrics hook with automatic polling.
  */
 
 "use client";

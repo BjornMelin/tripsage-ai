@@ -1,8 +1,5 @@
 /**
  * @fileoverview Thin wrapper around the official Amadeus Node SDK.
- *
- * Provides lazy singleton construction and typed helper methods for the
- * accommodations workload (hotel geocode search, offers search, booking).
  */
 
 import Amadeus from "amadeus";

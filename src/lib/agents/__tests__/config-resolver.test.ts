@@ -19,8 +19,9 @@ vi.mock("@/lib/cache/tags", () => ({
   versionedKey: mockVersionedKey,
 }));
 
-vi.mock("@/lib/telemetry/alerts", () => ({
-  emitOperationalAlert: mockEmitAlert,
+vi.mock("@/lib/telemetry/degraded-mode", () => ({
+  emitOperationalAlertOncePerWindow: (...args: unknown[]) => mockEmitAlert(...args),
+  resetDegradedModeAlertStateForTests: () => undefined,
 }));
 
 vi.mock("@/lib/telemetry/span", async () => {

@@ -1,6 +1,5 @@
 /**
- * @fileoverview RAG (Retrieval-Augmented Generation) schemas.
- * Includes document indexing, hybrid search, and reranking validation.
+ * @fileoverview RAG (Retrieval-Augmented Generation) schemas. Includes document indexing, hybrid search, and reranking validation.
  */
 
 import { z } from "zod";

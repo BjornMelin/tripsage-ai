@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zod v4 schemas for web search API responses and web search tool inputs.
- *
- * Core schemas: Web search API parameters, results, and data structures
- * Tool schemas: Input validation for web search tools (search, batch search)
  */
 
 import { z } from "zod";

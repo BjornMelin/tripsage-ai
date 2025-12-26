@@ -1,8 +1,5 @@
 /**
  * @fileoverview Cache keys/constants for popular flight routes.
- *
- * Kept outside route modules because Next.js route handlers may only export
- * specific symbols (e.g. GET/POST, runtime, etc.).
  */
 
 /**

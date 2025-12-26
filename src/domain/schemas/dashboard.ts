@@ -1,6 +1,5 @@
 /**
- * @fileoverview Dashboard metrics schemas with validation.
- * Includes API response types and time window configuration.
+ * @fileoverview Dashboard metrics schemas with validation. Includes API response types and time window configuration.
  */
 
 import { z } from "zod";

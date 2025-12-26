@@ -1,8 +1,5 @@
 /**
  * @fileoverview Trip card component for displaying trip information.
- *
- * Shows trip details including dates, duration, budget, destinations, and status
- * with edit/delete actions and navigation to trip details.
  */
 
 "use client";

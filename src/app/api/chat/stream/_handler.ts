@@ -1,11 +1,5 @@
 /**
  * @fileoverview Pure handler for chat streaming using AI SDK v6 ToolLoopAgent.
- *
- * The handler composes validation, memory hydration, and ToolLoopAgent-based
- * streaming. It is fully dependency-injected to ensure deterministic tests.
- *
- * Uses createAgentUIStreamResponse for proper agent loop handling with
- * autonomous multi-step tool execution.
  */
 
 import {
@@ -181,7 +175,7 @@ export async function handleChatStream(
   }
 
   // Configure the chat agent
-  const chatConfig: ChatAgentConfig = {
+  const chatConfig = {
     desiredMaxTokens:
       Number.isFinite(payload.desiredMaxTokens) && (payload.desiredMaxTokens ?? 0) > 0
         ? Math.floor(payload.desiredMaxTokens as number)
@@ -189,7 +183,8 @@ export async function handleChatStream(
     maxSteps: 10,
     memorySummary,
     systemPrompt: CHAT_DEFAULT_SYSTEM_PROMPT,
-  };
+    useCallOptions: false,
+  } satisfies ChatAgentConfig & { useCallOptions?: false };
 
   deps.logger?.info?.("chat_stream:start", {
     model: provider.modelId,
@@ -213,7 +208,6 @@ export async function handleChatStream(
   // Use createAgentUIStreamResponse for proper agent loop handling
   const response = await createAgentUIStreamResponse({
     agent,
-    messages,
 
     // Handle errors during streaming
     onError: (err) => {
@@ -275,6 +269,7 @@ export async function handleChatStream(
         }
       }
     },
+    uiMessages: messages,
   });
 
   return response;

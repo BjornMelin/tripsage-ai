@@ -1,6 +1,5 @@
 /**
- * @fileoverview Canonical Zod schema for travel plans.
- * Defines the persisted shape and exported TypeScript type.
+ * @fileoverview Canonical Zod schema for travel plans. Defines the persisted shape and exported TypeScript type.
  */
 
 import { z } from "zod";

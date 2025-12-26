@@ -1,7 +1,7 @@
 /**
- * @fileoverview Alert component for displaying content in an alert-like format.
- * Provides a styled alert with various sizes and variants.
+ * @fileoverview Alert component for displaying content in an alert-like format. Provides a styled alert with various sizes and variants.
  */
+
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 

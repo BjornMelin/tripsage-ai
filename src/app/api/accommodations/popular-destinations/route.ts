@@ -1,8 +1,5 @@
 /**
  * @fileoverview API route returning cached popular hotel destinations.
- *
- * Returns personalized destinations based on user's search history if available,
- * falling back to global popular hotel destinations.
  */
 
 import "server-only";

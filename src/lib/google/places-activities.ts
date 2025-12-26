@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places API (New) helpers for activity search.
- *
- * Provides activity-specific query builders, field masks, and mapping
- * from Places API responses to Activity schema.
  */
 
 import "server-only";

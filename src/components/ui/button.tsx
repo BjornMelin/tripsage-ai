@@ -1,6 +1,5 @@
 /**
- * @fileoverview Button component for triggering actions.
- * Provides a styled button with various sizes and variants.
+ * @fileoverview Button component for triggering actions. Provides a styled button with various sizes and variants.
  */
 
 import { Slot } from "@radix-ui/react-slot";

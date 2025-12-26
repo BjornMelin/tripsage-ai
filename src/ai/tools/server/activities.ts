@@ -1,7 +1,5 @@
 /**
  * @fileoverview AI SDK v6 tools for activity search and details.
- *
- * Provides searchActivities and getActivityDetails tools for use in chat/agents.
  */
 
 import "server-only";

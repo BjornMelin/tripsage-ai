@@ -1,6 +1,5 @@
 /**
- * @fileoverview Token counting, budgeting, and model limits schemas.
- * Includes chat message roles, token counting messages, clamp results, and model limits.
+ * @fileoverview Token counting, budgeting, and model limits schemas. Includes chat message roles, token counting messages, clamp results, and model limits.
  */
 
 import { z } from "zod";

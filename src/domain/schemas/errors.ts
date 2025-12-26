@@ -1,6 +1,5 @@
 /**
- * @fileoverview Error reporting schemas and related types.
- * Includes error boundary information, error details, error reports, and component props.
+ * @fileoverview Error reporting schemas and related types. Includes error boundary information, error details, error reports, and component props.
  */
 
 import type React from "react";

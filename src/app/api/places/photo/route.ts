@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places API (New) Photo Media proxy endpoint.
- *
- * Proxies photo bytes from places.photos.getMedia with cache-friendly headers.
- * Does not persist photos server-side per Google Maps Platform policy.
  */
 
 import "server-only";

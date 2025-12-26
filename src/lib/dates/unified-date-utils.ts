@@ -1,6 +1,5 @@
 /**
- * @fileoverview Unified date utility helpers built on date-fns v4 with typed
- * inputs, validation, and formatting presets for Tripsage frontend modules.
+ * @fileoverview Unified date utility helpers built on date-fns v4 with typed inputs, validation, and formatting presets for Tripsage frontend modules.
  */
 
 import {

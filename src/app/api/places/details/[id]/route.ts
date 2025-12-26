@@ -1,8 +1,5 @@
 /**
  * @fileoverview Google Places API (New) Place Details endpoint.
- *
- * Server-side route for Place Details with minimal field mask. Terminates
- * autocomplete sessions when called after autocomplete selection.
  */
 
 import "server-only";

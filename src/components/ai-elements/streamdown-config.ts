@@ -1,9 +1,5 @@
 /**
  * @fileoverview Centralized Streamdown defaults for TripSage.
- *
- * Streamdown is used as the markdown renderer for AI Elements Response. We keep
- * the built-in remark/rehype pipeline (GFM, math, CJK-friendly parsing, Shiki,
- * Mermaid) but tighten link/image protocol handling for AI-generated content.
  */
 
 import type { MermaidConfig, MermaidOptions, StreamdownProps } from "streamdown";

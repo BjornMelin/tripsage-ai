@@ -1,10 +1,5 @@
 /**
  * @fileoverview Search params handler interface for strategy pattern.
- *
- * This module defines the handler interface that each search type implements
- * to provide type-specific parameter handling. The strategy pattern eliminates
- * switch statements and enables extensibility - adding a new search type only
- * requires creating a new handler file.
  */
 
 import type { SearchParams } from "@schemas/search";

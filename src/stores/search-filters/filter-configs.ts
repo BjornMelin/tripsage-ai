@@ -1,7 +1,5 @@
 /**
  * @fileoverview Filter and sort configurations by search type.
- *
- * Extracted from search-filters-store.ts to reduce store size and improve maintainability.
  */
 
 import type { SearchType } from "@schemas/search";

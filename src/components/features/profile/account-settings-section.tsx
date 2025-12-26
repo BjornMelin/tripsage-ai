@@ -1,6 +1,5 @@
 /**
- * @fileoverview Account settings section: email update, verification, and
- * notification preferences.
+ * @fileoverview Account settings section: email update, verification, and notification preferences.
  */
 
 "use client";

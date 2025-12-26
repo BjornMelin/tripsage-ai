@@ -1,6 +1,5 @@
 /**
- * @fileoverview Contact and feedback form validation schemas.
- * Includes contact forms, feedback forms, and newsletter subscription schemas.
+ * @fileoverview Contact and feedback form validation schemas. Includes contact forms, feedback forms, and newsletter subscription schemas.
  */
 
 import { z } from "zod";

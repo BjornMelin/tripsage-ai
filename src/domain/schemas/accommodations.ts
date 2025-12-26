@@ -1,6 +1,5 @@
 /**
- * @fileoverview Accommodation tool schemas with validation.
- * Includes search parameters, results, details, availability checks, and booking schemas for accommodation tools.
+ * @fileoverview Accommodation tool schemas with validation. Includes search parameters, results, details, availability checks, and booking schemas for accommodation tools.
  */
 
 import { z } from "zod";

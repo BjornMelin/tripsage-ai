@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zod schemas for web search batch API responses and web search batch tool inputs.
- *
- * Core schemas: Web search batch API parameters and data structures
- * Tool schemas: Input validation for web search batch tools (batch search)
  */
 
 import { z } from "zod";

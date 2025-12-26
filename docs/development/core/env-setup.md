@@ -11,7 +11,7 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
   - `NEXT_PUBLIC_API_URL`
 - Supabase (Dashboard → Settings → API):
   - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `SUPABASE_JWT_SECRET`
   - Console: <https://supabase.com/dashboard>
@@ -106,7 +106,7 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 
 - [ ] `.env` copied from root `.env.example`
 - [ ] `.env.test` copied from root `.env.test.example` for local/CI test runs
-- [ ] Supabase URL + anon key + service role key present
+- [ ] Supabase URL + public key (publishable or anon) + service role key present
 - [ ] Upstash Redis REST URL + token present
 - [ ] QStash token + signing keys present
 - [ ] At least one model provider key (OpenAI/Anthropic/xAI/OpenRouter or `AI_GATEWAY_API_KEY`)

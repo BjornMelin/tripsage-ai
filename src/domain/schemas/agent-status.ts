@@ -1,6 +1,5 @@
 /**
- * @fileoverview Agent status tracking and validation schemas.
- * Includes agent entities, tasks, workflows, metrics, and real-time update schemas.
+ * @fileoverview Agent status tracking and validation schemas. Includes agent entities, tasks, workflows, metrics, and real-time update schemas.
  */
 
 import { z } from "zod";

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Calendar tools for AI SDK v6.
- *
- * Provides tools for creating calendar events, checking availability, and
- * exporting itineraries to ICS format.
  */
 
 import "server-only";

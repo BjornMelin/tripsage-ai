@@ -1,8 +1,5 @@
 /**
  * @fileoverview Empty state component for search results.
- *
- * Displays a consistent "no results found" UI across flight, hotel,
- * and activity search result views.
  */
 
 "use client";

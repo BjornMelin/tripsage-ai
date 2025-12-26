@@ -1,7 +1,5 @@
 /**
- * @fileoverview Unified React hooks for trip-related API operations including CRUD
- * operations, suggestions, real-time updates, and flight data fetching with proper
- * error handling and caching.
+ * @fileoverview Unified React hooks for trip-related API operations including CRUD operations, suggestions, real-time updates, and flight data fetching with proper error handling and caching.
  */
 
 "use client";

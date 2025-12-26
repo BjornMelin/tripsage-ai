@@ -1,9 +1,5 @@
 /**
  * @fileoverview System prompt builders for agent workflows.
- *
- * Constructs system instructions for destination research, itinerary planning,
- * flight search, accommodation search, budget planning, and router classification
- * agents. Prompts include context from user requests and optional metadata.
  */
 
 import type {

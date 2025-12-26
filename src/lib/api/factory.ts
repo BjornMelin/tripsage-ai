@@ -1,8 +1,5 @@
 /**
  * @fileoverview Higher-order function factory for Next.js route handlers.
- *
- * Wraps route handlers with authentication, rate limiting, error handling, and
- * telemetry. Per ADR-0029 and ADR-0032.
  */
 
 import "server-only";
@@ -11,7 +8,13 @@ import type { AgentDependencies } from "@ai/agents/types";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { Agent, ToolSet } from "ai";
+import type {
+  Agent,
+  FinishReason,
+  LanguageModelResponseMetadata,
+  LanguageModelUsage,
+  ToolSet,
+} from "ai";
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
@@ -184,13 +187,42 @@ function parseRateLimitWindowMs(window: string): number | null {
   return Math.floor(value * unitMs);
 }
 
+/**
+ * Determine the degraded mode for a rate limit key when Redis is unavailable.
+ *
+ * SECURITY: Cost-sensitive routes must fail_closed to prevent:
+ * - Massive AI provider costs (OpenAI, Anthropic)
+ * - Third-party API quota exhaustion (Amadeus, accommodations)
+ * - Memory/data manipulation abuse
+ *
+ * Only read-only, low-cost routes should fail_open.
+ */
 function defaultDegradedModeForRateLimitKey(key: RouteRateLimitKey): DegradedMode {
+  // Explicit high-cost routes
   if (key === "embeddings" || key === "ai:stream" || key === "telemetry:ai-demo") {
     return "fail_closed";
   }
+
+  // Security-critical routes
   if (key.startsWith("auth:")) return "fail_closed";
   if (key.startsWith("keys:")) return "fail_closed";
   if (key.startsWith("agents:")) return "fail_closed";
+
+  // AI/LLM routes - fail closed to prevent cost abuse
+  if (key.startsWith("chat:")) return "fail_closed";
+  if (key.startsWith("ai:")) return "fail_closed";
+
+  // Travel API routes - fail closed to prevent third-party quota exhaustion
+  if (key.startsWith("flights:")) return "fail_closed";
+  if (key.startsWith("accommodations:")) return "fail_closed";
+  if (key.startsWith("activities:")) return "fail_closed";
+
+  // Data manipulation routes - fail closed to prevent abuse
+  if (key.startsWith("memory:")) return "fail_closed";
+  if (key.startsWith("trips:")) return "fail_closed";
+  if (key.startsWith("calendar:")) return "fail_closed";
+
+  // Read-only, low-cost routes can fail open
   return "fail_open";
 }
 
@@ -486,26 +518,9 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         }
       }
 
-      // Handle rate limiting if configured
-      if (rateLimit) {
-        let identifier: string;
-        if (user?.id) {
-          identifier = `user:${hashIdentifier(normalizeIdentifier(user.id))}`;
-        } else {
-          const ipHash = getTrustedRateLimitIdentifier(req);
-          identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
-        }
-        const degradedMode =
-          config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
-        const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
-          degradedMode,
-        });
-        if (rateLimitError) {
-          return rateLimitError;
-        }
-      }
-
-      // Parse and validate request body if schema is provided
+      // SECURITY: Parse and validate request body BEFORE rate limiting
+      // This prevents attackers from exhausting rate limit quotas with invalid payloads.
+      // Invalid requests should be rejected without consuming rate limit quota.
       let validatedData: SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown;
       if (schema) {
         const parsed = await parseJsonBody(req, { maxBytes: config.maxBodyBytes });
@@ -530,6 +545,25 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         validatedData = undefined as SchemaType extends z.ZodType
           ? z.infer<SchemaType>
           : unknown;
+      }
+
+      // Handle rate limiting if configured (AFTER validation to prevent quota exhaustion)
+      if (rateLimit) {
+        let identifier: string;
+        if (user?.id) {
+          identifier = `user:${hashIdentifier(normalizeIdentifier(user.id))}`;
+        } else {
+          const ipHash = getTrustedRateLimitIdentifier(req);
+          identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
+        }
+        const degradedMode =
+          config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
+        const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
+          degradedMode,
+        });
+        if (rateLimitError) {
+          return rateLimitError;
+        }
       }
 
       const routeKey = getSafeRouteKeyForTelemetry({
@@ -607,15 +641,9 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 /**
  * Represents the output specification for an AI SDK Agent.
  *
- * This mirrors the internal `Output<OUTPUT, PARTIAL>` interface from the AI SDK.
- * We define it here because the SDK exports `Output` as a namespace with factory
- * functions (e.g., `Output.text()`, `Output.object()`) rather than as a type.
- *
- * The Agent interface uses `OUTPUT extends Output` internally, but since we can't
- * import that type directly, we provide a compatible interface for type safety
- * in our generic factory functions.
- *
- * @see https://sdk.vercel.ai/docs/reference/ai-sdk-core/agent
+ * This mirrors the AI SDK `Output<OUTPUT, PARTIAL>` interface. The `ai` package
+ * exports `Output` as a runtime namespace (factory functions) rather than a
+ * directly importable type, so we use a structural type compatible with the SDK.
  */
 type AgentOutput<OutputType = unknown, PartialType = unknown> = {
   responseFormat: PromiseLike<
@@ -623,7 +651,11 @@ type AgentOutput<OutputType = unknown, PartialType = unknown> = {
   >;
   parseCompleteOutput: (
     options: { text: string },
-    context: unknown
+    context: {
+      response: LanguageModelResponseMetadata;
+      usage: LanguageModelUsage;
+      finishReason: FinishReason;
+    }
   ) => Promise<OutputType>;
   parsePartialOutput: (options: {
     text: string;
@@ -730,8 +762,8 @@ export function createAgentRoute<
         return createAgentUIStreamResponse({
           abortSignal: req.signal,
           agent,
-          messages: defaultMessages,
           onError: createErrorHandler(),
+          uiMessages: defaultMessages,
         });
       }
     );

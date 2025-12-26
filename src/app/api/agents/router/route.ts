@@ -1,8 +1,5 @@
 /**
- * @fileoverview Router agent route handler (frontend-only).
- * - Supabase SSR auth → userId
- * - Provider resolution (BYOK/Gateway)
- * - Classifies user messages into agent workflows
+ * @fileoverview Router agent route handler (frontend-only). - Supabase SSR auth → userId - Provider resolution (BYOK/Gateway) - Classifies user messages into agent workflows
  */
 
 import "server-only";

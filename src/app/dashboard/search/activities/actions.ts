@@ -1,6 +1,5 @@
 /**
- * @fileoverview Server Actions for trip planning integration.
- * Handles fetching user trips and adding activities to trips.
+ * @fileoverview Server Actions for trip planning integration. Handles fetching user trips and adding activities to trips.
  */
 
 "use server";

@@ -1,12 +1,5 @@
 /**
  * @fileoverview Helpers for API route handlers (headers, rate limiting, validation, errors).
- *
- * Provides standardized utilities for Next.js API route handlers including:
- * - Request parsing and validation
- * - Error handling with redaction
- * - Authentication helpers
- * - Rate limiting identifiers
- * - Telemetry spans
  */
 
 import { type NextRequest, NextResponse } from "next/server";

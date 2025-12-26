@@ -1,7 +1,7 @@
 /**
- * @fileoverview Conversation component for displaying a conversation in a chat-like format.
- * Provides a styled conversation with various sizes and variants.
+ * @fileoverview Conversation component for displaying a conversation in a chat-like format. Provides a styled conversation with various sizes and variants.
  */
+
 "use client";
 
 import { ArrowDownIcon } from "lucide-react";

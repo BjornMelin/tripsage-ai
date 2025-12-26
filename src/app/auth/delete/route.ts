@@ -1,6 +1,5 @@
 /**
- * @fileoverview Authenticated account deletion route.
- * Deletes the current user via Supabase admin API using the service-role key.
+ * @fileoverview Authenticated account deletion route. Deletes the current user via Supabase admin API using the service-role key.
  */
 
 import "server-only";

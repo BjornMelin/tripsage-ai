@@ -1,8 +1,5 @@
 /**
  * @fileoverview Browser/client-safe Supabase exports.
- *
- * Server entrypoints live in `./server` (Route Handlers / Server Components) and
- * `./factory` (middleware/proxy cookie adapters).
  */
 
 // Browser client helpers

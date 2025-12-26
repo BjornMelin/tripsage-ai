@@ -1,9 +1,5 @@
 /**
  * @fileoverview React hook for authenticated API requests.
- *
- * Provides a thin, Supabase-SSR-aligned wrapper around the shared `apiClient`.
- * Authentication is enforced server-side via Supabase cookie sessions and
- * route guards; this hook does not manage JWTs or refresh tokens.
  */
 
 "use client";

@@ -1,8 +1,5 @@
 /**
  * @fileoverview Trip collaborator webhook handler with async notification queuing.
- *
- * Uses the shared webhook handler abstraction to reduce boilerplate.
- * Enqueues notifications via QStash with ADR-0048 retry policy.
  */
 
 import "server-only";

@@ -1,14 +1,5 @@
 /**
  * @fileoverview Factory for creating TripSage agents using AI SDK v6 ToolLoopAgent.
- *
- * Provides a centralized factory function for instantiating ToolLoopAgent
- * instances with consistent configuration, telemetry, and error handling.
- * Agents created through this factory automatically receive:
- *
- * - Telemetry spans for observability
- * - Token budget clamping
- * - Tool call repair for invalid inputs
- * - Consistent stop conditions
  */
 
 import "server-only";

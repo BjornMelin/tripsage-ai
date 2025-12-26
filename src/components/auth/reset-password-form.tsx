@@ -1,8 +1,5 @@
 /**
  * @fileoverview Password reset form component.
- *
- * Handles password reset requests via Supabase Auth. Provides feedback for
- * success/error states and navigation.
  */
 
 "use client";

@@ -1,10 +1,5 @@
 /**
  * @fileoverview Hotel chain code mappings from Amadeus to brand names and categories.
- *
- * Amadeus uses 2-character chain codes to identify hotel brands.
- * This mapping enables UI display of brand names and automatic category classification.
- *
- * @see https://amadeus.com/en/resources/amadeus-property-codes
  */
 
 /** Hotel category classification */

@@ -1,8 +1,5 @@
 /**
  * @fileoverview React hooks for budget and expense management.
- *
- * Provides hooks for managing budgets, expenses, alerts, and currency conversion
- * with local state management and API synchronization.
  */
 
 "use client";

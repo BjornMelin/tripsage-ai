@@ -1,6 +1,5 @@
 /**
- * @fileoverview Clipboard helpers with fallbacks for older browsers.
- * Must only be imported in client components.
+ * @fileoverview Clipboard helpers with fallbacks for older browsers. Must only be imported in client components.
  */
 
 "use client";

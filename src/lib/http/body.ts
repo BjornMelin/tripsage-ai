@@ -80,3 +80,33 @@ export async function readRequestBodyBytesWithLimit(
   }
   return bytes;
 }
+
+export async function parseFormDataWithLimit(
+  req: Request,
+  maxBytes: number
+): Promise<FormData> {
+  const bytes = await readRequestBodyBytesWithLimit(req, maxBytes);
+  if (bytes.byteLength === 0) return new FormData();
+
+  // Avoid `new Headers(req.headers)` due to cross-implementation incompatibilities
+  // in some test environments (e.g., MSW's fetch/Headers polyfills).
+  const headers = new Headers();
+  req.headers.forEach((value, key) => {
+    headers.set(key, value);
+  });
+  // Avoid stale lengths when reconstructing.
+  headers.delete("content-length");
+
+  // Avoid DOM lib typing issues (`BodyInit` expects `ArrayBuffer`, not `Uint8Array<ArrayBufferLike>`).
+  // Also avoids `SharedArrayBuffer` incompatibilities in the DOM lib types.
+  const body = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(body).set(bytes);
+
+  const wrapped = new Request(req.url, {
+    body,
+    headers,
+    method: req.method,
+  });
+
+  return wrapped.formData();
+}

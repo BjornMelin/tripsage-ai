@@ -1,8 +1,5 @@
 /**
  * @fileoverview Memory tools backed by Supabase memories schema (server-only).
- *
- * Uses the canonical `memories.*` schema (memories.sessions, memories.turns)
- * for storing and retrieving conversational memory.
  */
 
 import "server-only";

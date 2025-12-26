@@ -1,7 +1,5 @@
 /**
- * @fileoverview TripSuggestions component displaying AI-powered travel recommendations
- * with personalized suggestions based on user memory and preferences, including
- * budget-aware filtering and interactive trip planning features.
+ * @fileoverview TripSuggestions component displaying AI-powered travel recommendations with personalized suggestions based on user memory and preferences, including budget-aware filtering and interactive trip planning features.
  */
 
 "use client";

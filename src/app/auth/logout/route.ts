@@ -1,9 +1,5 @@
 /**
  * @fileoverview Supabase logout route handler.
- *
- * Provides POST and GET handlers to sign the current user out using Supabase
- * SSR cookies. POST is used by client-side stores, while GET supports simple
- * hyperlink-based logout flows.
  */
 
 import "server-only";

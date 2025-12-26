@@ -1,9 +1,5 @@
 /**
- * @fileoverview Memory agent route handler (frontend-only).
- * - Supabase SSR auth → userId
- * - Provider resolution (BYOK/Gateway)
- * - Guardrails (rate limiting, telemetry)
- * - AI SDK v6 streaming summary response
+ * @fileoverview Memory agent route handler (frontend-only). - Supabase SSR auth → userId - Provider resolution (BYOK/Gateway) - Guardrails (rate limiting, telemetry) - AI SDK v6 streaming summary response
  */
 
 import "server-only";

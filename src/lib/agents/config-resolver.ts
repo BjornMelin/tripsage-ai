@@ -1,7 +1,5 @@
 /**
- * @fileoverview Agent configuration resolver backed by Supabase with Upstash cache.
- * Fetches configuration for a given agent type and scope, validates via Zod,
- * and caches the result with cache-tag versioning for fast reuse across agents.
+ * @fileoverview Agent configuration resolver backed by Supabase with Upstash cache. Fetches configuration for a given agent type and scope, validates via Zod, and caches the result with cache-tag versioning for fast reuse across agents.
  */
 
 import "server-only";
@@ -12,7 +10,7 @@ import { versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { emitOperationalAlert } from "@/lib/telemetry/alerts";
+import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 const CACHE_TAG = "configuration";
@@ -66,14 +64,18 @@ export async function resolveAgentConfig(
         .maybeSingle();
 
       if (error) {
-        emitOperationalAlert("agent_config.resolve_failed", {
+        emitOperationalAlertOncePerWindow({
           attributes: { agentType, reason: "db_error", scope },
+          event: "agent_config.resolve_failed",
+          windowMs: 60 * 60 * 1000, // 1h
         });
         throw error;
       }
       if (!data) {
-        emitOperationalAlert("agent_config.resolve_failed", {
+        emitOperationalAlertOncePerWindow({
           attributes: { agentType, reason: "not_found", scope },
+          event: "agent_config.resolve_failed",
+          windowMs: 60 * 60 * 1000, // 1h
         });
         throw Object.assign(new Error("Agent configuration not found"), {
           status: 404,
@@ -82,8 +84,10 @@ export async function resolveAgentConfig(
 
       const parsed = configurationAgentConfigSchema.safeParse(data.config);
       if (!parsed.success) {
-        emitOperationalAlert("agent_config.resolve_failed", {
+        emitOperationalAlertOncePerWindow({
           attributes: { agentType, reason: "schema_invalid", scope },
+          event: "agent_config.resolve_failed",
+          windowMs: 60 * 60 * 1000, // 1h
         });
         recordTelemetryEvent("agent_config.schema_invalid", {
           attributes: {

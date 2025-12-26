@@ -1,6 +1,5 @@
 /**
- * @fileoverview QuickActions component providing grid/list/compact layouts for
- * common travel planning tasks with icons, descriptions, and navigation links.
+ * @fileoverview QuickActions component providing grid/list/compact layouts for common travel planning tasks with icons, descriptions, and navigation links.
  */
 
 "use client";

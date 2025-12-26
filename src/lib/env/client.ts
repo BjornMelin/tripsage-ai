@@ -1,9 +1,5 @@
 /**
  * @fileoverview Client-safe environment variable access.
- *
- * This module exports only NEXT_PUBLIC_* environment variables that are
- * safe to expose in client bundles. All values are validated at build time
- * and frozen to prevent mutation.
  */
 
 import type { ClientEnv } from "@schemas/env";
@@ -40,6 +36,10 @@ function normalizeOptionalEnvVar(value: string | undefined): string | undefined 
 function validateClientEnv(): ClientEnv {
   // Avoid enumerating process.env in client bundles; Next.js inlines env var
   // accesses but does not guarantee process.env is enumerable in the browser.
+  const resolvedSupabaseKey =
+    normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
+    normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
   const clientVars = {
     NEXT_PUBLIC_API_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_API_URL),
     NEXT_PUBLIC_APP_NAME: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_APP_NAME),
@@ -51,9 +51,7 @@ function validateClientEnv(): ClientEnv {
       process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT
     ),
     NEXT_PUBLIC_SITE_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SITE_URL),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: normalizeOptionalEnvVar(
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: resolvedSupabaseKey,
     NEXT_PUBLIC_SUPABASE_URL: normalizeOptionalEnvVar(
       process.env.NEXT_PUBLIC_SUPABASE_URL
     ),

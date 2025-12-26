@@ -1,7 +1,5 @@
 /**
- * @fileoverview Provider registry and model resolution for AI SDK v6.
- * Centralizes BYOK key lookup via Supabase RPC and returns a ready
- * LanguageModel for downstream routes (no client-side secrets).
+ * @fileoverview Provider registry and model resolution for AI SDK v6. Centralizes BYOK key lookup via Supabase RPC and returns a ready LanguageModel for downstream routes (no client-side secrets).
  */
 
 import "server-only";

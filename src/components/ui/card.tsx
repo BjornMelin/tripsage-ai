@@ -1,7 +1,7 @@
 /**
- * @fileoverview Card component for displaying content in a card-like format.
- * Provides a styled card with header, title, description, content, and footer.
+ * @fileoverview Card component for displaying content in a card-like format. Provides a styled card with header, title, description, content, and footer.
  */
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

@@ -1,9 +1,33 @@
 /**
- * @fileoverview Client IP extraction helpers for server-side requests.
- *
- * This module is intentionally header-only (accepts `Headers`) so it can be
- * reused from NextRequest, standard Request, and Next.js `headers()` calls.
+ * @fileoverview Client IP extraction with proxy header trust validation.
  */
+
+// SECURITY: Proxy headers (X-Forwarded-For, X-Real-IP, CF-Connecting-IP) are only
+// trusted when running on Vercel, when explicitly enabled via TRUST_PROXY=true,
+// or in non-production environments (NODE_ENV=development|test).
+// On self-hosted deployments without a trusted reverse proxy, these headers can be
+// spoofed by attackers to bypass rate limits.
+
+/**
+ * Check if we should trust proxy headers for IP extraction.
+ *
+ * Returns true when:
+ * - Running on Vercel (VERCEL=1) - Vercel always strips/overwrites these headers
+ * - Explicitly configured (TRUST_PROXY=true) - for reverse proxy setups
+ * - Running in development/test (NODE_ENV=development|test) - keeps local/CI behavior
+ *
+ * SECURITY: In production on self-hosted deployments, do not trust proxy headers
+ * unless your reverse proxy strips inbound values and sets them from the actual
+ * client connection (set TRUST_PROXY=true once configured).
+ */
+function shouldTrustProxyHeaders(): boolean {
+  if (process.env.VERCEL === "1" || process.env.TRUST_PROXY === "true") {
+    return true;
+  }
+
+  const nodeEnv = process.env.NODE_ENV;
+  return nodeEnv === "development" || nodeEnv === "test";
+}
 
 /**
  * Validate a string as an IPv4 or IPv6 address.
@@ -25,13 +49,25 @@ function isValidIpAddress(ip: string): boolean {
 /**
  * Extract the client IP from trusted sources with deterministic fallback.
  *
- * Priority order:
+ * SECURITY: Proxy headers are only trusted on Vercel, when explicitly configured
+ * (TRUST_PROXY=true), or in non-production environments (NODE_ENV=development|test).
+ * On untrusted deployments, attackers could spoof these headers to bypass rate limits.
+ *
+ * Priority order (when proxy headers are trusted):
  * 1) `x-real-ip` (Vercel's canonical client IP header)
  * 2) `x-forwarded-for` (first IP)
  * 3) `cf-connecting-ip` (Cloudflare deployments)
  * 4) `"unknown"`
+ *
+ * When proxy headers are NOT trusted:
+ * - Returns `"unknown"` to ensure consistent rate limiting behavior
  */
 export function getClientIpFromHeaders(headers: Pick<Headers, "get">): string {
+  // Only trust proxy headers in known environments
+  if (!shouldTrustProxyHeaders()) {
+    return "unknown";
+  }
+
   const realIp = headers.get("x-real-ip")?.trim();
   if (realIp && isValidIpAddress(realIp)) {
     return realIp;

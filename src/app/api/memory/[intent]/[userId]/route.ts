@@ -1,19 +1,5 @@
 /**
  * @fileoverview Consolidated memory API route (intent + userId).
- *
- * Consolidates memory endpoints that historically lived under:
- * - `src/app/api/memory/context/[userId]`
- * - `src/app/api/memory/stats/[userId]`
- * - `src/app/api/memory/preferences/[userId]`
- * - `src/app/api/memory/insights/[userId]`
- * - `src/app/api/memory/user/[userId]`
- *
- * Supported intents:
- * - `GET /api/memory/context/:userId`
- * - `GET /api/memory/stats/:userId`
- * - `POST /api/memory/preferences/:userId`
- * - `GET /api/memory/insights/:userId`
- * - `DELETE /api/memory/user/:userId`
  */
 
 import "server-only";

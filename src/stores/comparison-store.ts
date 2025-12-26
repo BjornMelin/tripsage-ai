@@ -1,8 +1,5 @@
 /**
  * @fileoverview Zustand store for managing comparison items across search types.
- *
- * Replaces sessionStorage-based comparison lists with a centralized store that
- * supports cross-type comparisons, persistence, and computed derived state.
  */
 
 import type {

@@ -1,7 +1,5 @@
 /**
  * @fileoverview Shared cache key hashing utilities.
- *
- * Provides consistent SHA-256 hashing for cache keys across tools and agents.
  */
 
 import { createHash } from "node:crypto";

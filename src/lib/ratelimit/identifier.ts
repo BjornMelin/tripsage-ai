@@ -1,8 +1,5 @@
 /**
  * @fileoverview Shared helpers for constructing rate limit identifiers.
- *
- * Identifiers are normalized and hashed to avoid storing raw IPs or other
- * sensitive identifiers in Redis keys.
  */
 
 import "server-only";

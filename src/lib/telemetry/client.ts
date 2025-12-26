@@ -1,9 +1,5 @@
 /**
  * @fileoverview Client-side OpenTelemetry initialization.
- *
- * Provides WebTracerProvider setup for browser tracing with automatic
- * fetch instrumentation to enable distributed tracing from client to server.
- * Client-side error recording is handled separately in `client-errors.ts`.
  */
 
 "use client";

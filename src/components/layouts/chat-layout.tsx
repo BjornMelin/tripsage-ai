@@ -1,7 +1,5 @@
 /**
- * @fileoverview ChatLayout components providing the main chat interface structure
- * including collapsible sidebar, agent status panel, and responsive layout
- * management for the chat experience.
+ * @fileoverview ChatLayout components providing the main chat interface structure including collapsible sidebar, agent status panel, and responsive layout management for the chat experience.
  */
 
 "use client";

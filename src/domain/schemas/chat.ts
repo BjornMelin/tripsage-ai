@@ -1,6 +1,5 @@
 /**
- * @fileoverview Chat messaging and conversation schemas with validation.
- * Includes message structure, tool calls, attachments, and conversation management.
+ * @fileoverview Chat messaging and conversation schemas with validation. Includes message structure, tool calls, attachments, and conversation management.
  */
 
 import { z } from "zod";

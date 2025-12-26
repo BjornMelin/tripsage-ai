@@ -1,8 +1,5 @@
 /**
  * @fileoverview Loading skeleton component for search results.
- *
- * Provides consistent loading states across flight, hotel, and activity
- * result views with configurable skeleton layouts.
  */
 
 "use client";

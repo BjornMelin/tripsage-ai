@@ -1,6 +1,5 @@
 /**
- * @fileoverview Trip-related Zod schemas for runtime validation.
- * Includes trip creation, updates, filtering, suggestions, and itinerary items.
+ * @fileoverview Trip-related Zod schemas for runtime validation. Includes trip creation, updates, filtering, suggestions, and itinerary items.
  */
 
 import { z } from "zod";

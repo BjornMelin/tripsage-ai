@@ -12,31 +12,35 @@ Integration tests for calendar API routes using Vitest with optimized shared moc
 
 ## Shared Test Utilities
 
-### `test-helpers.ts`
+These tests use the shared helpers in `src/test/helpers/`:
 
-Provides reusable mocks and helpers:
+- `@/test/helpers/api-route` for rate-limit + auth guards
+- `@/test/helpers/route` for building `NextRequest` and route contexts
 
-- `setupCalendarMocks()` - Configures all mocks for calendar routes
-- `buildMockRequest()` - Creates mock NextRequest objects
-- `CALENDAR_MOCKS` - Hoisted mocks for shared use
-- `MOCK_RATE_LIMIT_SUCCESS/FAILED` - Rate limit result constants
-
-### Usage Example
+### Usage Example (current style)
 
 ```typescript
-import { setupCalendarMocks, buildMockRequest } from "./test-helpers";
+import {
+  resetApiRouteMocks,
+  enableApiRouteRateLimit,
+  mockApiRouteRateLimitOnce,
+} from "@/test/helpers/api-route";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 describe("My Route", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    resetApiRouteMocks();
   });
 
   it("handles request", async () => {
-    setupCalendarMocks({ authenticated: true });
     const mod = await import("../route");
-    const req = buildMockRequest("http://localhost/api/calendar/status");
-    const res = await mod.GET(req);
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/calendar/status",
+    });
+    const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(200);
   });
 });

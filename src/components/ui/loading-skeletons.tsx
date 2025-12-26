@@ -1,7 +1,5 @@
 /**
- * @fileoverview Loading skeleton components for various UI elements.
- * Provides placeholder components that mimic the layout of actual content
- * during loading states.
+ * @fileoverview Loading skeleton components for various UI elements. Provides placeholder components that mimic the layout of actual content during loading states.
  */
 
 import * as React from "react";

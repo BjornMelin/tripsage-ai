@@ -1,6 +1,5 @@
 /**
- * @fileoverview Trip budget form component with Zod validation and dynamic
- * category allocation.
+ * @fileoverview Trip budget form component with Zod validation and dynamic category allocation.
  */
 
 "use client";
@@ -161,10 +160,10 @@ export const BudgetForm = ({
       })),
       currency: "USD",
       enableAlerts: true,
-      endDate: "",
+      endDate: undefined,
       name: "",
       notes: "",
-      startDate: "",
+      startDate: undefined,
       totalAmount: 0,
       ...initialData,
     },
@@ -361,7 +360,13 @@ export const BudgetForm = ({
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(event.target.value || undefined)
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -375,7 +380,13 @@ export const BudgetForm = ({
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        value={field.value ?? ""}
+                        onChange={(event) =>
+                          field.onChange(event.target.value || undefined)
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

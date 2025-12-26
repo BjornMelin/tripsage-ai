@@ -9,7 +9,10 @@
 - Scope: whole repository
 - Constraints: audit-only (no source changes)
 
-## Executive summary (fill at end)
+## Executive summary (audit snapshot)
+
+> Remediation status: complete as of 2025-12-22 on branch `chore/review-2025-12-15-finalize`.\
+> See `docs/review/2025-12-15/implementation-guide.md` and `docs/review/2025-12-15/verification-report.md`.
 
 - Blockers: 1
 - Critical: 2
@@ -133,7 +136,11 @@
 
 - [x] `node -e \"require.resolve('import-in-the-middle'); require.resolve('require-in-the-middle')\"` succeeds from repo root.
 - [x] `pnpm build` (after REL-001 is fixed) emits zero warnings about these packages not being resolvable.
-- [ ] A production run (`pnpm start` after build) does not crash on module resolution during instrumentation init.
+- [x] A production run (`pnpm start` after build) does not crash on module resolution during instrumentation init.
+
+**Implementation note (2025-12-22):**
+
+- Verified production runtime by running `pnpm start` after `pnpm build` using the standalone output (`node .next/standalone/server.js`) with non-secret stub env vars required by `envSchema` in production (see verification report for exact command).
 
 **References:**  
 
@@ -171,8 +178,12 @@
 **Acceptance criteria:**
 
 - [x] A deliberate "bad coverage" run fails: `pnpm test:coverage` (or equivalent) exits non-zero when coverage is below thresholds.
-- [ ] The chosen enforcement strategy is documented (global/per-directory thresholds + excludes) and matches the actual numbers.
-- [ ] Coverage on critical surfaces (auth, payments, keys, webhooks, AI tool routing) has explicit targets and is measured.
+- [x] The chosen enforcement strategy is documented (global/per-directory thresholds + excludes) and matches the actual numbers.
+- [x] Coverage on critical surfaces (auth, payments, keys, webhooks, AI tool routing) has explicit targets and is measured.
+
+**Implementation note (2025-12-22):**
+
+- Added `scripts/check-coverage-critical.mjs` (missing-file enforcement + critical surface targets) and updated `pnpm test:coverage` to run it after Vitest coverage. Coverage targets and current numbers are documented under `docs/development/testing/`.
 
 **References:**  
 
@@ -252,6 +263,7 @@
 
 - Added `docs/development/architecture/layering.md` and linked from standards + dev README.
 - Extended `scripts/check-boundaries.mjs` to block domain → app/next imports with a TODO allowlist.
+- Extended `scripts/check-boundaries.mjs` to enforce `src/domain/schemas/**` as a leaf (no `@/lib/**`, `next/*`, or `server-only` imports).
 - CI now runs `pnpm boundary:check`.
 
 **References:**  
@@ -450,6 +462,10 @@
 - QStash verification reads the raw body with a hard max byte limit and returns `413 payload_too_large` before signature verification when exceeded.
 - Tests: `src/lib/qstash/__tests__/receiver.test.ts`.
 
+**Follow-up (2025-12-22):**
+
+- Key-rotation misconfig alert now includes `alert.category=config_drift`, links to Upstash signing key rotation docs, and uses a 6h dedupe window to reduce the chance of missed rotations while remaining non-spammy.
+
 **References:**  
 
 - <https://upstash.com/docs/qstash/howto/signature>
@@ -536,7 +552,7 @@
 
 **References:**
 
-- <https://nextjs.org/docs/pages/api-reference/config/next-config-js/turbopack>
+- <https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack>
 
 ### ARCH-002 - Minor - Architecture - AI tool guardrails bypassed: some tools use raw `tool()` instead of `createAiTool`
 
@@ -842,7 +858,7 @@
 
 **Implementation (2025-12-17):**
 
-- `src/app/api/telemetry/ai-demo/route.ts` is demo-gated (`ENABLE_AI_DEMO === "true"` else `404`) and privileged (`TELEMETRY_AI_DEMO_KEY` required else `503`, plus `x-internal-key` verification).
+- `src/app/api/telemetry/ai-demo/route.ts` is demo-gated (`ENABLE_AI_DEMO === "true"` else `404`) and privileged (`TELEMETRY_AI_DEMO_KEY` required else `404`, plus `x-internal-key` verification).
 - It enforces hard caps: 16KB max body and `detail` length max 2000 chars.
 - Rate limiting is configured `degradedMode: "fail_closed"` so alerts are not emitted when limiter infra is unavailable.
 - Operational alert attributes avoid raw user-provided `detail`; they emit only low-risk metadata (`has_detail`, `detail_length`) and an optional HMAC `detail_hash` fingerprint when `TELEMETRY_HASH_SECRET` is configured.
@@ -1022,11 +1038,16 @@
 
 - [x] Touched files have short, accurate `@fileoverview` headers.  
 - [x] Template-style file header content is removed in touched areas.  
-- [ ] Any remaining file-level docs are kept in sync via tests or lint rules.
+- [x] Any remaining file-level docs are kept in sync via tests or lint rules.
 
 **Implementation note (2025-12-17):**
 
 - Kept `@fileoverview` headers by preference, but trimmed them to 1-sentence, technical summaries in touched files.
+
+**Implementation note (2025-12-22):**
+
+- Added `scripts/check-fileoverviews.mjs` + `pnpm check:fileoverviews` (diff-based) and enforced it in CI to prevent multi-line `@fileoverview` drift in changed non-test `src/**` code.
+- Added `pnpm check:fileoverviews:full` for a full-repo scan, and normalized non-test `src/**` headers to comply (single-line blocks).
 
 **References:**  
 

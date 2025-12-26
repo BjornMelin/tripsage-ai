@@ -1,7 +1,5 @@
 /**
  * @fileoverview Client Component for displaying calendar events list.
- *
- * Fetches events via API route to avoid server/client boundary violations.
  */
 
 "use client";

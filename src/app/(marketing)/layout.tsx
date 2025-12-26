@@ -1,8 +1,5 @@
 /**
  * @fileoverview Marketing/public pages layout with navigation.
- *
- * Provides the public Navbar for unauthenticated visitors.
- * Route group doesn't affect URL paths.
  */
 
 import { type ReactNode, Suspense } from "react";

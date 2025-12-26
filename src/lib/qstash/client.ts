@@ -1,12 +1,5 @@
 /**
  * @fileoverview Shared QStash client with enforced retry policy per ADR-0048.
- *
- * Centralizes QStash job enqueuing to ensure consistent retry configuration
- * across all webhook handlers. Implements policy defined in ADR-0048:
- * - 5 retries (6 total attempts)
- * - Exponential backoff starting at 10s
- *
- * Also provides a factory pattern for test injection support.
  */
 
 import "server-only";
