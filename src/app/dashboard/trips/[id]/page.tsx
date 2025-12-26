@@ -58,6 +58,18 @@ const MAX_FILENAME_LENGTH = 80;
 const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/;
 
 const toIsoDateInputValue = (value: unknown): string | undefined => {
+  if (value == null) return undefined;
+
+  if (value instanceof Date) {
+    try {
+      const trimmed = value.toISOString().trim();
+      if (!ISO_DATE_PREFIX.test(trimmed)) return undefined;
+      return trimmed.slice(0, 10);
+    } catch {
+      return undefined;
+    }
+  }
+
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   if (!ISO_DATE_PREFIX.test(trimmed)) return undefined;
