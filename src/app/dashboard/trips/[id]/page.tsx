@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { Budget, BudgetCategory } from "@schemas/budget";
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -16,7 +17,8 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BudgetForm } from "@/components/features/budget/budget-form";
 import { BudgetTracker } from "@/components/features/trips/budget-tracker";
 import { ItineraryBuilder } from "@/components/features/trips/itinerary-builder";
 import { TripTimeline } from "@/components/features/trips/trip-timeline";
@@ -29,6 +31,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
@@ -37,12 +46,23 @@ import { handleApiError } from "@/lib/api/error-types";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { ROUTES } from "@/lib/routes";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { parseTripDate } from "@/lib/trips/parse-trip-date";
 import { statusVariants } from "@/lib/variants/status";
+import { useBudgetStore } from "@/stores/budget-store";
 import { useTripItineraryStore } from "@/stores/trip-itinerary-store";
 
 const MAX_FILENAME_LENGTH = 80;
+
+const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/;
+
+const toIsoDateInputValue = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!ISO_DATE_PREFIX.test(trimmed)) return undefined;
+  return trimmed.slice(0, 10);
+};
 
 const sanitizeTripTitleForFilename = (title?: string) => {
   const base = (title ?? "").trim();
@@ -71,6 +91,10 @@ export default function TripDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const [isCreateBudgetDialogOpen, setIsCreateBudgetDialogOpen] = useState(false);
+
+  const addBudget = useBudgetStore((state) => state.addBudget);
+  const setActiveBudget = useBudgetStore((state) => state.setActiveBudget);
 
   const tripIdParam = params.id as string;
   const tripIdNumber = Number.parseInt(tripIdParam, 10);
@@ -167,8 +191,22 @@ export default function TripDetailsPage() {
     router.push(ROUTES.dashboard.trips);
   };
 
+  const handleOpenCreateBudget = () => {
+    setIsCreateBudgetDialogOpen(true);
+  };
+
   // Merge trip with destinations first so helpers can reference it
   const mergedTrip = trip ? { ...trip, destinations } : null;
+
+  const initialBudgetFormData = useMemo(() => {
+    if (!mergedTrip) return undefined;
+    return {
+      currency: mergedTrip.currency ?? "USD",
+      endDate: toIsoDateInputValue(mergedTrip.endDate),
+      name: `${mergedTrip.title || "Trip"} Budget`,
+      startDate: toIsoDateInputValue(mergedTrip.startDate),
+    };
+  }, [mergedTrip]);
 
   // Parse start/end dates once to avoid duplicate telemetry/errors
   const parsedDates = useMemo(() => {
@@ -412,7 +450,11 @@ export default function TripDetailsPage() {
             <TripTimeline trip={mergedTrip} showActions={true} />
 
             {/* Budget Tracker */}
-            <BudgetTracker tripId={mergedTrip.id} showActions={true} />
+            <BudgetTracker
+              tripId={mergedTrip.id}
+              showActions={true}
+              onCreateBudget={handleOpenCreateBudget}
+            />
           </div>
 
           {/* Quick Stats */}
@@ -498,6 +540,7 @@ export default function TripDetailsPage() {
               tripId={mergedTrip.id}
               showActions={true}
               className="max-w-2xl"
+              onCreateBudget={handleOpenCreateBudget}
             />
 
             {/* Additional budget features would go here */}
@@ -532,6 +575,81 @@ export default function TripDetailsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={isCreateBudgetDialogOpen}
+        onOpenChange={setIsCreateBudgetDialogOpen}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Create trip budget</DialogTitle>
+            <DialogDescription>
+              Set a total budget and optional category allocations for this trip.
+            </DialogDescription>
+          </DialogHeader>
+
+          <BudgetForm
+            initialData={initialBudgetFormData}
+            onCancel={() => setIsCreateBudgetDialogOpen(false)}
+            onSubmit={(data) => {
+              try {
+                const budgetId = secureUuid();
+                const createdAt = nowIso();
+
+                const categories: BudgetCategory[] = data.categories.map((category) => {
+                  const id = category.id ?? secureUuid();
+                  const percentage =
+                    data.totalAmount > 0
+                      ? (category.amount / data.totalAmount) * 100
+                      : 0;
+
+                  return {
+                    amount: category.amount,
+                    category: category.category,
+                    id,
+                    percentage,
+                    remaining: category.amount,
+                    spent: 0,
+                  };
+                });
+
+                const budget: Budget = {
+                  categories,
+                  createdAt,
+                  currency: data.currency,
+                  endDate: data.endDate,
+                  id: budgetId,
+                  isActive: true,
+                  name: data.name,
+                  startDate: data.startDate,
+                  totalAmount: data.totalAmount,
+                  tripId: mergedTrip.id,
+                  updatedAt: createdAt,
+                };
+
+                addBudget(budget);
+                setActiveBudget(budgetId);
+                setIsCreateBudgetDialogOpen(false);
+                toast({
+                  description: "Budget created for this trip.",
+                  title: "Budget created",
+                });
+              } catch (error) {
+                recordClientErrorOnActiveSpan(
+                  error instanceof Error ? error : new Error(String(error)),
+                  { action: "createBudget", context: "TripDetailsPage" }
+                );
+                toast({
+                  description: "Unable to create budget. Please try again.",
+                  title: "Budget creation failed",
+                  variant: "destructive",
+                });
+              }
+              return Promise.resolve();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

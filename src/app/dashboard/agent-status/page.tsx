@@ -6,7 +6,7 @@
 
 import { ActivityIcon, BrainIcon, NetworkIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
-import { AgentStatusDashboard } from "@/components/features/agent-monitoring/dashboard/agent-status-dashboard";
+import { AgentStatusDashboard } from "@/components/features/agent-monitoring/dashboard/agent-status-dashboard-lazy";
 import { ConnectionStatus } from "@/components/features/shared/connection-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

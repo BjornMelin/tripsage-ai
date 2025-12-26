@@ -22,9 +22,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getUserSecurityEvents, getUserSecurityMetrics } from "@/lib/security/service";
-import { getCurrentSessionId, listActiveSessions } from "@/lib/security/sessions";
+import { listActiveSessions } from "@/lib/security/sessions";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const SecurityDashboardLogger = createServerLogger("security.dashboard");
@@ -32,26 +31,17 @@ const SecurityDashboardLogger = createServerLogger("security.dashboard");
 /**
  * Get the security data for the current user.
  *
+ * @param userId - Current user ID.
+ * @param currentSessionId - Current auth session ID.
  * @returns The security data.
  */
-async function GetSecurityData() {
-  const supabase = await createServerSupabase();
-  const { user, error } = await getCurrentUser(supabase);
-  if (error) {
-    throw error;
-  }
-  if (!user) {
-    throw new Error("unauthorized");
-  }
-
+async function GetSecurityData(userId: string, currentSessionId: string | null) {
   const adminSupabase = createAdminSupabase();
 
   const [eventsResult, metricsResult, sessionsResult] = await Promise.allSettled([
-    getUserSecurityEvents(adminSupabase, user.id),
-    getUserSecurityMetrics(adminSupabase, user.id),
-    getCurrentSessionId(supabase).then((currentSessionId) =>
-      listActiveSessions(adminSupabase, user.id, { currentSessionId })
-    ),
+    getUserSecurityEvents(adminSupabase, userId),
+    getUserSecurityMetrics(adminSupabase, userId),
+    listActiveSessions(adminSupabase, userId, { currentSessionId }),
   ]);
 
   if (eventsResult.status === "rejected") {
@@ -60,7 +50,7 @@ async function GetSecurityData() {
         eventsResult.reason instanceof Error
           ? eventsResult.reason.message
           : "unknown_error",
-      userId: user.id,
+      userId,
     });
   }
   if (metricsResult.status === "rejected") {
@@ -69,7 +59,7 @@ async function GetSecurityData() {
         metricsResult.reason instanceof Error
           ? metricsResult.reason.message
           : "unknown_error",
-      userId: user.id,
+      userId,
     });
   }
   if (sessionsResult.status === "rejected") {
@@ -78,7 +68,7 @@ async function GetSecurityData() {
         sessionsResult.reason instanceof Error
           ? sessionsResult.reason.message
           : "unknown_error",
-      userId: user.id,
+      userId,
     });
   }
 
@@ -100,10 +90,19 @@ const RiskColor: Record<SecurityEvent["riskLevel"], string> = {
 /**
  * The security dashboard component.
  *
+ * @param props - Component props.
+ * @param props.userId - Current user ID.
+ * @param props.currentSessionId - Current session ID (used to mark current session).
  * @returns The security dashboard component.
  */
-export async function SecurityDashboard() {
-  const { events, metrics, sessions } = await GetSecurityData();
+export async function SecurityDashboard({
+  userId,
+  currentSessionId,
+}: {
+  userId: string;
+  currentSessionId: string | null;
+}) {
+  const { events, metrics, sessions } = await GetSecurityData(userId, currentSessionId);
 
   return (
     <div className="space-y-6">
