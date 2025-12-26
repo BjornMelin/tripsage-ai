@@ -187,13 +187,42 @@ function parseRateLimitWindowMs(window: string): number | null {
   return Math.floor(value * unitMs);
 }
 
+/**
+ * Determine the degraded mode for a rate limit key when Redis is unavailable.
+ *
+ * SECURITY: Cost-sensitive routes must fail_closed to prevent:
+ * - Massive AI provider costs (OpenAI, Anthropic)
+ * - Third-party API quota exhaustion (Amadeus, accommodations)
+ * - Memory/data manipulation abuse
+ *
+ * Only read-only, low-cost routes should fail_open.
+ */
 function defaultDegradedModeForRateLimitKey(key: RouteRateLimitKey): DegradedMode {
+  // Explicit high-cost routes
   if (key === "embeddings" || key === "ai:stream" || key === "telemetry:ai-demo") {
     return "fail_closed";
   }
+
+  // Security-critical routes
   if (key.startsWith("auth:")) return "fail_closed";
   if (key.startsWith("keys:")) return "fail_closed";
   if (key.startsWith("agents:")) return "fail_closed";
+
+  // AI/LLM routes - fail closed to prevent cost abuse
+  if (key.startsWith("chat:")) return "fail_closed";
+  if (key.startsWith("ai:")) return "fail_closed";
+
+  // Travel API routes - fail closed to prevent third-party quota exhaustion
+  if (key.startsWith("flights:")) return "fail_closed";
+  if (key.startsWith("accommodations:")) return "fail_closed";
+  if (key.startsWith("activities:")) return "fail_closed";
+
+  // Data manipulation routes - fail closed to prevent abuse
+  if (key.startsWith("memory:")) return "fail_closed";
+  if (key.startsWith("trips:")) return "fail_closed";
+  if (key.startsWith("calendar:")) return "fail_closed";
+
+  // Read-only, low-cost routes can fail open
   return "fail_open";
 }
 
@@ -489,26 +518,9 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         }
       }
 
-      // Handle rate limiting if configured
-      if (rateLimit) {
-        let identifier: string;
-        if (user?.id) {
-          identifier = `user:${hashIdentifier(normalizeIdentifier(user.id))}`;
-        } else {
-          const ipHash = getTrustedRateLimitIdentifier(req);
-          identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
-        }
-        const degradedMode =
-          config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
-        const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
-          degradedMode,
-        });
-        if (rateLimitError) {
-          return rateLimitError;
-        }
-      }
-
-      // Parse and validate request body if schema is provided
+      // SECURITY: Parse and validate request body BEFORE rate limiting
+      // This prevents attackers from exhausting rate limit quotas with invalid payloads.
+      // Invalid requests should be rejected without consuming rate limit quota.
       let validatedData: SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown;
       if (schema) {
         const parsed = await parseJsonBody(req, { maxBytes: config.maxBodyBytes });
@@ -533,6 +545,25 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         validatedData = undefined as SchemaType extends z.ZodType
           ? z.infer<SchemaType>
           : unknown;
+      }
+
+      // Handle rate limiting if configured (AFTER validation to prevent quota exhaustion)
+      if (rateLimit) {
+        let identifier: string;
+        if (user?.id) {
+          identifier = `user:${hashIdentifier(normalizeIdentifier(user.id))}`;
+        } else {
+          const ipHash = getTrustedRateLimitIdentifier(req);
+          identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
+        }
+        const degradedMode =
+          config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
+        const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
+          degradedMode,
+        });
+        if (rateLimitError) {
+          return rateLimitError;
+        }
       }
 
       const routeKey = getSafeRouteKeyForTelemetry({
