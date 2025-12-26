@@ -217,9 +217,9 @@ describe("getCurrentWeather", () => {
 
       const pendingRequest: Promise<unknown> = Promise.resolve(
         execute(
-        {
-          city: "Paris",
-          coordinates: null,
+          {
+            city: "Paris",
+            coordinates: null,
             fresh: true,
             lang: null,
             units: "metric",
@@ -249,9 +249,9 @@ describe("getCurrentWeather", () => {
 
       const pendingRequest: Promise<unknown> = Promise.resolve(
         execute(
-        {
-          city: "Paris",
-          coordinates: null,
+          {
+            city: "Paris",
+            coordinates: null,
             fresh: true,
             lang: null,
             units: "metric",
