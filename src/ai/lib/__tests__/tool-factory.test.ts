@@ -123,6 +123,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  vi.stubEnv("VERCEL", "1");
   upstashBeforeEachHook();
   getUpstashCache().reset();
   recordedRateLimitIdentifiers.length = 0;
@@ -137,6 +138,10 @@ beforeEach(() => {
   telemetrySpan.addEvent.mockClear();
   telemetrySpan.setAttribute.mockClear();
   setMockHeaders({});
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
 });
 
 afterAll(upstashAfterAllHook);
@@ -239,13 +244,10 @@ describe("createAiTool", () => {
 
   test("passes ToolExecutionOptions to execute function", async () => {
     let capturedCallOptions: ToolExecutionOptions | null = null;
-    // biome-ignore lint/suspicious/useAwait: Mock function must return Promise to match tool execute signature
-    const executeSpy = vi.fn(
-      async (_params: unknown, callOptions: ToolExecutionOptions) => {
-        capturedCallOptions = callOptions;
-        return { result: "ok" };
-      }
-    );
+    const executeSpy = vi.fn((_params: unknown, callOptions: ToolExecutionOptions) => {
+      capturedCallOptions = callOptions;
+      return Promise.resolve({ result: "ok" });
+    });
 
     const toolWithContext = createAiTool({
       description: "tool that uses context",

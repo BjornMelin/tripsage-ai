@@ -1,14 +1,22 @@
 /**
  * @fileoverview Normalization utilities for web search tool results.
+ *
+ * SECURITY: This module sanitizes external web content to prevent
+ * indirect prompt injection attacks where malicious websites embed
+ * hidden text designed to manipulate the AI agent.
  */
 
 import type { WebSearchSource } from "@ai/tools/schemas/web-search";
+import { sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";
 
 /**
  * Normalizes a single search result item to match the strict schema.
  *
  * Extracts only the allowed fields (url, title, snippet, publishedAt) and
  * filters out any extra fields that Firecrawl may include.
+ *
+ * SECURITY: Title and snippet are sanitized to prevent indirect prompt
+ * injection from malicious websites embedding hidden manipulation text.
  *
  * @param item Raw result item from Firecrawl API (may contain extra fields).
  * @returns Normalized result matching WebSearchSource schema, or null if invalid.
@@ -29,12 +37,14 @@ export function normalizeWebSearchResult(item: unknown): WebSearchSource | null 
     url,
   };
 
+  // SECURITY: Sanitize title to prevent injection via search results
   if (typeof record.title === "string") {
-    normalized.title = record.title;
+    normalized.title = sanitizeForPrompt(record.title, 200);
   }
 
+  // SECURITY: Sanitize snippet to prevent injection via search results
   if (typeof record.snippet === "string") {
-    normalized.snippet = record.snippet;
+    normalized.snippet = sanitizeForPrompt(record.snippet, 500);
   }
 
   if (typeof record.publishedAt === "string") {

@@ -11,6 +11,7 @@ import type { ModelMessage, PrepareStepFunction, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
 import { z } from "zod";
 import { extractTexts, validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { sanitizeWithInjectionDetection } from "@/lib/security/prompt-sanitizer";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
@@ -232,9 +233,11 @@ export function createChatAgent(
   } = config;
 
   // Build base system prompt with optional memory context
+  // SECURITY: Memory is sandboxed in XML tags and sanitized to prevent injection
   let instructions = systemPrompt;
   if (memorySummary) {
-    instructions += `\n\nUser memory (summary):\n${memorySummary}`;
+    const sanitizedMemory = sanitizeWithInjectionDetection(memorySummary, 2000);
+    instructions += `\n\n<user_memory role="context">\n${sanitizedMemory}\n</user_memory>`;
   }
 
   // Extract text parts for token counting
@@ -472,9 +475,14 @@ export function createChatAgent(
     callOptionsSchema: chatCallOptionsSchema,
     prepareCall: ({ instructions: baseInstructions, options }) => {
       // Inject memory summary into instructions at runtime
+      // SECURITY: Memory is sandboxed in XML tags and sanitized to prevent injection
       let finalInstructions = normalizeInstructions(baseInstructions);
       if (options.memorySummary) {
-        finalInstructions += `\n\nUser memory (summary):\n${options.memorySummary}`;
+        const sanitizedMemory = sanitizeWithInjectionDetection(
+          options.memorySummary,
+          2000
+        );
+        finalInstructions += `\n\n<user_memory role="context">\n${sanitizedMemory}\n</user_memory>`;
       }
       return { instructions: finalInstructions };
     },
