@@ -17,7 +17,7 @@ import {
 import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
@@ -89,7 +89,7 @@ function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
 export const webSearchBatch = createAiTool({
   description:
     "Run multiple web searches in a single call, reusing per-query cache and rate limits.",
-  execute: async ({ queries, userId, ...rest }, callOptions: ToolCallOptions) => {
+  execute: async ({ queries, userId, ...rest }, callOptions: ToolExecutionOptions) => {
     const started = Date.now();
     // Optional top-level rate limiting (in addition to per-query limits)
     try {

@@ -15,7 +15,7 @@ import {
   TOOL_ERROR_CODES,
 } from "@ai/tools/server/errors";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
@@ -103,7 +103,7 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
 
 async function runWebSearch(
   params: WebSearchInput,
-  _callOptions?: ToolCallOptions
+  _callOptions?: ToolExecutionOptions
 ): Promise<WebSearchResult> {
   try {
     const apiKey = resolveFirecrawlApiKey();

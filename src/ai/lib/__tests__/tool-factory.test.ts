@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
@@ -165,7 +165,7 @@ describe("createAiTool", () => {
     });
 
     // Test tool execution directly (unit test)
-    const callOptions: ToolCallOptions = {
+    const callOptions: ToolExecutionOptions = {
       messages: [],
       toolCallId: "test-call-1",
     };
@@ -224,7 +224,7 @@ describe("createAiTool", () => {
       name: "limitedTool",
     });
 
-    const callOptions: ToolCallOptions = {
+    const callOptions: ToolExecutionOptions = {
       messages: [],
       toolCallId: "test-call-limited",
     };
@@ -237,13 +237,15 @@ describe("createAiTool", () => {
     expect(recordedRateLimitIdentifiers.length).toBeGreaterThan(0);
   });
 
-  test("passes ToolCallOptions to execute function", async () => {
-    let capturedCallOptions: ToolCallOptions | null = null;
+  test("passes ToolExecutionOptions to execute function", async () => {
+    let capturedCallOptions: ToolExecutionOptions | null = null;
     // biome-ignore lint/suspicious/useAwait: Mock function must return Promise to match tool execute signature
-    const executeSpy = vi.fn(async (_params: unknown, callOptions: ToolCallOptions) => {
-      capturedCallOptions = callOptions;
-      return { result: "ok" };
-    });
+    const executeSpy = vi.fn(
+      async (_params: unknown, callOptions: ToolExecutionOptions) => {
+        capturedCallOptions = callOptions;
+        return { result: "ok" };
+      }
+    );
 
     const toolWithContext = createAiTool({
       description: "tool that uses context",
@@ -266,7 +268,7 @@ describe("createAiTool", () => {
       name: "contextTool",
     });
 
-    const callOptions: ToolCallOptions = {
+    const callOptions: ToolExecutionOptions = {
       messages: [{ content: "test message", role: "user" }],
       toolCallId: "call-ctx-test",
     };
@@ -278,7 +280,7 @@ describe("createAiTool", () => {
     expect(capturedCallOptions).toBeDefined();
     expect(capturedCallOptions).toHaveProperty("toolCallId", "call-ctx-test");
     expect(capturedCallOptions).toHaveProperty("messages");
-    const options = capturedCallOptions as ToolCallOptions | null;
+    const options = capturedCallOptions as ToolExecutionOptions | null;
     expect(options?.messages).toHaveLength(1);
   });
 

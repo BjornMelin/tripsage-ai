@@ -9,7 +9,7 @@ import { rateLimitResultSchema } from "@ai/tools/schemas/tools";
 import { createToolError, type ToolErrorCode } from "@ai/tools/server/errors";
 import type { AgentWorkflowKind } from "@schemas/agents";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { FlexibleSchema, Tool, ToolCallOptions } from "ai";
+import type { FlexibleSchema, Tool, ToolExecutionOptions } from "ai";
 import { asSchema, tool } from "ai";
 import { headers } from "next/headers";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -38,7 +38,7 @@ type RateLimitWindow = Parameters<typeof Ratelimit.slidingWindow>[1];
  */
 type ToolExecute<InputValue, OutputValue> = (
   params: InputValue,
-  callOptions: ToolCallOptions
+  callOptions: ToolExecutionOptions
 ) => Promise<OutputValue>;
 
 /** Transform function to convert tool output for model consumption. */
@@ -117,10 +117,10 @@ export type CacheOptions<InputValue, OutputValue> = {
 export type RateLimitOptions<InputValue> = {
   /** Error code to emit when the limit is exceeded. */
   errorCode: ToolErrorCode;
-  /** Optional identifier override using params and/or ToolCallOptions. */
+  /** Optional identifier override using params and/or ToolExecutionOptions. */
   identifier?: (
     params: InputValue,
-    callOptions?: ToolCallOptions
+    callOptions?: ToolExecutionOptions
   ) => string | undefined | null;
   /** Sliding window limit. */
   limit: number;
@@ -218,7 +218,7 @@ export function createAiTool<InputValue, OutputValue>(
   // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for AI SDK v6 tool() generic inference
   return (tool as any)({
     description: options.description,
-    execute: (params: InputValue, callOptions: ToolCallOptions) => {
+    execute: (params: InputValue, callOptions: ToolExecutionOptions) => {
       const startedAt = Date.now();
       return withTelemetrySpan(
         `tool.${telemetryName}`,
@@ -512,7 +512,7 @@ async function enforceRateLimit<InputValue>(
   config: RateLimitOptions<InputValue>,
   toolName: string,
   params: InputValue,
-  callOptions: ToolCallOptions,
+  callOptions: ToolExecutionOptions,
   span: Span
 ): Promise<void> {
   const override = sanitizeRateLimitIdentifier(

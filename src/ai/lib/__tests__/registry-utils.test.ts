@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import type { toolRegistry } from "@ai/tools";
-import type { ToolCallOptions } from "ai";
+import type { ToolExecutionOptions } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
@@ -130,7 +130,7 @@ describe("invokeTool", () => {
     };
 
     const params = { query: "test query" };
-    const callOptions: ToolCallOptions = {
+    const callOptions: ToolExecutionOptions = {
       messages: [],
       toolCallId: "test-call-1",
     };
