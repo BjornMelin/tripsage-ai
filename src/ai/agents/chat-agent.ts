@@ -116,25 +116,18 @@ export const chatCallOptionsSchema = z.object({
 /** TypeScript type for chat agent call options. */
 export type ChatCallOptions = z.infer<typeof chatCallOptionsSchema>;
 
-/**
- * Configuration for creating the chat agent.
- */
+/** Configuration for creating the chat agent. */
 export interface ChatAgentConfig {
   /** System prompt, can be extended with memory context. */
   systemPrompt?: string;
-
   /** Optional memory summary to append to system prompt. */
   memorySummary?: string;
-
   /** Desired max output tokens before clamping. */
   desiredMaxTokens?: number;
-
   /** Maximum tool execution steps. */
   maxSteps?: number;
-
   /** Tools that require user ID injection for user-scoped operations. */
   userScopedTools?: string[];
-
   /** Enable call options schema for dynamic configuration. */
   useCallOptions?: boolean;
 }
@@ -169,25 +162,26 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
 }
 
 /**
- * Creates the main chat agent for conversational travel planning.
+ * Creates a travel planning agent with context-aware tool orchestration.
  *
- * Returns a reusable ToolLoopAgent instance supporting dynamic configuration
- * via callOptionsSchema, memory/context injection, and context window management.
+ * Returns a ToolLoopAgent that manages the conversation context window,
+ * performs token budgeting, and injects user-scoped dependencies into tools.
+ * Supports optional runtime configuration via `callOptionsSchema` for dynamic
+ * memory injection and session tracking.
  *
- * @param deps - Runtime dependencies including model and identifiers.
- * @param messages - UI messages for context.
- * @param config - Chat agent configuration.
- * @returns Configured ToolLoopAgent for chat.
+ * @param deps - Agent dependencies (model, user ID, session ID).
+ * @param messages - Message history for context window analysis.
+ * @param config - Agent loop settings (max steps, token limits, useCallOptions).
+ * @returns Configured TripSage agent result.
  *
  * @example
  * ```typescript
  * const { agent } = createChatAgent(deps, messages, {
  *   memorySummary: "User prefers boutique hotels.",
  * });
- * const stream = agent.stream({ prompt: userMessage });
  * ```
  *
- * @example With dynamic call options
+ * @example With dynamic call options (runtime memory/context)
  * ```typescript
  * const { agent } = createChatAgent(deps, messages, { useCallOptions: true });
  * const stream = agent.stream({
@@ -196,17 +190,11 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
  * });
  * ```
  */
-/**
- * Creates a chat agent without call options (simpler API, no runtime memory injection).
- */
 export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
   config?: ChatAgentConfig & { useCallOptions?: false | undefined }
 ): TripSageAgentResult<ToolSet, never>;
-/**
- * Creates a chat agent with call options schema for runtime memory injection.
- */
 export function createChatAgent(
   deps: AgentDependencies,
   messages: UIMessage[],
