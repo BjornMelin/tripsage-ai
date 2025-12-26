@@ -43,7 +43,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 
 ## 3. Project Layout and Responsibilities
 
-- **Primary app (root):** Next.js 16 workspace at repository root. Core AI in `src/app/api/**` route handlers. Shared schemas/types in `src/domain/schemas` (reuse server/client). Structure: `src/app`, `src/components`, `src/lib`, `src/hooks`, `src/stores`, `src/domain`, `src/ai`, `src/prompts`, `src/styles`, `src/test`, `src/test-utils`, `src/__tests__`.
+- **Primary app (root):** Next.js 16 workspace at repo root. Core AI in `src/app/api/**` route handlers. Shared schemas/types in `src/domain/schemas` (reuse server/client). Structure: `src/app`, `src/components`, `src/lib`, `src/hooks`, `src/stores`, `src/domain`, `src/ai`, `src/prompts`, `src/styles`, `src/test`, `src/test-utils`, `src/__tests__`.
 - **Infrastructure:** Scripts in `scripts/`; containers in `docker/`; tests in `src/**/__tests__`; docs in `docs/`; e2e tests in `e2e/`.
 
 ---
@@ -63,7 +63,8 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ### 4.2 TypeScript and frontend style
 
 - **TypeScript:** `strict: true`, `noUnusedLocals`, `noFallthroughCasesInSwitch`. Avoid `any`; use precise unions/generics. Handle `null`/`undefined` explicitly.
-- **Unsafe casts:** `as unknown as T` casts are forbidden in production code (`src/**` excluding tests). CI runs `pnpm check:no-new-unknown-casts` and `pnpm check:no-secrets:staged` (via pre-commit) to reject violations. Use type guards, schema validation, or `satisfies` instead. For test mocks requiring unsafe casts, use `unsafeCast<T>()` from `@/test/helpers/unsafe-cast`.
+- **Unsafe casts:** `as unknown as T` casts are forbidden in production code (`src/**` excluding tests). CI runs `pnpm check:no-new-unknown-casts` to reject violations. Use type guards, schema validation, or `satisfies` instead. For test mocks requiring unsafe casts, use `unsafeCast<T>()` from `@/test/helpers/unsafe-cast`.
+- **Secret scanning:** CI runs `pnpm check:no-secrets` on PR diffs and `pnpm check:no-secrets:full` on pushes (see `.github/workflows/ci.yml`). The script `check:no-secrets:staged` exists but is not used in workflows.
 - **Biome:** `pnpm biome:fix`. Do **not** edit `biome.json`; fix code instead.
 - **File structure:**
   - Source (`.ts`, `.tsx`): Optional `@fileoverview`, blank line, `"use client"` (if needed), blank line, imports, implementation.

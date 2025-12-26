@@ -1,4 +1,6 @@
-/** @fileoverview Normalization utilities for web search tool results. */
+/**
+ * @fileoverview Normalization utilities for web search tool results.
+ */
 
 import type { WebSearchSource } from "@ai/tools/schemas/web-search";
 import { sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";

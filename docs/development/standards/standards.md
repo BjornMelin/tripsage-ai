@@ -45,7 +45,7 @@ function useTrips() {
 }
 ```
 
-- Commands: `pnpm biome:fix`, `pnpm type-check`, `pnpm test`.
+- Commands: `pnpm biome:fix`, `pnpm biome:check`, `pnpm type-check`, `pnpm test:affected`.
 
 ## Import Paths
 

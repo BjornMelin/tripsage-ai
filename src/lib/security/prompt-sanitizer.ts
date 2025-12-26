@@ -1,11 +1,11 @@
 /**
- * @fileoverview Shared AI prompt sanitization utilities.
- *
- * SECURITY: This module defends against prompt injection attacks including:
- * - Unicode homoglyphs (Cyrillic "А" looks like Latin "A")
- * - Zero-width characters (invisible characters that break regex)
- * - Common injection patterns (SYSTEM:, ignore instructions, etc.)
+ * @fileoverview Prompt injection defense via homoglyph normalization and pattern filtering.
  */
+
+// SECURITY: Defends against prompt injection attacks including:
+// - Unicode homoglyphs (Cyrillic "А" looks like Latin "A")
+// - Zero-width characters (invisible characters that break regex)
+// - Common injection patterns (SYSTEM:, ignore instructions, etc.)
 
 /**
  * Common prompt injection patterns to detect.

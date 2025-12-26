@@ -88,18 +88,14 @@ function readText(filePath) {
   try {
     return readFileSync(filePath, "utf8");
   } catch (error) {
-    // Handle files deleted between listing and reading (rare race condition)
+    // Silently skip deleted files - they appear in git diff but no longer exist on disk.
+    // This is expected when files are removed as part of cleanup.
     if (
       error &&
       typeof error === "object" &&
       "code" in error &&
-      // NodeJS errno codes are strings like "ENOENT"
       (error.code === "ENOENT" || String(error.code) === "ENOENT")
     ) {
-      const message = error instanceof Error ? error.message : String(error);
-      process.stderr.write(
-        `[check-fileoverviews] skipped missing file: ${filePath} (${message})\n`
-      );
       return null;
     }
     throw error;

@@ -1,12 +1,12 @@
 /**
- * @fileoverview Client IP extraction helpers for server-side requests.
- *
- * SECURITY: Proxy headers (X-Forwarded-For, X-Real-IP, CF-Connecting-IP) are only
- * trusted when running on Vercel, when explicitly enabled via TRUST_PROXY=true,
- * or in non-production environments (NODE_ENV=development|test).
- * On self-hosted deployments without a trusted reverse proxy, these headers can be
- * spoofed by attackers to bypass rate limits.
+ * @fileoverview Client IP extraction with proxy header trust validation.
  */
+
+// SECURITY: Proxy headers (X-Forwarded-For, X-Real-IP, CF-Connecting-IP) are only
+// trusted when running on Vercel, when explicitly enabled via TRUST_PROXY=true,
+// or in non-production environments (NODE_ENV=development|test).
+// On self-hosted deployments without a trusted reverse proxy, these headers can be
+// spoofed by attackers to bypass rate limits.
 
 /**
  * Check if we should trust proxy headers for IP extraction.

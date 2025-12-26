@@ -31,6 +31,7 @@ export function RealtimeAuthProvider(): null {
 
       const { data: authListener } = supabase.auth.onAuthStateChange(
         (_event, session) => {
+          if (!isMounted) return;
           const token = session?.access_token ?? null;
           supabase.realtime.setAuth(token ?? "");
         }
@@ -63,8 +64,8 @@ export function RealtimeAuthProvider(): null {
 
     return () => {
       isMounted = false;
-      cleanupClientAuth?.();
       cleanupSubscription?.();
+      cleanupClientAuth?.();
     };
   }, []);
 
