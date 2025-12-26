@@ -231,6 +231,12 @@ Do not return final response until all gates pass for code changes.
 
 **If Vitest hangs after finishing:** run `VITEST_DEBUG_OPEN_HANDLES=1 pnpm test` and ensure MSW is not bypassing unhandled requests (`MSW_ON_UNHANDLED_REQUEST=error`).
 
+### 6.3 Dependency and bundle hygiene (recommended)
+
+- **Unused deps (Knip):** `pnpm deps:report` (non-failing), `pnpm deps:audit` (failing), `pnpm deps:fix` (auto-removes unused deps from `package.json`).
+- **Unused files (Knip):** `pnpm exec knip --files --no-exit-code` (review before deleting; if you automate deletion, require explicit opt-in via `--allow-remove-files`).
+- **Bundle analysis (Next 16):** `pnpm build:analyze` (writes to `.next/diagnostics/analyze`).
+
 ### Upstash testing
 
 - **Mocking:** `setupUpstashMocks()` with `__reset()` in `beforeEach`. No ad-hoc mocks; use MSW handlers.
