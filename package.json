@@ -48,6 +48,11 @@
     "check:no-secrets:staged": "node scripts/check-no-secrets.mjs --staged",
     "check:no-secrets:full": "node scripts/check-no-secrets.mjs --full",
     "check:no-unknown-casts": "node scripts/check-no-unknown-casts.mjs",
+    "deps:audit": "knip --dependencies",
+    "deps:audit:prod": "knip --production --dependencies",
+    "deps:fix": "knip --fix --dependencies",
+    "deps:report": "knip --dependencies --no-exit-code",
+    "deps:report:prod": "knip --production --dependencies --no-exit-code",
     "deps:cycles": "madge --circular --extensions ts,tsx --ts-config ./tsconfig.json src/ai/agents"
   },
   "simple-git-hooks": {
@@ -169,8 +174,10 @@
     "jscodeshift": "^17.3.0",
     "jsdom": "^27.3.0",
     "jsondiffpatch": "^0.7.3",
+    "knip": "^5.77.1",
     "madge": "^8.0.0",
     "msw": "^2.12.4",
+    "postcss": "^8.5.6",
     "semantic-release": "^25.0.2",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.1.18",

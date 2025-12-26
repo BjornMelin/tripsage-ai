@@ -1,0 +1,16 @@
+{
+  "entry": [
+    "src/app/**/{page,layout,template,loading,error,not-found,default,head}.{ts,tsx}!",
+    "src/app/**/route.{ts,tsx}!",
+    "scripts/**/*.{ts,tsx,js,mjs,cjs}"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}!",
+    "scripts/**/*.{ts,tsx,js,mjs,cjs}",
+    "e2e/**/*.{ts,tsx}",
+    "!**/.next/**",
+    "!**/coverage/**",
+    "!**/playwright-report/**",
+    "!**/test-results/**"
+  ]
+}
