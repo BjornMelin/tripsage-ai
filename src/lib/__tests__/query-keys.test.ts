@@ -83,6 +83,14 @@ describe("queryKeys", () => {
         "collaborators",
       ]);
     });
+
+    it("returns collaboratorsDisabled key", () => {
+      expect(queryKeys.trips.collaboratorsDisabled()).toEqual([
+        "trips",
+        "collaborators",
+        null,
+      ]);
+    });
   });
 
   describe("chat", () => {

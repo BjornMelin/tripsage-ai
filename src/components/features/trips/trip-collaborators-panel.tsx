@@ -81,7 +81,7 @@ const ROLE_META: Record<
   },
 };
 
-function InitialsFromEmail(email: string | undefined) {
+function GetInitialsFromEmail(email: string | undefined) {
   if (!email) return "??";
   const [name] = email.split("@");
   const cleaned = name.replaceAll(/[^a-zA-Z0-9]/g, "");
@@ -344,7 +344,7 @@ export function TripCollaboratorsPanel(props: {
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8 ring-1 ring-border">
                     <AvatarFallback>
-                      {InitialsFromEmail(collaborator.userEmail)}
+                      {GetInitialsFromEmail(collaborator.userEmail)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">

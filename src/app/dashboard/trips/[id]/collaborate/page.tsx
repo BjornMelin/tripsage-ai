@@ -156,7 +156,11 @@ export default function TripCollaborationPage() {
                   tripId={tripIdNumber}
                   canEdit={permissions.canEdit}
                   onActivity={(input) => {
-                    activityFeed.emit(input).catch(() => undefined);
+                    activityFeed.emit(input).catch((error) => {
+                      if (process.env.NODE_ENV === "development") {
+                        console.warn("Trip activity feed emit failed:", error);
+                      }
+                    });
                   }}
                 />
               )}
@@ -196,7 +200,11 @@ export default function TripCollaborationPage() {
                   collaborators={collaborators}
                   isOwner={isOwner}
                   onActivity={(input) => {
-                    activityFeed.emit(input).catch(() => undefined);
+                    activityFeed.emit(input).catch((error) => {
+                      if (process.env.NODE_ENV === "development") {
+                        console.warn("Trip activity feed emit failed:", error);
+                      }
+                    });
                   }}
                 />
               )}

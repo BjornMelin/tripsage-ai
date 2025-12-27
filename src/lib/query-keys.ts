@@ -110,6 +110,8 @@ export const queryKeys = {
     all: () => ["trips"] as const,
     collaborators: (tripId: number) =>
       [...queryKeys.trips.detail(tripId), "collaborators"] as const,
+    collaboratorsDisabled: () =>
+      [...queryKeys.trips.all(), "collaborators", null] as const,
     detail: (id: number) => [...queryKeys.trips.details(), id] as const,
     details: () => [...queryKeys.trips.all(), "detail"] as const,
     list: (filters?: Record<string, unknown>) =>

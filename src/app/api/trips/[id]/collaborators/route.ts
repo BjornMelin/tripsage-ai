@@ -286,7 +286,7 @@ export const POST = withApiGuards({
   const parsedCollaborator = tripCollaboratorSchema.parse({
     createdAt: data.created_at,
     id: data.id,
-    role: tripCollaboratorRoleSchema.parse(data.role),
+    role: data.role,
     tripId: data.trip_id,
     userEmail: normalizedEmail,
     userId: data.user_id,

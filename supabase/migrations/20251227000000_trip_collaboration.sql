@@ -181,13 +181,13 @@ BEGIN
         ON realtime.messages
         FOR SELECT
         TO authenticated
-	        USING (
-	          realtime.topic() ~ '^trip:[0-9]+$'
-	          AND public.user_has_trip_access(auth.uid(), (public.rt_topic_suffix())::bigint)
-	          AND realtime.messages.extension IN ('broadcast', 'presence')
-	        )
-	      $pol$;
-	    END IF;
+        USING (
+          realtime.topic() ~ '^trip:[0-9]+$'
+          AND public.user_has_trip_access(auth.uid(), (public.rt_topic_suffix())::bigint)
+          AND realtime.messages.extension IN ('broadcast', 'presence')
+        )
+      $pol$;
+    END IF;
 
     IF NOT EXISTS (
       SELECT 1
@@ -201,12 +201,12 @@ BEGIN
         ON realtime.messages
         FOR INSERT
         TO authenticated
-	        WITH CHECK (
-	          realtime.topic() ~ '^trip:[0-9]+$'
-	          AND public.user_has_trip_access(auth.uid(), (public.rt_topic_suffix())::bigint)
-	          AND realtime.messages.extension IN ('broadcast', 'presence')
-	        )
-	      $pol$;
-	    END IF;
-	  END IF;
+        WITH CHECK (
+          realtime.topic() ~ '^trip:[0-9]+$'
+          AND public.user_has_trip_access(auth.uid(), (public.rt_topic_suffix())::bigint)
+          AND realtime.messages.extension IN ('broadcast', 'presence')
+        )
+      $pol$;
+    END IF;
+  END IF;
 END $do$;

@@ -39,6 +39,7 @@ export function useTripCollaborators(tripId: number | null) {
     enabled: tripId !== null,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
+      // Invariant: queryFn should only run when `enabled` is true
       if (tripId === null) {
         throw new Error("Trip id is required");
       }
@@ -52,7 +53,7 @@ export function useTripCollaborators(tripId: number | null) {
     },
     queryKey:
       tripId === null
-        ? queryKeys.trips.collaborators(0)
+        ? queryKeys.trips.collaboratorsDisabled()
         : queryKeys.trips.collaborators(tripId),
     staleTime: staleTimes.realtime,
     throwOnError: false,
@@ -119,6 +120,7 @@ export function useUpdateTripCollaboratorRole(tripId: number) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.trips.collaborators(tripId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
     },
     throwOnError: false,
   });

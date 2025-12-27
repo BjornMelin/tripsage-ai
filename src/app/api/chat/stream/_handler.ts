@@ -82,7 +82,14 @@ export async function handleChatStream(
   const startedAt = deps.clock?.now?.() ?? Date.now();
   const requestId = secureUuid();
 
-  const { userId } = payload;
+  const userId = typeof payload.userId === "string" ? payload.userId.trim() : "";
+  if (!userId) {
+    return errorResponse({
+      error: "validation_error",
+      reason: "userId is required",
+      status: 400,
+    });
+  }
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
   const sessionId = payload.sessionId?.trim() || null;

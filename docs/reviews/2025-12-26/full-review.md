@@ -45,14 +45,14 @@ Justification: core quality gates pass, but the architecture boundaries and typi
 
 ### 2.3 Key Issues and Anti-Patterns (Representative Examples)
 
-1) **Domain → Infra / AI Coupling (inconsistent boundaries)**
+1. **Domain → Infra / AI Coupling (inconsistent boundaries)**
 
 - `src/domain/accommodations/service.ts` imports multiple `@/lib/*` infra modules directly (cache, Google APIs, retry, telemetry) and implements caching/rate-limit behavior inside the domain service.
 - `src/domain/activities/service.ts` imports and calls an AI tool directly: `import { webSearch } from "@ai/tools/server/web-search";` (top of file).
 
 Impact: the “domain” layer is no longer a stable abstraction boundary; it becomes harder to test in isolation, reuse, or refactor infra independently.
 
-2) **Module-scope singleton containers**
+1. **Module-scope singleton containers**
 
 - `src/domain/activities/container.ts`:
 
@@ -65,14 +65,14 @@ Impact: the “domain” layer is no longer a stable abstraction boundary; it be
 
 Impact: implicit global state; harder to override deps in tests; diverges from the repo’s “construct per request inside handler” guidance.
 
-3) **Route handler vs handler duplication**
+1. **Route handler vs handler duplication**
 
 - `src/app/api/chat/stream/route.ts` wraps POST in `withApiGuards({ auth: true, rateLimit: "chat:stream", ... })`.
 - `src/app/api/chat/stream/_handler.ts` performs **another auth lookup** via `deps.supabase.auth.getUser()` and also contains an optional `deps.limit` rate-limiter path.
 
 Impact: duplicated responsibilities, extra roundtrips, and risk of divergence in future changes.
 
-4) **Error response consistency gap**
+1. **Error response consistency gap**
 
 - `src/app/api/chat/stream/_handler.ts` constructs a raw `Response` for rate limiting to set `Retry-After` because `errorResponse()` doesn’t support custom headers:
 
@@ -82,7 +82,7 @@ Impact: duplicated responsibilities, extra roundtrips, and risk of divergence in
 
 Impact: inconsistent error response shape and bypass of standardized helpers. **However**, this is a symptom of duplicated responsibility: `withApiGuards` already enforces route rate limits and applies standardized rate limit headers (including `Retry-After`) via `applyRateLimitHeaders()`. The highest-leverage fix is to **remove handler-level rate limiting entirely** and rely on `withApiGuards` for 429 responses.
 
-5) **AI markdown rendering allows raw HTML**
+1. **AI markdown rendering allows raw HTML**
 
 - `src/components/ai-elements/streamdown-config.ts` includes `defaultRehypePlugins.raw` (i.e., `rehype-raw`), enabling embedded HTML inside AI-generated markdown.
 

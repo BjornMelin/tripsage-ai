@@ -251,7 +251,9 @@ async function deleteTripById(
 
   const userIdsToInvalidate = new Set<string>([
     trip.user_id,
-    ...(collaborators ?? []).map((row) => row.user_id),
+    ...(collaborators ?? [])
+      .map((row) => row.user_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0),
   ]);
 
   const { count, error } = await deleteSingle(supabase, "trips", (qb) =>

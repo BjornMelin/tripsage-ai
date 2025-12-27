@@ -92,14 +92,47 @@ let hardViolationsCount = 0;
 let warningsFound = 0;
 let allowlistedDomainViolations = 0;
 
+const invalidAllowlistEntries = [];
 for (const [allowlistPath, allowlistReason] of DOMAIN_IMPORT_ALLOWLIST) {
-  if (allowlistPath.trim().length === 0 || allowlistReason.trim().length === 0) {
-    console.error("❌ Invalid DOMAIN_IMPORT_ALLOWLIST entry.");
-    console.error(
-      `   Expected: ["src/domain/...", "Justification (TRACKING-ID)"] — got: ["${allowlistPath}", "${allowlistReason}"]`
-    );
-    process.exit(1);
+  const trimmedPath = allowlistPath.trim();
+  const trimmedReason = allowlistReason.trim();
+  const issues = [];
+
+  if (trimmedPath.length === 0) {
+    issues.push("path is empty");
   }
+  if (trimmedReason.length === 0) {
+    issues.push("reason is empty");
+  }
+  if (trimmedPath !== allowlistPath) {
+    issues.push("path has leading/trailing whitespace");
+  }
+  if (trimmedReason !== allowlistReason) {
+    issues.push("reason has leading/trailing whitespace");
+  }
+  if (!trimmedPath.startsWith(`${DOMAIN_SCAN_DIR}/`)) {
+    issues.push(`path must start with "${DOMAIN_SCAN_DIR}/"`);
+  }
+
+  if (issues.length > 0) {
+    invalidAllowlistEntries.push({
+      allowlistPath,
+      allowlistReason,
+      issues,
+      trimmedPath,
+      trimmedReason,
+    });
+  }
+}
+
+if (invalidAllowlistEntries.length > 0) {
+  console.error("❌ Invalid DOMAIN_IMPORT_ALLOWLIST entries:");
+  for (const entry of invalidAllowlistEntries) {
+    console.error(`- Raw: ["${entry.allowlistPath}", "${entry.allowlistReason}"]`);
+    console.error(`  Trimmed: ["${entry.trimmedPath}", "${entry.trimmedReason}"]`);
+    console.error(`  Issues: ${entry.issues.join(", ")}`);
+  }
+  process.exit(1);
 }
 
 /**
@@ -495,7 +528,7 @@ function checkBoundaries() {
       const log = isAllowlisted ? console.warn : console.error;
 
       log(heading);
-      if (allowlistReason !== undefined) {
+      if (isAllowlisted) {
         log(`   Reason: ${allowlistReason}`);
       }
       if (appViolations.length > 0) {

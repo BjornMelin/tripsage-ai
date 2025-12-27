@@ -15,7 +15,7 @@ import {
 import type { z } from "zod";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
-type AnyFieldValuesSchema = z.core.$ZodType<FieldValues, FieldValues>;
+type AnyFieldValuesSchema = z.ZodType<FieldValues, FieldValues>;
 type FormFieldValues<Schema extends AnyFieldValuesSchema> = z.input<Schema>;
 type FormSubmitValues<Schema extends AnyFieldValuesSchema> = z.output<Schema>;
 

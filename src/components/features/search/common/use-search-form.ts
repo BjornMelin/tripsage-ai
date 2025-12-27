@@ -14,7 +14,7 @@ import type {
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 
-type AnyFieldValuesSchema = z.core.$ZodType<FieldValues, FieldValues>;
+type AnyFieldValuesSchema = z.ZodType<FieldValues, FieldValues>;
 type FormFieldValues<Schema extends AnyFieldValuesSchema> = z.input<Schema>;
 type FormSubmitValues<Schema extends AnyFieldValuesSchema> = z.output<Schema>;
 

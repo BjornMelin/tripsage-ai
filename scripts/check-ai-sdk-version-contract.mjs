@@ -127,16 +127,19 @@ function checkDocsForForbiddenPins({ markdownFiles }) {
     const content = readTextFileOrExit(filePath);
     for (const { id, label, regex } of FORBIDDEN_PATTERNS) {
       regex.lastIndex = 0;
-      const match = regex.exec(content);
-      if (!match) continue;
-      const line = indexToLineNumber(content, match.index);
-      violations.push({
-        filePath,
-        id,
-        label,
-        line,
-        match: match[0],
-      });
+      let match;
+      match = regex.exec(content);
+      while (match !== null) {
+        const line = indexToLineNumber(content, match.index);
+        violations.push({
+          filePath,
+          id,
+          label,
+          line,
+          match: match[0],
+        });
+        match = regex.exec(content);
+      }
     }
   }
 
