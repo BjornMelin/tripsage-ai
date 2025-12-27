@@ -52,6 +52,29 @@ export async function sendChatMessage(channel: ReturnType<typeof joinSessionChan
 }
 ```
 
+### Trip Collaboration Activity
+
+Trip collaboration uses topic `trip:{trip_id}` and a single broadcast event:
+
+- Topic: `trip:{trip_id}`
+- Event: `trip:activity`
+
+Payload shape:
+
+```ts
+type TripActivityBroadcastPayload = {
+  kind:
+    | "collaborator_invited"
+    | "collaborator_removed"
+    | "collaborator_role_updated"
+    | "trip_updated";
+  message: string;
+  at: string; // ISO timestamp
+};
+```
+
+This activity feed looks like “audit” data but is **ephemeral** (not persisted).
+
 ### Connection Health (frontend)
 
 - Channel lifecycles managed by `useRealtimeChannel`; status tracked in `useRealtimeConnectionStore` (`connecting/connected/disconnected/reconnecting/error`).
@@ -152,3 +175,4 @@ CREATE POLICY "private_session_channels" ON realtime.messages
 
 - [Supabase Realtime Authorization](https://supabase.com/docs/guides/realtime/authorization)
 - TripSage migrations: `20251122000000_base_schema.sql` (contains `rt_topic_prefix`, `rt_topic_suffix`, `rt_is_session_member`)
+- TripSage migrations: `20251227001000_realtime_authorization_policies.sql` (adds `user:{uuid}` / `session:{uuid}` policies and hardens topic parsing for `trip:` / `session:`)

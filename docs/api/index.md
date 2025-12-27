@@ -219,7 +219,7 @@ Internal endpoints for admin and system use:
 
 Request and response schemas are defined using Zod v4 and located in:
 
-- **Trips**: `@schemas/trips` (`tripCreateSchema`, `tripUpdateSchema`, `tripSuggestionSchema`, `itineraryItemCreateSchema`)
+- **Trips**: `@schemas/trips` (`tripCreateSchema`, `tripUpdateSchema`, `tripSuggestionSchema`, `itineraryItemCreateSchema`, `tripCollaboratorInviteSchema`, `tripCollaboratorRoleUpdateSchema`)
 - **Flights**: `@schemas/flights` (`flightSearchRequestSchema`, `flightSearchResultSchema`)
 - **Calendar**: `@schemas/calendar` (`createEventRequestSchema`, `updateEventRequestSchema`, `icsExportRequestSchema`)
 - **API**: `@schemas/api` (`placesSearchRequestSchema`, `postKeyBodySchema`, `loginRequestSchema`)
