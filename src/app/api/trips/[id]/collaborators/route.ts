@@ -22,6 +22,7 @@ import {
 import { createAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger, type ServerLogger } from "@/lib/telemetry/logger";
 import { getOriginFromRequest } from "@/lib/url/server-origin";
 import { invalidateUserTripsCache } from "../../_handler";
 
@@ -62,13 +63,22 @@ async function getTripOrNotFound(
 
 async function findExistingUserIdByEmail(
   admin: TypedAdminSupabase,
-  email: string
+  email: string,
+  logger?: ServerLogger
 ): Promise<string | null> {
   const { data, error } = await admin.rpc("auth_user_id_by_email", {
     p_email: email,
   });
 
-  if (error) return null;
+  if (error) {
+    const emailDomain = email.includes("@") ? email.split("@")[1] : null;
+    logger?.warn("trips.collaborators.lookup_user_id_failed", {
+      code: (error as { code?: unknown }).code ?? null,
+      emailDomain,
+      rpc: "auth_user_id_by_email",
+    });
+    return null;
+  }
   if (!data || typeof data !== "string") return null;
   return data;
 }
@@ -201,6 +211,7 @@ export const POST = withApiGuards({
   rateLimit: "trips:collaborators:invite",
   telemetry: "trips.collaborators.invite",
 })(async (req, { supabase, user }, _data, routeContext) => {
+  const logger = createServerLogger("trips.collaborators.invite");
   const admin = createAdminSupabase();
   const userResult = requireUserId(user);
   if ("error" in userResult) return userResult.error;
@@ -230,7 +241,11 @@ export const POST = withApiGuards({
   const normalizedEmail = validation.data.email.trim().toLowerCase();
   const role = validation.data.role;
 
-  const existingUserId = await findExistingUserIdByEmail(admin, normalizedEmail);
+  const existingUserId = await findExistingUserIdByEmail(
+    admin,
+    normalizedEmail,
+    logger
+  );
 
   const targetUserIdResult = existingUserId
     ? { userId: existingUserId }

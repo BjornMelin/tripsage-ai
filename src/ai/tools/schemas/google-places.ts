@@ -42,7 +42,7 @@ export const lookupPoiInputSchema = z
       (o.destination !== null && o.destination !== undefined) ||
       (o.query !== null && o.query !== undefined) ||
       (typeof o.lat === "number" && typeof o.lon === "number"),
-    { error: "Provide destination, query, or lat/lon" }
+    { error: "Provide destination, query, or lat/lon", path: ["destination"] }
   );
 
 // ===== TOOL OUTPUT SCHEMAS =====

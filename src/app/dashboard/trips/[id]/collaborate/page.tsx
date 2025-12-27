@@ -30,6 +30,15 @@ import {
 } from "@/hooks/use-trip-collaborators";
 import { useTrip } from "@/hooks/use-trips";
 
+type TripPermissionRole = ReturnType<typeof getTripEditPermission>["role"];
+
+const ROLE_LABELS = {
+  admin: "Admin",
+  editor: "Editor",
+  owner: "Owner",
+  viewer: "Viewer",
+} satisfies Record<Exclude<TripPermissionRole, "unknown">, string>;
+
 /**
  * Trip collaboration page component.
  *
@@ -118,13 +127,7 @@ export default function TripCollaborationPage() {
             </h1>
             {permissions.role !== "unknown" && (
               <Badge variant="outline" className="border-dashed">
-                {permissions.role === "owner"
-                  ? "Owner"
-                  : permissions.role === "admin"
-                    ? "Admin"
-                    : permissions.role === "editor"
-                      ? "Editor"
-                      : "Viewer"}
+                {ROLE_LABELS[permissions.role]}
               </Badge>
             )}
           </div>

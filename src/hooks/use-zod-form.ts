@@ -15,6 +15,8 @@ import {
 import type { z } from "zod";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
+// Zod v4: `ZodType<Output, Input, Internals>` (Input defaults to `unknown`), so we pin
+// both output and input to `FieldValues` to keep React Hook Form typing consistent.
 type AnyFieldValuesSchema = z.ZodType<FieldValues, FieldValues>;
 type FormFieldValues<Schema extends AnyFieldValuesSchema> = z.input<Schema>;
 type FormSubmitValues<Schema extends AnyFieldValuesSchema> = z.output<Schema>;

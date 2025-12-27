@@ -61,7 +61,7 @@ export interface ChatPayload {
   model?: string;
   desiredMaxTokens?: number;
   ip?: string;
-  userId: string;
+  userId?: string;
 }
 
 /**

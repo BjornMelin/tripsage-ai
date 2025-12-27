@@ -372,9 +372,11 @@ export function TripCollaboratorsPanel(props: {
                       onValueChange={(value) => {
                         const parsed = tripCollaboratorRoleSchema.safeParse(value);
                         if (!parsed.success) return;
-                        handleUpdateRole(collaborator, parsed.data).catch(
-                          () => undefined
-                        );
+                        handleUpdateRole(collaborator, parsed.data).catch((error) => {
+                          if (process.env.NODE_ENV === "development") {
+                            console.warn("Role update failed:", error);
+                          }
+                        });
                       }}
                       disabled={updateRoleMutation.isPending}
                     >

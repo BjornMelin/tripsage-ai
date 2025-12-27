@@ -6,6 +6,20 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 
+type ServerSupabase = Awaited<ReturnType<typeof createServerSupabase>>;
+type GetUserResult = Awaited<ReturnType<ServerSupabase["auth"]["getUser"]>>;
+type GetSessionResult = Awaited<ReturnType<ServerSupabase["auth"]["getSession"]>>;
+type SupabaseSession = GetSessionResult["data"]["session"];
+
+type GetUserWithSessionResult = {
+  supabase: ServerSupabase;
+  session: SupabaseSession;
+  error: GetUserResult["error"] | GetSessionResult["error"];
+  errorSource: "user" | "session" | null;
+  userError: GetUserResult["error"];
+  sessionError: GetSessionResult["error"];
+};
+
 /**
  * Error thrown when Google OAuth token is not available.
  */
@@ -22,17 +36,7 @@ export class GoogleTokenError extends Error {
  * Supabase's `getSession()` can return a cached session. Calling `getUser()` first ensures
  * the JWT is validated server-side before using provider tokens from the session.
  */
-async function getUserWithSession(): Promise<{
-  supabase: Awaited<ReturnType<typeof createServerSupabase>>;
-  session:
-    | Awaited<
-        ReturnType<
-          Awaited<ReturnType<typeof createServerSupabase>>["auth"]["getSession"]
-        >
-      >["data"]["session"]
-    | null;
-  error: unknown;
-}> {
+async function getUserWithSession(): Promise<GetUserWithSessionResult> {
   const supabase = await createServerSupabase();
 
   // Validate JWT server-side before retrieving session tokens (defense-in-depth)
@@ -42,7 +46,14 @@ async function getUserWithSession(): Promise<{
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { error: userError, session: null, supabase };
+    return {
+      error: userError,
+      errorSource: "user",
+      session: null,
+      sessionError: null,
+      supabase,
+      userError,
+    };
   }
 
   const {
@@ -50,7 +61,14 @@ async function getUserWithSession(): Promise<{
     error: sessionError,
   } = await supabase.auth.getSession();
 
-  return { error: sessionError, session: session ?? null, supabase };
+  return {
+    error: sessionError,
+    errorSource: sessionError || !session ? "session" : null,
+    session,
+    sessionError,
+    supabase,
+    userError: null,
+  };
 }
 
 /**

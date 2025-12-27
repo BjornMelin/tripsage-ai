@@ -116,7 +116,7 @@ Examples:
 - `src/hooks/supabase/use-realtime-channel.ts` uses `@ts-expect-error` and `(channel as any).on(...)` due to Supabase overload resolution.
 - `src/hooks/use-zod-form.ts` uses `zodResolver(schema as any)` with a Biome ignore.
 - `src/ai/tools/server/planning.ts` uses `any` (with Biome ignores) inside `combineSearchResults`.
-- `src/ai/lib/tool-factory.ts` uses `(tool as any)(...)` to work around AI SDK inference limitations.
+- `src/ai/lib/tool-factory.ts` employs `(tool as any)(...)` to work around AI SDK inference limitations.
 
 Recommended refactor:
 
@@ -154,7 +154,7 @@ Recommended refactor:
 
 ## 4. Duplication and Consolidation Opportunities
 
-1) **Rate limiting logic duplication**
+1) **Rate-limiting logic duplication**
 
 - `src/lib/api/factory.ts`: `enforceRateLimit(...)` for routes with degrade-mode semantics.
 - `src/ai/lib/tool-factory.ts`: `enforceRateLimit(...)` for tools, including identifier extraction and Upstash limiter caching.
@@ -164,12 +164,12 @@ Recommendation:
 
 - Extract a shared `src/lib/ratelimit/enforce.ts` (or similar) with common primitives (identifier normalization/hashing, limiter caching, reset normalization), then keep policy decisions (route keys, degraded modes) local.
 
-2) **Error response helper gaps**
+1) **Error response helper gaps**
 
 - Observed gap: `src/app/api/chat/stream/_handler.ts` creates a raw `Response` to attach `Retry-After`.
 - Research-backed correction: the repo already has a rate limit header utility (`src/lib/ratelimit/headers.ts`) and `withApiGuards` already applies headers for route rate limits. Prefer **removing the redundant handler-level rate limiting** over extending `errorResponse()` to accept headers.
 
-3) **Env access patterns**
+1) **Env access patterns**
 
 - Validated env helpers exist (`src/lib/env/server.ts`, `src/lib/env/client.ts`), but several modules still access `process.env` directly for non-trivial keys (e.g. `src/lib/memory/mem0-adapter.ts`).
 
@@ -188,8 +188,8 @@ Recommendation:
 
 ### 5.2 DRY (Repeated Responsibility / Overlap)
 
-- Chat stream auth + rate limiting are implemented in both `withApiGuards` and `handleChatStream`.
-- Rate limiting logic exists in multiple layers (route factory, tool factory, domain services).
+- Chat stream auth + rate-limiting are implemented in both `withApiGuards` and `handleChatStream`.
+- Rate-limiting logic exists in multiple layers (route factory, tool factory, domain services).
 
 ### 5.3 YAGNI (Speculative/Incomplete Features)
 
@@ -214,13 +214,13 @@ Recommendation:
   - **Risk/impact:** **Medium** (implicit state; harder tests; inconsistent with guidance).  
   - **Resolution:** replace with `create*Service()` factories; initialize per-request in route adapters.
 
-- **TD-3** – Chat stream route/handler duplicate auth and optional rate limiting  
+- **TD-3** – Chat stream route/handler duplicate auth and optional rate-limiting  
   - **Files:** `src/app/api/chat/stream/route.ts`, `src/app/api/chat/stream/_handler.ts`  
-  - **Problem:** auth is enforced in both layers; handler retains unused optional rate limiting.  
+  - **Problem:** auth is enforced in both layers; handler retains unused optional rate-limiting.  
   - **Risk/impact:** **Medium** (duplication and inconsistency).  
-  - **Resolution:** make `_handler.ts` accept `userId` (or user) from `withApiGuards`, remove internal auth + rate limiting logic from handler.
+  - **Resolution:** make `_handler.ts` accept `userId` (or user) from `withApiGuards`, remove internal auth and rate-limiting logic from handler.
 
-- **TD-4** – Rate limiting duplication across layers  
+- **TD-4** – Rate-limiting duplication across layers  
   - **Files:** `src/lib/api/factory.ts`, `src/ai/lib/tool-factory.ts`, plus domain services using `Ratelimit`  
   - **Problem:** multiple implementations of identifier selection, limiter caching, and response formatting.  
   - **Risk/impact:** **Medium** (inconsistent throttling semantics; hard to evolve).  
@@ -263,7 +263,7 @@ Recommendation:
 ### Testing and Coverage Debt
 
 - **TD-8** – Tests use `as unknown as` / `as any` instead of `unsafeCast<T>()`  
-  - **Files:** `src/app/api/chat/stream/__tests__/route.smoke.test.ts` (e.g. `as unknown as LanguageModel`), plus a small number of `as any` uses in tests.  
+  - **Files:** `src/app/api/chat/stream/__tests__/route.smoke.test.ts` (e.g. `as unknown as LanguageModel`), plus a few `as any` uses in tests.  
   - **Risk/impact:** **Low**.  
   - **Resolution:** replace with `unsafeCast<T>()` to keep test typing patterns consistent.
 
@@ -337,7 +337,7 @@ Recommendation:
 ### 7.1 Biome
 
 - Current status: **clean** (`pnpm biome:check` passed).
-- Observed pattern: a small number of **explicit suppressions** exist in production code for legitimate typing gaps (AI SDK / Supabase).
+- Observed pattern: a few **explicit suppressions** exist in production code for legitimate typing gaps (AI SDK / Supabase).
 - Tests relax `noExplicitAny` to **warn** via Biome overrides (`biome.json`), which is acceptable but should remain tightly scoped.
 
 Plan:
@@ -678,6 +678,16 @@ Plan:
 - **Dirty worktree:** because the repo is currently dirty, Phase 2 should be careful not to trample unrelated ongoing work. If Phase 2 is meant to land as a single PR, consider starting from a clean branch to avoid mixing unrelated local changes. (UNVERIFIED: intent of current local diffs.)
 
 ## 11. Final Status
+
+### Phase 1: Complete (2025-12-26)
+
+- All technical debt items catalogued and analyzed.
+- Decisions finalized with evidence-backed scoring where applicable.
+- Baseline established (guardrails passing).
+
+### Phase 2: Outstanding
+
+- 10 major work sections remain; see Section **9.A** for the detailed checklist.
 
 > This section is updated continuously during **Phase 2** to record the baseline and final verification runs.
 
