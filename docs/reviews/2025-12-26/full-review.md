@@ -194,7 +194,7 @@ Recommendation:
 ### 5.3 YAGNI (Speculative/Incomplete Features)
 
 - `src/app/dashboard/search/hotels/hotels-search-client.tsx` has a TODO to fetch personalized tips; currently static tips are fine and could be left as-is without a TODO.
-- `src/app/dashboard/trips/[id]/collaborate/page.tsx` uses a stubbed collaborators state with TODO; this is either a feature to implement or UI to explicitly mark as “Coming soon” (but not a silent stub).
+- `src/app/dashboard/trips/[id]/collaborate/page.tsx` used a stubbed collaborators state with TODO at review time; this is now implemented in Phase 2 (see **9.B**, TD-12/D10).
 
 ## 6. Technical Debt Inventory (MUST BE FULLY ADDRESSED)
 
@@ -288,7 +288,7 @@ Recommendation:
 ### Product / UX Debt
 
 - **TD-12** – UI TODOs / placeholders  
-  - **Files:** `src/app/dashboard/search/hotels/hotels-search-client.tsx` (tips TODO), `src/app/dashboard/trips/[id]/collaborate/page.tsx` (stub collaborators)  
+  - **Files:** `src/app/dashboard/search/hotels/hotels-search-client.tsx` (tips TODO); `src/app/dashboard/trips/[id]/collaborate/page.tsx` (stub collaborators, **resolved in Phase 2** — see **9.B**)  
   - **Risk/impact:** **Low/Medium** (user-facing incompleteness).  
   - **Resolution:** implement the missing hook/API or remove/replace stubs with explicit “Coming soon” UX and remove TODO noise.
 
@@ -388,7 +388,7 @@ Plan:
 | D7 | AI SDK tool factory typing (`tool as any`) | **Improve only if simpler:** attempt a schema-driven `createAiTool` typing refactor to remove `(tool as any)` **only if** it reduces (not increases) complexity; otherwise keep a single localized cast with explicit justification + tests and treat as deliberate debt. | **9.0** | Finalized |
 | D8 | Coverage thresholds (TD-9) | **Incremental increases tied to tests:** raise coverage thresholds in small steps only after adding targeted tests for critical/high-complexity logic; avoid a big-bang “85% now” jump. | **9.0** | Finalized |
 | D9 | “Personalized tips” TODO (TD-12) | **Remove TODO; keep static tips:** remove the placeholder TODO and ensure copy doesn’t imply personalization. | **9.3** | Finalized |
-| D10 | Collaboration page stubs (TD-12) | **Coming soon:** remove fake invite/state + hardcoded activity/collaborators; keep only stable, real functionality and explicitly label unfinished collaboration. | **9.3** | Finalized |
+| D10 | Collaboration page stubs (TD-12) | **Implement real collaboration:** replace stubbed invite/state with real collaborators CRUD + roles + real-time activity and permission-gated live editing (RLS-first). | **9.3** | Finalized |
 | D11 | `TODO(ARCH-001/002)` allowlist markers (TD-11) | **Remove TODO markers; keep allowlists:** preserve the allowlist mechanism but require each entry to include a concrete justification + tracking issue (no expiration enforcement). | **9.3** | Finalized |
 | D12 | Streamdown raw HTML (TD-17) | **Disable raw HTML for AI markdown:** omit `defaultRehypePlugins.raw` in shared defaults; keep KaTeX + harden protocol restrictions and `allowDataImages:false`. | **9.8** | Finalized |
 
@@ -443,20 +443,7 @@ Plan:
   - Reference “pure-ish domain” service: `src/domain/flights/service.ts`
   - Chat stream duplication currently present: `src/app/api/chat/stream/route.ts`, `src/app/api/chat/stream/_handler.ts`
 
-### 9.1 Baseline & Guardrails
-
-- [ ] Capture a Phase 2 baseline run (Tooling) — record outputs in **Section 11** — refs: TD-* (all) — Priority: High
-  - [ ] Record `git status -sb` (note dirty/untracked; confirm whether `.knip-files.json` exists)
-  - [ ] Run `pnpm biome:fix`
-  - [ ] Run `pnpm type-check`
-  - [ ] Run `pnpm test:affected`
-  - [ ] Run guardrails:
-    - [ ] `pnpm boundary:check`
-    - [ ] `pnpm ai-tools:check`
-    - [ ] `pnpm check:no-new-domain-infra-imports`
-    - [ ] `pnpm check:no-new-unknown-casts`
-  - [ ] If anything fails, append a new checklist item under the relevant section and link it from **Section 11**
-  - **Done when:** Section 11 contains a dated baseline snapshot + either (a) all green, or (b) explicit follow-up tasks added.
+### 9.A Outstanding Work (Remaining)
 
 ### 9.2 Architecture & Boundaries
 
@@ -553,13 +540,6 @@ Plan:
   - [ ] Keep the implementation small; rely on schema validation + narrow helpers
   - **Done when:** the Biome `noExplicitAny` suppressions for `combineSearchResults` are removed and output validation still passes.
 
-- [ ] Fix React Hook Form + Zod resolver typing in shared hooks (Typing) — refs: TD-6, D4 — Priority: Medium
-  - **Docs:** `useForm<z.input<typeof schema>, any, z.output<typeof schema>>({ resolver: zodResolver(schema) })` per `@hookform/resolvers` README (see links in **9.0**).
-  - [ ] Update `src/hooks/use-zod-form.ts` to remove `schema as any` by making the hook schema-generic and setting RHF generics appropriately
-  - [ ] Update `src/components/features/search/common/use-search-form.ts` similarly, so feature forms no longer need local casting
-  - [ ] `rg \"zodResolver\\(schema as any\\)\" src` returns 0 matches
-  - **Done when:** both hooks compile without suppressions and call sites remain ergonomic (no repeated generics everywhere).
-
 - [ ] AI SDK tool factory typing: remove `(tool as any)` **only if simpler** (Typing) — refs: TD-6, D7 — Priority: Low
   - [ ] Attempt to tie `createAiTool` generics directly to the Zod schemas so `tool()` can infer types
   - [ ] If the refactor increases complexity (more generics / harder call sites), revert and document the cast as deliberate debt
@@ -578,10 +558,6 @@ Plan:
     - [ ] env helper modules under `src/lib/env/**`
     - [ ] `process.env.NODE_ENV` / `NEXT_PHASE` / `NEXT_RUNTIME` guards (compile/build/runtime behavior)
   - **Done when:** critical secrets/config are read through validated helpers and remaining direct reads are either (a) in env modules, (b) tests, or (c) documented intentional exceptions.
-
-- [ ] Fix Zod v4 refine option style (`message` → `error`) (Consistency) — refs: TD-7 — Priority: Low
-  - [ ] Update `src/ai/tools/schemas/google-places.ts` to use `{ error: ... }` per Zod v4 docs (see links in **9.0**)
-  - **Done when:** schema matches repo conventions; no runtime behavior change.
 
 ### 9.6 Tests & Coverage
 
@@ -621,29 +597,6 @@ Plan:
 
 ### 9.8 Docs & Tooling Alignment
 
-- [ ] Align AI SDK version references across docs + add drift guard (Docs/Tooling) — refs: TD-10, D5 — Priority: Low
-  - **Canonical:** `package.json` + `AGENTS.md` (already aligned as of 2025-12-26).
-  - [ ] Update beta-pinned docs to match reality (or replace with “see `package.json`” references):
-    - [ ] `docs/architecture/frontend-architecture.md`
-    - [ ] `docs/architecture/system-overview.md`
-    - [ ] `docs/development/core/development-guide.md`
-    - [ ] `docs/development/README.md`
-    - [ ] `docs/api/README.md`
-    - [ ] `docs/review/2025-12-15/implementation-guide.md`
-    - [ ] `docs/review/2025-12-15/review-log.md`
-  - [ ] Replace beta-only doc links (e.g. GitHub `vercel/ai` docs pinned to `ai@6.0.0-beta.*`) with stable `ai-sdk.dev` / `v6.ai-sdk.dev` references where appropriate (see **9.0**)
-  - [ ] Add a small script (or extend an existing one) to verify that these docs don’t reintroduce beta pins (or that pinned versions match `package.json`), and wire it into CI/`pnpm` scripts
-  - **Done when:** no project docs reference obsolete beta pins, and an automated check prevents drift.
-
-- [ ] Resolve `TODO(ARCH-001/002)` script debt (Docs/Tooling) — refs: TD-11 — Priority: Low
-  - [ ] Remove TODO markers while preserving the guardrail allowlist mechanism (D11)
-  - [ ] `scripts/check-boundaries.mjs`:
-    - [ ] Replace `TODO(ARCH-001)` comment with a non-TODO comment documenting allowlist entry format: **file path → justification + tracking issue** (URL or ID)
-  - [ ] `scripts/check-ai-tools.mjs`:
-    - [ ] Replace `TODO(ARCH-002)` comment with the same non-TODO allowlist entry format
-    - [ ] Document when to use `ai-tool-check: allow-raw-tool` marker and require a justification string in the allowlist map
-  - **Done when:** no `TODO(ARCH-*)` remains, and any future allowlist entry requires explicit justification + tracking.
-
 - [ ] Run Knip audit and remove unused deps/files (Tooling) — refs: TD-16 — Priority: Medium
   - [ ] Run `pnpm deps:report` and capture output in Section 11
   - [ ] Remove unused deps/files iteratively (run `pnpm deps:audit` after each chunk)
@@ -657,14 +610,6 @@ Plan:
   - [ ] Ensure the card title/description does **not** imply personalization
   - **Done when:** no “future personalization” TODO remains and the UI copy is accurate.
 
-- [ ] Replace collaboration/invite stubs with explicit “Coming soon” UX (Product) — refs: TD-12, D10 — Priority: Medium
-  - Primary target: `src/app/dashboard/trips/[id]/collaborate/page.tsx`
-  - Secondary target: `src/components/features/realtime/optimistic-trip-updates.tsx` (`CollaborationIndicator` hardcoded names)
-  - [ ] Remove fake invite flow (`setTimeout`) and the empty stub collaborator “API state” object
-  - [ ] Remove/replace hardcoded “Recent Activity” with an explicit placeholder (or remove the section)
-  - [ ] Replace collaborator list controls with a clear non-functional placeholder (e.g., badge + short explanation)
-  - **Done when:** the page has no misleading stub state or fake actions; unfinished collaboration features are clearly labeled “Coming soon”.
-
 ### 9.10 Security Hardening (AI Markdown Rendering)
 
 - [ ] Disable raw HTML in Streamdown defaults for AI-generated content (Security) — refs: TD-17, D12 — Priority: High
@@ -676,6 +621,50 @@ Plan:
     - [ ] `javascript:` links are blocked/rewritten per harden configuration
   - [ ] Manual smoke: verify KaTeX, code blocks, and Mermaid still render correctly in chat UI
   - **Done when:** AI markdown no longer interprets raw HTML and link protocols are still restricted.
+
+### 9.B Completed Work (Implemented)
+
+- [x] Capture a Phase 2 baseline run (Tooling) — record outputs in **Section 11** — refs: TD-* (all) — Priority: High
+  - [x] Record `git status -sb` (note dirty/untracked; confirm whether `.knip-files.json` exists)
+  - [x] Run `pnpm biome:fix`
+  - [x] Run `pnpm type-check`
+  - [x] Run `pnpm test:affected`
+  - [x] Run guardrails:
+    - [x] `pnpm boundary:check`
+    - [x] `pnpm ai-tools:check`
+    - [x] `pnpm check:no-new-domain-infra-imports`
+    - [x] `pnpm check:no-new-unknown-casts`
+  - [x] If anything fails, append a new checklist item under the relevant section and link it from **Section 11**
+  - **Done when:** Section 11 contains a dated baseline snapshot + either (a) all green, or (b) explicit follow-up tasks added.
+
+- [x] Fix React Hook Form + Zod resolver typing in shared hooks (Typing) — refs: TD-6, D4 — Priority: Medium
+  - [x] Update `src/hooks/use-zod-form.ts` to remove `schema as any` by making the hook schema-generic and setting RHF generics appropriately
+  - [x] Update `src/components/features/search/common/use-search-form.ts` similarly, so feature forms no longer need local casting
+  - [x] `rg "zodResolver\\(schema as any\\)" src` returns 0 matches
+  - **Done when:** both hooks compile without suppressions and call sites remain ergonomic (no repeated generics everywhere).
+
+- [x] Fix Zod v4 refine option style (`message` → `error`) (Consistency) — refs: TD-7 — Priority: Low
+  - [x] Update `src/ai/tools/schemas/google-places.ts` to use `{ error: ... }` per Zod v4 docs (see links in **9.0**)
+  - **Done when:** schema matches repo conventions; no runtime behavior change.
+
+- [x] Align AI SDK version references across docs + add drift guard (Docs/Tooling) — refs: TD-10, D5 — Priority: Low
+  - [x] Update beta-pinned docs to match reality (or replace with “see `package.json`” references)
+  - [x] Replace beta-only doc links with stable `ai-sdk.dev` / `v6.ai-sdk.dev` references where appropriate (see **9.0**)
+  - [x] Add a small script to verify docs don’t reintroduce beta pins, and wire it into CI/`pnpm` scripts (`pnpm check:ai-sdk-version-contract`)
+  - **Done when:** no project docs reference obsolete beta pins, and an automated check prevents drift.
+
+- [x] Resolve `TODO(ARCH-001/002)` script debt (Docs/Tooling) — refs: TD-11 — Priority: Low
+  - [x] Remove TODO markers while preserving the guardrail allowlist mechanism (D11)
+  - [x] `scripts/check-boundaries.mjs`: replace `TODO(ARCH-001)` with non-TODO allowlist documentation and require explicit justification
+  - [x] `scripts/check-ai-tools.mjs`: replace `TODO(ARCH-002)` with non-TODO allowlist documentation and require explicit justification
+  - **Done when:** no `TODO(ARCH-*)` remains, and any future allowlist entry requires explicit justification + tracking.
+
+- [x] Implement trip collaboration page end-to-end (Product) — refs: TD-12, D10 — Priority: Medium
+  - [x] Replace stubbed collaborator/invite state with real collaborator CRUD (invite/update role/remove/leave) backed by `/api/trips/[id]/collaborators*` + Supabase RLS
+  - [x] Add real-time activity feed using private Realtime Broadcast channel `trip:{tripId}` and wire it into edits + collaborator actions
+  - [x] Gate live trip editing by role (owner/admin/editor can edit; viewer is read-only) while keeping server-side enforcement via RLS
+  - [x] Add schemas/hooks/tests for collaborator flows and ensure trip list caches invalidate for all trip members
+  - **Done when:** collaboration page has no fake actions/stub state and is fully functional end-to-end.
 
 ## 10. Risks, Trade-offs, and Notes
 
@@ -692,9 +681,20 @@ Plan:
 
 > This section is updated continuously during **Phase 2** to record the baseline and final verification runs.
 
-- All planned tasks completed: Yes/No (explain if No).
-- All technical debt items addressed: Yes/No (explain if No).
-- Lint/format status: [describe].
-- TypeScript/type-check status: [describe].
-- Test status: [describe].
-- Residual known issues or deliberate debts: [list or “None”].
+- All planned tasks completed: **No** — see remaining items in **9.A**.
+- All technical debt items addressed: **No** — TD-1/TD-2/TD-3/TD-4/TD-5/TD-8/TD-9/TD-13/TD-14/TD-15/TD-16/TD-17 remain.
+
+### 2025-12-27 Baseline Snapshot (Phase 2)
+
+- [x] `git status -sb` recorded (worktree is dirty; untracked trip collaboration hooks/components present; no `.knip-files.json` observed).
+- [x] `pnpm biome:fix` ✅
+- [x] `pnpm type-check` ✅
+- [x] `pnpm test:affected` ✅
+- [x] Guardrails:
+  - [x] `pnpm boundary:check` ✅
+  - [x] `pnpm ai-tools:check` ✅
+  - [x] `pnpm check:no-new-domain-infra-imports` ✅
+  - [x] `pnpm check:no-new-unknown-casts` ✅
+  - [x] `pnpm check:ai-sdk-version-contract` ✅
+
+- Residual known issues or deliberate debts: tracked as outstanding checklist items in **9.A**.
