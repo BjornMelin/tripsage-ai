@@ -140,6 +140,7 @@ export const GET = withApiGuards({
   telemetry: "trips.collaborators.list",
 })(async (_req, { supabase, user }, _data, routeContext) => {
   const admin = createAdminSupabase();
+  const logger = createServerLogger("trips.collaborators.list");
   const userResult = requireUserId(user);
   if ("error" in userResult) return userResult.error;
   const { userId } = userResult;
@@ -178,6 +179,14 @@ export const GET = withApiGuards({
   const collaborators = rows.map((row) => {
     const roleResult = tripCollaboratorRoleSchema.safeParse(row.role);
     const role = roleResult.success ? roleResult.data : "viewer";
+    if (!roleResult.success) {
+      logger.warn("trips.collaborators.invalid_role", {
+        collaboratorId: row.id,
+        rawRole: row.role,
+        tripId: row.trip_id,
+        userId: row.user_id,
+      });
+    }
 
     return tripCollaboratorSchema.parse({
       createdAt: row.created_at,
@@ -297,6 +306,7 @@ export const POST = withApiGuards({
   }
 
   await invalidateUserTripsCache(targetUserIdResult.userId);
+  await invalidateUserTripsCache(userId);
 
   const parsedCollaborator = tripCollaboratorSchema.parse({
     createdAt: data.created_at,

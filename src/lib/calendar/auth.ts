@@ -14,7 +14,7 @@ type SupabaseSession = GetSessionResult["data"]["session"];
 type GetUserWithSessionResult = {
   supabase: ServerSupabase;
   session: SupabaseSession;
-  error: GetUserResult["error"] | GetSessionResult["error"];
+  error: GetUserResult["error"] | GetSessionResult["error"] | Error;
   errorSource: "user" | "session" | null;
   userError: GetUserResult["error"];
   sessionError: GetSessionResult["error"];
@@ -62,7 +62,7 @@ async function getUserWithSession(): Promise<GetUserWithSessionResult> {
   } = await supabase.auth.getSession();
 
   return {
-    error: sessionError,
+    error: sessionError ?? (session ? null : new Error("No active session")),
     errorSource: sessionError || !session ? "session" : null,
     session,
     sessionError,

@@ -411,7 +411,7 @@ Plan:
 | D11 | 10.0 | 8.0 | 10.0 | 9.0 | 9.3 |
 | D12 | 10.0 | 10.0 | 10.0 | 8.0 | 9.8 |
 
-**Primary sources and repo evidence used to finalize decisions**
+### Primary sources and repo evidence used to finalize decisions
 
 - AI SDK 6 announcement + release date (Dec 22, 2025): `https://vercel.com/blog/ai-sdk-6`
 - AI SDK v6 reference (`createAgentUIStreamResponse` signature, `uiMessages`, `headers`, `includeUsage`, `abortSignal`): `https://v6.ai-sdk.dev/docs/reference/ai-sdk-core/create-agent-ui-stream-response`
