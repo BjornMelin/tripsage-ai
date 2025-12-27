@@ -92,13 +92,21 @@ function GetConnectionBadgeProps(state: ConnectionState) {
 interface OptimisticTripUpdatesProps {
   /** The ID of the trip to update. */
   tripId: number;
+  /** Whether the current user can edit the trip. Defaults to true. */
+  canEdit?: boolean;
+  /** Optional callback to emit activity items to a shared feed. */
+  onActivity?: (input: { kind: "trip_updated"; message: string }) => void;
 }
 
 /**
  * Component demonstrating optimistic updates for trip editing
  * Shows real-time collaboration with instant UI feedback
  */
-export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
+export function OptimisticTripUpdates({
+  tripId,
+  canEdit = true,
+  onActivity,
+}: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateTrip = useUpdateTrip();
@@ -174,6 +182,14 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     field: TripUpdateKey,
     value: TripUpdate[TripUpdateKey]
   ) => {
+    if (!canEdit) {
+      toast({
+        description: "You have view-only access to this trip.",
+        title: "Read-only",
+      });
+      return;
+    }
+
     if (!trip) {
       toast({
         description: "Trip data is still loading. Please wait and try again.",
@@ -247,6 +263,11 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         });
       }, 2000);
 
+      onActivity?.({
+        kind: "trip_updated",
+        message: `Updated ${field.replaceAll("_", " ")}`,
+      });
+
       /**
        * Show a success toast.
        */
@@ -315,6 +336,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    * @returns A promise that resolves to the input blur.
    */
   const handleInputBlur = (field: keyof TripUpdate) => {
+    if (!canEdit) return;
     const value = formData[field];
     const uiKey = fieldToUiKey[field];
     const currentValue = uiKey && trip ? trip[uiKey] : undefined;
@@ -365,10 +387,17 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     const { className, icon: Icon, label } = GetConnectionBadgeProps(state);
 
     return (
-      <Badge className={`mb-4 ${className}`}>
-        <Icon className="h-3 w-3 mr-1" />
-        {label}
-      </Badge>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Badge className={className}>
+          <Icon className="h-3 w-3 mr-1" />
+          {label}
+        </Badge>
+        {!canEdit && (
+          <Badge variant="secondary" className="border border-dashed">
+            View only
+          </Badge>
+        )}
+      </div>
     );
   };
 
@@ -462,6 +491,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                 value={formData.name || ""}
                 onChange={(e) => handleInputChange("name", e.target.value)}
                 onBlur={() => handleInputBlur("name")}
+                disabled={!canEdit}
                 placeholder="Enter trip name..."
               />
             </div>
@@ -479,6 +509,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                 value={formData.destination || ""}
                 onChange={(e) => handleInputChange("destination", e.target.value)}
                 onBlur={() => handleInputBlur("destination")}
+                disabled={!canEdit}
                 placeholder="Enter destination..."
               />
             </div>
@@ -497,6 +528,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                   handleInputChange("budget", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("budget")}
+                disabled={!canEdit}
                 placeholder="Enter budget..."
               />
             </div>
@@ -516,6 +548,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                   handleInputChange("travelers", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("travelers")}
+                disabled={!canEdit}
                 placeholder="Number of travelers..."
               />
             </div>
