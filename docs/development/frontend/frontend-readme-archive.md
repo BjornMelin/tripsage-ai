@@ -3,7 +3,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript)](https://typescriptlang.org)
-[![AI SDK](https://img.shields.io/badge/AI_SDK-v6_beta-orange)](https://sdk.vercel.ai)
+[![AI SDK](https://img.shields.io/badge/AI_SDK-v6-orange)](https://ai-sdk.dev)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwind-css)](https://tailwindcss.com)
 [![Supabase](https://img.shields.io/badge/Supabase-SSR-3fcf8e?logo=supabase)](https://supabase.com)
 [![Vitest](https://img.shields.io/badge/Vitest-✓-6e9f18?logo=vitest)](https://vitest.dev)
@@ -405,13 +405,13 @@ See `scripts/ops.ts` for implementation details.
 
 ### Utility Scripts
 
-| Script                     | Purpose                                    |
-| -------------------------- | ------------------------------------------ |
+| Script | Purpose |
+| ------ | ------- |
 | `scripts/run-benchmark.mjs` | Wrapper: runs vitest + benchmark analysis |
-| `scripts/benchmark-tests.ts` | Parses vitest JSON, calculates metrics   |
+| `scripts/benchmark-tests.ts` | Parses vitest JSON, calculates metrics |
 | `scripts/check-boundaries.mjs` | Detects server-only imports in client code |
-| `scripts/test-memory-monitor.mjs` | Memory/timing monitor for test runs  |
-| `scripts/ops.ts`           | Consolidated ops CLI (infra, AI, tests)   |
+| `scripts/test-memory-monitor.mjs` | Memory/timing monitor for test runs |
+| `scripts/ops.ts` | Consolidated ops CLI (infra, AI, tests) |
 
 ### Maintenance
 

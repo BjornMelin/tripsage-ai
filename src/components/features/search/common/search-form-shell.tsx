@@ -23,21 +23,24 @@ export interface SearchFormShellRenderState {
 }
 
 /** Quick-select item for populating form fields. */
-export interface QuickSelectItem<TParams extends FieldValues> {
+export interface QuickSelectItem<TFieldValues extends FieldValues> {
   id: string;
   label: string;
-  params: Partial<TParams>;
+  params: Partial<TFieldValues>;
   description?: string;
   icon?: React.ReactNode;
   disabled?: boolean;
 }
 
 /** Props for the SearchFormShell component */
-export interface SearchFormShellProps<TParams extends FieldValues> {
+export interface SearchFormShellProps<
+  TFieldValues extends FieldValues,
+  TTransformedValues extends FieldValues = TFieldValues,
+> {
   /** React Hook Form instance (created via `useSearchForm` or `useForm`). */
-  form: UseFormReturn<TParams>;
+  form: UseFormReturn<TFieldValues, unknown, TTransformedValues>;
   /** Handler called on form submission */
-  onSubmit: (params: TParams) => Promise<void>;
+  onSubmit: (params: TTransformedValues) => Promise<void>;
   /** Telemetry span name for tracking submissions */
   telemetrySpanName?: string;
   /** Telemetry span attributes */
@@ -58,31 +61,31 @@ export interface SearchFormShellProps<TParams extends FieldValues> {
   className?: string;
   /** Render function for form fields */
   children: (
-    form: UseFormReturn<TParams>,
+    form: UseFormReturn<TFieldValues, unknown, TTransformedValues>,
     state: SearchFormShellRenderState
   ) => React.ReactNode;
   /** Optional content rendered after quick-select sections and before submit. */
   footer?: (
-    form: UseFormReturn<TParams>,
+    form: UseFormReturn<TFieldValues, unknown, TTransformedValues>,
     state: SearchFormShellRenderState
   ) => React.ReactNode;
   /** Popular items for quick selection */
-  popularItems?: QuickSelectItem<TParams>[];
+  popularItems?: QuickSelectItem<TFieldValues>[];
   /** Recent search items for quick selection */
-  recentItems?: QuickSelectItem<TParams>[];
+  recentItems?: QuickSelectItem<TFieldValues>[];
   /** Popular section label */
   popularLabel?: string;
   /** Recent section label */
   recentLabel?: string;
   /** Handler for popular item selection */
   onPopularItemSelect?: (
-    item: QuickSelectItem<TParams>,
-    form: UseFormReturn<TParams>
+    item: QuickSelectItem<TFieldValues>,
+    form: UseFormReturn<TFieldValues, unknown, TTransformedValues>
   ) => void;
   /** Handler for recent item selection */
   onRecentItemSelect?: (
-    item: QuickSelectItem<TParams>,
-    form: UseFormReturn<TParams>
+    item: QuickSelectItem<TFieldValues>,
+    form: UseFormReturn<TFieldValues, unknown, TTransformedValues>
   ) => void;
   /** Secondary action rendered next to the submit button */
   secondaryAction?: React.ReactNode;
@@ -107,7 +110,10 @@ export interface SearchFormShellProps<TParams extends FieldValues> {
  * </SearchFormShell>
  * ```
  */
-export function SearchFormShell<TParams extends FieldValues>({
+export function SearchFormShell<
+  TFieldValues extends FieldValues,
+  TTransformedValues extends FieldValues = TFieldValues,
+>({
   form,
   onSubmit,
   telemetrySpanName = "search.submit",
@@ -129,7 +135,7 @@ export function SearchFormShell<TParams extends FieldValues>({
   onRecentItemSelect,
   secondaryAction,
   showProgress = true,
-}: SearchFormShellProps<TParams>) {
+}: SearchFormShellProps<TFieldValues, TTransformedValues>) {
   const [isPending, setIsPending] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
@@ -165,9 +171,9 @@ export function SearchFormShell<TParams extends FieldValues>({
   const isSubmitDisabled =
     isInteractionDisabled || (disableSubmitWhenInvalid && !form.formState.isValid);
 
-  const applyQuickSelectParams = (item: QuickSelectItem<TParams>) => {
+  const applyQuickSelectParams = (item: QuickSelectItem<TFieldValues>) => {
     Object.entries(item.params).forEach(([key, value]) => {
-      form.setValue(key as Path<TParams>, value, {
+      form.setValue(key as Path<TFieldValues>, value, {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true,
@@ -183,9 +189,12 @@ export function SearchFormShell<TParams extends FieldValues>({
 
   const renderQuickSelectSection = (
     sectionLabel: string,
-    items: QuickSelectItem<TParams>[],
+    items: QuickSelectItem<TFieldValues>[],
     onSelect:
-      | ((item: QuickSelectItem<TParams>, form: UseFormReturn<TParams>) => void)
+      | ((
+          item: QuickSelectItem<TFieldValues>,
+          form: UseFormReturn<TFieldValues, unknown, TTransformedValues>
+        ) => void)
       | undefined
   ) => {
     if (items.length === 0) return null;

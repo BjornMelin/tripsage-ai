@@ -13,7 +13,7 @@ TripSage development patterns and architecture overview. This document provides 
 | **Framework** | Next.js 16 | Server route handlers, React Server Components |
 | **React** | React 19 | UI with concurrent features |
 | **Language** | TypeScript 5.9.x | Strict mode, full type safety |
-| **AI** | AI SDK v6 (`ai@6.0.0-beta.116`) | `streamText`, `generateObject`, tool calling |
+| **AI** | AI SDK v6 (`ai@6.0.3`) | `streamText`, `generateObject`, tool calling |
 | **Database** | Supabase PostgreSQL | RLS, pgvector, Realtime |
 | **Cache** | Upstash Redis | HTTP REST API, rate limiting |
 | **Auth** | Supabase SSR | Cookie-based sessions |
@@ -56,14 +56,14 @@ src/
 ### Getting Started
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [Quick Start](quick-start.md) | Project setup, environment, first run |
 | [Environment Setup](env-setup.md) | Provider credential checklist |
 
 ### Code & Architecture
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [Standards](../standards/standards.md) | TypeScript, import paths, Zod schemas, Zustand stores, security |
 | [Zod Schema Guide](../standards/zod-schema-guide.md) | Zod v4 patterns, validation, AI SDK tool schemas |
 | [Database Architecture](../../architecture/database.md) | Schema design, RLS, Supabase integration |
@@ -71,7 +71,7 @@ src/
 ### AI & Tools
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [AI Integration](../ai/ai-integration.md) | Vercel AI Gateway, BYOK provider configuration |
 | [AI Tools](../ai/ai-tools.md) | `createAiTool` factory, guardrails, tool patterns |
 | [Activities](../frontend/activities.md) | Activity search service, tools, and API usage |
@@ -79,21 +79,21 @@ src/
 ### Infrastructure
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [Observability](../backend/observability.md) | Telemetry spans, logging, operational alerts |
 | [Cache Versioned Keys](../backend/cache-versioned-keys.md) | Tag-based cache invalidation patterns |
 
 ### Utilities
 
 | Utility | Location | Purpose |
-|---------|----------|---------|
+| --------- | ---------- | --------- |
 | Geo/Distance | `@/lib/geo` | Haversine distance calculation for hotel/activity proximity sorting |
 | Security/Random | `@/lib/security/random` | Secure UUIDs and IDs (`secureUuid`, `secureId`, `nowIso`) |
 
 ### Quality & Testing
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [Testing](../testing/testing.md) | Strategy, patterns, templates, MSW handlers |
 | [Troubleshooting](troubleshooting.md) | Debugging, CI/CD, workflow guidance |
 
@@ -185,7 +185,7 @@ const tripData = validation.data;
 **Available route-helpers:**
 
 | Helper | Purpose |
-|--------|---------|
+| -------- | --------- |
 | `parseJsonBody(req)` | Parse JSON body with error handling |
 | `validateSchema(schema, data)` | Zod validation with standardized error response |
 | `parseNumericId(ctx)` / `parseStringId(ctx)` | Extract and validate route params |

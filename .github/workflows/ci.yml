@@ -122,6 +122,9 @@ jobs:
       - name: AI tool guardrails check
         run: pnpm ai-tools:check
 
+      - name: AI SDK version contract check
+        run: pnpm check:ai-sdk-version-contract
+
       - name: Dependency cycle check (AI agents)
         run: pnpm deps:cycles
 

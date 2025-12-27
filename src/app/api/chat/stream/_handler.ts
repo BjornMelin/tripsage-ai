@@ -11,7 +11,7 @@ import {
 import type { ProviderResolution } from "@schemas/providers";
 import type { UIMessage } from "ai";
 import { createAgentUIStreamResponse } from "ai";
-import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
+import { errorResponse } from "@/lib/api/route-helpers";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
   assistantResponseToMemoryTurn,
@@ -36,19 +36,6 @@ export type ProviderResolver = (
 ) => Promise<ProviderResolution>;
 
 /**
- * Function type for rate limiting requests.
- *
- * @param identifier - The identifier for the chat.
- * @returns Promise resolving to a dict with success, limit, remaining, and reset.
- */
-export type RateLimiter = (identifier: string) => Promise<{
-  success: boolean;
-  limit?: number;
-  remaining?: number;
-  reset?: number;
-}>;
-
-/**
  * Interface defining dependencies required for chat stream handling.
  *
  * All dependencies are injected to enable deterministic testing and
@@ -57,7 +44,6 @@ export type RateLimiter = (identifier: string) => Promise<{
 export interface ChatDeps {
   supabase: TypedServerSupabase;
   resolveProvider: ProviderResolver;
-  limit?: RateLimiter;
   logger?: {
     info: (msg: string, meta?: Record<string, unknown>) => void;
     error: (msg: string, meta?: Record<string, unknown>) => void;
@@ -75,6 +61,7 @@ export interface ChatPayload {
   model?: string;
   desiredMaxTokens?: number;
   ip?: string;
+  userId: string;
 }
 
 /**
@@ -95,31 +82,10 @@ export async function handleChatStream(
   const startedAt = deps.clock?.now?.() ?? Date.now();
   const requestId = secureUuid();
 
-  // SSR auth via injected supabase
-  const { data: auth } = await deps.supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  if (!user) {
-    return unauthorizedResponse();
-  }
+  const { userId } = payload;
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
   const sessionId = payload.sessionId?.trim() || null;
-
-  // Rate limit
-  if (deps.limit) {
-    const identifier = `${user.id}:${payload.ip ?? "unknown"}`;
-    const { success } = await deps.limit(identifier);
-    if (!success) {
-      // Use Response directly for Retry-After header (errorResponse doesn't support custom headers)
-      return new Response(
-        JSON.stringify({ error: "rate_limited", reason: "Too many requests" }),
-        {
-          headers: { "content-type": "application/json", "Retry-After": "60" },
-          status: 429,
-        }
-      );
-    }
-  }
 
   // Validate attachments
   const validation = validateChatMessages(messages);
@@ -133,7 +99,7 @@ export async function handleChatStream(
 
   // Provider resolution
   const provider = await deps.resolveProvider(
-    user.id,
+    userId,
     (payload.model || "").trim() || undefined
   );
 
@@ -145,7 +111,7 @@ export async function handleChatStream(
       limit: 3,
       sessionId: sessionIdForFetch,
       type: "fetchContext",
-      userId: user.id,
+      userId,
     });
 
     const items = memoryResult.context ?? [];
@@ -157,7 +123,7 @@ export async function handleChatStream(
       error: error instanceof Error ? error.message : String(error),
       requestId,
       sessionId,
-      userId: user.id,
+      userId,
     });
     // Memory enrichment is best-effort; ignore orchestrator failures
   }
@@ -170,7 +136,7 @@ export async function handleChatStream(
       logger: deps.logger,
       sessionId,
       turn: latestMessage ? uiMessageToMemoryTurn(latestMessage) : null,
-      userId: user.id,
+      userId,
     });
   }
 
@@ -189,17 +155,17 @@ export async function handleChatStream(
   deps.logger?.info?.("chat_stream:start", {
     model: provider.modelId,
     requestId,
-    userId: user.id,
+    userId,
   });
 
   // Create the chat agent using ToolLoopAgent
   const { agent, modelId } = createChatAgent(
     {
-      identifier: `${user.id}:${payload.ip ?? "unknown"}`,
+      identifier: `${userId}:${payload.ip ?? "unknown"}`,
       model: provider.model,
       modelId: provider.modelId,
       sessionId: sessionId ?? undefined,
-      userId: user.id,
+      userId,
     },
     messages,
     chatConfig
@@ -238,7 +204,7 @@ export async function handleChatStream(
             logger: deps.logger,
             sessionId,
             turn: assistantResponseToMemoryTurn(event.messages),
-            userId: user.id,
+            userId,
           });
 
           const chatMessagePayload: InsertTables<"chat_messages"> & {
@@ -252,7 +218,7 @@ export async function handleChatStream(
             // biome-ignore lint/style/useNamingConvention: Database field name
             session_id: sessionId,
             // biome-ignore lint/style/useNamingConvention: Database field name
-            user_id: user.id,
+            user_id: userId,
           };
 
           // Store requestId at top-level when column exists; otherwise remains in metadata
@@ -264,7 +230,7 @@ export async function handleChatStream(
             error: error instanceof Error ? error.message : String(error),
             requestId,
             sessionId,
-            userId: user.id,
+            userId,
           });
         }
       }

@@ -451,13 +451,13 @@ export type SortOption = z.infer<typeof sortOptionSchema>;
 
 /** Optional future date schema that treats empty strings as undefined for optional form fields. */
 const OPTIONAL_FUTURE_DATE_SCHEMA = z.preprocess(
-  (value) => (value === "" ? undefined : value),
+  (value: string | undefined) => (value === "" ? undefined : value),
   FUTURE_DATE_SCHEMA.optional()
 );
 
 /** Optional difficulty schema that allows empty strings to be treated as undefined. */
 const OPTIONAL_DIFFICULTY_SCHEMA = z.preprocess(
-  (value) => (value === "" ? undefined : value),
+  (value: string | undefined) => (value === "" ? undefined : value),
   z.enum(["easy", "moderate", "challenging", "extreme"]).optional()
 );
 

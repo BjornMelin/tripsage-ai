@@ -15,23 +15,35 @@ import {
 import type { z } from "zod";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
-// Form options - using a data type parameter to avoid complex generic constraints
-interface UseZodFormOptions<Data extends FieldValues>
-  extends Omit<UseFormProps<Data>, "resolver"> {
-  schema: z.ZodType<Data>;
+type AnyFieldValuesSchema = z.core.$ZodType<FieldValues, FieldValues>;
+type FormFieldValues<Schema extends AnyFieldValuesSchema> = z.input<Schema>;
+type FormSubmitValues<Schema extends AnyFieldValuesSchema> = z.output<Schema>;
+
+// Form options - schema-first to preserve input/output typing
+interface UseZodFormOptions<Schema extends AnyFieldValuesSchema>
+  extends Omit<
+    UseFormProps<FormFieldValues<Schema>, unknown, FormSubmitValues<Schema>>,
+    "resolver"
+  > {
+  schema: Schema;
   validateMode?: "onSubmit" | "onBlur" | "onChange" | "onTouched" | "all";
-  transformSubmitData?: (data: Data) => Data | Promise<Data>;
-  onValidationError?: (errors: ValidationResult<Data>) => void;
-  onSubmitSuccess?: (data: Data) => void | Promise<void>;
+  transformSubmitData?: (
+    data: FormSubmitValues<Schema>
+  ) => FormSubmitValues<Schema> | Promise<FormSubmitValues<Schema>>;
+  onValidationError?: (errors: ValidationResult<FormFieldValues<Schema>>) => void;
+  onSubmitSuccess?: (data: FormSubmitValues<Schema>) => void | Promise<void>;
   onSubmitError?: (error: Error) => void;
 }
 
 // form return type
-interface UseZodFormReturn<T extends FieldValues> extends UseFormReturn<T> {
+interface UseZodFormReturn<
+  Fields extends FieldValues,
+  Transformed extends FieldValues = Fields,
+> extends UseFormReturn<Fields, unknown, Transformed> {
   // Safe submit with validation
   handleSubmitSafe: (
-    onValid: (data: T) => void | Promise<void>,
-    onInvalid?: (errors: ValidationResult<T>) => void
+    onValid: (data: Transformed) => void | Promise<void>,
+    onInvalid?: (errors: ValidationResult<Fields>) => void
   ) => (e?: React.BaseSyntheticEvent) => Promise<void>;
 
   isFormComplete: boolean;
@@ -174,9 +186,9 @@ function validationResultFromFieldErrors<Data extends FieldValues>(
 }
 
 // Custom hook for enhanced Zod form handling
-export function useZodForm<Data extends FieldValues>(
-  options: UseZodFormOptions<Data>
-): UseZodFormReturn<Data> {
+export function useZodForm<Schema extends AnyFieldValuesSchema>(
+  options: UseZodFormOptions<Schema>
+): UseZodFormReturn<FormFieldValues<Schema>, FormSubmitValues<Schema>> {
   const {
     schema,
     validateMode,
@@ -191,11 +203,10 @@ export function useZodForm<Data extends FieldValues>(
 
   // Initialize React Hook Form with Zod resolver
   const resolvedMode = mode ?? validateMode ?? "onChange";
-  const form = useForm<Data>({
+  const form = useForm<FormFieldValues<Schema>, unknown, FormSubmitValues<Schema>>({
     ...formOptions,
     mode: resolvedMode,
-    // biome-ignore lint/suspicious/noExplicitAny: zodResolver requires flexible schema typing
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     reValidateMode: reValidateMode ?? "onChange",
   });
 
@@ -209,8 +220,8 @@ export function useZodForm<Data extends FieldValues>(
   // Safe submit handler with enhanced error handling
   const handleSubmitSafe = useCallback(
     (
-      onValid: (data: Data) => void | Promise<void>,
-      onInvalid?: (errors: ValidationResult<Data>) => void
+      onValid: (data: FormSubmitValues<Schema>) => void | Promise<void>,
+      onInvalid?: (errors: ValidationResult<FormFieldValues<Schema>>) => void
     ) =>
       async (e?: React.BaseSyntheticEvent) => {
         const submit = form.handleSubmit(
@@ -257,7 +268,8 @@ export function useZodForm<Data extends FieldValues>(
             }
           },
           (fieldErrors) => {
-            const validationResult = validationResultFromFieldErrors<Data>(fieldErrors);
+            const validationResult =
+              validationResultFromFieldErrors<FormFieldValues<Schema>>(fieldErrors);
 
             setValidationState({
               isValidating: false,

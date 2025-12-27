@@ -25,7 +25,7 @@ function TestForm({
 }: {
   onSubmit: (data: TestFormValues) => void | Promise<void>;
 }) {
-  const form = useZodForm<TestFormValues>({
+  const form = useZodForm({
     defaultValues: { title: "" },
     mode: "onChange",
     schema,

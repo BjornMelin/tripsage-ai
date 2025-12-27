@@ -10,7 +10,7 @@ overrides:
   undici: 5.29.0
   brace-expansion: '>=2.0.2'
 
-packageExtensionsChecksum: sha256-e0oGVYZm0rjSTi9paZ5zbAQWOYbXBXvFmp6P/IUc8es=
+packageExtensionsChecksum: sha256-a4RfSyuCngTE1LXxDZzMP0buMpfFnP4l8Y5PtJPBs78=
 
 importers:
 
@@ -6682,6 +6682,7 @@ snapshots:
     dependencies:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.69.0(react@19.2.3)
+      zod: 4.2.1
 
   '@iconify/types@2.0.0': {}
 

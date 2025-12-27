@@ -30,8 +30,8 @@ curl http://localhost:3000/api/dashboard
 | Layer                   | Technology                                       | Purpose                                                 |
 | ----------------------- | ------------------------------------------------ | ------------------------------------------------------- |
 | **Framework**           | Next.js 16                                       | Server route handlers, React Server Components          |
-| **AI**                  | AI SDK v6 (`ai@6.0.0-beta.105`)                  | `streamText`, `generateObject`, tool calling, streaming |
-| **Database**            | Supabase (`@supabase/ssr@0.7.0`)                 | PostgreSQL, Row Level Security, SSR cookie handling     |
+| **AI**                  | AI SDK v6 (`ai@6.0.3`)                           | `streamText`, `generateObject`, tool calling, streaming |
+| **Database**            | Supabase (`@supabase/ssr@^0.8.0`)                | PostgreSQL, Row Level Security, SSR cookie handling     |
 | **Cache/Rate Limiting** | Upstash (`@upstash/redis`, `@upstash/ratelimit`) | Redis caching, sliding window rate limits               |
 | **State Management**    | TanStack Query (`@tanstack/react-query@5.x`)     | Client-side data fetching, caching, mutations           |
 | **Validation**          | Zod v4 (`zod@4.x`)                               | Request/response schema validation                      |
@@ -253,17 +253,18 @@ pnpm biome:fix
 
 | Package                 | Version        | Usage                                                     |
 | ----------------------- | -------------- | --------------------------------------------------------- |
-| `ai`                    | 6.0.0-beta.105 | AI SDK core: `streamText`, `generateObject`, tool calling |
-| `@ai-sdk/react`         | 3.0.0-beta.105 | React hooks: `useChat`, `useCompletion`                   |
-| `@ai-sdk/openai`        | 3.0.0-beta.63  | OpenAI provider                                           |
-| `@ai-sdk/anthropic`     | 3.0.0-beta.54  | Anthropic provider                                        |
-| `@ai-sdk/xai`           | 3.0.0-beta.39  | xAI provider                                              |
-| `@supabase/ssr`         | 0.7.0          | Supabase SSR cookie handling                              |
-| `@supabase/supabase-js` | 2.84.0         | Supabase client                                           |
-| `@upstash/redis`        | 1.35.6         | Redis client                                              |
+| `ai`                    | 6.0.3          | AI SDK core: `streamText`, `generateObject`, tool calling |
+| `@ai-sdk/react`         | 3.0.3          | React hooks: `useChat`, `useCompletion`                   |
+| `@ai-sdk/openai`        | 3.0.1          | OpenAI provider                                           |
+| `@ai-sdk/anthropic`     | 3.0.1          | Anthropic provider                                        |
+| `@ai-sdk/xai`           | 3.0.1          | xAI provider                                              |
+| `@ai-sdk/togetherai`    | 2.0.1          | Together.ai provider                                      |
+| `@supabase/ssr`         | ^0.8.0         | Supabase SSR cookie handling                              |
+| `@supabase/supabase-js` | ^2.89.0        | Supabase client                                           |
+| `@upstash/redis`        | ^1.36.0        | Redis client                                              |
 | `@upstash/ratelimit`    | 2.0.7          | Rate limiting                                             |
-| `@tanstack/react-query` | 5.90.10        | Data fetching/caching                                     |
-| `zod`                   | 4.1.12         | Schema validation                                         |
+| `@tanstack/react-query` | ^5.90.12       | Data fetching/caching                                     |
+| `zod`                   | ^4.2.1         | Schema validation                                         |
 | `@opentelemetry/api`    | 1.9.0          | Observability                                             |
-| `amadeus`               | 11.0.0         | Flight/hotel search                                       |
+| `amadeus`               | ^11.0.0        | Flight/hotel search                                       |
 | `mem0ai`                | 2.1.38         | Memory/context storage                                    |

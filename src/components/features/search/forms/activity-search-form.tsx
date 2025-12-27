@@ -11,6 +11,7 @@ import {
   activitySearchParamsSchema,
 } from "@schemas/search";
 import { useMemo } from "react";
+import type { z } from "zod";
 import {
   Card,
   CardContent,
@@ -32,9 +33,11 @@ import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
 
+type ActivitySearchFormValues = z.input<typeof activitySearchFormSchema>;
+
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => Promise<void>;
-  initialValues?: Partial<ActivitySearchFormData>;
+  initialValues?: Partial<ActivitySearchFormValues>;
 }
 
 export function ActivitySearchForm({
@@ -82,8 +85,8 @@ export function ActivitySearchForm({
     () => recentSearchesByType.slice(0, 4),
     [recentSearchesByType]
   );
-  const recentItems: QuickSelectItem<ActivitySearchFormData>[] = useMemo(() => {
-    return buildRecentQuickSelectItems<ActivitySearchFormData, ActivitySearchParams>(
+  const recentItems: QuickSelectItem<ActivitySearchFormValues>[] = useMemo(() => {
+    return buildRecentQuickSelectItems<ActivitySearchFormValues, ActivitySearchParams>(
       recentSearches,
       activitySearchParamsSchema,
       (params, search) => {
@@ -94,13 +97,18 @@ export function ActivitySearchForm({
           : destination;
         const description = params.date ?? undefined;
 
-        const item: QuickSelectItem<ActivitySearchFormData> = {
+        const item: QuickSelectItem<ActivitySearchFormValues> = {
           id: search.id,
           label,
           params: {
             category: params.category ?? "",
             date: params.date ?? "",
-            dateRange: params.dateRange ?? undefined,
+            dateRange: params.dateRange
+              ? {
+                  end: params.dateRange.end ?? "",
+                  start: params.dateRange.start ?? "",
+                }
+              : undefined,
             destination: params.destination ?? "",
             difficulty: params.difficulty ?? undefined,
             duration: params.duration ?? undefined,

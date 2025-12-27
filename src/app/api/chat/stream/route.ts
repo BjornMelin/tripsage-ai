@@ -8,7 +8,11 @@ import { resolveProvider } from "@ai/models/registry";
 import type { UIMessage } from "ai";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { getClientIpFromHeaders, parseJsonBody } from "@/lib/api/route-helpers";
+import {
+  getClientIpFromHeaders,
+  parseJsonBody,
+  requireUserId,
+} from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { handleChatStream } from "./_handler";
 
@@ -41,7 +45,12 @@ export const POST = withApiGuards({
   botId: true,
   rateLimit: "chat:stream",
   telemetry: "chat.stream",
-})(async (req: NextRequest, { supabase }): Promise<Response> => {
+})(async (req: NextRequest, { supabase, user }): Promise<Response> => {
+  const auth = requireUserId(user);
+  if ("error" in auth) {
+    return auth.error;
+  }
+
   // Parse with fallback to empty messages
   const parsed = await parseJsonBody(req);
   const body: IncomingBody =
@@ -52,11 +61,10 @@ export const POST = withApiGuards({
     {
       clock: { now: () => Date.now() },
       config: { defaultMaxTokens: 1024 },
-      limit: undefined, // Rate limiting handled by factory
       logger,
       resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
       supabase,
     },
-    { ...body, ip }
+    { ...body, ip, userId: auth.userId }
   );
 });

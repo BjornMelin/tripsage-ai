@@ -57,7 +57,6 @@ export const streamdownRemarkPlugins: NonNullable<StreamdownProps["remarkPlugins
   Object.values(defaultRemarkPlugins);
 
 export const streamdownRehypePlugins: NonNullable<StreamdownProps["rehypePlugins"]> = [
-  defaultRehypePlugins.raw,
   defaultRehypePlugins.katex,
   [
     hardenFn,

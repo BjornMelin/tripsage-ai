@@ -5,6 +5,18 @@
 "use client";
 
 import type { UiTrip } from "@schemas/trips";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  AlertCircleIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DollarSignIcon,
+  Loader2Icon,
+  MapPinIcon,
+  UsersIcon,
+} from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -73,19 +85,6 @@ type ConnectionState = keyof typeof CONNECTION_BADGE_PROPS;
 function GetConnectionBadgeProps(state: ConnectionState) {
   return CONNECTION_BADGE_PROPS[state];
 }
-
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircleIcon,
-  CalendarIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  DollarSignIcon,
-  Loader2Icon,
-  MapPinIcon,
-  UsersIcon,
-} from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
 
 /**
  * Interface for the optimistic trip updates props.
@@ -603,42 +602,20 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
  * @returns The collaboration indicator component.
  */
 export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) {
-  const [activeCollaborators] = useState([
-    { editing: "budget", id: "user-456", name: "Alice Johnson" },
-    { editing: null, id: "user-789", name: "Bob Smith" },
-  ]);
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <UsersIcon className="h-5 w-5" />
           <span>Active Collaborators</span>
+          <Badge variant="secondary">Coming soon</Badge>
         </CardTitle>
       </CardHeader>
 
       <CardContent>
-        <div className="space-y-2">
-          {activeCollaborators.map((collaborator) => (
-            <div
-              key={collaborator.id}
-              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-            >
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${ExtractClass(STATUS_TONES.active, "bg-")}`}
-                />
-                <span className="text-sm font-medium">{collaborator.name}</span>
-              </div>
-
-              {collaborator.editing && (
-                <Badge variant="secondary" className="text-xs">
-                  Editing {collaborator.editing}
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Presence indicators are coming soon.
+        </p>
       </CardContent>
     </Card>
   );

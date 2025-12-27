@@ -8,19 +8,36 @@ import { describe, expect, it, vi } from "vitest";
 type StreamdownProps = ComponentProps<typeof StreamdownComponent>;
 
 // Mock streamdown to avoid CSS imports (KaTeX) in test environment
-vi.mock("streamdown", () => ({
-  defaultRehypePlugins: {
-    harden: [() => undefined, {}],
-    katex: () => undefined,
-    raw: () => undefined,
-  },
-  defaultRemarkPlugins: {},
-  Streamdown: ({ children, ...props }: StreamdownProps) => (
-    <div data-testid="mock-streamdown" data-props={JSON.stringify(Object.keys(props))}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock("streamdown", () => {
+  const raw = () => undefined;
+  const katex = () => undefined;
+  const harden = () => undefined;
+
+  return {
+    defaultRehypePlugins: {
+      harden: [harden, {}],
+      katex,
+      raw,
+    },
+    defaultRemarkPlugins: {},
+    Streamdown: ({ children, ...props }: StreamdownProps) => {
+      const rehypePlugins = Array.isArray(props.rehypePlugins)
+        ? props.rehypePlugins
+        : [];
+      const hasRaw = rehypePlugins.includes(raw);
+
+      return (
+        <div
+          data-testid="mock-streamdown"
+          data-has-raw={String(hasRaw)}
+          data-props={JSON.stringify(Object.keys(props))}
+        >
+          {children}
+        </div>
+      );
+    },
+  };
+});
 
 import { Response } from "@/components/ai-elements/response";
 
@@ -55,5 +72,11 @@ describe("ai-elements/response", () => {
     expect(stringKeys).toEqual(
       expect.arrayContaining(["controls", "mode", "shikiTheme"])
     );
+  });
+
+  it("disables raw HTML rendering by default", () => {
+    const { getByTestId } = render(<Response>hello</Response>);
+    const wrapper = getByTestId("mock-streamdown");
+    expect(wrapper.getAttribute("data-has-raw")).toBe("false");
   });
 });

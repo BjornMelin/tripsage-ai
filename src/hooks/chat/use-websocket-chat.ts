@@ -15,7 +15,7 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 /**
  * Payload for chat message broadcast events.
  */
-export interface ChatMessageBroadcastPayload {
+export interface ChatMessageBroadcastPayload extends Record<string, unknown> {
   /** Optional message identifier. */
   id?: string;
   /** Message content (Markdown/plain text). */
@@ -29,7 +29,7 @@ export interface ChatMessageBroadcastPayload {
 /**
  * Payload for chat typing broadcast events.
  */
-export interface ChatTypingBroadcastPayload {
+export interface ChatTypingBroadcastPayload extends Record<string, unknown> {
   /** User ID of the typing user. */
   userId: string;
   /** Whether the user is currently typing. */
@@ -37,6 +37,8 @@ export interface ChatTypingBroadcastPayload {
   /** Optional username for UI display. */
   username?: string;
 }
+
+type ChatRealtimePayload = ChatMessageBroadcastPayload | ChatTypingBroadcastPayload;
 
 /**
  * Represents a chat message exchanged through the realtime channel.
@@ -128,10 +130,7 @@ export function useWebSocketChat({
 
   // Handle incoming chat messages and typing events via onMessage callback
   const handleMessage = useCallback(
-    (
-      payload: ChatMessageBroadcastPayload | ChatTypingBroadcastPayload,
-      event: string
-    ) => {
+    (payload: ChatRealtimePayload, event: string) => {
       if (!sessionId && topicType === "session") {
         return;
       }
@@ -163,9 +162,7 @@ export function useWebSocketChat({
     [handleRealtimeMessage, handleTypingUpdate, sessionId, topicType, user?.id]
   );
 
-  const { sendBroadcast } = useRealtimeChannel<
-    ChatMessageBroadcastPayload | ChatTypingBroadcastPayload
-  >(topic, {
+  const { sendBroadcast } = useRealtimeChannel<ChatRealtimePayload>(topic, {
     events: ["chat:message", "chat:typing"],
     onMessage: handleMessage,
     onStatusChange: (newStatus) => {

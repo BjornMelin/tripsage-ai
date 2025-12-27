@@ -78,9 +78,10 @@ const SCAN_DIRS = ["src/app", "src/components", "src/hooks", "src/stores", "src/
 
 // Domain boundary enforcement (keep rules small and high-signal).
 const DOMAIN_SCAN_DIR = "src/domain";
-const DOMAIN_IMPORT_ALLOWLIST = new Set([
-  // TODO(ARCH-001): Legacy exceptions only. Keep this list small and burn down.
-  // Example: "src/domain/example/legacy.ts",
+// ARCH-001 (deliberate debt): Legacy exceptions only. Keep this list small and burn down.
+// Each entry MUST include a justification + tracking issue ID (e.g., "ARCH-001", "GH#1234").
+const DOMAIN_IMPORT_ALLOWLIST = new Map([
+  // ["src/domain/example/legacy.ts", "Justification (ARCH-001)"],
 ]);
 
 // Domain schemas should remain a leaf (pure Zod definitions): they must not depend on
@@ -90,6 +91,16 @@ const DOMAIN_SCHEMAS_DIR = "src/domain/schemas";
 let hardViolationsCount = 0;
 let warningsFound = 0;
 let allowlistedDomainViolations = 0;
+
+for (const [allowlistPath, allowlistReason] of DOMAIN_IMPORT_ALLOWLIST) {
+  if (allowlistPath.trim().length === 0 || allowlistReason.trim().length === 0) {
+    console.error("❌ Invalid DOMAIN_IMPORT_ALLOWLIST entry.");
+    console.error(
+      `   Expected: ["src/domain/...", "Justification (TRACKING-ID)"] — got: ["${allowlistPath}", "${allowlistReason}"]`
+    );
+    process.exit(1);
+  }
+}
 
 /**
  * Recursively find all TypeScript/JavaScript files in a directory.
@@ -476,13 +487,17 @@ function checkBoundaries() {
         continue;
       }
 
-      const isAllowlisted = DOMAIN_IMPORT_ALLOWLIST.has(normalizedPath);
+      const allowlistReason = DOMAIN_IMPORT_ALLOWLIST.get(normalizedPath);
+      const isAllowlisted = allowlistReason !== undefined;
       const heading = isAllowlisted
         ? `⚠️  LEGACY ALLOWLIST: ${normalizedPath}`
         : `❌ BOUNDARY VIOLATION: ${normalizedPath}`;
       const log = isAllowlisted ? console.warn : console.error;
 
       log(heading);
+      if (allowlistReason !== undefined) {
+        log(`   Reason: ${allowlistReason}`);
+      }
       if (appViolations.length > 0) {
         log(`   Domain imports app layer: ${appViolations.join(", ")}`);
       }
