@@ -29,6 +29,15 @@ export class GoogleTokenError extends Error {
 export async function getGoogleProviderToken(): Promise<string> {
   const supabase = await createServerSupabase();
   const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new GoogleTokenError("No active session found");
+  }
+
+  const {
     data: { session },
     error: sessionError,
   } = await supabase.auth.getSession();
@@ -82,6 +91,15 @@ export async function hasGoogleCalendarScopes(
 ): Promise<boolean> {
   try {
     const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return false;
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession();

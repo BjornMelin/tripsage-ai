@@ -65,6 +65,14 @@ export async function getCurrentSessionId(
   supabase: TypedServerSupabase
 ): Promise<string | null> {
   try {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      if (userError) {
+        logger.warn("user_fetch_failed", { error: userError.message });
+      }
+      return null;
+    }
+
     const { data, error } = await supabase.auth.getSession();
     if (error) {
       logger.warn("session_fetch_failed", { error: error.message });

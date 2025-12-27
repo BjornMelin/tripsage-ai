@@ -21,7 +21,7 @@ import {
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { deleteSingle, getSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
-import { invalidateUserTripsCache } from "../_handler";
+import { invalidateTripAccessCaches, invalidateUserTripsCache } from "../_handler";
 
 /**
  * Maps validated trip update payload from camelCase API contract
@@ -51,6 +51,23 @@ function mapUpdatePayloadToDb(payload: z.infer<typeof tripUpdateSchema>) {
   return tripsUpdateSchema.parse(updates);
 }
 
+function isPermissionDeniedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const maybe = error as { code?: unknown; details?: unknown; message?: unknown };
+
+  const code = typeof maybe.code === "string" ? maybe.code : null;
+  if (code === "42501") return true;
+
+  const details = typeof maybe.details === "string" ? maybe.details : "";
+  const message = typeof maybe.message === "string" ? maybe.message : "";
+  const combined = `${message} ${details}`.toLowerCase();
+  return (
+    combined.includes("permission denied") ||
+    combined.includes("row-level security") ||
+    combined.includes("violates row-level security")
+  );
+}
+
 /**
  * Fetches a trip by ID for the authenticated user.
  *
@@ -65,7 +82,7 @@ async function getTripById(
   tripId: number
 ) {
   const { data, error } = await getSingle(supabase, "trips", (qb) =>
-    qb.eq("id", tripId).eq("user_id", userId)
+    qb.eq("id", tripId)
   );
 
   if (error) {
@@ -88,7 +105,7 @@ async function getTripById(
 
   // Parse through schema to ensure type compatibility with mapDbTripToUi
   const row = tripsRowSchema.parse(data);
-  return NextResponse.json(mapDbTripToUi(row));
+  return NextResponse.json(mapDbTripToUi(row, { currentUserId: userId }));
 }
 
 /**
@@ -119,13 +136,49 @@ async function updateTripById(
   const updates = mapUpdatePayloadToDb(validation.data);
 
   const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
-    qb.eq("id", tripId).eq("user_id", userId)
+    qb.eq("id", tripId)
   );
 
   if (error || !data) {
     const supaError = error as { code?: string } | null;
     if (supaError?.code === "PGRST116") {
       return notFoundResponse("Trip");
+    }
+
+    if (error && isPermissionDeniedError(error)) {
+      return errorResponse({
+        err: error,
+        error: "forbidden",
+        reason: "You do not have permission to update this trip",
+        status: 403,
+      });
+    }
+
+    if (!error && !data) {
+      const { data: existing, error: accessError } = await supabase
+        .from("trips")
+        .select("id")
+        .eq("id", tripId)
+        .maybeSingle();
+
+      if (accessError) {
+        return errorResponse({
+          err: accessError,
+          error: "internal",
+          reason: "Failed to validate trip access",
+          status: 500,
+        });
+      }
+
+      if (!existing) {
+        return notFoundResponse("Trip");
+      }
+
+      return errorResponse({
+        error: "forbidden",
+        reason: "You do not have permission to update this trip",
+        status: 403,
+      });
     }
 
     return errorResponse({
@@ -136,11 +189,10 @@ async function updateTripById(
     });
   }
 
-  await invalidateUserTripsCache(userId);
-
   // Parse through schema to ensure type compatibility with mapDbTripToUi
   const row = tripsRowSchema.parse(data);
-  return NextResponse.json(mapDbTripToUi(row));
+  await invalidateTripAccessCaches(supabase, tripId, row.user_id);
+  return NextResponse.json(mapDbTripToUi(row, { currentUserId: userId }));
 }
 
 /**
@@ -156,8 +208,54 @@ async function deleteTripById(
   userId: string,
   tripId: number
 ) {
+  const { data: trip, error: tripError } = await supabase
+    .from("trips")
+    .select("user_id")
+    .eq("id", tripId)
+    .maybeSingle();
+
+  if (tripError) {
+    return errorResponse({
+      err: tripError,
+      error: "internal",
+      reason: "Failed to load trip",
+      status: 500,
+    });
+  }
+
+  if (!trip) {
+    return notFoundResponse("Trip");
+  }
+
+  if (trip.user_id !== userId) {
+    return errorResponse({
+      error: "forbidden",
+      reason: "Only the trip owner can delete this trip",
+      status: 403,
+    });
+  }
+
+  const { data: collaborators, error: collaboratorError } = await supabase
+    .from("trip_collaborators")
+    .select("user_id")
+    .eq("trip_id", tripId);
+
+  if (collaboratorError) {
+    return errorResponse({
+      err: collaboratorError,
+      error: "internal",
+      reason: "Failed to load trip collaborators",
+      status: 500,
+    });
+  }
+
+  const userIdsToInvalidate = new Set<string>([
+    trip.user_id,
+    ...(collaborators ?? []).map((row) => row.user_id),
+  ]);
+
   const { count, error } = await deleteSingle(supabase, "trips", (qb) =>
-    qb.eq("id", tripId).eq("user_id", userId)
+    qb.eq("id", tripId)
   );
 
   if (error) {
@@ -173,7 +271,11 @@ async function deleteTripById(
     return notFoundResponse("Trip");
   }
 
-  await invalidateUserTripsCache(userId);
+  await Promise.all(
+    [...userIdsToInvalidate].map((targetUserId) =>
+      invalidateUserTripsCache(targetUserId)
+    )
+  );
   return new Response(null, { status: 204 });
 }
 
