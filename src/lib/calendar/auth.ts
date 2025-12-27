@@ -13,11 +13,11 @@ type SupabaseSession = GetSessionResult["data"]["session"];
 
 type GetUserWithSessionResult = {
   supabase: ServerSupabase;
-  session: SupabaseSession;
-  error: GetUserResult["error"] | GetSessionResult["error"] | Error;
+  session: SupabaseSession | null;
+  error: GetUserResult["error"] | GetSessionResult["error"] | Error | null;
   errorSource: "user" | "session" | null;
-  userError: GetUserResult["error"];
-  sessionError: GetSessionResult["error"];
+  userError: GetUserResult["error"] | Error | null;
+  sessionError: GetSessionResult["error"] | null;
 };
 
 /**
@@ -46,13 +46,14 @@ async function getUserWithSession(): Promise<GetUserWithSessionResult> {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
+    const resolvedUserError = userError ?? new Error("No authenticated user");
     return {
-      error: userError,
+      error: resolvedUserError,
       errorSource: "user",
       session: null,
       sessionError: null,
       supabase,
-      userError,
+      userError: resolvedUserError,
     };
   }
 

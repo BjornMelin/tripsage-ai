@@ -154,6 +154,9 @@ export const GET = withApiGuards({
 
   const isOwner = trip.user_id === userId;
 
+  // Authorization is enforced via RLS policies on trip_collaborators.
+  // Non-collaborators will receive an empty array; owners and collaborators
+  // will only see records they have access to.
   const { data, error } = await supabase
     .from("trip_collaborators")
     .select("id,trip_id,user_id,role,created_at")
@@ -171,6 +174,8 @@ export const GET = withApiGuards({
 
   const rows = (data ?? []) as CollaboratorRow[];
 
+  // Email privacy: owners can see all collaborator emails;
+  // non-owners can only see their own email.
   const emailLookupIds = isOwner
     ? Array.from(new Set(rows.map((row) => row.user_id)))
     : [userId];

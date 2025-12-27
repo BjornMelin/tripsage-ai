@@ -508,9 +508,9 @@ Plan:
     - [ ] Add a regression test that aborting the request stops the stream (if feasible in current test harness)
   - **Done when:** `_handler.ts` contains no `supabase.auth.getUser()` and no handler-level rate limit code path; all affected tests pass.
 
-### 9.4 Rate Limiting Consolidation
+### 9.4 Rate-Limiting Consolidation
 
-- [ ] Audit rate limiting duplication and either consolidate further or document deliberate duplication (KISS) — refs: TD-4 — Priority: Medium
+- [ ] Audit rate-limiting duplication and either consolidate further or document deliberate duplication (KISS) — refs: TD-4 — Priority: Medium
   - [ ] Document the current split:
     - HTTP routes: `withApiGuards` / `src/lib/api/factory.ts` (error responses + headers via `applyRateLimitHeaders()`)
     - AI tools: `createAiTool` / `src/ai/lib/tool-factory.ts` (tool error shapes via `ToolError`)
@@ -606,7 +606,7 @@ Plan:
 
 - [ ] Remove “personalized tips” TODO and keep tips explicitly general (Product) — refs: TD-12, D9 — Priority: Low
   - Target file: `src/app/dashboard/search/hotels/hotels-search-client.tsx`
-  - [ ] Remove the TODO comment about “personalized tips”
+  - [ ] Delete the TODO comment about “personalized tips”
   - [ ] Ensure the card title/description does **not** imply personalization
   - **Done when:** no “future personalization” TODO remains and the UI copy is accurate.
 
