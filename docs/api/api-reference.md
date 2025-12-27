@@ -67,12 +67,16 @@ curl -X GET "http://localhost:3000/api/trips/1" --cookie "sb-access-token=<jwt>"
 
 ### Trips
 
-- `GET /trips` (Auth) — List trips; query: `destination`, `status`, `startDate`, `endDate`.
+- `GET /trips` (Auth) — List trips the user can access (owned + shared); query: `destination`, `status`, `startDate`, `endDate`.
 - `POST /trips` (Auth) — Create trip. Body: `title`, `destination`, `startDate`, `endDate`; optional `budget`, `currency`, `status` (default `planning`), `travelers`, `tripType`, `visibility`, `tags`, `description`, `preferences`.
 - `GET /trips/{id}` (Auth) — Get trip.
 - `PUT /trips/{id}` (Auth) — Partial update (same fields as create).
 - `DELETE /trips/{id}` (Auth) — Delete trip.
 - `GET /trips/suggestions` (Auth) — AI suggestions. Query: `limit`, `budget_max`, `category`. Returns `TripSuggestion[]`.
+- `GET /trips/{id}/collaborators` (Auth) — List collaborators (owner id is derived from the trip).
+- `POST /trips/{id}/collaborators` (Auth) — Invite/add collaborator (owner-only).
+- `PATCH /trips/{id}/collaborators/{userId}` (Auth) — Update collaborator role (owner-only).
+- `DELETE /trips/{id}/collaborators/{userId}` (Auth) — Remove collaborator (owner) or leave trip (self).
 
 **Examples**
 TS (create)

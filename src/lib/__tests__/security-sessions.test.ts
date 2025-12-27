@@ -14,6 +14,16 @@ const mockSpan = vi.hoisted(() => ({
   setAttribute: vi.fn(),
 }));
 
+const authUserResult = {
+  data: { user: { id: "user-1" } },
+  error: null,
+};
+
+const createAuthStub = (overrides?: Partial<Record<string, unknown>>) => ({
+  getUser: vi.fn(async () => authUserResult),
+  ...overrides,
+});
+
 vi.mock("@/lib/telemetry/logger", () => ({
   createServerLogger: vi.fn(() => mockLogger),
 }));
@@ -102,12 +112,12 @@ describe("lib/security/sessions", () => {
       `h.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.s`;
 
     const supabase = {
-      auth: {
+      auth: createAuthStub({
         getSession: vi.fn(async () => ({
           data: { session: { access_token: tokenFor({ session_id: "sess-1" }) } },
           error: null,
         })),
-      },
+      }),
     };
 
     const { getCurrentSessionId } = await import("@/lib/security/sessions");
@@ -119,12 +129,12 @@ describe("lib/security/sessions", () => {
       "base64url"
     )}.s`;
     const supabase = {
-      auth: {
+      auth: createAuthStub({
         getSession: vi.fn(async () => ({
           data: { session: { access_token: token } },
           error: null,
         })),
-      },
+      }),
     };
 
     const { getCurrentSessionId } = await import("@/lib/security/sessions");
@@ -133,12 +143,12 @@ describe("lib/security/sessions", () => {
 
   it("returns null for invalid or missing access tokens", async () => {
     const supabase = {
-      auth: {
+      auth: createAuthStub({
         getSession: vi.fn(async () => ({
           data: { session: { access_token: "not-a-jwt" } },
           error: null,
         })),
-      },
+      }),
     };
 
     const { getCurrentSessionId } = await import("@/lib/security/sessions");
@@ -147,12 +157,12 @@ describe("lib/security/sessions", () => {
 
   it("returns null and warns on invalid token payload", async () => {
     const supabase = {
-      auth: {
+      auth: createAuthStub({
         getSession: vi.fn(async () => ({
           data: { session: { access_token: "h.!@#.s" } },
           error: null,
         })),
-      },
+      }),
     };
 
     const { getCurrentSessionId } = await import("@/lib/security/sessions");
@@ -165,12 +175,12 @@ describe("lib/security/sessions", () => {
 
   it("returns null and warns when getSession returns an error", async () => {
     const supabase = {
-      auth: {
+      auth: createAuthStub({
         getSession: vi.fn(async () => ({
           data: { session: null },
           error: { message: "bad_session" },
         })),
-      },
+      }),
     };
 
     const { getCurrentSessionId } = await import("@/lib/security/sessions");
@@ -182,11 +192,11 @@ describe("lib/security/sessions", () => {
 
   it("returns null and logs when getSession throws", async () => {
     const supabase = {
-      auth: {
+      auth: createAuthStub({
         getSession: vi.fn(() => {
           throw new Error("boom");
         }),
-      },
+      }),
     };
 
     const { getCurrentSessionId } = await import("@/lib/security/sessions");

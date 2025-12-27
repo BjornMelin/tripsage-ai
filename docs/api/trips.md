@@ -4,7 +4,7 @@ Trip management and itinerary endpoints.
 
 ## `GET /api/trips`
 
-List trips for the authenticated user with optional filtering.
+List trips the authenticated user can access (owned trips + trips shared with them) with optional filtering.
 
 **Authentication**: Required  
 **Rate Limit Key**: `trips:list`
@@ -28,6 +28,7 @@ List trips for the authenticated user with optional filtering.
     "id": "1",
     "title": "Summer Vacation",
     "destination": "Paris",
+    "userId": "00000000-0000-0000-0000-000000000000",
     "startDate": "2025-07-01",
     "endDate": "2025-07-15",
     "travelers": 2,
@@ -41,6 +42,12 @@ List trips for the authenticated user with optional filtering.
   }
 ]
 ```
+
+Notes:
+
+- `id` is returned as a string, but the `{id}` path parameter is numeric (e.g. `/api/trips/123`).
+- `userId` is the trip owner (even when the trip is shared with you).
+- `visibility` is derived: `"private"` for the owner and `"shared"` for collaborators.
 
 ### Errors
 
@@ -141,13 +148,13 @@ trip = response.json()
 Get a specific trip by ID.
 
 **Authentication**: Required  
-**Rate Limit Key**: `trips:list`
+**Rate Limit Key**: `trips:detail`
 
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | Trip ID |
+| `id` | string | Yes | Trip ID (numeric string, e.g. `123`) |
 
 ### Response
 
@@ -211,6 +218,7 @@ Same fields as `POST /api/trips`, all optional.
 
 - `400` - Validation failed
 - `401` - Not authenticated
+- `403` - Insufficient permissions (e.g., viewer collaborator)
 - `404` - Trip not found
 - `429` - Rate limit exceeded
 
@@ -252,6 +260,7 @@ Delete a trip.
 ### Errors
 
 - `401` - Not authenticated
+- `403` - Only the trip owner can delete a trip
 - `404` - Trip not found
 - `429` - Rate limit exceeded
 
@@ -261,6 +270,169 @@ Delete a trip.
 curl -X DELETE "http://localhost:3000/api/trips/1" \
   --cookie "sb-access-token=$JWT"
 ```
+
+---
+
+## Trip Collaborators
+
+Trip collaboration is managed through collaborator rows scoped to a trip ID. The trip
+owner is derived from the trip record (`trip.userId`) and is not a collaborator row.
+
+### Roles
+
+- `viewer`: read-only access
+- `editor`: can update trip details via `PUT /api/trips/{id}`
+- `admin`: can update trip details via `PUT /api/trips/{id}`
+
+Note: collaborator roles currently gate trip metadata updates. Other trip resources may have separate permission rules.
+
+## `GET /api/trips/{id}/collaborators`
+
+List collaborators for a trip.
+
+**Authentication**: Required  
+**Rate Limit Key**: `trips:collaborators:list`
+
+### Response
+
+`200 OK`
+
+```json
+{
+  "tripId": 123,
+  "ownerId": "00000000-0000-0000-0000-000000000000",
+  "isOwner": true,
+  "collaborators": [
+    {
+      "id": 1,
+      "tripId": 123,
+      "userId": "11111111-1111-1111-1111-111111111111",
+      "userEmail": "collab@example.com",
+      "role": "viewer",
+      "createdAt": "2025-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+Notes:
+
+- `userEmail` is only populated for the trip owner (all collaborators). Non-owners only see their own email.
+
+### Errors
+
+- `401` - Not authenticated
+- `404` - Trip not found (or you do not have access)
+- `429` - Rate limit exceeded
+
+---
+
+## `POST /api/trips/{id}/collaborators`
+
+Invite/add a collaborator (owner-only). If the email does not match an existing Supabase Auth user, an invite email is sent first.
+
+**Authentication**: Required  
+**Rate Limit Key**: `trips:collaborators:invite`
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | Email address to invite |
+| `role` | string | No | `viewer` \| `editor` \| `admin` (default: `viewer`) |
+
+### Response
+
+`201 Created`
+
+```json
+{
+  "invited": true,
+  "collaborator": {
+    "id": 1,
+    "tripId": 123,
+    "userId": "11111111-1111-1111-1111-111111111111",
+    "userEmail": "collab@example.com",
+    "role": "viewer",
+    "createdAt": "2025-01-15T10:00:00Z"
+  }
+}
+```
+
+### Errors
+
+- `400` - Validation failed or invalid request
+- `401` - Not authenticated
+- `403` - Only the trip owner can invite collaborators
+- `409` - User is already a collaborator on this trip
+- `429` - Rate limit exceeded
+
+---
+
+## `PATCH /api/trips/{id}/collaborators/{userId}`
+
+Update a collaborator role (owner-only).
+
+**Authentication**: Required  
+**Rate Limit Key**: `trips:collaborators:update`
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | Trip ID (numeric string, e.g. `123`) |
+| `userId` | string | Yes | Collaborator user ID (UUID) |
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | string | Yes | `viewer` \| `editor` \| `admin` |
+
+### Response
+
+`200 OK`
+
+```json
+{
+  "collaborator": {
+    "id": 1,
+    "tripId": 123,
+    "userId": "11111111-1111-1111-1111-111111111111",
+    "role": "editor",
+    "createdAt": "2025-01-15T10:00:00Z"
+  }
+}
+```
+
+### Errors
+
+- `400` - Invalid request (e.g., userId is not a UUID)
+- `401` - Not authenticated
+- `403` - Only the trip owner can update collaborator roles
+- `404` - Trip or collaborator not found
+- `429` - Rate limit exceeded
+
+---
+
+## `DELETE /api/trips/{id}/collaborators/{userId}`
+
+Remove a collaborator. Trip owners can remove any collaborator. Collaborators can remove themselves (leave the trip).
+
+**Authentication**: Required  
+**Rate Limit Key**: `trips:collaborators:remove`
+
+### Response
+
+`204 No Content`
+
+### Errors
+
+- `400` - Invalid request (e.g., userId is not a UUID)
+- `401` - Not authenticated
+- `403` - You do not have permission to remove this collaborator
+- `404` - Trip or collaborator not found
+- `429` - Rate limit exceeded
 
 ---
 

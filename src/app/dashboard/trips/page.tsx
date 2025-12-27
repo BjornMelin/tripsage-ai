@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type Trip, useCreateTrip, useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { nowIso } from "@/lib/security/random";
@@ -125,6 +126,7 @@ export default function TripsPage() {
   const createTripMutation = useCreateTrip();
   const deleteTripMutation = useDeleteTrip();
   const { data: trips, isLoading, error, isConnected, realtimeStatus } = useTrips();
+  const currentUserId = useCurrentUserId();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
@@ -503,7 +505,11 @@ export default function TripsPage() {
             <TripCard
               key={trip.id}
               trip={trip}
-              onDelete={handleDeleteTrip}
+              onDelete={
+                currentUserId && trip.userId && trip.userId === currentUserId
+                  ? handleDeleteTrip
+                  : undefined
+              }
               className={viewMode === "list" ? "flex-row" : ""}
             />
           ))}

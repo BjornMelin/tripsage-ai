@@ -44,6 +44,11 @@ const mockCreateIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 const mockDeleteIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockToast = vi.hoisted(() => vi.fn());
+const mockCurrentUserId = vi.hoisted(() =>
+  vi.fn(() => "11111111-1111-4111-8aaa-111111111111")
+);
+
+const DEFAULT_USER_ID = "11111111-1111-4111-8aaa-111111111111";
 
 vi.mock("@/hooks/use-trips", () => ({
   useCreateTrip: () => ({
@@ -63,6 +68,10 @@ vi.mock("@/hooks/use-trips", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-current-user-id", () => ({
+  useCurrentUserId: () => mockCurrentUserId(),
+}));
+
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
 }));
@@ -73,12 +82,14 @@ vi.mock("@/components/features/realtime/connection-status-monitor", () => ({
 }));
 
 vi.mock("@/components/features/trips/trip-card", () => ({
-  TripCard: ({ trip, onDelete }: { trip: UiTrip; onDelete: (id: string) => void }) => (
+  TripCard: ({ trip, onDelete }: { trip: UiTrip; onDelete?: (id: string) => void }) => (
     <div data-testid={`trip-card-${trip.id}`}>
       <span>{trip.title}</span>
-      <button type="button" onClick={() => onDelete(trip.id)}>
-        Delete
-      </button>
+      {onDelete ? (
+        <button type="button" onClick={() => onDelete(trip.id)}>
+          Delete
+        </button>
+      ) : null}
     </div>
   ),
 }));
@@ -108,6 +119,7 @@ describe("TripsPage", () => {
     mockDeleteTrip.mockReset();
     mockDeleteIsPending.mockReset();
     mockToast.mockReset();
+    mockCurrentUserId.mockReset();
     mockTrips.mockReturnValue([]);
     mockIsLoading.mockReturnValue(false);
     mockError.mockReturnValue(null);
@@ -115,6 +127,7 @@ describe("TripsPage", () => {
     mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: true });
     mockCreateIsPending.mockReturnValue(false);
     mockDeleteIsPending.mockReturnValue(false);
+    mockCurrentUserId.mockReturnValue(DEFAULT_USER_ID);
   });
 
   describe("Loading state", () => {
@@ -135,6 +148,7 @@ describe("TripsPage", () => {
           destinations: [destination("Paris", "France")],
           id: "trip-loaded",
           title: "Loaded Trip",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -263,6 +277,7 @@ describe("TripsPage", () => {
         id: "trip-1",
         startDate: "2099-06-01",
         title: "Paris Vacation",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
       {
@@ -275,6 +290,7 @@ describe("TripsPage", () => {
         id: "trip-2",
         startDate: "2099-07-15",
         title: "Tokyo Adventure",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
     ];
@@ -332,6 +348,7 @@ describe("TripsPage", () => {
           id: "trip-upcoming",
           startDate: "2099-01-01",
           title: "Future Trip",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
         {
@@ -340,6 +357,7 @@ describe("TripsPage", () => {
           destinations: [],
           id: "trip-draft",
           title: "Draft Trip",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -376,6 +394,7 @@ describe("TripsPage", () => {
           destinations: [],
           id: "trip-z",
           title: "Zebra Trip",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
         {
@@ -384,6 +403,7 @@ describe("TripsPage", () => {
           destinations: [],
           id: "trip-a",
           title: "Alpine Adventure",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ];
@@ -410,6 +430,7 @@ describe("TripsPage", () => {
           destinations: [destination("Tokyo", "Japan")],
           id: "trip-budget-low",
           title: "Budget Low",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
         {
@@ -419,6 +440,7 @@ describe("TripsPage", () => {
           destinations: [destination("Paris", "France"), destination("Lyon", "France")],
           id: "trip-budget-high",
           title: "Budget High",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ];
@@ -524,6 +546,7 @@ describe("TripsPage", () => {
           destinations: [destination("Kyoto", "Japan")],
           id: "trip-delete-id",
           title: "Kyoto Escape",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -550,6 +573,7 @@ describe("TripsPage", () => {
           destinations: [destination("Kyoto", "Japan")],
           id: "trip-delete-id",
           title: "Kyoto Escape",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -583,6 +607,7 @@ describe("TripsPage", () => {
           destinations: [destination("Kyoto", "Japan")],
           id: "trip-delete-id",
           title: "Kyoto Escape",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -609,6 +634,7 @@ describe("TripsPage", () => {
         destinations: [destination("Paris", "France")],
         id: "trip-1",
         title: "Paris Vacation",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
       {
@@ -617,6 +643,7 @@ describe("TripsPage", () => {
         destinations: [destination("Tokyo", "Japan")],
         id: "trip-2",
         title: "Tokyo Adventure",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
     ];
@@ -685,6 +712,7 @@ describe("TripsPage", () => {
           destinations: [],
           id: "trip-1",
           title: "Solo Trip",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -701,6 +729,7 @@ describe("TripsPage", () => {
           destinations: [],
           id: "trip-1",
           title: "Trip 1",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
         {
@@ -709,6 +738,7 @@ describe("TripsPage", () => {
           destinations: [],
           id: "trip-2",
           title: "Trip 2",
+          userId: DEFAULT_USER_ID,
           visibility: "private",
         },
       ]);
@@ -726,6 +756,7 @@ describe("TripsPage", () => {
         destinations: [],
         id: "trip-draft",
         title: "Draft Trip",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
       {
@@ -736,6 +767,7 @@ describe("TripsPage", () => {
         id: "trip-active",
         startDate: "2025-01-01",
         title: "Active Trip",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
       {
@@ -746,6 +778,7 @@ describe("TripsPage", () => {
         id: "trip-completed",
         startDate: "2024-01-01",
         title: "Completed Trip",
+        userId: DEFAULT_USER_ID,
         visibility: "private",
       },
     ];

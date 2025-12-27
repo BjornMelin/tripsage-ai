@@ -15,22 +15,21 @@ vi.mock("@/lib/supabase", () => ({
 vi.mock("@/hooks/use-zod-form", async () => {
   const { useForm } = await import("react-hook-form");
   const { zodResolver } = await import("@hookform/resolvers/zod");
+  type ZodResolverSchema = Parameters<typeof zodResolver>[0];
   return {
     useZodForm: ({
       schema,
       defaultValues,
       mode,
     }: {
-      schema: unknown;
-      defaultValues: unknown;
+      schema: ZodResolverSchema;
+      defaultValues: FieldValues;
       mode?: UseFormProps<FieldValues>["mode"];
     }) => {
       return useForm({
-        // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
-        defaultValues: defaultValues as any,
+        defaultValues,
         mode,
-        // biome-ignore lint/suspicious/noExplicitAny: test mock needs flexible typing
-        resolver: zodResolver(schema as any),
+        resolver: zodResolver(schema),
       });
     },
   };

@@ -6,6 +6,20 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 
+type ServerSupabase = Awaited<ReturnType<typeof createServerSupabase>>;
+type GetUserResult = Awaited<ReturnType<ServerSupabase["auth"]["getUser"]>>;
+type GetSessionResult = Awaited<ReturnType<ServerSupabase["auth"]["getSession"]>>;
+type SupabaseSession = GetSessionResult["data"]["session"];
+
+type GetUserWithSessionResult = {
+  supabase: ServerSupabase;
+  session: SupabaseSession | null;
+  error: GetUserResult["error"] | GetSessionResult["error"] | Error | null;
+  errorSource: "user" | "session" | null;
+  userError: GetUserResult["error"] | Error | null;
+  sessionError: GetSessionResult["error"] | null;
+};
+
 /**
  * Error thrown when Google OAuth token is not available.
  */
@@ -14,6 +28,48 @@ export class GoogleTokenError extends Error {
     super(message);
     this.name = "GoogleTokenError";
   }
+}
+
+/**
+ * Get authenticated session data from Supabase with a defense-in-depth JWT validation step.
+ *
+ * Supabase's `getSession()` can return a cached session. Calling `getUser()` first ensures
+ * the JWT is validated server-side before using provider tokens from the session.
+ */
+async function getUserWithSession(): Promise<GetUserWithSessionResult> {
+  const supabase = await createServerSupabase();
+
+  // Validate JWT server-side before retrieving session tokens (defense-in-depth)
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    const resolvedUserError = userError ?? new Error("No authenticated user");
+    return {
+      error: resolvedUserError,
+      errorSource: "user",
+      session: null,
+      sessionError: null,
+      supabase,
+      userError: resolvedUserError,
+    };
+  }
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  return {
+    error: sessionError ?? (session ? null : new Error("No active session")),
+    errorSource: sessionError || !session ? "session" : null,
+    session,
+    sessionError,
+    supabase,
+    userError: null,
+  };
 }
 
 /**
@@ -27,13 +83,9 @@ export class GoogleTokenError extends Error {
  * @throws GoogleTokenError if token is not available or user is not authenticated
  */
 export async function getGoogleProviderToken(): Promise<string> {
-  const supabase = await createServerSupabase();
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
+  const { supabase, session, error } = await getUserWithSession();
 
-  if (sessionError || !session) {
+  if (error || !session) {
     throw new GoogleTokenError("No active session found");
   }
 
@@ -81,12 +133,9 @@ export async function hasGoogleCalendarScopes(
   _requiredScopes: string[] = ["https://www.googleapis.com/auth/calendar.events"]
 ): Promise<boolean> {
   try {
-    const supabase = await createServerSupabase();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { session, error } = await getUserWithSession();
 
-    if (!session) {
+    if (error || !session) {
       return false;
     }
 

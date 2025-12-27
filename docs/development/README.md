@@ -5,7 +5,7 @@ Resources and guidelines for TripSage development.
 ## Quick Reference
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [Quick Start](core/quick-start.md) | Project setup, environment, first run |
 | [Standards](standards/standards.md) | TypeScript, import paths, Zod schemas, Zustand stores, security |
 | [Layering Policy](architecture/layering.md) | Architecture layers, allowed dependencies, boundary enforcement |
@@ -16,7 +16,7 @@ Resources and guidelines for TripSage development.
 ## AI & Tools
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [AI Integration](ai/ai-integration.md) | Vercel AI Gateway, BYOK provider configuration |
 | [AI Tools](ai/ai-tools.md) | `createAiTool` factory, guardrails, tool patterns |
 | [Activities](frontend/activities.md) | Activity search service, tools, API usage example |
@@ -25,7 +25,7 @@ Resources and guidelines for TripSage development.
 ## Infrastructure
 
 | Guide | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [Zod Schema Guide](standards/zod-schema-guide.md) | Zod v4 patterns, validation, AI SDK tool schemas |
 | [Zustand Computed Middleware](frontend/zustand-computed-middleware.md) | Automatic computed properties for Zustand stores |
 | [Observability](backend/observability.md) | Telemetry spans, logging, operational alerts |
@@ -49,7 +49,7 @@ pnpm ai-tools:check && pnpm check:fileoverviews && pnpm check:no-secrets && pnpm
 ## Architecture
 
 - **Framework**: Next.js 16 (TypeScript) — server route handlers + React Server Components
-- **AI**: Vercel AI SDK v6 (`ai@6.0.0-beta.150`) with frontend-only agents
+- **AI**: Vercel AI SDK v6 (`ai@6.0.3`) with frontend-only agents
 - **Database**: Supabase PostgreSQL with pgvector, RLS, Realtime
 - **Cache**: Upstash Redis (HTTP REST API) + QStash for async jobs
 - **State**: Zustand (client) + TanStack Query (server)
@@ -59,7 +59,7 @@ See [Development Guide](core/development-guide.md) for full-stack details and [D
 ## Finding Information
 
 | Need | Go To |
-|------|-------|
+| ------ | ------- |
 | New to the project | [Quick Start](core/quick-start.md) |
 | Writing code | [Standards](standards/standards.md) |
 | Architecture overview | [Development Guide](core/development-guide.md) |

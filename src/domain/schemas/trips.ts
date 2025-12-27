@@ -17,6 +17,49 @@ export const visibilitySchema = z.enum(["private", "shared", "public"]);
 /** TypeScript type for trip visibility levels. */
 export type TripVisibility = z.infer<typeof visibilitySchema>;
 
+/** Zod schema for trip collaborator permission tiers. */
+export const tripCollaboratorRoleSchema = z.enum(["viewer", "editor", "admin"]);
+
+/** TypeScript type for trip collaborator permission tiers. */
+export type TripCollaboratorRole = z.infer<typeof tripCollaboratorRoleSchema>;
+
+/**
+ * Zod schema for collaborator rows returned by the collaboration API.
+ *
+ * Note: The trip owner is derived from the trip record and is not a row in
+ * `public.trip_collaborators`.
+ */
+export const tripCollaboratorSchema = z.strictObject({
+  createdAt: z.string().nullable(),
+  id: z.number().int(),
+  role: tripCollaboratorRoleSchema,
+  tripId: z.number().int(),
+  userEmail: EMAIL_SCHEMA.optional(),
+  userId: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for collaborator rows returned by the collaboration API. */
+export type TripCollaborator = z.infer<typeof tripCollaboratorSchema>;
+
+/** Zod schema for inviting/adding a collaborator to a trip. */
+export const tripCollaboratorInviteSchema = z.strictObject({
+  email: EMAIL_SCHEMA,
+  role: tripCollaboratorRoleSchema.default("viewer"),
+});
+
+/** TypeScript type for collaborator invite inputs. */
+export type TripCollaboratorInviteInput = z.infer<typeof tripCollaboratorInviteSchema>;
+
+/** Zod schema for updating a collaborator's role. */
+export const tripCollaboratorRoleUpdateSchema = z.strictObject({
+  role: tripCollaboratorRoleSchema,
+});
+
+/** TypeScript type for collaborator role updates. */
+export type TripCollaboratorRoleUpdateInput = z.infer<
+  typeof tripCollaboratorRoleUpdateSchema
+>;
+
 /**
  * Zod schema for trip destinations (UI/store representation).
  * Represents a destination within a trip with activities, accommodation, and transportation.

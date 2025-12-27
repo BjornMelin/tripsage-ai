@@ -2198,6 +2198,17 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: undefined;
       };
+      auth_user_id_by_email: {
+        Args: { p_email: string };
+        Returns: string;
+      };
+      auth_user_emails_by_ids: {
+        Args: { p_user_ids: string[] };
+        Returns: {
+          user_id: string;
+          email: string | null;
+        }[];
+      };
       extract_trip_id_from_path: {
         Args: { file_path: string };
         Returns: number;

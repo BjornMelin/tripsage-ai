@@ -506,7 +506,7 @@ Goal: enforce boundaries and conventions so the same classes of bugs don’t ret
     - Removed unused `src/ai/tools/schemas/memory.ts` duplicate.
     - Added output validation for the memory-agent tool wrapper and tests covering `createAiTool` output schema enforcement.
   - References:
-    - <https://github.com/vercel/ai/blob/ai@6.0.0-beta.128/content/docs/02-foundations/04-tools.mdx>
+    - <https://ai-sdk.dev/docs/foundations/tools>
 
 ### 4.3 Break the AI core circular dependency
 

@@ -46,8 +46,6 @@ const API_KEY_FORM_SCHEMA = z.strictObject({
   service: z.enum(SUPPORTED),
 });
 
-type ApiKeyFormValues = z.infer<typeof API_KEY_FORM_SCHEMA>;
-
 const PROVIDER_DISPLAY_NAMES: Record<AllowedService, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
@@ -101,7 +99,7 @@ export function ApiKeysContent() {
   );
   const isBusy = loading || initialLoading;
 
-  const form = useZodForm<ApiKeyFormValues>({
+  const form = useZodForm({
     defaultValues: { apiKey: "", service: "openai" },
     schema: API_KEY_FORM_SCHEMA,
     validateMode: "onChange",

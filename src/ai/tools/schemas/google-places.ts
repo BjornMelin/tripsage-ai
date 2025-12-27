@@ -36,12 +36,13 @@ export const lookupPoiInputSchema = z
       .default(1000)
       .describe("Search radius in meters"),
   })
+  // Zod v4 uses `{ error: "..." }` (not `{ message: "..." }`) for refine errors.
   .refine(
     (o) =>
       (o.destination !== null && o.destination !== undefined) ||
       (o.query !== null && o.query !== undefined) ||
       (typeof o.lat === "number" && typeof o.lon === "number"),
-    { message: "Provide destination, query, or lat/lon" }
+    { error: "Provide destination, query, or lat/lon", path: ["destination"] }
   );
 
 // ===== TOOL OUTPUT SCHEMAS =====

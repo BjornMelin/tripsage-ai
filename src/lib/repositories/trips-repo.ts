@@ -99,7 +99,7 @@ export async function listTrips() {
   if (error) throw error;
   // Validate all rows using Zod schema
   const validatedRows = (data || []).map((row) => tripsRowSchema.parse(row));
-  return validatedRows.map(mapDbTripToUi);
+  return validatedRows.map((row) => mapDbTripToUi(row));
 }
 
 /**

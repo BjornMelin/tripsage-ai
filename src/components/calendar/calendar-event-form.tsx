@@ -57,7 +57,7 @@ export function CalendarEventForm({
     watch,
     setValue,
     reset,
-  } = useZodForm<EventFormData>({
+  } = useZodForm({
     defaultValues: {
       calendarId: "primary",
       ...initialData,

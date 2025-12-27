@@ -85,7 +85,7 @@ export function PreferencesSection() {
     initialAdditionalSettings
   );
 
-  const form = useZodForm<PreferencesFormData>({
+  const form = useZodForm({
     defaultValues,
     mode: "onChange",
     schema: preferencesFormSchema,

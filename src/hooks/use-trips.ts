@@ -11,6 +11,7 @@ import type {
   TripUpdateInput,
   UiTrip,
 } from "@schemas/trips";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import {
@@ -18,10 +19,10 @@ import {
   usePostgresChangesChannel,
 } from "@/hooks/supabase/use-realtime-channel";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
 import { queryKeys } from "@/lib/query-keys";
-import { type TypedSupabaseClient, useSupabaseRequired } from "@/lib/supabase";
 import type { UpdateTables } from "@/lib/supabase/database.types";
 
 /** Trip type alias using canonical schema from @schemas/trips. */
@@ -233,21 +234,6 @@ interface TripRealtimeStatus {
   errors: Error[];
 }
 
-function useCurrentUserId(supabase: TypedSupabaseClient): string | null {
-  const { data, error } = useQuery<string | null>({
-    gcTime: cacheTimes.extended,
-    queryFn: async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      return authData.user?.id ?? null;
-    },
-    queryKey: ["currentUser"],
-    staleTime: Infinity,
-    throwOnError: false,
-  });
-
-  return error ? null : (data ?? null);
-}
-
 /**
  * Hook to get user's trips with enhanced error handling and real-time updates.
  *
@@ -257,9 +243,8 @@ function useCurrentUserId(supabase: TypedSupabaseClient): string | null {
  */
 export function useTrips(filters?: TripFilters) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
-  const userId = useCurrentUserId(supabase);
+  const userId = useCurrentUserId();
 
   const query = useQuery<Trip[], AppError>({
     gcTime: cacheTimes.medium,
@@ -284,34 +269,59 @@ export function useTrips(filters?: TripFilters) {
         ? [
             {
               event: "*",
-              filter: `user_id=eq.${userId}`,
               schema: "public",
               table: "trips",
+            },
+            {
+              event: "*",
+              filter: `user_id=eq.${userId}`,
+              schema: "public",
+              table: "trip_collaborators",
             },
           ]
         : [],
     [userId]
   );
 
-  const handleTripsChange = useCallback(
-    (payload: { new: { id?: number | string }; old: { id?: number | string } }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+  type TripsRealtimeRow = { id?: number | string } & Partial<
+    Record<"trip_id", number | string>
+  >;
 
-      const tripId = payload.new?.id ?? payload.old?.id;
-      if (typeof tripId === "string" || typeof tripId === "number") {
-        const numericId =
-          typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
-        if (Number.isFinite(numericId)) {
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.trips.detail(numericId),
-          });
-        }
-      }
+  const getRealtimeNumberishField = useCallback(
+    (row: unknown, field: "id" | "trip_id") => {
+      if (!row || typeof row !== "object") return undefined;
+      const value = (row as Record<string, unknown>)[field];
+      return typeof value === "string" || typeof value === "number" ? value : undefined;
     },
-    [queryClient]
+    []
   );
 
-  const realtime = usePostgresChangesChannel<{ id?: number | string }>(realtimeTopic, {
+  const handleTripsChange = useCallback(
+    (payload: RealtimePostgresChangesPayload<TripsRealtimeRow>) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+
+      const rawTripId =
+        payload.table === "trip_collaborators"
+          ? (getRealtimeNumberishField(payload.new, "trip_id") ??
+            getRealtimeNumberishField(payload.old, "trip_id"))
+          : (getRealtimeNumberishField(payload.new, "id") ??
+            getRealtimeNumberishField(payload.old, "id"));
+
+      if (!rawTripId) return;
+
+      const numericId =
+        typeof rawTripId === "string" ? Number.parseInt(rawTripId, 10) : rawTripId;
+
+      if (Number.isFinite(numericId)) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.trips.detail(numericId),
+        });
+      }
+    },
+    [getRealtimeNumberishField, queryClient]
+  );
+
+  const realtime = usePostgresChangesChannel<TripsRealtimeRow>(realtimeTopic, {
     changes,
     onChange: handleTripsChange,
     private: true,
@@ -341,9 +351,8 @@ export function useTrips(filters?: TripFilters) {
  */
 export function useTrip(tripId: string | number | null | undefined) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const supabase = useSupabaseRequired();
   const queryClient = useQueryClient();
-  const userId = useCurrentUserId(supabase);
+  const userId = useCurrentUserId();
 
   const numericTripId =
     tripId === null || tripId === undefined
@@ -376,7 +385,7 @@ export function useTrip(tripId: string | number | null | undefined) {
         ? [
             {
               event: "*",
-              filter: `id=eq.${numericTripId},user_id=eq.${userId}`,
+              filter: `id=eq.${numericTripId}`,
               schema: "public",
               table: "trips",
             },

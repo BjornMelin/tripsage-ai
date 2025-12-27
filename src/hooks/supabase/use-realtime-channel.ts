@@ -14,7 +14,7 @@ import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
 import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 /** Supabase broadcast event payload structure. */
-interface BroadcastPayload<T> {
+interface BroadcastPayload<T extends Record<string, unknown>> {
   type: "broadcast";
   event: string;
   meta?: { replayed?: boolean; id: string };
@@ -37,7 +37,9 @@ export type RealtimeConnectionStatus =
  *
  * @template Payload - Expected payload shape for broadcast events.
  */
-export interface UseRealtimeChannelOptions<Payload = unknown> {
+export interface UseRealtimeChannelOptions<
+  Payload extends Record<string, unknown> = Record<string, unknown>,
+> {
   /** Whether the channel is private (uses Realtime Authorization). Defaults to true. */
   private?: boolean;
   /** Optional list of event names to filter broadcasts. If omitted, all events are received. */
@@ -55,7 +57,9 @@ export interface UseRealtimeChannelOptions<Payload = unknown> {
  *
  * @template Payload - Expected payload shape for broadcast events.
  */
-export interface UseRealtimeChannelResult<Payload = unknown> {
+export interface UseRealtimeChannelResult<
+  Payload extends Record<string, unknown> = Record<string, unknown>,
+> {
   /** The underlying Supabase RealtimeChannel instance, or null if not connected. */
   channel: RealtimeChannel | null;
   /** Current connection status. */
@@ -111,7 +115,9 @@ function mapSupabaseStatus(
  * @param opts - Optional channel configuration including callbacks and backoff settings.
  * @returns Connection state and broadcast helpers.
  */
-export function useRealtimeChannel<Payload = unknown>(
+export function useRealtimeChannel<
+  Payload extends Record<string, unknown> = Record<string, unknown>,
+>(
   topic: string | null,
   opts: UseRealtimeChannelOptions<Payload> = { private: true }
 ): UseRealtimeChannelResult<Payload> {
@@ -195,10 +201,6 @@ export function useRealtimeChannel<Payload = unknown>(
           onMessage(payload.payload, eventName);
           realtimeStore.updateActivity(channel.topic);
         };
-        // TypeScript cannot resolve the correct overload when event is a runtime string.
-        // The broadcast overload in RealtimeChannel.d.ts:244-267 is correct but TS
-        // matches the system overload instead. Handler is typed via BroadcastPayload<T>.
-        // @ts-expect-error - Supabase overload resolution with dynamic event names
         channel.on("broadcast", { event: eventName }, handler);
       }
     }
@@ -427,18 +429,36 @@ export function usePostgresChangesChannel<
         const filter = change.filter;
         const table = change.table;
 
-        // Compute eventType, defaulting to "*" if not a standard event; Supabase accepts
-        // all PostgresChangeEvent values. Handler already typed so runtime works correctly.
-        const eventType = event === "*" ? "*" : (event as PostgresChangeEvent);
-        // TypeScript cannot resolve the postgres_changes overload with runtime-computed event types.
-        // The handler is properly typed via RealtimePostgresChangesPayload<Row>. Use type assertion
-        // to bypass overload resolution while maintaining runtime correctness.
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase overload resolution issue
-        (channel as any).on(
-          "postgres_changes",
-          { event: eventType, filter, schema, table },
-          handler
-        );
+        switch (event) {
+          case "INSERT":
+            channel.on(
+              "postgres_changes",
+              { event: "INSERT", filter, schema, table },
+              handler
+            );
+            break;
+          case "UPDATE":
+            channel.on(
+              "postgres_changes",
+              { event: "UPDATE", filter, schema, table },
+              handler
+            );
+            break;
+          case "DELETE":
+            channel.on(
+              "postgres_changes",
+              { event: "DELETE", filter, schema, table },
+              handler
+            );
+            break;
+          default:
+            channel.on(
+              "postgres_changes",
+              { event: "*", filter, schema, table },
+              handler
+            );
+            break;
+        }
       }
     }
 

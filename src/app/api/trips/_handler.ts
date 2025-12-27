@@ -70,6 +70,35 @@ export async function invalidateUserTripsCache(userId: string): Promise<void> {
 }
 
 /**
+ * Invalidates trips cache entries for every user who can access a trip:
+ * the owner plus all current collaborators.
+ */
+export async function invalidateTripAccessCaches(
+  supabase: TypedServerSupabase,
+  tripId: number,
+  ownerId: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("trip_collaborators")
+    .select("user_id")
+    .eq("trip_id", tripId);
+
+  if (error) {
+    logger.warn("trip_collaborators_query_failed", {
+      error: error.message,
+      tripId,
+    });
+  }
+
+  const collaboratorIds = (data ?? [])
+    .map((row) => row.user_id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+  const uniqueUserIds = new Set<string>([ownerId, ...collaboratorIds]);
+  await Promise.all([...uniqueUserIds].map((id) => invalidateUserTripsCache(id)));
+}
+
+/**
  * Maps validated trip creation payload to Supabase trips insert shape.
  *
  * Keeps request/response validation layered on top of the generated
@@ -131,7 +160,6 @@ export async function handleListTrips(
   let query = deps.supabase
     .from("trips")
     .select("*")
-    .eq("user_id", params.userId)
     .order("created_at", { ascending: false });
 
   if (params.filters.destination) {
@@ -193,7 +221,9 @@ export async function handleListTrips(
     });
   }
 
-  const uiTrips = validRows.map(mapDbTripToUi);
+  const uiTrips = validRows.map((row) =>
+    mapDbTripToUi(row, { currentUserId: params.userId })
+  );
 
   await setCachedJson(cacheKey, uiTrips, TRIPS_CACHE_TTL);
 
@@ -233,6 +263,6 @@ export async function handleCreateTrip(
   await invalidateUserTripsCache(params.userId);
 
   const row = tripsRowSchema.parse(data);
-  const uiTrip = mapDbTripToUi(row);
+  const uiTrip = mapDbTripToUi(row, { currentUserId: params.userId });
   return NextResponse.json(uiTrip, { status: 201 });
 }

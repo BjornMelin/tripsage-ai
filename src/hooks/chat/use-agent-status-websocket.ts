@@ -68,13 +68,15 @@ interface AgentResourceUsagePayload {
   tokens: number;
 }
 
-type AgentRealtimePayload =
-  | AgentStatusUpdatePayload
-  | AgentTaskStartPayload
-  | AgentTaskProgressPayload
-  | AgentTaskCompletePayload
-  | AgentErrorPayload
-  | AgentResourceUsagePayload;
+type AgentRealtimePayload = Record<string, unknown> &
+  (
+    | AgentStatusUpdatePayload
+    | AgentTaskStartPayload
+    | AgentTaskProgressPayload
+    | AgentTaskCompletePayload
+    | AgentErrorPayload
+    | AgentResourceUsagePayload
+  );
 
 export interface AgentStatusRealtimeControls {
   /** Raw realtime connection status from `useRealtimeChannel`. */

@@ -15,7 +15,16 @@ import type { Database, Json } from "@/lib/supabase/database.types";
  * @param row - The raw trip row from Supabase database
  * @returns UI-formatted trip object with camelCase properties
  */
-export function mapDbTripToUi(row: TripsRow): UiTrip {
+export function mapDbTripToUi(
+  row: TripsRow,
+  opts?: { currentUserId?: string }
+): UiTrip {
+  const currentUserId = opts?.currentUserId;
+  const isSharedWithUser =
+    typeof currentUserId === "string" && currentUserId.length > 0
+      ? row.user_id !== currentUserId
+      : false;
+
   return {
     budget: row.budget,
     createdAt: row.created_at ?? undefined,
@@ -34,7 +43,7 @@ export function mapDbTripToUi(row: TripsRow): UiTrip {
     tripType: row.trip_type,
     updatedAt: row.updated_at ?? undefined,
     userId: row.user_id,
-    visibility: "private",
+    visibility: isSharedWithUser ? "shared" : "private",
   };
 }
 

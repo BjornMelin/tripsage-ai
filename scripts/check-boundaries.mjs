@@ -78,9 +78,10 @@ const SCAN_DIRS = ["src/app", "src/components", "src/hooks", "src/stores", "src/
 
 // Domain boundary enforcement (keep rules small and high-signal).
 const DOMAIN_SCAN_DIR = "src/domain";
-const DOMAIN_IMPORT_ALLOWLIST = new Set([
-  // TODO(ARCH-001): Legacy exceptions only. Keep this list small and burn down.
-  // Example: "src/domain/example/legacy.ts",
+// ARCH-001 (deliberate debt): Legacy exceptions only. Keep this list small and burn down.
+// Each entry MUST include a justification + tracking issue ID (e.g., "ARCH-001", "GH#1234").
+const DOMAIN_IMPORT_ALLOWLIST = new Map([
+  // ["src/domain/example/legacy.ts", "Justification (ARCH-001)"],
 ]);
 
 // Domain schemas should remain a leaf (pure Zod definitions): they must not depend on
@@ -90,6 +91,49 @@ const DOMAIN_SCHEMAS_DIR = "src/domain/schemas";
 let hardViolationsCount = 0;
 let warningsFound = 0;
 let allowlistedDomainViolations = 0;
+
+const invalidAllowlistEntries = [];
+for (const [allowlistPath, allowlistReason] of DOMAIN_IMPORT_ALLOWLIST) {
+  const trimmedPath = allowlistPath.trim();
+  const trimmedReason = allowlistReason.trim();
+  const issues = [];
+
+  if (trimmedPath.length === 0) {
+    issues.push("path is empty");
+  }
+  if (trimmedReason.length === 0) {
+    issues.push("reason is empty");
+  }
+  if (trimmedPath !== allowlistPath) {
+    issues.push("path has leading/trailing whitespace");
+  }
+  if (trimmedReason !== allowlistReason) {
+    issues.push("reason has leading/trailing whitespace");
+  }
+  if (!trimmedPath.startsWith(`${DOMAIN_SCAN_DIR}/`)) {
+    issues.push(`path must start with "${DOMAIN_SCAN_DIR}/"`);
+  }
+
+  if (issues.length > 0) {
+    invalidAllowlistEntries.push({
+      allowlistPath,
+      allowlistReason,
+      issues,
+      trimmedPath,
+      trimmedReason,
+    });
+  }
+}
+
+if (invalidAllowlistEntries.length > 0) {
+  console.error("❌ Invalid DOMAIN_IMPORT_ALLOWLIST entries:");
+  for (const entry of invalidAllowlistEntries) {
+    console.error(`- Raw: ["${entry.allowlistPath}", "${entry.allowlistReason}"]`);
+    console.error(`  Trimmed: ["${entry.trimmedPath}", "${entry.trimmedReason}"]`);
+    console.error(`  Issues: ${entry.issues.join(", ")}`);
+  }
+  process.exit(1);
+}
 
 /**
  * Recursively find all TypeScript/JavaScript files in a directory.
@@ -476,13 +520,17 @@ function checkBoundaries() {
         continue;
       }
 
-      const isAllowlisted = DOMAIN_IMPORT_ALLOWLIST.has(normalizedPath);
+      const allowlistReason = DOMAIN_IMPORT_ALLOWLIST.get(normalizedPath);
+      const isAllowlisted = allowlistReason !== undefined;
       const heading = isAllowlisted
         ? `⚠️  LEGACY ALLOWLIST: ${normalizedPath}`
         : `❌ BOUNDARY VIOLATION: ${normalizedPath}`;
       const log = isAllowlisted ? console.warn : console.error;
 
       log(heading);
+      if (isAllowlisted) {
+        log(`   Reason: ${allowlistReason}`);
+      }
       if (appViolations.length > 0) {
         log(`   Domain imports app layer: ${appViolations.join(", ")}`);
       }

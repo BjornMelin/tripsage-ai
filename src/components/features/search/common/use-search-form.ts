@@ -14,6 +14,10 @@ import type {
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 
+type AnyFieldValuesSchema = z.ZodType<FieldValues, FieldValues>;
+type FormFieldValues<Schema extends AnyFieldValuesSchema> = z.input<Schema>;
+type FormSubmitValues<Schema extends AnyFieldValuesSchema> = z.output<Schema>;
+
 /**
  * Shared React Hook Form setup for search feature forms.
  *
@@ -22,17 +26,18 @@ import type { z } from "zod";
  * @param options - The options to use for the form.
  * @returns A React Hook Form instance.
  */
-// biome-ignore lint/style/useNamingConvention: Hook name follows existing app conventions.
-export function useSearchForm<TSchema extends z.ZodType<FieldValues>>(
-  schema: TSchema,
-  defaultValues: DefaultValues<z.infer<TSchema>>,
-  options: Omit<UseFormProps<z.infer<TSchema>>, "resolver" | "defaultValues"> = {}
-): UseFormReturn<z.infer<TSchema>> {
-  return useForm<z.infer<TSchema>>({
+export function useSearchForm<Schema extends AnyFieldValuesSchema>(
+  schema: Schema,
+  defaultValues: DefaultValues<FormFieldValues<Schema>>,
+  options: Omit<
+    UseFormProps<FormFieldValues<Schema>, unknown, FormSubmitValues<Schema>>,
+    "resolver" | "defaultValues"
+  > = {}
+): UseFormReturn<FormFieldValues<Schema>, unknown, FormSubmitValues<Schema>> {
+  return useForm<FormFieldValues<Schema>, unknown, FormSubmitValues<Schema>>({
     defaultValues,
     mode: "onChange",
-    // biome-ignore lint/suspicious/noExplicitAny: zodResolver requires flexible schema typing for Zod v4 compatibility
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     ...options,
   });
 }

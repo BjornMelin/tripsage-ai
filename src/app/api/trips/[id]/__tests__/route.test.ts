@@ -47,6 +47,7 @@ const baseRow: TripsRow = {
 const { redis, ratelimit } = setupUpstashMocks();
 
 type SupabaseMockOptions = {
+  accessResult?: { data: { id: number } | null; error: unknown | null };
   deleteResult?: { count: number; error: unknown | null };
   getUserResult?: {
     data: { user: { id: string } | null } | null;
@@ -62,46 +63,57 @@ function createSupabaseMock(
 ) {
   const row: TripsRow = { ...baseRow, ...(rowOverride ?? {}) };
   const singleResult = opts?.singleResult ?? { data: row, error: null };
+  const accessResult = opts?.accessResult ?? {
+    data: { id: row.id },
+    error: null,
+  };
   const updateResult = opts?.updateResult ?? {
     data: { ...row, ...(rowOverride ?? {}) },
     error: null,
   };
   const deleteResult = opts?.deleteResult ?? { count: 1, error: null };
-  const builder = {
-    delete() {
-      this.operation = "delete";
-      return this;
-    },
-    eq() {
-      return this;
-    },
-    error: null as unknown,
-    maybeSingle: vi.fn(() => builder.single()),
-    operation: "select" as "select" | "update" | "delete",
-    select() {
-      if (this.operation !== "update") {
-        this.operation = "select";
-      }
-      return this;
-    },
-    single: vi.fn(() => {
-      if (builder.operation === "select") return singleResult;
-      if (builder.operation === "update") return updateResult;
-      return { data: null, error: null };
-    }),
-    // biome-ignore lint/suspicious/noThenProperty: Mock promise-like object for testing
-    then(onFulfilled: (value: { count: number; error: unknown | null }) => unknown) {
-      if (this.operation === "delete") {
-        return Promise.resolve(deleteResult).then(onFulfilled);
-      }
-      return Promise.resolve({ count: 0, error: null }).then(onFulfilled);
-    },
-    update(payload: Record<string, unknown>) {
-      this.operation = "update";
-      this.updatePayload = payload;
-      return this;
-    },
-    updatePayload: {} as Record<string, unknown>,
+
+  const createBuilder = () => {
+    const builder = {
+      delete() {
+        this.operation = "delete";
+        return this;
+      },
+      eq() {
+        return this;
+      },
+      error: null as unknown,
+      maybeSingle: vi.fn(() => builder.single()),
+      operation: "select" as "select" | "update" | "delete",
+      select(fields?: string) {
+        this.selectFields = fields ?? "*";
+        if (this.operation !== "update") {
+          this.operation = "select";
+        }
+        return this;
+      },
+      selectFields: "*" as string,
+      single: vi.fn(() => {
+        if (builder.operation === "update") return updateResult;
+        if (builder.selectFields === "id") return accessResult;
+        return singleResult;
+      }),
+      // biome-ignore lint/suspicious/noThenProperty: Mock promise-like object for testing
+      then(onFulfilled: (value: { count: number; error: unknown | null }) => unknown) {
+        if (this.operation === "delete") {
+          return Promise.resolve(deleteResult).then(onFulfilled);
+        }
+        return Promise.resolve({ count: 0, error: null }).then(onFulfilled);
+      },
+      update(payload: Record<string, unknown>) {
+        this.operation = "update";
+        this.updatePayload = payload;
+        return this;
+      },
+      updatePayload: {} as Record<string, unknown>,
+    };
+
+    return builder;
   };
 
   return {
@@ -111,7 +123,7 @@ function createSupabaseMock(
           opts?.getUserResult ?? { data: { user: { id: row.user_id } }, error: null }
       ),
     },
-    from: vi.fn(() => builder),
+    from: vi.fn(() => createBuilder()),
   };
 }
 
@@ -185,6 +197,22 @@ describe("/api/trips/[id]", () => {
     expect(res.status).toBe(200);
     expect(json.destination).toBe("Rome");
     expect(json.title).toBe("Updated Trip");
+  });
+
+  it("returns 403 when update affects no rows but trip exists", async () => {
+    const mockSupabase = createSupabaseMock(undefined, {
+      accessResult: { data: { id: baseRow.id }, error: null },
+      updateResult: { data: null, error: null },
+    });
+    setSupabaseFactoryForTests(() => Promise.resolve(mockSupabase as never));
+
+    const req = createMockNextRequest({
+      body: { destination: "Rome" },
+      method: "PUT",
+      url: "http://localhost/api/trips/1",
+    });
+    const res = await PUT(req, createRouteParamsContext({ id: "1" }));
+    expect(res.status).toBe(403);
   });
 
   it("deletes a trip and returns 204", async () => {

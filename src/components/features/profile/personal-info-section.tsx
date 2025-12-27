@@ -70,7 +70,7 @@ export function PersonalInfoSection() {
     [authUser]
   );
 
-  const form = useZodForm<PersonalInfoFormData>({
+  const form = useZodForm({
     defaultValues,
     mode: "onChange",
     schema: personalInfoFormSchema,

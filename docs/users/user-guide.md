@@ -83,20 +83,25 @@ Create detailed trip schedules:
 
 ### Sharing Trips
 
-Share trips with others for collaborative planning:
+Invite other people to a trip for shared planning:
 
-- **Invite collaborators**: Add people by email or share link
-- **Permission levels**: View, edit, or admin access
-- **Real-time updates**: See changes as collaborators make them
+- **Invite by email**: Trip owners can invite collaborators from the trip’s Collaborate page (`/dashboard/trips/{id}/collaborate`).
+- **Roles**:
+  - `viewer`: read-only access
+  - `editor`: can edit trip details
+  - `admin`: can edit trip details (owner-managed)
+- **Access model**: Only invited collaborators can access a trip; sharing a URL does not grant access by itself.
+- **Real-time activity**: Collaboration actions and edits can be broadcast to trip members when connected.
+- **Scope**: Collaboration currently focuses on trip details and collaborator management; other trip content may remain owner-only.
 
-### Group Decision Making
+### Group Decision Making (Planned)
 
-Tools for group trip planning:
+Not implemented yet:
 
-- **Voting on options**: Let group members vote on flights, hotels, activities
-- **Comment threads**: Discuss options and preferences
-- **Task assignment**: Assign planning tasks to different people
-- **Cost sharing**: Split expenses and track contributions
+- Voting on options
+- Comment threads
+- Task assignment
+- Cost sharing
 
 ## Budget Management
 

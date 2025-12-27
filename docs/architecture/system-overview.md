@@ -18,12 +18,12 @@ graph TD
 
 ## Stack Snapshot (from `package.json`)
 
-- Next.js `16.0.3`, React `19.2.x`, TypeScript `5.9.x`.
-- AI SDK core `ai@6.0.0-beta.99`; React hooks `@ai-sdk/react@3.0.0-beta.99`; providers `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/xai`; gateway via `createGateway`.
-- Supabase SSR `@supabase/ssr@0.7.0`, browser client `@supabase/supabase-js@2.80.0`, Vault, pgvector, Realtime.
-- Upstash `@upstash/redis@1.35.6`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@2.8.4`.
-- UI: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Framer Motion.
-- Payments/Email: Stripe `^19.3.0`, Resend `^6.5.0`.
+- Next.js `^16.1.1`, React `^19.2.3`, TypeScript `^5.9.3`.
+- AI SDK core `ai@6.0.3`; React hooks `@ai-sdk/react@3.0.3`; providers `@ai-sdk/openai@3.0.1`, `@ai-sdk/anthropic@3.0.1`, `@ai-sdk/xai@3.0.1`; gateway via `createGateway`.
+- Supabase SSR `@supabase/ssr@^0.8.0`, browser client `@supabase/supabase-js@^2.89.0`, Vault, pgvector, Realtime.
+- Upstash `@upstash/redis@^1.36.0`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@^2.8.4`.
+- UI: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion.
+- Payments/Email: Stripe `^20.1.0`, Resend `^6.6.0`.
 - Scheduling/Calendar: `ical-generator@10.0.0`, Google Calendar integration in `src/lib/calendar`.
 - State: Server Components by default; client state with Zustand; server state with TanStack Query.
 - Observability: `@vercel/otel`, `@opentelemetry/api` with helpers in `src/lib/telemetry` (see `docs/development/backend/observability.md`).

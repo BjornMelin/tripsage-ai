@@ -139,6 +139,10 @@ export const ROUTE_RATE_LIMITS = {
   timezone: { limit: 60, window: "1 m" },
 
   // Trips
+  "trips:collaborators:invite": { limit: 10, window: "1 m" },
+  "trips:collaborators:list": { limit: 60, window: "1 m" },
+  "trips:collaborators:remove": { limit: 20, window: "1 m" },
+  "trips:collaborators:update": { limit: 20, window: "1 m" },
   "trips:create": { limit: 30, window: "1 m" },
   "trips:delete": { limit: 10, window: "1 m" },
   "trips:detail": { limit: 60, window: "1 m" },

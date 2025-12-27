@@ -602,7 +602,7 @@
 
 **References:**  
 
-- <https://github.com/vercel/ai/blob/ai@6.0.0-beta.128/content/docs/02-foundations/04-tools.mdx>
+- <https://ai-sdk.dev/docs/foundations/tools>
 
 ### REL-002 - Major - Reliability - AI tool uses loopback fetch to authenticated ICS export route (likely 401)
 

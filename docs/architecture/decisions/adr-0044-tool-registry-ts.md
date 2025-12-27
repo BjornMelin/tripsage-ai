@@ -14,7 +14,7 @@
 ## Decision
 
 - Implement a centralized tool registry `src/ai/tools/index.ts` and domain tools (`web-search`, `web-crawl`, `weather`, `flights`, `maps`, `accommodations`, `memory`).
-- Integrate optional MCP tools discovery at runtime in `src/app/api/chat/stream/_handler.ts` using `@ai-sdk/mcp@1.0.0-beta.15` SSE transport.
+- Integrate optional MCP tools discovery at runtime in `src/app/api/chat/stream/_handler.ts` using `@ai-sdk/mcp@1.0.1` SSE transport.
 - Require all server tools under `src/ai/tools/server` to use `createAiTool` with `outputSchema` + `validateOutput: true`; CI enforces this via `scripts/check-ai-tools.mjs`.
 - Enforce security via:
   - Upstash Redis caching and simple rate-limit-compatible patterns.
@@ -31,4 +31,4 @@
 
 - Tool registry: `src/ai/tools/index.ts`
 - Chat stream integration: `src/app/api/chat/stream/_handler.ts`
-- MCP client: `@ai-sdk/mcp@1.0.0-beta.15`
+- MCP client: `@ai-sdk/mcp@1.0.1`

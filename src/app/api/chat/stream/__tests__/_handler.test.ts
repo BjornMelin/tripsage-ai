@@ -8,7 +8,7 @@ import type { ChatDeps, ProviderResolver } from "../_handler";
 
 type AgentUIStreamOptions = {
   agent: unknown;
-  messages: UIMessage[];
+  uiMessages: UIMessage[];
   onError?: (err: unknown) => string;
   onFinish?: (event: unknown) => void | Promise<void>;
 };
@@ -69,10 +69,7 @@ const createResolver =
  * @param memories - Array of memory content strings for memory hydration testing.
  * @returns Mock Supabase client with basic database operations.
  */
-function fakeSupabase(
-  userId: string | null,
-  memories: string[] = []
-): ChatDeps["supabase"] {
+function fakeSupabase(memories: string[] = []): ChatDeps["supabase"] {
   return createMockSupabaseClient({
     selectResults: {
       memories: {
@@ -81,7 +78,7 @@ function fakeSupabase(
         error: null,
       },
     },
-    user: userId ? { id: userId } : null,
+    user: { id: "ignored" },
   });
 }
 
@@ -93,19 +90,6 @@ describe("handleChatStream", () => {
     );
   });
 
-  it("401 when unauthenticated", async () => {
-    const res = await handleChatStream(
-      {
-        resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase(null),
-      },
-      { messages: [] }
-    );
-    expect(res.status).toBe(401);
-    const body = await res.json();
-    expect(body.error).toBe("unauthorized");
-  });
-
   it("creates agent and streams response for authenticated user", async () => {
     const res = await handleChatStream(
       {
@@ -113,7 +97,7 @@ describe("handleChatStream", () => {
         config: { defaultMaxTokens: 256 },
         logger: { error: vi.fn(), info: vi.fn() },
         resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase("u4"),
+        supabase: fakeSupabase(),
       },
       {
         messages: [
@@ -124,23 +108,11 @@ describe("handleChatStream", () => {
           } satisfies UIMessage,
         ],
         sessionId: "s1",
+        userId: "u4",
       }
     );
     expect(res.status).toBe(200);
     expect(mockCreateAgentUIStreamResponse).toHaveBeenCalled();
-  });
-
-  it("429 when rate limited", async () => {
-    const res = await handleChatStream(
-      {
-        limit: vi.fn(async () => ({ success: false })) as ChatDeps["limit"],
-        resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase("u1"),
-      },
-      { ip: "1.2.3.4", messages: [] }
-    );
-    expect(res.status).toBe(429);
-    expect(res.headers.get("Retry-After")).toBe("60");
   });
 
   it("400 on invalid attachment type", async () => {
@@ -154,7 +126,7 @@ describe("handleChatStream", () => {
     const res = await handleChatStream(
       {
         resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase("u2"),
+        supabase: fakeSupabase(),
       },
       {
         messages: [
@@ -171,6 +143,7 @@ describe("handleChatStream", () => {
             role: "user",
           } satisfies UIMessage,
         ],
+        userId: "u2",
       }
     );
     expect(res.status).toBe(400);
@@ -191,7 +164,7 @@ describe("handleChatStream", () => {
     const res = await handleChatStream(
       {
         resolveProvider,
-        supabase: fakeSupabase("u5"),
+        supabase: fakeSupabase(),
       },
       {
         messages: [
@@ -202,6 +175,7 @@ describe("handleChatStream", () => {
           } satisfies UIMessage,
         ],
         model: "claude-3.5-sonnet",
+        userId: "u5",
       }
     );
     expect(res.status).toBe(200);
@@ -221,11 +195,12 @@ describe("handleChatStream", () => {
       {
         config: { defaultMaxTokens: 512 },
         resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase("u6"),
+        supabase: fakeSupabase(),
       },
       {
         desiredMaxTokens: 256,
         messages,
+        userId: "u6",
       }
     );
 
@@ -247,7 +222,7 @@ describe("handleChatStream", () => {
       handleChatStream(
         {
           resolveProvider,
-          supabase: fakeSupabase("u7"),
+          supabase: fakeSupabase(),
         },
         {
           messages: [
@@ -257,6 +232,7 @@ describe("handleChatStream", () => {
               role: "user",
             } satisfies UIMessage,
           ],
+          userId: "u7",
         }
       )
     ).rejects.toThrow("Provider resolution failed");
@@ -278,7 +254,7 @@ describe("handleChatStream", () => {
       {
         logger,
         resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase("u8"),
+        supabase: fakeSupabase(),
       },
       {
         messages: [
@@ -288,6 +264,7 @@ describe("handleChatStream", () => {
             role: "user",
           } satisfies UIMessage,
         ],
+        userId: "u8",
       }
     );
 
@@ -319,7 +296,7 @@ describe("handleChatStream", () => {
       {
         logger,
         resolveProvider: createResolver("gpt-4o-mini"),
-        supabase: fakeSupabase("u9"),
+        supabase: fakeSupabase(),
       },
       {
         messages: [
@@ -330,6 +307,7 @@ describe("handleChatStream", () => {
           } satisfies UIMessage,
         ],
         sessionId: "s9",
+        userId: "u9",
       }
     );
 

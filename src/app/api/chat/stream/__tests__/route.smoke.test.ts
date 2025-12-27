@@ -4,6 +4,7 @@ import type { ProviderResolution } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import type { ChatDeps } from "../_handler";
 import { handleChatStream } from "../_handler";
@@ -56,39 +57,26 @@ vi.mock("@/lib/security/random", () => ({
 const MOCK_RESOLVE_PROVIDER = vi.hoisted(() =>
   vi.fn(
     async (): Promise<ProviderResolution> => ({
-      model: {
-        id: "gpt-4o-mini",
-        providerId: "openai",
-      } as unknown as LanguageModel,
+      model: unsafeCast<LanguageModel>({ id: "gpt-4o-mini", providerId: "openai" }),
       modelId: "gpt-4o-mini",
       provider: "openai" as const,
     })
   )
 );
 
-const MOCK_RATE_LIMITER = vi.hoisted(() =>
-  vi.fn(async () => ({
-    limit: 40,
-    remaining: 39,
-    reset: 60_000,
-    success: true,
-  }))
-);
-
-const makeSupabase = (userId: string | null): TypedServerSupabase =>
-  createMockSupabaseClient({ user: userId ? { id: userId } : null });
+const makeSupabase = (): TypedServerSupabase =>
+  createMockSupabaseClient({ user: { id: "user-1" } });
 
 describe("/api/chat/stream route smoke", () => {
   const createDeps = (overrides?: Partial<ChatDeps>): ChatDeps => ({
     clock: { now: () => 0 },
     config: { defaultMaxTokens: 1024 },
-    limit: MOCK_RATE_LIMITER,
     logger: {
       error: vi.fn(),
       info: vi.fn(),
     },
     resolveProvider: MOCK_RESOLVE_PROVIDER,
-    supabase: makeSupabase("user-1"),
+    supabase: makeSupabase(),
     ...overrides,
   });
 
@@ -96,28 +84,16 @@ describe("/api/chat/stream route smoke", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 unauthenticated", async () => {
-    const deps = createDeps({
-      supabase: makeSupabase(null),
+  it("resolves provider using the injected userId", async () => {
+    const deps = createDeps();
+
+    await handleChatStream(deps, {
+      ip: "1.2.3.4",
+      messages: [],
+      userId: "user-1",
     });
 
-    const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 429 when rate limited", async () => {
-    const deps = createDeps({
-      limit: vi.fn(async () => ({
-        limit: 40,
-        remaining: 0,
-        reset: 60_000,
-        success: false,
-      })),
-    });
-
-    const res = await handleChatStream(deps, { ip: "1.2.3.4", messages: [] });
-    expect(res.status).toBe(429);
-    expect(res.headers.get("Retry-After")).toBe("60");
+    expect(deps.resolveProvider).toHaveBeenCalledWith("user-1", undefined);
   });
 
   it("returns 200 on success with mocked agent", async () => {
@@ -132,6 +108,7 @@ describe("/api/chat/stream route smoke", () => {
           role: "user" as const,
         },
       ] as UIMessage[],
+      userId: "user-1",
     };
 
     const res = await handleChatStream(deps, payload);

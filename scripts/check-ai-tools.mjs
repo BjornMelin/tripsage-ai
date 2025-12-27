@@ -15,8 +15,8 @@ const REPO_ROOT = path.join(DIRNAME, "..");
 
 const TOOL_MARKER = "ai-tool-check: allow-raw-tool";
 const TOOL_ALLOWLIST = new Map([
-  // TODO(ARCH-002): Legacy exceptions only. Keep this list small and burn down.
-  // ["src/ai/tools/server/example.ts", "Reason + tracking ticket"],
+  // ARCH-002 (deliberate debt): Legacy exceptions only. Keep this list small and burn down.
+  // Format: ["src/ai/tools/server/example.ts", "Justification (ARCH-002 / GH#1234)"],
 ]);
 
 const TOOL_IMPORT_PATTERN = /import\s*{[^}]*\btool\b[^}]*}\s*from\s*["']ai["']/;
@@ -27,6 +27,16 @@ const isMainModule = (() => {
   if (!entry) return false;
   return path.resolve(entry) === FILENAME;
 })();
+
+for (const [allowlistPath, allowlistReason] of TOOL_ALLOWLIST) {
+  if (allowlistPath.trim().length === 0 || allowlistReason.trim().length === 0) {
+    console.error("❌ Invalid TOOL_ALLOWLIST entry.");
+    console.error(
+      `   Expected: ["src/ai/tools/server/...", "Justification (TRACKING-ID)"] — got: ["${allowlistPath}", "${allowlistReason}"]`
+    );
+    process.exit(1);
+  }
+}
 
 function stripNonCode(content) {
   let out = "";

@@ -5,6 +5,18 @@
 "use client";
 
 import type { UiTrip } from "@schemas/trips";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  AlertCircleIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DollarSignIcon,
+  Loader2Icon,
+  MapPinIcon,
+  UsersIcon,
+} from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -74,32 +86,27 @@ function GetConnectionBadgeProps(state: ConnectionState) {
   return CONNECTION_BADGE_PROPS[state];
 }
 
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircleIcon,
-  CalendarIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  DollarSignIcon,
-  Loader2Icon,
-  MapPinIcon,
-  UsersIcon,
-} from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
-
 /**
  * Interface for the optimistic trip updates props.
  */
 interface OptimisticTripUpdatesProps {
   /** The ID of the trip to update. */
   tripId: number;
+  /** Whether the current user can edit the trip. Defaults to true. */
+  canEdit?: boolean;
+  /** Optional callback to emit activity items to a shared feed. */
+  onActivity?: (input: { kind: "trip_updated"; message: string }) => void;
 }
 
 /**
  * Component demonstrating optimistic updates for trip editing
  * Shows real-time collaboration with instant UI feedback
  */
-export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
+export function OptimisticTripUpdates({
+  tripId,
+  canEdit = true,
+  onActivity,
+}: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateTrip = useUpdateTrip();
@@ -175,6 +182,14 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     field: TripUpdateKey,
     value: TripUpdate[TripUpdateKey]
   ) => {
+    if (!canEdit) {
+      toast({
+        description: "You have view-only access to this trip.",
+        title: "Read-only",
+      });
+      return;
+    }
+
     if (!trip) {
       toast({
         description: "Trip data is still loading. Please wait and try again.",
@@ -248,6 +263,11 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         });
       }, 2000);
 
+      onActivity?.({
+        kind: "trip_updated",
+        message: `Updated ${field.replaceAll("_", " ")}`,
+      });
+
       /**
        * Show a success toast.
        */
@@ -316,6 +336,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
    * @returns A promise that resolves to the input blur.
    */
   const handleInputBlur = (field: keyof TripUpdate) => {
+    if (!canEdit) return;
     const value = formData[field];
     const uiKey = fieldToUiKey[field];
     const currentValue = uiKey && trip ? trip[uiKey] : undefined;
@@ -366,10 +387,17 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
     const { className, icon: Icon, label } = GetConnectionBadgeProps(state);
 
     return (
-      <Badge className={`mb-4 ${className}`}>
-        <Icon className="h-3 w-3 mr-1" />
-        {label}
-      </Badge>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Badge className={className}>
+          <Icon className="h-3 w-3 mr-1" />
+          {label}
+        </Badge>
+        {!canEdit && (
+          <Badge variant="secondary" className="border border-dashed">
+            View only
+          </Badge>
+        )}
+      </div>
     );
   };
 
@@ -463,6 +491,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                 value={formData.name || ""}
                 onChange={(e) => handleInputChange("name", e.target.value)}
                 onBlur={() => handleInputBlur("name")}
+                disabled={!canEdit}
                 placeholder="Enter trip name..."
               />
             </div>
@@ -480,6 +509,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                 value={formData.destination || ""}
                 onChange={(e) => handleInputChange("destination", e.target.value)}
                 onBlur={() => handleInputBlur("destination")}
+                disabled={!canEdit}
                 placeholder="Enter destination..."
               />
             </div>
@@ -498,6 +528,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                   handleInputChange("budget", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("budget")}
+                disabled={!canEdit}
                 placeholder="Enter budget..."
               />
             </div>
@@ -517,6 +548,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
                   handleInputChange("travelers", Number.parseInt(e.target.value, 10))
                 }
                 onBlur={() => handleInputBlur("travelers")}
+                disabled={!canEdit}
                 placeholder="Number of travelers..."
               />
             </div>
@@ -603,42 +635,20 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
  * @returns The collaboration indicator component.
  */
 export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) {
-  const [activeCollaborators] = useState([
-    { editing: "budget", id: "user-456", name: "Alice Johnson" },
-    { editing: null, id: "user-789", name: "Bob Smith" },
-  ]);
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <UsersIcon className="h-5 w-5" />
           <span>Active Collaborators</span>
+          <Badge variant="secondary">Coming soon</Badge>
         </CardTitle>
       </CardHeader>
 
       <CardContent>
-        <div className="space-y-2">
-          {activeCollaborators.map((collaborator) => (
-            <div
-              key={collaborator.id}
-              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-            >
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${ExtractClass(STATUS_TONES.active, "bg-")}`}
-                />
-                <span className="text-sm font-medium">{collaborator.name}</span>
-              </div>
-
-              {collaborator.editing && (
-                <Badge variant="secondary" className="text-xs">
-                  Editing {collaborator.editing}
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Presence indicators are coming soon.
+        </p>
       </CardContent>
     </Card>
   );
