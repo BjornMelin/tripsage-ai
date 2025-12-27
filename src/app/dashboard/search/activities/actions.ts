@@ -97,7 +97,7 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
     });
     return [];
   });
-  return rows.map(mapDbTripToUi);
+  return rows.map((row) => mapDbTripToUi(row, { currentUserId: user.id }));
 }
 
 /**
