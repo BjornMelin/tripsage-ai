@@ -24,11 +24,13 @@ vi.mock("@/lib/env/server", () => ({
 
 // Mock accommodations service
 const mockSearch = vi.hoisted(() => vi.fn());
-vi.mock("@domain/accommodations/container", () => ({
-  getAccommodationsService: () => ({
-    search: mockSearch,
-  }),
-}));
+vi.mock("@domain/accommodations/service", () => {
+  class MockAccommodationsService {
+    search = mockSearch;
+  }
+
+  return { AccommodationsService: MockAccommodationsService };
+});
 
 // Import after mocks
 import { searchHotelsAction } from "../actions";

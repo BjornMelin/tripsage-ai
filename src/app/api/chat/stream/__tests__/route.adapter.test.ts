@@ -46,6 +46,7 @@ describe("/api/chat/stream route adapter", () => {
       { messages: [] },
       { headers: { "x-forwarded-for": "1.2.3.4" } }
     );
+    const abortSignal = req.signal;
     const res = await mod.POST(req, createRouteParamsContext());
 
     expect(res.status).toBe(200);
@@ -53,6 +54,10 @@ describe("/api/chat/stream route adapter", () => {
     const call = HANDLE_CHAT_STREAM.mock.calls[0];
     expect(call).toBeDefined();
     const payload = call?.[1];
-    expect(payload).toMatchObject({ ip: "1.2.3.4", messages: [] });
+    expect(payload).toMatchObject({
+      abortSignal,
+      ip: "1.2.3.4",
+      messages: [],
+    });
   });
 });

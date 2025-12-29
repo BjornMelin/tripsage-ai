@@ -447,78 +447,78 @@ Plan:
 
 ### 9.2 Architecture & Boundaries
 
-- [ ] Remove domain singleton containers (Architecture) — refs: TD-2 — Priority: High
-  - [ ] Delete `src/domain/activities/container.ts`
-  - [ ] Delete `src/domain/accommodations/container.ts`
-  - [ ] Replace all call sites (construct deps inside handler / tool execute):
-    - [ ] `src/app/api/activities/search/route.ts`
-    - [ ] `src/app/api/activities/[id]/route.ts`
-    - [ ] `src/app/api/accommodations/search/route.ts`
-    - [ ] `src/app/dashboard/search/unified/actions.ts`
-    - [ ] `src/ai/tools/server/activities.ts`
-    - [ ] `src/ai/tools/server/accommodations.ts`
-  - [ ] Verify no remaining usage: `rg "getActivitiesService\\(|getAccommodationsService\\(" src` returns 0 matches
+- [x] Remove domain singleton containers (Architecture) — refs: TD-2 — Priority: High
+  - [x] Delete `src/domain/activities/container.ts`
+  - [x] Delete `src/domain/accommodations/container.ts`
+  - [x] Replace all call sites (construct deps inside handler / tool execute):
+    - [x] `src/app/api/activities/search/route.ts`
+    - [x] `src/app/api/activities/[id]/route.ts`
+    - [x] `src/app/api/accommodations/search/route.ts`
+    - [x] `src/app/dashboard/search/unified/actions.ts`
+    - [x] `src/ai/tools/server/activities.ts`
+    - [x] `src/ai/tools/server/accommodations.ts`
+  - [x] Verify no remaining usage: `rg "getActivitiesService\\(|getAccommodationsService\\(" src` returns 0 matches
   - **Done when:** containers removed + all above call sites use explicit factories/constructors without module-scope singletons.
 
-- [ ] Activities domain: isolate infra + AI tooling behind injected deps (Architecture) — refs: TD-1 — Priority: High
+- [x] Activities domain: isolate infra + AI tooling behind injected deps (Architecture) — refs: TD-1 — Priority: High
   - **Goal:** `src/domain/activities/**` should only import from `@domain/*` and `@schemas/*` (and local `./*`), mirroring the `src/domain/flights/service.ts` pattern.
-  - [ ] Refactor `src/domain/activities/service.ts`:
-    - [ ] Remove direct import of `@ai/tools/server/web-search` (inject a `webSearch` function/adapter instead)
-    - [ ] Remove direct imports of `@/lib/google/places-activities` (inject Places search/detail fns)
-    - [ ] Remove direct imports of `@/lib/*` infra helpers (hashing, logging, telemetry) by injecting the minimal functions needed
-    - [ ] Ensure all non-determinism is injectable (`clock`, `id` generator) for tests
-  - [ ] Update entrypoints to provide the adapters (no module-scope wiring):
-    - [ ] `src/app/api/activities/search/route.ts`
-    - [ ] `src/app/api/activities/[id]/route.ts`
-    - [ ] `src/ai/tools/server/activities.ts`
-  - [ ] Add/update focused tests for the extracted “core” logic (fallback trigger rules; cache hit/miss shaping) using fakes instead of network — refs: TD-9 — suggested location: `src/domain/activities/service.test.ts`
+  - [x] Refactor `src/domain/activities/service.ts`:
+    - [x] Remove direct import of `@ai/tools/server/web-search` (inject a `webSearch` function/adapter instead)
+    - [x] Remove direct imports of `@/lib/google/places-activities` (inject Places search/detail fns)
+    - [x] Remove direct imports of `@/lib/*` infra helpers (hashing, logging, telemetry) by injecting the minimal functions needed
+    - [x] Ensure all non-determinism is injectable (`clock`, `id` generator) for tests
+  - [x] Update entrypoints to provide the adapters (no module-scope wiring):
+    - [x] `src/app/api/activities/search/route.ts`
+    - [x] `src/app/api/activities/[id]/route.ts`
+    - [x] `src/ai/tools/server/activities.ts`
+  - [x] Add/update focused tests for the extracted “core” logic (fallback trigger rules; cache hit/miss shaping) using fakes instead of network — refs: TD-9 — suggested location: `src/domain/activities/service.test.ts`
   - **Done when:** `src/domain/activities/service.ts` no longer imports `@ai/tools/*` or `@/lib/*`, and `pnpm check:no-new-domain-infra-imports` stays green.
 
-- [ ] Accommodations domain: isolate infra behind injected deps (Architecture) — refs: TD-1, TD-14 — Priority: High
+- [x] Accommodations domain: isolate infra behind injected deps (Architecture) — refs: TD-1, TD-14 — Priority: High
   - **Goal:** converge on the `flights` style: domain logic + provider adapter(s) with infra wiring in entrypoints.
-  - [ ] Fix TD-14 while refactoring: remove the Telemetry span type extraction hack and use a direct type import from `@/lib/telemetry/span`.
-  - [ ] Refactor `src/domain/accommodations/service.ts`:
-    - [ ] Remove direct imports of cache helpers (`@/lib/cache/*`) by injecting cache get/set/versioning functions
-    - [ ] Remove direct imports of Google geocoding/enrichment (`@/lib/google/*`) by injecting adapters
-    - [ ] Remove direct import of retry helper (`@/lib/http/retry`) by injecting `retry` function
-    - [ ] Move rate limiter creation out of the domain service (rate limiting should live in route/tool guards)
-  - [ ] Update entrypoints to provide the adapters:
-    - [ ] `src/app/api/accommodations/search/route.ts`
-    - [ ] `src/app/dashboard/search/unified/actions.ts`
-    - [ ] `src/ai/tools/server/accommodations.ts`
-  - [ ] Add/update tests around the domain contract (cache-aside correctness; error mapping) using fake adapters
+  - [x] Fix TD-14 while refactoring: remove the Telemetry span type extraction hack and use a direct type import from `@/lib/telemetry/span`.
+  - [x] Refactor `src/domain/accommodations/service.ts`:
+    - [x] Remove direct imports of cache helpers (`@/lib/cache/*`) by injecting cache get/set/versioning functions
+    - [x] Remove direct imports of Google geocoding/enrichment (`@/lib/google/*`) by injecting adapters
+    - [x] Remove direct import of retry helper (`@/lib/http/retry`) by injecting `retry` function
+    - [x] Move rate limiter creation out of the domain service (rate limiting should live in route/tool guards)
+  - [x] Update entrypoints to provide the adapters:
+    - [x] `src/app/api/accommodations/search/route.ts`
+    - [x] `src/app/dashboard/search/unified/actions.ts`
+    - [x] `src/ai/tools/server/accommodations.ts`
+  - [x] Add/update tests around the domain contract (cache-aside correctness; error mapping) using fake adapters
   - **Done when:** `src/domain/accommodations/service.ts` no longer imports `@/lib/cache/*`, `@/lib/google/*`, or `@/lib/http/retry`, and behavior is preserved via tests.
 
-- [ ] Standardize route handlers to construct deps inside handler (Architecture) — refs: TD-2, TD-1 — Priority: High
-  - [ ] Audit `src/app/api/**/route.ts` for module-scope service instances/clients
-  - [ ] Ensure per-request construction for anything request-scoped (Supabase SSR clients, user-dependent configs)
-  - [ ] For safe singleton reuse (e.g., pure config constants), document rationale
+- [x] Standardize route handlers to construct deps inside handler (Architecture) — refs: TD-2, TD-1 — Priority: High
+  - [x] Audit `src/app/api/**/route.ts` for module-scope service instances/clients (within the TD-1/TD-2 scope)
+  - [x] Ensure per-request construction for anything request-scoped (Supabase SSR clients, user-dependent configs)
+  - [x] For safe singleton reuse (e.g., pure config constants), document rationale
   - **Done when:** no route handler imports a domain singleton container; construction patterns match `withApiGuards` expectations.
 
 ### 9.3 Chat Stream Consistency
 
-- [ ] Consolidate chat stream auth/rate-limiting responsibilities (DRY) — refs: TD-3 — Priority: High
-  - [ ] Update `src/app/api/chat/stream/_handler.ts` to accept `user` (from `withApiGuards` context) rather than calling `deps.supabase.auth.getUser()`
-  - [ ] Remove `deps.limit` from `ChatDeps` and delete the dead handler-level rate limit branch (no raw `new Response(...)` 429)
-  - [ ] Wire abort handling using AI SDK v6 support:
-    - [ ] Pass `abortSignal: req.signal` (or equivalent) into `createAgentUIStreamResponse(...)` to cancel streaming on disconnect (see AI SDK v6 ref in Decision Log)
-  - [ ] Ensure all error responses use the standardized helpers (`unauthorizedResponse`, `errorResponse`) and that route-level rate limiting still sets headers via `applyRateLimitHeaders()`
-  - [ ] Update tests for chat stream route and handler:
-    - [ ] `src/app/api/chat/stream/__tests__/route.smoke.test.ts` (adjust mocks so auth is checked once at the guard level)
-    - [ ] Add a regression test that aborting the request stops the stream (if feasible in current test harness)
+- [x] Consolidate chat stream auth/rate-limiting responsibilities (DRY) — refs: TD-3 — Priority: High
+  - [x] Update `src/app/api/chat/stream/_handler.ts` to accept `user` (from `withApiGuards` context) rather than calling `deps.supabase.auth.getUser()`
+  - [x] Remove `deps.limit` from `ChatDeps` and delete the dead handler-level rate limit branch (no raw `new Response(...)` 429)
+  - [x] Wire abort handling using AI SDK v6 support:
+    - [x] Pass `abortSignal: req.signal` (or equivalent) into `createAgentUIStreamResponse(...)` to cancel streaming on disconnect (see AI SDK v6 ref in Decision Log)
+  - [x] Ensure all error responses use the standardized helpers (`unauthorizedResponse`, `errorResponse`) and that route-level rate limiting still sets headers via `applyRateLimitHeaders()`
+  - [x] Update tests for chat stream route and handler:
+    - [x] `src/app/api/chat/stream/__tests__/route.adapter.test.ts` (adjust mocks so auth is checked once at the guard level)
+    - [x] Abort regression (test harness): assert `abortSignal` is forwarded into `createAgentUIStreamResponse(...)` (full stream cancellation is UNVERIFIED in tests)
   - **Done when:** `_handler.ts` contains no `supabase.auth.getUser()` and no handler-level rate limit code path; all affected tests pass.
 
 ### 9.4 Rate-Limiting Consolidation
 
-- [ ] Audit rate-limiting duplication and either consolidate further or document deliberate duplication (KISS) — refs: TD-4 — Priority: Medium
-  - [ ] Document the current split:
+- [x] Audit rate-limiting duplication and either consolidate further or document deliberate duplication (KISS) — refs: TD-4 — Priority: Medium
+  - [x] Document the current split:
     - HTTP routes: `withApiGuards` / `src/lib/api/factory.ts` (error responses + headers via `applyRateLimitHeaders()`)
     - AI tools: `createAiTool` / `src/ai/lib/tool-factory.ts` (tool error shapes via `ToolError`)
-  - [ ] Identify any truly duplicated “primitives” worth extracting (only if it reduces code):
+  - [x] Identify any truly duplicated “primitives” worth extracting (only if it reduces code):
     - Identifier normalization/hashing (already shared via `src/lib/ratelimit/identifier.ts`)
-    - Retry-after computation and window parsing
-  - [ ] If extracting, keep it tiny (one helper module) and keep policy decisions local (KISS)
-  - [ ] If not extracting, document the deliberate duplication and why (different response contracts)
+    - Retry-after computation and window parsing (extracted into `computeRetryAfterSeconds()` in `src/lib/ratelimit/headers.ts`)
+  - [x] If extracting, keep it tiny (one helper module) and keep policy decisions local (KISS)
+  - [x] If not extracting, document the deliberate duplication and why (different response contracts)
   - **Done when:** TD-4 has an explicit final state: consolidated where it helps, or documented deliberate split.
 
 ### 9.5 Type Safety Improvements (Production)
@@ -534,15 +534,15 @@ Plan:
     - [ ] Use a `switch` on the `event` value to call `.on('postgres_changes', { event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' ... })` with **literal** event strings (enables overload selection)
   - **Done when:** `src/hooks/supabase/use-realtime-channel.ts` has no `@ts-expect-error` and no `any` casts around `.on(...)`, and TypeScript passes.
 
-- [ ] Remove `any` in `combineSearchResults` by using schema-inferred types (Typing) — refs: TD-6 — Priority: Medium
-  - [ ] Introduce explicit types derived from `combineSearchResultsInputSchema` and `combineSearchResultsResponseSchema`
-  - [ ] Replace `any` sorting/access with typed reads (or validate/normalize inputs first)
-  - [ ] Keep the implementation small; rely on schema validation + narrow helpers
+- [x] Remove `any` in `combineSearchResults` by using schema-inferred types (Typing) — refs: TD-6 — Priority: Medium
+  - [x] Introduce explicit types derived from `combineSearchResultsInputSchema` and `combineSearchResultsResponseSchema`
+  - [x] Replace `any` sorting/access with typed reads (or validate/normalize inputs first)
+  - [x] Keep the implementation small; rely on schema validation + narrow helpers
   - **Done when:** the Biome `noExplicitAny` suppressions for `combineSearchResults` are removed and output validation still passes.
 
-- [ ] AI SDK tool factory typing: remove `(tool as any)` **only if simpler** (Typing) — refs: TD-6, D7 — Priority: Low
-  - [ ] Attempt to tie `createAiTool` generics directly to the Zod schemas so `tool()` can infer types
-  - [ ] If the refactor increases complexity (more generics / harder call sites), revert and document the cast as deliberate debt
+- [x] AI SDK tool factory typing: remove `(tool as any)` **only if simpler** (Typing) — refs: TD-6, D7 — Priority: Low
+  - [x] Attempt to tie `createAiTool` generics directly to the Zod schemas so `tool()` can infer types
+  - [x] If the refactor increases complexity (more generics / harder call sites), revert and document the cast as deliberate debt
   - **Done when:** either (a) `(tool as any)` is removed without increasing cognitive load, or (b) it is explicitly retained with rationale and a regression test.
 
 - [ ] Standardize env access through validated helpers (Tooling/Safety) — refs: TD-15 — Priority: Medium
@@ -561,19 +561,19 @@ Plan:
 
 ### 9.6 Tests & Coverage
 
-- [ ] Replace remaining test casts with `unsafeCast<T>()` (Testing) — refs: TD-8 — Priority: Low
-  - [ ] Find remaining violations: `rg \"as unknown as\" src | rg -v \"src/test|__tests__\"` (and fix in tests using `unsafeCast<T>()`)
-  - [ ] Update at least: `src/app/api/chat/stream/__tests__/route.smoke.test.ts`
+- [x] Replace remaining test casts with `unsafeCast<T>()` (Testing) — refs: TD-8 — Priority: Low
+  - [x] Find remaining violations: `rg \"as unknown as\" src | rg -v \"src/test|__tests__\"` (and fix in tests using `unsafeCast<T>()`)
+  - [x] Update at least: `src/app/api/chat/stream/__tests__/route.adapter.test.ts`
   - **Done when:** test-only unsafe cast helper is used consistently (no new `as unknown as` in tests).
 
-- [ ] Add focused tests for chat context compression + tool-call pairing logic (Testing) — refs: TD-9 — Priority: Medium
-  - [ ] Identify the smallest pure units inside `src/ai/agents/chat-agent.ts` suitable for unit testing (avoid async Server Component limitations)
-  - [ ] Add deterministic unit tests using AI SDK test helpers (MockLanguageModelV3 / tracked mock models) per repo testing standards
+- [x] Add focused tests for chat context compression + tool-call pairing logic (Testing) — refs: TD-9 — Priority: Medium
+  - [x] Identify the smallest pure units inside `src/ai/agents/chat-agent.ts` suitable for unit testing (avoid async Server Component limitations)
+  - [x] Add deterministic unit tests using AI SDK test helpers (MockLanguageModelV3 / tracked mock models) per repo testing standards
   - **Done when:** the highest-complexity logic is covered by fast unit tests and contributes to coverage improvement.
 
-- [ ] Incrementally raise Vitest coverage thresholds (Testing) — refs: TD-9, D8 — Priority: Medium
-  - [ ] Consult `docs/development/testing/coverage-milestones.md` and choose the next incremental target
-  - [ ] Raise thresholds only after tests are added (avoid “coverage theater”)
+- [x] Incrementally raise Vitest coverage thresholds (Testing) — refs: TD-9, D8 — Priority: Medium
+  - [x] Consult `docs/development/testing/coverage-milestones.md` and choose the next incremental target
+  - [x] Raise thresholds only after tests are added (avoid “coverage theater”)
   - **Done when:** thresholds are higher than baseline and CI remains green.
 
 ### 9.7 Maintainability Refactors
@@ -612,17 +612,28 @@ Plan:
 
 ### 9.10 Security Hardening (AI Markdown Rendering)
 
-- [ ] Disable raw HTML in Streamdown defaults for AI-generated content (Security) — refs: TD-17, D12 — Priority: High
+- [x] Disable raw HTML in Streamdown defaults for AI-generated content (Security) — refs: TD-17, D12 — Priority: High
   - Target file: `src/components/ai-elements/streamdown-config.ts`
-  - [ ] Omit `defaultRehypePlugins.raw` from `streamdownRehypePlugins` so HTML tags are escaped instead of interpreted
-  - [ ] Keep KaTeX + harden restrictions (`allowedProtocols: ['http','https','mailto']`, `allowDataImages: false`)
-  - [ ] Add targeted tests (Vitest/jsdom) to prevent regressions:
-    - [ ] Rendering `<Response>` with HTML tags does not create DOM `<script>` elements and shows escaped text
-    - [ ] `javascript:` links are blocked/rewritten per harden configuration
-  - [ ] Manual smoke: verify KaTeX, code blocks, and Mermaid still render correctly in chat UI
+  - [x] Omit `defaultRehypePlugins.raw` from `streamdownRehypePlugins` so HTML tags are escaped instead of interpreted
+  - [x] Keep KaTeX + harden restrictions (`allowedProtocols: ['http','https','mailto']`, `allowDataImages: false`)
+  - [x] Add targeted tests (Vitest/jsdom) to prevent regressions:
+    - [x] Rendering `<Response>` with HTML tags does not create DOM `<script>` elements and shows escaped text
+    - [x] `javascript:` links are blocked/rewritten per harden configuration
+  - [ ] Manual smoke: verify KaTeX, code blocks, and Mermaid still render correctly in chat UI (UNVERIFIED)
   - **Done when:** AI markdown no longer interprets raw HTML and link protocols are still restricted.
 
 ### 9.B Completed Work (Implemented)
+
+- [x] Finalize Phase 2 architectural and safety burn-down (Architecture/Typing/Security) — refs: TD-1/TD-2/TD-3/TD-4/TD-6/TD-8/TD-9/TD-14/TD-17 — Priority: High
+  - [x] Domain boundaries: remove domain singletons and refactor activities/accommodations toward the flights pattern (TD-1/TD-2/TD-14)
+  - [x] Chat stream: make route adapter the sole owner for auth + route rate limits; keep `_handler.ts` as pure DI (TD-3)
+  - [x] Rate limiting: document the deliberate split (HTTP vs tools) and extract shared retry-after math (TD-4)
+  - [x] Type safety: remove production `any` for `combineSearchResults` and remove tool factory `(tool as any)` (TD-6)
+  - [x] Tests + coverage: replace test-only casts with `unsafeCast<T>()`, add focused chat-agent tests, and raise coverage thresholds (TD-8/TD-9)
+  - [x] Streamdown: disable raw HTML for untrusted AI markdown and add jsdom regressions for XSS and protocol hardening (TD-17)
+  - **Notes:**
+    - TD-17 changes how literal `<tags>` display in AI output (they are escaped) and is covered by jsdom tests.
+    - Chat stream abort behavior is asserted via `abortSignal` forwarding; full end-to-end stream cancellation is UNVERIFIED in automated tests.
 
 - [x] Capture a Phase 2 baseline run (Tooling) — record outputs in **Section 11** — refs: TD-* (all) — Priority: High
   - [x] Record `git status -sb` (note dirty/untracked; confirm whether `.knip-files.json` exists)
@@ -687,12 +698,12 @@ Plan:
 
 ### Phase 2: Outstanding
 
-- 10 major work sections remain; see Section **9.A** for the detailed checklist.
+- 4 major work sections remain (9.5, 9.7, 9.8, 9.9); see Section **9.A** for the detailed checklist.
 
 > This section is updated continuously during **Phase 2** to record the baseline and final verification runs.
 
 - All planned tasks completed: **No** — see remaining items in **9.A**.
-- All technical debt items addressed: **No** — TD-1/TD-2/TD-3/TD-4/TD-5/TD-8/TD-9/TD-13/TD-14/TD-15/TD-16/TD-17 remain.
+- All technical debt items addressed: **No** — TD-5/TD-13/TD-15/TD-16 remain.
 
 ### 2025-12-27 Baseline Snapshot (Phase 2)
 
@@ -708,3 +719,11 @@ Plan:
   - [x] `pnpm check:ai-sdk-version-contract` ✅
 
 - Residual known issues or deliberate debts: tracked as outstanding checklist items in **9.A**.
+
+### 2025-12-29 Verification Snapshot (Phase 2)
+
+- [x] `git status -sb` recorded (worktree is still dirty; Phase 2 implementation changes present).
+- [x] `pnpm biome:fix` ✅
+- [x] `pnpm type-check` ✅
+- [x] `pnpm test:affected` ✅
+  - Guardrails were not re-run in this snapshot (UNVERIFIED); the last recorded guardrail run is the 2025-12-27 baseline above.

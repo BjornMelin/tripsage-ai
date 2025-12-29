@@ -14,6 +14,7 @@ import {
   WritableStream as NodeWritableStream,
 } from "node:stream/web";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { MSW_SUPABASE_URL } from "./msw/constants";
 import { server } from "./msw/server";
 
@@ -107,8 +108,14 @@ afterAll(() => {
       for (const item of items ?? []) {
         const name =
           typeof item === "object" && item && "constructor" in item
-            ? // biome-ignore lint/suspicious/noExplicitAny: debug-only safe cast
-              String((item as any).constructor?.name ?? "Object")
+            ? String(
+                (() => {
+                  const ctorName = unsafeCast<{ constructor?: { name?: unknown } }>(
+                    item
+                  ).constructor?.name;
+                  return typeof ctorName === "string" ? ctorName : "Object";
+                })()
+              )
             : typeof item;
         counts.set(name, (counts.get(name) ?? 0) + 1);
       }

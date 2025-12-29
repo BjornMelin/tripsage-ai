@@ -9,6 +9,7 @@ import type { ChatDeps, ProviderResolver } from "../_handler";
 type AgentUIStreamOptions = {
   agent: unknown;
   uiMessages: UIMessage[];
+  abortSignal?: AbortSignal;
   onError?: (err: unknown) => string;
   onFinish?: (event: unknown) => void | Promise<void>;
 };
@@ -211,6 +212,33 @@ describe("handleChatStream", () => {
         onFinish: expect.any(Function),
         uiMessages: messages,
       })
+    );
+  });
+
+  it("forwards abortSignal into createAgentUIStreamResponse", async () => {
+    const abortController = new AbortController();
+
+    await handleChatStream(
+      {
+        config: { defaultMaxTokens: 512 },
+        resolveProvider: createResolver("gpt-4o-mini"),
+        supabase: fakeSupabase(),
+      },
+      {
+        abortSignal: abortController.signal,
+        messages: [
+          {
+            id: "m1",
+            parts: [{ text: "test message", type: "text" }],
+            role: "user",
+          } satisfies UIMessage,
+        ],
+        userId: "u-abort",
+      }
+    );
+
+    expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal })
     );
   });
 

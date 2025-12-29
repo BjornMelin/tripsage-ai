@@ -37,10 +37,12 @@ const GET_CURRENT_USER = vi.hoisted(() =>
 
 const MOCK_GET_REDIS = vi.hoisted(() => vi.fn(() => undefined));
 
-const MOCK_SERVICE = vi.hoisted(() => ({
-  details: vi.fn(),
-  search: vi.fn(),
-}));
+const MOCK_ACTIVITIES_SEARCH = vi.hoisted(() => vi.fn());
+const MOCK_ACTIVITIES_DETAILS = vi.hoisted(() => vi.fn());
+class MockActivitiesService {
+  details = MOCK_ACTIVITIES_DETAILS;
+  search = MOCK_ACTIVITIES_SEARCH;
+}
 
 vi.mock("@/lib/redis", () => ({
   getRedis: MOCK_GET_REDIS,
@@ -51,8 +53,8 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: GET_CURRENT_USER,
 }));
 
-vi.mock("@domain/activities/container", () => ({
-  getActivitiesService: vi.fn(() => MOCK_SERVICE),
+vi.mock("@domain/activities/service", () => ({
+  ActivitiesService: MockActivitiesService,
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
@@ -121,7 +123,7 @@ describe("/api/activities routes", () => {
         },
       };
 
-      MOCK_SERVICE.search.mockResolvedValue(mockResult);
+      MOCK_ACTIVITIES_SEARCH.mockResolvedValue(mockResult);
 
       const { POST } = await import("../search/route");
       const req = createMockNextRequest({
@@ -136,7 +138,7 @@ describe("/api/activities routes", () => {
       expect(res.status).toBe(200);
       expect(body.activities).toHaveLength(1);
       expect(body.activities[0].name).toBe("Test Activity");
-      expect(MOCK_SERVICE.search).toHaveBeenCalledWith(
+      expect(MOCK_ACTIVITIES_SEARCH).toHaveBeenCalledWith(
         { category: "museums", destination: "Paris" },
         expect.objectContaining({ userId: "user-1" })
       );
@@ -161,7 +163,7 @@ describe("/api/activities routes", () => {
     });
 
     it("should handle service errors", async () => {
-      MOCK_SERVICE.search.mockRejectedValue(new Error("Service error"));
+      MOCK_ACTIVITIES_SEARCH.mockRejectedValue(new Error("Service error"));
 
       const { POST } = await import("../search/route");
       const req = createMockNextRequest({
@@ -222,10 +224,11 @@ describe("/api/activities routes", () => {
         type: "museum",
       };
 
-      MOCK_SERVICE.details.mockResolvedValue(mockActivity);
+      MOCK_ACTIVITIES_DETAILS.mockResolvedValue(mockActivity);
 
       const { GET } = await import("../[id]/route");
       const req = createMockNextRequest({
+        cookies: { "sb-access-token": "test-token" },
         method: "GET",
         url: "http://localhost/api/activities/places/123",
       });
@@ -238,9 +241,9 @@ describe("/api/activities routes", () => {
       expect(res.status).toBe(200);
       expect(body.id).toBe("places/123");
       expect(body.name).toBe("Test Activity");
-      expect(MOCK_SERVICE.details).toHaveBeenCalledWith(
+      expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith(
         "places/123",
-        expect.objectContaining({ userId: expect.any(String) })
+        expect.objectContaining({ userId: "user-1" })
       );
     });
 
@@ -261,7 +264,7 @@ describe("/api/activities routes", () => {
     });
 
     it("should return 404 when activity not found", async () => {
-      MOCK_SERVICE.details.mockRejectedValue(
+      MOCK_ACTIVITIES_DETAILS.mockRejectedValue(
         new Error("Activity not found for Place ID: invalid")
       );
 

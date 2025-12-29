@@ -100,10 +100,10 @@ export default defineConfig({
       thresholds: {
         // Global baseline thresholds (raise incrementally).
         // See docs/development/testing/coverage-milestones.md for current measurements and raise plan.
-        branches: 35,
-        functions: 50,
-        lines: 45,
-        statements: 45,
+        branches: 40,
+        functions: 55,
+        lines: 50,
+        statements: 50,
       },
     },
 

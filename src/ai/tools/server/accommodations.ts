@@ -14,8 +14,10 @@ import {
   TOOL_ERROR_CODES,
   type ToolErrorCode,
 } from "@ai/tools/server/errors";
-import { getAccommodationsService } from "@domain/accommodations/container";
+import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "@domain/accommodations/constants";
 import { ProviderError } from "@domain/accommodations/errors";
+import { AmadeusProviderAdapter } from "@domain/accommodations/providers/amadeus-adapter";
+import { AccommodationsService } from "@domain/accommodations/service";
 import {
   type AccommodationBookingRequest,
   type AccommodationBookingResult,
@@ -35,23 +37,32 @@ import {
   accommodationSearchOutputSchema,
 } from "@schemas/accommodations";
 import { headers } from "next/headers";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { bumpTag, versionedKey } from "@/lib/cache/tags";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
+import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
+import { retryWithBackoff } from "@/lib/http/retry";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireApproval } from "./approvals";
 
-/**
- * Accommodations service instance for tool execution.
- *
- * This service is initialized at module scope, creating a singleton instance.
- * Singleton initialization is appropriate here because:
- * - The service manages connection pooling and shared adapters.
- * - Avoids redundant creation of service instances for each tool execution.
- * - The service is lightweight and always needed for all exported tools.
- *
- * If future requirements change and lazy initialization is needed, refactor accordingly.
- */
-const accommodationsService = getAccommodationsService();
+function createAccommodationsService(): AccommodationsService {
+  return new AccommodationsService({
+    bumpTag,
+    cacheTtlSeconds: ACCOM_SEARCH_CACHE_TTL_SECONDS,
+    canonicalizeParamsForCache,
+    enrichHotelListingWithPlaces,
+    getCachedJson,
+    provider: new AmadeusProviderAdapter(),
+    resolveLocationToLatLng,
+    retryWithBackoff,
+    setCachedJson,
+    supabase: createServerSupabase,
+    versionedKey,
+  });
+}
 
 export { accommodationSearchInputSchema as searchAccommodationsInputSchema };
 
@@ -63,7 +74,8 @@ export const searchAccommodations = createAiTool<
   description:
     "Search for accommodations (hotels and stays) using Amadeus Self-Service APIs with Google Places enrichment. Supports semantic search via RAG for natural language queries.",
   execute: async (params) => {
-    return accommodationsService.search(params, {
+    const service = createAccommodationsService();
+    return service.search(params, {
       sessionId: await maybeGetUserIdentifier(),
     });
   },
@@ -131,8 +143,9 @@ export const getAccommodationDetails = createAiTool<
   description:
     "Retrieve details for a specific accommodation property from Amadeus hotel offers and Google Places content.",
   execute: async (params) => {
+    const service = createAccommodationsService();
     try {
-      return await accommodationsService.details(params);
+      return await service.details(params);
     } catch (error) {
       throw mapProviderError(error, {
         failed: TOOL_ERROR_CODES.accomDetailsFailed,
@@ -156,11 +169,12 @@ export const checkAvailability = createAiTool<
   description:
     "Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking.",
   execute: async (params) => {
+    const service = createAccommodationsService();
     const userId = await getAuthenticatedUserId(
       TOOL_ERROR_CODES.accomBookingSessionRequired
     );
     try {
-      return await accommodationsService.checkAvailability(params, {
+      return await service.checkAvailability(params, {
         sessionId: userId,
         userId,
       });
@@ -187,6 +201,7 @@ export const bookAccommodation = createAiTool<
   description:
     "Complete an accommodation booking via Amadeus Self-Service APIs. Requires a bookingToken from checkAvailability, payment method, and prior approval.",
   execute: async (params) => {
+    const service = createAccommodationsService();
     const sessionId = params.sessionId ?? (await maybeGetUserIdentifier());
     if (!sessionId) {
       throw createToolError(TOOL_ERROR_CODES.accomBookingSessionRequired);
@@ -197,7 +212,7 @@ export const bookAccommodation = createAiTool<
     const idempotencyKey = params.idempotencyKey ?? secureUuid();
 
     try {
-      return await accommodationsService.book(params, {
+      return await service.book(params, {
         processPayment: ({ amountCents, currency }) =>
           processBookingPayment({
             amount: amountCents,

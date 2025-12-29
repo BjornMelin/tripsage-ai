@@ -62,6 +62,7 @@ export interface ChatPayload {
   desiredMaxTokens?: number;
   ip?: string;
   userId?: string;
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -180,6 +181,7 @@ export async function handleChatStream(
 
   // Use createAgentUIStreamResponse for proper agent loop handling
   const response = await createAgentUIStreamResponse({
+    abortSignal: payload.abortSignal,
     agent,
 
     // Handle errors during streaming

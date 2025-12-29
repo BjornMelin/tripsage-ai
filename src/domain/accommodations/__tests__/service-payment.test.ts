@@ -1,47 +1,50 @@
 /** @vitest-environment node */
 
 import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
-import { AccommodationsService } from "@domain/accommodations/service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getCachedJson } from "@/lib/cache/upstash";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
-import type { buildUpstashCacheMock } from "@/test/mocks/cache";
 
-vi.mock("@/lib/cache/upstash", async () => {
-  const { buildUpstashCacheMock: factory } = await import("@/test/mocks/cache");
-  const cache = factory();
-  (globalThis as Record<string, unknown>).__upstashCache = cache;
-  return cache.module;
-});
+type AccommodationsServiceDeps =
+  import("@domain/accommodations/service").AccommodationsServiceDeps;
+type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
 
-function getUpstashCache(): ReturnType<typeof buildUpstashCacheMock> {
-  return (globalThis as Record<string, unknown>).__upstashCache as ReturnType<
-    typeof buildUpstashCacheMock
-  >;
-}
-vi.mock("@/lib/cache/tags", () => ({
-  bumpTag: vi.fn(async () => 1),
-  versionedKey: vi.fn(async (_tag: string, key: string) => `tag:v1:${key}`),
+vi.mock("@/lib/telemetry/alerts", () => ({
+  emitOperationalAlert: vi.fn(),
 }));
 
-vi.mock("@/lib/google/caching", () => ({
-  cacheLatLng: vi.fn(),
-  getCachedLatLng: vi.fn(),
+vi.mock("@/lib/telemetry/span", () => ({
+  withTelemetrySpan: vi.fn(
+    async <T>(
+      _name: string,
+      _options: unknown,
+      fn: (span: {
+        addEvent: (name: string, attrs?: Record<string, unknown>) => void;
+        recordException: (error: unknown) => void;
+      }) => T | Promise<T>
+    ): Promise<T> =>
+      await fn({
+        addEvent: vi.fn(),
+        recordException: vi.fn(),
+      })
+  ),
 }));
+
+const { AccommodationsService } = await import("@domain/accommodations/service");
 
 describe("AccommodationsService booking payments", () => {
   beforeEach(() => {
-    getUpstashCache().reset();
+    vi.clearAllMocks();
   });
 
   it("uses cached availability price for payment processing", async () => {
-    vi.mocked(getCachedJson).mockResolvedValue({
+    const bookingPrice = {
       bookingToken: "token-123",
       price: { currency: "USD", total: "123.45" },
       propertyId: "H1",
       rateId: "token-123",
       userId: "user-1",
-    });
+    };
+
     const processPayment = vi.fn().mockResolvedValue({ paymentIntentId: "pi_test" });
     const providerPayload = { data: { sample: true } };
     const provider: AccommodationProviderAdapter = {
@@ -57,28 +60,54 @@ describe("AccommodationsService booking payments", () => {
       search: vi.fn(),
     };
 
-    const supabase = {
-      from: (table: string) => ({
-        insert: async () => ({ error: null }),
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              single: async () =>
-                table === "trips"
-                  ? { data: { id: 1, user_id: "user-1" }, error: null }
-                  : { data: null, error: null },
+    const supabase = unsafeCast<TypedServerSupabase>({
+      from: (table: string) => {
+        if (table === "trips") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: async () => ({
+                    data: { id: 1, user_id: "user-1" },
+                    error: null,
+                  }),
+                }),
+              }),
             }),
-          }),
-        }),
-      }),
+          };
+        }
+        if (table === "bookings") {
+          return {
+            insert: async () => ({ error: null }),
+          };
+        }
+        return unsafeCast<Record<string, unknown>>({});
+      },
+    });
+
+    let getKey: string | undefined;
+    const getCachedJson: AccommodationsServiceDeps["getCachedJson"] = <T>(
+      key: string
+    ): Promise<T | null> => {
+      getKey = key;
+      return Promise.resolve(unsafeCast<T>(bookingPrice));
     };
 
+    const bumpTag = vi.fn(async () => 1);
+
     const service = new AccommodationsService({
+      bumpTag,
       cacheTtlSeconds: 0,
+      canonicalizeParamsForCache: (params, prefix) =>
+        `${prefix}:${JSON.stringify(params)}`,
+      enrichHotelListingWithPlaces: async (listing) => listing,
+      getCachedJson,
       provider,
-      rateLimiter: undefined,
-      supabase: async () =>
-        unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
+      resolveLocationToLatLng: async (_location) => ({ lat: 1, lon: 1 }),
+      retryWithBackoff: async (fn, _options) => await fn(0),
+      setCachedJson: async () => undefined,
+      supabase: async () => supabase,
+      versionedKey: async (_tag: string, key: string) => `tag:v1:${key}`,
     });
 
     await service.book(
@@ -107,10 +136,12 @@ describe("AccommodationsService booking payments", () => {
       }
     );
 
+    expect(getKey).toContain("token-123");
     expect(processPayment).toHaveBeenCalledWith({
       amountCents: 12345,
       currency: "USD",
     });
+    expect(bumpTag).toHaveBeenCalledWith("accommodations:search");
 
     expect(provider.buildBookingPayload).toHaveBeenCalledWith(
       expect.objectContaining({ bookingToken: "token-123" }),

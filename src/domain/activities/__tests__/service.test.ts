@@ -1,444 +1,243 @@
 /** @vitest-environment node */
 
-import type { ActivitySearchParams } from "@schemas/search";
-import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Activity, ActivitySearchParams } from "@schemas/search";
+import { describe, expect, it, vi } from "vitest";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
-import { server } from "@/test/msw/server";
-import type { ActivitiesServiceDeps } from "../service";
+import { NotFoundError } from "../errors";
+import type { ActivitiesCache, PlacesActivitiesAdapter, WebSearchFn } from "../service";
 import { ActivitiesService } from "../service";
 
-vi.mock("@/lib/env/server", () => ({
-  getGoogleMapsServerKey: vi.fn(() => "test-key"),
-}));
+function makeActivity(partial: Partial<Activity> & Pick<Activity, "id">): Activity {
+  return {
+    coordinates: partial.coordinates,
+    date: partial.date ?? "2025-01-01",
+    description: partial.description ?? "desc",
+    duration: partial.duration ?? 120,
+    id: partial.id,
+    images: partial.images,
+    location: partial.location ?? "somewhere",
+    name: partial.name ?? "name",
+    price: partial.price ?? 2,
+    rating: partial.rating ?? 4.2,
+    type: partial.type ?? "activity",
+  };
+}
 
-vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name, _opts, fn) =>
-    fn({
-      addEvent: vi.fn(),
-      recordException: vi.fn(),
-      setAttribute: vi.fn(),
-    })
-  ),
-}));
+function makePlacesAdapter(
+  overrides?: Partial<PlacesActivitiesAdapter>
+): PlacesActivitiesAdapter {
+  return {
+    buildSearchQuery: vi.fn((destination: string, category?: string) =>
+      [destination, category].filter(Boolean).join(" ")
+    ),
+    getDetails: vi.fn(async (_placeId: string) => null),
+    search: vi.fn(async (_query: string, _limit: number) => []),
+    ...overrides,
+  };
+}
 
-vi.mock("@/lib/telemetry/logger", () => ({
-  createServerLogger: vi.fn(() => ({
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  })),
-}));
-
-vi.mock("@ai/tools/server/web-search", () => ({
-  webSearch: {
-    execute: vi.fn(),
-  },
-}));
+function makeCache(overrides?: Partial<ActivitiesCache>): ActivitiesCache {
+  return {
+    findActivityInRecentSearches: vi.fn(async () => null),
+    getSearch: vi.fn(async () => null),
+    putSearch: vi.fn(async () => undefined),
+    ...overrides,
+  };
+}
 
 describe("ActivitiesService", () => {
-  let mockSupabase: {
-    from: ReturnType<typeof vi.fn>;
-  };
-  let deps: ActivitiesServiceDeps;
-  let service: ActivitiesService;
+  it("throws when destination is missing", async () => {
+    const service = new ActivitiesService({
+      hashInput: () => "hash",
+      places: makePlacesAdapter(),
+    });
 
-  beforeEach(async () => {
-    const fromMock = vi.fn(() => ({
-      insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              gt: vi.fn(() => ({
-                order: vi.fn(() => ({
-                  limit: vi.fn(() => ({
-                    maybeSingle: vi.fn(() =>
-                      Promise.resolve({ data: null, error: null })
-                    ),
-                  })),
-                })),
-              })),
-            })),
-          })),
-        })),
+    await expect(
+      service.search(unsafeCast<ActivitySearchParams>({}), {})
+    ).rejects.toThrow("Destination is required");
+  });
+
+  it("returns cached results when available (skips Places)", async () => {
+    const cachedActivity = makeActivity({ id: "places/1", name: "Cached Activity" });
+    const cache = makeCache({
+      getSearch: vi.fn(async (_input) => ({
+        results: [cachedActivity],
+        source: "cached" as const,
       })),
-    }));
+    });
+    const places = makePlacesAdapter();
+    const service = new ActivitiesService({
+      cache,
+      hashInput: () => "hash",
+      places,
+    });
 
-    mockSupabase = {
-      from: fromMock,
-    };
+    const result = await service.search({ destination: "Paris" }, { userId: "user-1" });
 
-    deps = {
-      supabase: vi.fn(() => Promise.resolve(mockSupabase as never)),
-    };
+    expect(result.metadata.cached).toBe(true);
+    expect(result.metadata.primarySource).toBe("googleplaces");
+    expect(result.metadata.sources).toEqual(["cached"]);
+    expect(result.activities).toEqual([cachedActivity]);
+    expect(places.search).not.toHaveBeenCalled();
+  });
 
-    service = new ActivitiesService(deps);
+  it("performs Places search on cache miss and writes to cache", async () => {
+    const placesActivity = makeActivity({ id: "places/1", name: "Museum" });
+    const cache = makeCache();
+    const places = makePlacesAdapter({
+      search: vi.fn(async () => [placesActivity]),
+    });
+    const service = new ActivitiesService({
+      cache,
+      hashInput: () => "qhash",
+      places,
+    });
 
-    // Reset webSearch mock to ensure no shared state
-    const { webSearch } = await import("@ai/tools/server/web-search");
-    if (webSearch.execute) {
-      vi.mocked(webSearch.execute).mockReset();
-    }
+    const result = await service.search(
+      { category: "museums", destination: "New York" },
+      { userId: "user-1" }
+    );
 
-    server.use(
-      http.post("https://places.googleapis.com/v1/places:searchText", () =>
-        HttpResponse.json({
-          places: [
-            {
-              displayName: { text: "Museum of Modern Art" },
-              formattedAddress: "11 W 53rd St, New York, NY 10019",
-              id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
-              location: { latitude: 40.7614, longitude: -73.9776 },
-              photos: [{ name: "places/photo1" }],
-              priceLevel: "PRICE_LEVEL_MODERATE",
-              rating: 4.6,
-              types: ["museum", "tourist_attraction"],
-              userRatingCount: 4523,
-            },
-          ],
-        })
-      )
+    expect(result.metadata.cached).toBe(false);
+    expect(result.metadata.primarySource).toBe("googleplaces");
+    expect(result.metadata.sources).toEqual(["googleplaces"]);
+    expect(result.activities).toEqual([placesActivity]);
+    expect(cache.putSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: "New York",
+        queryHash: "qhash",
+        source: "googleplaces",
+        userId: "user-1",
+      })
     );
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-    server.resetHandlers();
+  it("triggers fallback when Places returns zero results", async () => {
+    const cache = makeCache();
+    const places = makePlacesAdapter({
+      search: vi.fn(async () => []),
+    });
+    const webSearch: WebSearchFn = vi.fn(async () => ({
+      results: [{ title: "Hidden Gem", url: "https://example.com/activity" }],
+    }));
+    const service = new ActivitiesService({
+      cache,
+      hashInput: () => "qhash",
+      places,
+      webSearch,
+    });
+
+    const result = await service.search(
+      { destination: "Unknown City" },
+      { userId: "user-1" }
+    );
+
+    expect(webSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "things to do in Unknown City",
+        toolCallId: "activities:webSearch:qhash",
+      })
+    );
+    expect(result.metadata.primarySource).toBe("ai_fallback");
+    expect(result.metadata.sources).toEqual(["googleplaces", "ai_fallback"]);
+    expect(result.metadata.notes).toEqual(
+      expect.arrayContaining([expect.stringContaining("AI suggestions")])
+    );
+    expect(result.activities.some((a) => a.id.startsWith("ai_fallback:"))).toBe(true);
   });
 
-  describe("search", () => {
-    it("should validate destination is required", async () => {
-      await expect(
-        service.search(unsafeCast<ActivitySearchParams>({}), {})
-      ).rejects.toThrow("Destination is required");
+  it("does not trigger fallback when Places returns sufficient results", async () => {
+    const places = makePlacesAdapter({
+      search: vi.fn(async () => [
+        makeActivity({ id: "places/1" }),
+        makeActivity({ id: "places/2" }),
+        makeActivity({ id: "places/3" }),
+        makeActivity({ id: "places/4" }),
+        makeActivity({ id: "places/5" }),
+      ]),
+    });
+    const webSearch: WebSearchFn = vi.fn(async () => ({
+      results: [{ title: "Should Not Be Used", url: "https://example.com/nope" }],
+    }));
+    const service = new ActivitiesService({
+      hashInput: () => "qhash",
+      places,
+      webSearch,
     });
 
-    it("should return cached results when available", async () => {
-      const mockCacheData = {
-        data: {
-          expires_at: new Date(Date.now() + 3600000).toISOString(),
-          results: [
-            {
-              date: "2025-01-01",
-              description: "Test",
-              duration: 120,
-              id: "places/1",
-              location: "Test Location",
-              name: "Cached Activity",
-              price: 2,
-              rating: 4.5,
-              type: "museum",
-            },
-          ],
-          source: "googleplaces",
-        },
-        error: null,
-      };
+    const result = await service.search(
+      { destination: "SmallTown" },
+      { userId: "user-1" }
+    );
 
-      const selectChain = {
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn(() => Promise.resolve(mockCacheData)),
-        order: vi.fn().mockReturnThis(),
-      };
-
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => selectChain),
-      } as never);
-
-      const result = await service.search(
-        { destination: "Paris" },
-        { userId: "user-1" }
-      );
-
-      expect(result.metadata.cached).toBe(true);
-      expect(result.activities).toHaveLength(1);
-      expect(result.activities[0].name).toBe("Cached Activity");
-    });
-
-    it("should perform Places search on cache miss", async () => {
-      const selectChain = {
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        order: vi.fn().mockReturnThis(),
-      };
-
-      mockSupabase.from.mockReturnValue({
-        insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        select: vi.fn(() => selectChain),
-      } as never);
-
-      const result = await service.search(
-        { category: "museums", destination: "New York" },
-        { userId: "user-1" }
-      );
-
-      expect(result.metadata.cached).toBe(false);
-      expect(result.activities.length).toBeGreaterThan(0);
-      expect(result.metadata.primarySource).toBe("googleplaces");
-    });
-
-    it("should trigger AI fallback when Places returns zero results", async () => {
-      server.use(
-        http.post("https://places.googleapis.com/v1/places:searchText", () =>
-          HttpResponse.json({ places: [] })
-        )
-      );
-
-      const { webSearch } = await import("@ai/tools/server/web-search");
-      if (!webSearch.execute) {
-        throw new Error("webSearch.execute is not available");
-      }
-      vi.mocked(webSearch.execute).mockResolvedValue({
-        fromCache: false,
-        results: [
-          {
-            snippet: "A unique local experience",
-            title: "Hidden Gem Activity",
-            url: "https://example.com/activity",
-          },
-        ],
-        tookMs: 100,
-      });
-
-      const selectChain = {
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        order: vi.fn().mockReturnThis(),
-      };
-
-      mockSupabase.from.mockReturnValue({
-        insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        select: vi.fn(() => selectChain),
-      } as never);
-
-      const result = await service.search(
-        { destination: "Unknown City" },
-        { userId: "user-1" }
-      );
-
-      expect(webSearch.execute).toHaveBeenCalled();
-      expect(result.metadata.primarySource).toBe("ai_fallback");
-      expect(result.activities.some((a) => a.id.startsWith("ai_fallback:"))).toBe(true);
-    });
-
-    it("should not trigger fallback when Places returns sufficient results", async () => {
-      const placesActivitiesModule = await import("@/lib/google/places-activities");
-      vi.spyOn(placesActivitiesModule, "searchActivitiesWithPlaces").mockResolvedValue(
-        Array.from({ length: 5 }).map((_, idx) => ({
-          coordinates: { lat: idx + 1, lng: idx + 1 },
-          date: "2025-01-01",
-          description: `Activity ${idx + 1} in Address ${idx + 1}`,
-          duration: 120,
-          id: `places/${idx + 1}`,
-          location: `Address ${idx + 1}`,
-          name: `Activity ${idx + 1}`,
-          price: 2,
-          rating: 4.1,
-          type: "tourist_attraction",
-        }))
-      );
-
-      const { webSearch } = await import("@ai/tools/server/web-search");
-      if (webSearch.execute) {
-        vi.mocked(webSearch.execute).mockReset();
-        vi.mocked(webSearch.execute).mockClear();
-      }
-
-      // Mock Places API to return 5 results (well above the 3 threshold)
-      // Use a non-popular destination to avoid isPopularDestination logic affecting fallback
-      server.resetHandlers();
-      server.use(
-        http.post("https://places.googleapis.com/v1/places:searchText", () =>
-          HttpResponse.json({
-            places: [
-              {
-                displayName: { text: "Activity 1" },
-                formattedAddress: "Address 1",
-                id: "places/1",
-                location: { latitude: 1.0, longitude: 1.0 },
-                rating: 4.0,
-                types: ["tourist_attraction"],
-              },
-              {
-                displayName: { text: "Activity 2" },
-                formattedAddress: "Address 2",
-                id: "places/2",
-                location: { latitude: 2.0, longitude: 2.0 },
-                rating: 4.5,
-                types: ["tourist_attraction"],
-              },
-              {
-                displayName: { text: "Activity 3" },
-                formattedAddress: "Address 3",
-                id: "places/3",
-                location: { latitude: 3.0, longitude: 3.0 },
-                rating: 4.2,
-                types: ["tourist_attraction"],
-              },
-              {
-                displayName: { text: "Activity 4" },
-                formattedAddress: "Address 4",
-                id: "places/4",
-                location: { latitude: 4.0, longitude: 4.0 },
-                rating: 4.3,
-                types: ["tourist_attraction"],
-              },
-              {
-                displayName: { text: "Activity 5" },
-                formattedAddress: "Address 5",
-                id: "places/5",
-                location: { latitude: 5.0, longitude: 5.0 },
-                rating: 4.1,
-                types: ["tourist_attraction"],
-              },
-            ],
-          })
-        )
-      );
-
-      const selectChain = {
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        order: vi.fn().mockReturnThis(),
-      };
-
-      mockSupabase.from.mockReturnValue({
-        insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        select: vi.fn(() => selectChain),
-      } as never);
-
-      // Use a non-popular destination to ensure fallback logic is clear
-      await service.search({ destination: "SmallTown" }, { userId: "user-1" });
-
-      if (webSearch.execute) {
-        expect(webSearch.execute).not.toHaveBeenCalled();
-      }
-    });
+    expect(webSearch).not.toHaveBeenCalled();
+    expect(result.metadata.primarySource).toBe("googleplaces");
+    expect(result.metadata.sources).toEqual(["googleplaces"]);
   });
 
-  describe("details", () => {
-    it("should require placeId", async () => {
-      await expect(service.details("", {})).rejects.toThrow("Place ID is required");
+  it("triggers mixed fallback when destination is popular and results are few", async () => {
+    const places = makePlacesAdapter({
+      search: vi.fn(async () => [
+        makeActivity({ id: "places/1" }),
+        makeActivity({ id: "places/2" }),
+      ]),
+    });
+    const webSearch: WebSearchFn = vi.fn(async () => ({
+      results: [{ title: "Extra Idea", url: "https://example.com/extra" }],
+    }));
+    const cache = makeCache();
+    const service = new ActivitiesService({
+      cache,
+      hashInput: () => "qhash",
+      places,
+      webSearch,
     });
 
-    it("should return cached activity details when available", async () => {
-      const mockCacheData = {
-        data: {
-          expires_at: new Date(Date.now() + 3600000).toISOString(),
-          results: [
-            {
-              date: "2025-01-01",
-              description: "Test",
-              duration: 120,
-              id: "places/123",
-              location: "Test Location",
-              name: "Cached Activity",
-              price: 2,
-              rating: 4.5,
-              type: "museum",
-            },
-          ],
-        },
-        error: null,
-      };
+    const result = await service.search({ destination: "Paris" }, { userId: "user-1" });
 
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn().mockReturnThis(),
-          gt: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn(() => Promise.resolve(mockCacheData)),
-          order: vi.fn().mockReturnThis(),
-        })),
-      } as never);
+    expect(webSearch).toHaveBeenCalled();
+    expect(result.metadata.primarySource).toBe("mixed");
+    expect(result.metadata.sources).toEqual(["googleplaces", "ai_fallback"]);
+    expect(cache.putSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "googleplaces",
+      })
+    );
+  });
 
-      server.use(
-        http.get("https://places.googleapis.com/v1/places/123", () =>
-          HttpResponse.json({
-            displayName: { text: "Place Details" },
-            formattedAddress: "123 Test St",
-            id: "places/123",
-            location: { latitude: 40.7614, longitude: -73.9776 },
-            rating: 4.5,
-            types: ["museum"],
-          })
-        )
-      );
-
-      const result = await service.details("places/123", { userId: "user-1" });
-
-      expect(result.id).toBe("places/123");
-      expect(result.name).toBe("Cached Activity");
+  it("details returns cached activity when available", async () => {
+    const cached = makeActivity({ id: "places/123", name: "Cached" });
+    const cache = makeCache({
+      findActivityInRecentSearches: vi.fn(async () => cached),
+    });
+    const places = makePlacesAdapter({
+      getDetails: vi.fn(async () =>
+        makeActivity({ id: "places/123", name: "From Places" })
+      ),
+    });
+    const service = new ActivitiesService({
+      cache,
+      hashInput: () => "hash",
+      places,
     });
 
-    it("should fetch from Places API when cache miss", async () => {
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn().mockReturnThis(),
-          gt: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          order: vi.fn().mockReturnThis(),
-        })),
-      } as never);
+    const result = await service.details("places/123", { userId: "user-1" });
 
-      // The URL format is https://places.googleapis.com/v1/{placeId} (no /places/ prefix)
-      server.use(
-        http.get("https://places.googleapis.com/v1/:placeId", ({ params }) => {
-          if (params.placeId === "ChIJN1t_tDeuEmsRUsoyG83frY4") {
-            return HttpResponse.json({
-              displayName: { text: "Museum of Modern Art" },
-              formattedAddress: "11 W 53rd St, New York, NY 10019",
-              id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
-              location: { latitude: 40.7614, longitude: -73.9776 },
-              photos: [{ name: "places/photo1" }],
-              priceLevel: "PRICE_LEVEL_MODERATE",
-              rating: 4.6,
-              types: ["museum", "tourist_attraction"],
-              userRatingCount: 4523,
-            });
-          }
-          return HttpResponse.json({}, { status: 404 });
-        })
-      );
+    expect(result).toEqual(cached);
+    expect(places.getDetails).not.toHaveBeenCalled();
+  });
 
-      const result = await service.details("ChIJN1t_tDeuEmsRUsoyG83frY4", {
-        userId: "user-1",
-      });
-
-      expect(result.id).toBe("ChIJN1t_tDeuEmsRUsoyG83frY4");
-      expect(result.name).toBe("Museum of Modern Art");
+  it("details throws NotFoundError when Places returns null", async () => {
+    const places = makePlacesAdapter({
+      getDetails: vi.fn(async () => null),
+    });
+    const service = new ActivitiesService({
+      hashInput: () => "hash",
+      places,
     });
 
-    it("should throw error when activity not found", async () => {
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn().mockReturnThis(),
-          gt: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          order: vi.fn().mockReturnThis(),
-        })),
-      } as never);
-
-      server.use(
-        http.get("https://places.googleapis.com/v1/places/invalid", () =>
-          HttpResponse.json({}, { status: 404 })
-        )
-      );
-
-      await expect(service.details("invalid", {})).rejects.toThrow(
-        "Activity not found"
-      );
-    });
+    await expect(
+      service.details("missing", { userId: "user-1" })
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });

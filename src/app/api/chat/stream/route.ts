@@ -65,6 +65,6 @@ export const POST = withApiGuards({
       resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
       supabase,
     },
-    { ...body, ip, userId: auth.userId }
+    { ...body, abortSignal: req.signal, ip, userId: auth.userId }
   );
 });

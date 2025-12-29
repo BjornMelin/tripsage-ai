@@ -4,7 +4,7 @@
 
 import type { MermaidConfig, MermaidOptions, StreamdownProps } from "streamdown";
 import { defaultRehypePlugins, defaultRemarkPlugins } from "streamdown";
-import type { Plugin } from "unified";
+import type { Pluggable, Plugin } from "unified";
 
 type HardenOptions = {
   allowedImagePrefixes?: string[];
@@ -14,13 +14,31 @@ type HardenOptions = {
   allowDataImages?: boolean;
 };
 
-// Normalize dual plugin shapes (function or [function, options] tuple) and cast for streamdown's plugin type constraints.
-const hardenRaw = defaultRehypePlugins.harden as unknown;
-const hardenFn = (Array.isArray(hardenRaw) ? hardenRaw[0] : hardenRaw) as Plugin;
-const hardenDefaults =
-  Array.isArray(hardenRaw) && hardenRaw[1] != null && typeof hardenRaw[1] === "object"
-    ? (hardenRaw[1] as HardenOptions)
-    : {};
+type UnifiedPlugin = Plugin<unknown[]>;
+type PluggableTuple = [plugin: UnifiedPlugin, ...parameters: unknown[]];
+
+function isPluggableTuple(value: Pluggable): value is PluggableTuple {
+  return Array.isArray(value);
+}
+
+function resolvePluginDefaults(plugin: Pluggable): {
+  plugin: UnifiedPlugin;
+  defaults: HardenOptions;
+} {
+  if (isPluggableTuple(plugin)) {
+    const defaults =
+      plugin[1] != null && typeof plugin[1] === "object"
+        ? (plugin[1] as HardenOptions)
+        : {};
+    return { defaults, plugin: plugin[0] };
+  }
+
+  return { defaults: {}, plugin: plugin as UnifiedPlugin };
+}
+
+const { plugin: hardenFn, defaults: hardenDefaults } = resolvePluginDefaults(
+  defaultRehypePlugins.harden
+);
 
 export const streamdownShikiTheme: NonNullable<StreamdownProps["shikiTheme"]> = [
   "github-light",

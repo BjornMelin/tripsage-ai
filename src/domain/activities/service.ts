@@ -1,50 +1,154 @@
 /**
- * @fileoverview Activities domain service orchestrating Google Places search, caching, and optional AI/web fallback.
+ * @fileoverview Activities domain service orchestrating Places search, caching, and optional web fallback.
  */
 
 import "server-only";
 
-import { webSearch } from "@ai/tools/server/web-search";
 import { NotFoundError } from "@domain/activities/errors";
 import type { ActivitySearchResult, ServiceContext } from "@domain/activities/types";
 import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { activitySearchParamsSchema } from "@schemas/search";
-import type { ToolExecutionOptions } from "ai";
-import { hashInputForCache } from "@/lib/cache/hash";
-import {
-  buildActivitySearchQuery,
-  getActivityDetailsFromPlaces,
-  searchActivitiesWithPlaces,
-} from "@/lib/google/places-activities";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { createServerLogger } from "@/lib/telemetry/logger";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
-
-const logger = createServerLogger("activities.service");
 
 /**
- * Cache TTL for Google Places results (24 hours).
+ * Cache TTL for Places-backed activity search results (24 hours).
  */
 const PLACES_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
-/**
- * Cache TTL for AI fallback results (6 hours).
- */
-const AI_FALLBACK_CACHE_TTL_SECONDS = 6 * 60 * 60;
+export type ActivitiesLogger = {
+  info: (message: string, meta?: Record<string, unknown>) => void;
+  warn: (message: string, meta?: Record<string, unknown>) => void;
+  error: (message: string, meta?: Record<string, unknown>) => void;
+};
+
+type TelemetryAttributes = Record<string, string | number | boolean>;
+
+export type ActivitiesTelemetrySpan = {
+  addEvent: (name: string, attributes?: TelemetryAttributes) => void;
+  recordException: (error: Error) => void;
+  setAttribute: (key: string, value: string | number | boolean) => void;
+};
+
+export type ActivitiesTelemetryOptions = {
+  attributes?: TelemetryAttributes;
+  redactKeys?: string[];
+};
+
+export type ActivitiesTelemetry = {
+  withSpan: <T>(
+    name: string,
+    options: ActivitiesTelemetryOptions,
+    fn: (span: ActivitiesTelemetrySpan) => Promise<T>
+  ) => Promise<T>;
+};
+
+export type WebSearchSource = {
+  url: string;
+  title?: string;
+  snippet?: string;
+  publishedAt?: string;
+};
+
+export type WebSearchResult = {
+  results: WebSearchSource[];
+};
+
+export type WebSearchFn = (input: {
+  query: string;
+  limit: number;
+  toolCallId: string;
+  userId?: string;
+}) => Promise<WebSearchResult | null>;
+
+export type PlacesActivitiesAdapter = {
+  buildSearchQuery: (destination: string, category?: string) => string;
+  search: (query: string, limit: number) => Promise<Activity[]>;
+  getDetails: (placeId: string) => Promise<Activity | null>;
+};
+
+export type ActivitiesCacheSource = "googleplaces" | "ai_fallback" | "cached";
+
+export type ActivitiesCache = {
+  getSearch: (input: {
+    activityType: string | null;
+    destination: string;
+    nowIso: string;
+    queryHash: string;
+    userId: string;
+  }) => Promise<null | { source: ActivitiesCacheSource; results: Activity[] }>;
+  putSearch: (input: {
+    activityType: string | null;
+    destination: string;
+    expiresAtIso: string;
+    queryHash: string;
+    queryParameters: ActivitySearchParams;
+    results: Activity[];
+    searchMetadata: Record<string, unknown>;
+    source: ActivitiesCacheSource;
+    userId: string;
+  }) => Promise<void>;
+  findActivityInRecentSearches: (input: {
+    nowIso: string;
+    placeId: string;
+    userId: string;
+  }) => Promise<Activity | null>;
+};
+
+export type ActivitiesClock = {
+  now: () => number;
+  todayIsoDate: () => string;
+};
 
 /**
  * Dependencies for the activities service.
  */
 export interface ActivitiesServiceDeps {
-  /** Supabase client factory. */
-  supabase: () => Promise<TypedServerSupabase>;
+  cache?: ActivitiesCache;
+  clock?: ActivitiesClock;
+  hashInput: (input: unknown) => string;
+  logger?: ActivitiesLogger;
+  places: PlacesActivitiesAdapter;
+  telemetry?: ActivitiesTelemetry;
+  webSearch?: WebSearchFn;
 }
+
+const noopLogger: ActivitiesLogger = {
+  error: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+};
+
+const noopSpan: ActivitiesTelemetrySpan = {
+  addEvent: () => undefined,
+  recordException: (_error) => undefined,
+  setAttribute: () => undefined,
+};
+
+const noopTelemetry: ActivitiesTelemetry = {
+  withSpan: async <T>(
+    _name: string,
+    _options: ActivitiesTelemetryOptions,
+    fn: (span: ActivitiesTelemetrySpan) => Promise<T>
+  ): Promise<T> => fn(noopSpan),
+};
+
+const defaultClock: ActivitiesClock = {
+  now: () => Date.now(),
+  todayIsoDate: () => new Date().toISOString().split("T")[0] ?? "1970-01-01",
+};
 
 /**
  * Activities service class.
  */
 export class ActivitiesService {
-  constructor(private readonly deps: ActivitiesServiceDeps) {}
+  private readonly clock: ActivitiesClock;
+  private readonly logger: ActivitiesLogger;
+  private readonly telemetry: ActivitiesTelemetry;
+
+  constructor(private readonly deps: ActivitiesServiceDeps) {
+    this.clock = deps.clock ?? defaultClock;
+    this.logger = deps.logger ?? noopLogger;
+    this.telemetry = deps.telemetry ?? noopTelemetry;
+  }
 
   /**
    * Computes a normalized query hash for cache lookups.
@@ -53,7 +157,6 @@ export class ActivitiesService {
    * @returns Normalized hash string.
    */
   private computeQueryHash(params: ActivitySearchParams): string {
-    // Normalize params for consistent hashing
     const normalized = {
       adults: params.adults,
       category: params.category?.trim().toLowerCase(),
@@ -65,11 +168,15 @@ export class ActivitiesService {
       indoor: params.indoor,
       infants: params.infants,
     };
-    return hashInputForCache(normalized);
+    return this.deps.hashInput(normalized);
+  }
+
+  private nowIso(): string {
+    return new Date(this.clock.now()).toISOString();
   }
 
   /**
-   * Searches for activities with caching and optional AI fallback.
+   * Searches for activities with caching and optional web fallback.
    *
    * @param params - Activity search parameters.
    * @param ctx - Service context (userId, locale, ip, etc.).
@@ -79,7 +186,7 @@ export class ActivitiesService {
     params: ActivitySearchParams,
     ctx?: ServiceContext
   ): Promise<ActivitySearchResult> {
-    return await withTelemetrySpan(
+    return await this.telemetry.withSpan(
       "activities.search",
       {
         attributes: {
@@ -101,79 +208,55 @@ export class ActivitiesService {
         }
         const validatedParams = parsedParams.data;
 
-        const userId = ctx?.userId;
+        const userId = ctx?.userId?.trim() || undefined;
         const queryHash = this.computeQueryHash(validatedParams);
         const destination = validatedParams.destination.trim();
         const activityType = validatedParams.category ?? null;
 
-        // Check Supabase cache (authenticated users only)
-        // Note: Database column names use snake_case (user_id, query_hash, activity_type, expires_at, created_at)
-        let cacheResult: {
-          data: {
-            source: string;
-            results: unknown;
-          } | null;
-          error: unknown;
-        } | null = null;
-        if (userId) {
-          const supabase = await this.deps.supabase();
-          cacheResult = await supabase
-            .from("search_activities")
-            .select("*")
-            .eq("user_id", userId)
-            .eq("destination", destination)
-            .eq("query_hash", queryHash)
-            .eq("activity_type", activityType ?? "")
-            .gt("expires_at", new Date().toISOString())
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-        }
-
-        if (cacheResult?.data) {
-          span.addEvent("cache.hit", {
-            queryHash,
-            source: cacheResult.data.source,
-          });
-          logger.info("cache_hit", {
+        if (userId && this.deps.cache) {
+          const cached = await this.deps.cache.getSearch({
+            activityType,
             destination,
+            nowIso: this.nowIso(),
             queryHash,
-            source: cacheResult.data.source,
+            userId,
           });
+          if (cached) {
+            span.addEvent("cache.hit", { queryHash, source: cached.source });
+            this.logger.info("cache_hit", {
+              destination,
+              queryHash,
+              source: cached.source,
+            });
 
-          const cachedResults = cacheResult.data.results as Activity[];
-          const cachedSource = cacheResult.data.source as
-            | "googleplaces"
-            | "ai_fallback"
-            | "cached";
-
-          return {
-            activities: cachedResults,
-            metadata: {
-              cached: true,
-              primarySource: cachedSource === "cached" ? "googleplaces" : cachedSource,
-              sources: [cachedSource],
-              total: cachedResults.length,
-            },
-          };
+            return {
+              activities: cached.results,
+              metadata: {
+                cached: true,
+                primarySource:
+                  cached.source === "cached" ? "googleplaces" : cached.source,
+                sources: [cached.source],
+                total: cached.results.length,
+              },
+            };
+          }
         }
 
         span.addEvent("cache.miss", { queryHash });
-        logger.info("cache_miss", { destination, queryHash });
+        this.logger.info("cache_miss", { destination, queryHash });
 
-        // Perform Google Places search
-        const searchQuery = buildActivitySearchQuery(
+        const searchQuery = this.deps.places.buildSearchQuery(
           destination,
           validatedParams.category
         );
 
-        const placesActivities = await withTelemetrySpan(
+        const placesActivities = await this.telemetry.withSpan(
           "activities.google_places.api",
           {
             attributes: { query: searchQuery },
             redactKeys: ["query"],
           },
-          async () => await searchActivitiesWithPlaces(searchQuery, 20)
+          async () => await this.deps.places.search(searchQuery, 20)
         );
 
         span.setAttribute("places.result_count", placesActivities.length);
@@ -185,7 +268,6 @@ export class ActivitiesService {
         ];
         const notes: string[] = [];
 
-        // Heuristic: trigger AI fallback if zero or very few results
         const shouldTriggerFallback =
           placesActivities.length === 0 ||
           (placesActivities.length < 3 && this.isPopularDestination(destination));
@@ -194,115 +276,51 @@ export class ActivitiesService {
 
         if (shouldTriggerFallback) {
           span.addEvent("activities.fallback.invoked");
-          logger.info("fallback_invoked", {
+          this.logger.info("fallback_invoked", {
             destination,
             placesCount: placesActivities.length,
           });
 
-          try {
-            // Call webSearch tool server-side
-            const fallbackQuery = `things to do in ${destination}`;
-            const callOptions = {
-              messages: [],
-              toolCallId: `activities:webSearch:${queryHash}`,
-            } satisfies ToolExecutionOptions;
-            const webSearchResult = await webSearch.execute?.(
-              {
-                categories: null,
-                fresh: false,
-                freshness: null,
+          if (this.deps.webSearch) {
+            try {
+              const fallbackQuery = `things to do in ${destination}`;
+              const webSearchResult = await this.deps.webSearch({
                 limit: 5,
-                location: null,
                 query: fallbackQuery,
-                region: null,
-                scrapeOptions: null,
-                sources: ["web"],
-                tbs: null,
-                timeoutMs: null,
-                userId: userId ?? null,
-              },
-              callOptions
-            );
+                toolCallId: `activities:webSearch:${queryHash}`,
+                userId,
+              });
+              if (!webSearchResult) {
+                throw new Error("webSearch returned no result");
+              }
 
-            if (!webSearchResult) {
-              throw new Error("webSearch tool returned no result");
-            }
-
-            // Handle both direct result and async iterable
-            const result =
-              "results" in webSearchResult
-                ? webSearchResult
-                : await (async () => {
-                    for await (const chunk of webSearchResult) {
-                      return chunk;
-                    }
-                    throw new Error("No results from webSearch");
-                  })();
-
-            // Normalize web search results into Activity[] (best-effort)
-            fallbackActivities = this.normalizeWebResultsToActivities(
-              result.results,
-              destination,
-              validatedParams.date
-            );
-
-            if (fallbackActivities.length > 0) {
-              primarySource = placesActivities.length > 0 ? "mixed" : "ai_fallback";
-              sources.push("ai_fallback");
-              activities = [...placesActivities, ...fallbackActivities];
-              notes.push(
-                "Some results are AI suggestions based on web content, not live availability"
+              fallbackActivities = this.normalizeWebResultsToActivities(
+                webSearchResult.results,
+                destination,
+                validatedParams.date
               );
 
-              // Persist fallback results separately with shorter TTL (authenticated users only)
-              if (userId) {
-                try {
-                  const fallbackExpiresAt = new Date();
-                  fallbackExpiresAt.setSeconds(
-                    fallbackExpiresAt.getSeconds() + AI_FALLBACK_CACHE_TTL_SECONDS
-                  );
-
-                  const supabase = await this.deps.supabase();
-                  await supabase.from("search_activities").insert({
-                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                    activity_type: activityType,
-                    destination,
-                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                    expires_at: fallbackExpiresAt.toISOString(),
-                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                    query_hash: `${queryHash}:fallback`,
-                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                    query_parameters: { ...validatedParams, fallback: true },
-                    results: fallbackActivities,
-                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                    search_metadata: {
-                      webResultsCount: result.results.length,
-                      webSearchQuery: fallbackQuery,
-                    },
-                    source: "ai_fallback",
-                    // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-                    user_id: userId,
-                  });
-                } catch (insertError) {
-                  logger.error("fallback_cache_insert_failed", {
-                    destination,
-                    error:
-                      insertError instanceof Error
-                        ? insertError.message
-                        : String(insertError),
-                  });
-                  span.recordException(insertError as Error);
-                  // Continue without caching - fallback results still returned
-                }
+              if (fallbackActivities.length > 0) {
+                primarySource = placesActivities.length > 0 ? "mixed" : "ai_fallback";
+                sources.push("ai_fallback");
+                activities = [...placesActivities, ...fallbackActivities];
+                notes.push(
+                  "Some results are AI suggestions based on web content, not live availability"
+                );
               }
+            } catch (error) {
+              this.logger.error("fallback_failed", {
+                destination,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              span.recordException(
+                error instanceof Error ? error : new Error(String(error))
+              );
             }
-          } catch (error) {
-            logger.error("fallback_failed", {
-              destination,
-              error: error instanceof Error ? error.message : String(error),
+          } else {
+            span.addEvent("activities.fallback.skipped", {
+              reason: "web_search_unavailable",
             });
-            span.recordException(error as Error);
-            // Continue with Places results only
           }
         } else {
           span.addEvent("activities.fallback.suppressed", {
@@ -311,43 +329,34 @@ export class ActivitiesService {
           });
         }
 
-        // Persist to Supabase cache (authenticated users only)
-        if (userId) {
+        if (userId && this.deps.cache) {
           try {
-            const expiresAt = new Date();
+            const expiresAt = new Date(this.clock.now());
             expiresAt.setSeconds(expiresAt.getSeconds() + PLACES_CACHE_TTL_SECONDS);
 
-            const supabase = await this.deps.supabase();
-            await supabase.from("search_activities").insert({
-              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-              activity_type: activityType,
+            await this.deps.cache.putSearch({
+              activityType,
               destination,
-              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-              expires_at: expiresAt.toISOString(),
-              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-              query_hash: queryHash,
-              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-              query_parameters: validatedParams,
+              expiresAtIso: expiresAt.toISOString(),
+              queryHash,
+              queryParameters: validatedParams,
               results: activities,
-              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-              search_metadata: {
+              searchMetadata: {
+                fallbackCount: fallbackActivities.length,
                 fallbackTriggered: shouldTriggerFallback,
                 placesCount: placesActivities.length,
               },
               source: primarySource === "mixed" ? "googleplaces" : primarySource,
-              // biome-ignore lint/style/useNamingConvention: Database column names use snake_case
-              user_id: userId,
+              userId,
             });
-          } catch (insertError) {
-            logger.error("cache_insert_failed", {
+          } catch (error) {
+            this.logger.error("cache_insert_failed", {
               destination,
-              error:
-                insertError instanceof Error
-                  ? insertError.message
-                  : String(insertError),
+              error: error instanceof Error ? error.message : String(error),
             });
-            span.recordException(insertError as Error);
-            // Continue without caching - results still returned
+            span.recordException(
+              error instanceof Error ? error : new Error(String(error))
+            );
           }
         }
 
@@ -373,7 +382,7 @@ export class ActivitiesService {
    * @returns Activity object with full details.
    */
   async details(placeId: string, ctx?: ServiceContext): Promise<Activity> {
-    return await withTelemetrySpan(
+    return await this.telemetry.withSpan(
       "activities.details",
       {
         attributes: { placeId },
@@ -384,32 +393,13 @@ export class ActivitiesService {
           throw new Error("Place ID is required");
         }
 
-        // Check cache for details (could be in search results)
-        const supabase = await this.deps.supabase();
-        const userId = ctx?.userId;
-
-        // Try to find in recent search results (authenticated users only)
-        // Note: Database column names use snake_case (user_id, expires_at, created_at)
-        let cacheResult: {
-          data: {
-            results: unknown;
-          } | null;
-          error: unknown;
-        } | null = null;
-        if (userId) {
-          cacheResult = await supabase
-            .from("search_activities")
-            .select("results")
-            .eq("user_id", userId)
-            .gt("expires_at", new Date().toISOString())
-            .order("created_at", { ascending: false })
-            .limit(10)
-            .maybeSingle();
-        }
-
-        if (cacheResult?.data) {
-          const results = cacheResult.data.results as Activity[];
-          const cached = results.find((a) => a.id === placeId);
+        const userId = ctx?.userId?.trim() || undefined;
+        if (userId && this.deps.cache) {
+          const cached = await this.deps.cache.findActivityInRecentSearches({
+            nowIso: this.nowIso(),
+            placeId,
+            userId,
+          });
           if (cached) {
             span.addEvent("cache.hit", { placeId });
             return cached;
@@ -418,13 +408,10 @@ export class ActivitiesService {
 
         span.addEvent("cache.miss", { placeId });
 
-        // Fetch from Places API
-        const activity = await getActivityDetailsFromPlaces(placeId);
-
+        const activity = await this.deps.places.getDetails(placeId);
         if (!activity) {
           throw new NotFoundError(`Activity not found for Place ID: ${placeId}`);
         }
-
         return activity;
       }
     );
@@ -433,9 +420,7 @@ export class ActivitiesService {
   /**
    * Simple heuristic to determine if a destination is "popular".
    *
-   * Used to decide whether low Places result count should trigger AI fallback.
-   * This is a basic implementation; can be enhanced with a whitelist or
-   * external data source.
+   * Used to decide whether low Places result count should trigger fallback.
    *
    * @param destination - Destination string.
    * @returns True if destination is considered popular.
@@ -467,27 +452,20 @@ export class ActivitiesService {
    * Normalizes web search results into Activity objects (best-effort).
    *
    * Extracts activity-like information from web search snippets and URLs.
-   * This is a heuristic mapping and may not always produce high-quality results.
    *
-   * @param webResults - Web search results from Firecrawl.
+   * @param webResults - Web search results.
    * @param destination - Destination location.
    * @param date - Optional date string.
    * @returns Array of Activity objects (may be empty if normalization fails).
    */
   private normalizeWebResultsToActivities(
-    webResults: Array<{
-      url: string;
-      title?: string;
-      snippet?: string;
-      publishedAt?: string;
-    }>,
+    webResults: WebSearchSource[],
     destination: string,
     date?: string
   ): Activity[] {
     const activities: Activity[] = [];
 
     for (const result of webResults) {
-      // Skip if no title or snippet
       if (!result.title && !result.snippet) {
         continue;
       }
@@ -495,7 +473,6 @@ export class ActivitiesService {
       const name = result.title ?? "Activity";
       const description = result.snippet ?? `Activity in ${destination}`;
 
-      // Extract activity type from title/snippet (heuristic)
       let type = "activity";
       const lowerName = name.toLowerCase();
       const lowerDesc = description.toLowerCase();
@@ -510,22 +487,19 @@ export class ActivitiesService {
         type = "restaurant";
       }
 
-      // Default values for AI fallback activities
-      const activity: Activity = {
+      activities.push({
         coordinates: undefined,
-        date: date ?? new Date().toISOString().split("T")[0],
+        date: date ?? this.clock.todayIsoDate(),
         description,
-        duration: 120, // Default 2 hours
-        id: `ai_fallback:${hashInputForCache(result.url)}`,
+        duration: 120,
+        id: `ai_fallback:${this.deps.hashInput(result.url)}`,
         images: undefined,
         location: destination,
         name,
-        price: 2, // Default moderate price
-        rating: 0, // No rating available
+        price: 2,
+        rating: 0,
         type,
-      };
-
-      activities.push(activity);
+      });
     }
 
     return activities;

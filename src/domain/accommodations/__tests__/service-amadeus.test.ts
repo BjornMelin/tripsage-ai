@@ -1,69 +1,79 @@
 /** @vitest-environment node */
 
-import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ProviderError } from "@domain/accommodations/errors";
+import type { AccommodationProviderAdapter } from "@domain/accommodations/providers/types";
+import { accommodationSearchOutputSchema } from "@schemas/accommodations";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
-import { buildUpstashCacheMock } from "@/test/mocks/cache";
-import { server } from "@/test/msw/server";
 
-function getUpstashCache() {
-  const g = globalThis as Record<string, unknown>;
-  if (!g.__upstashCache) {
-    g.__upstashCache = buildUpstashCacheMock();
-  }
-  return g.__upstashCache as ReturnType<typeof buildUpstashCacheMock>;
-}
+type AccommodationsServiceDeps =
+  import("@domain/accommodations/service").AccommodationsServiceDeps;
 
-vi.mock("@/lib/env/server", () => ({
-  getGoogleMapsServerKey: () => "test-key",
-  getServerEnvVarWithFallback: () => undefined,
+vi.mock("@/lib/telemetry/span", () => ({
+  withTelemetrySpan: async (
+    _name: string,
+    _options: unknown,
+    fn: (span: {
+      addEvent: (name: string, attributes?: Record<string, unknown>) => void;
+      recordException: (error: unknown) => void;
+    }) => Promise<unknown>
+  ) => await fn({ addEvent: vi.fn(), recordException: vi.fn() }),
 }));
 
-vi.mock("@/lib/google/caching", () => ({
-  cacheLatLng: vi.fn().mockResolvedValue(undefined),
-  cachePlaceId: vi.fn().mockResolvedValue(undefined),
-  getCachedLatLng: vi.fn().mockResolvedValue(null),
-  getCachedPlaceId: vi.fn().mockResolvedValue(null),
-}));
-
-vi.mock("@/lib/cache/upstash", () => getUpstashCache().module);
-vi.mock("@/lib/cache/tags", () => ({
-  bumpTag: vi.fn(async () => 1),
-  versionedKey: vi.fn(async (_tag: string, key: string) => `tag:v1:${key}`),
-}));
-
-// Reset modules to ensure fresh imports with mocks applied
-vi.resetModules();
-
-// Dynamic imports after mocks
-const { AccommodationsService } = await import("@domain/accommodations/service");
-const { getCachedJson } = await import("@/lib/cache/upstash");
-const { getCachedLatLng } = await import("@/lib/google/caching");
-
-type AccommodationProviderAdapter =
-  import("@domain/accommodations/providers/types").AccommodationProviderAdapter;
 type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
+
+const { AccommodationsService } = await import("@domain/accommodations/service");
+
+const CACHE_NAMESPACE = "service:accom:search";
+const CACHE_TAG_SEARCH = "accommodations:search";
+
+function createService(options: {
+  coords?: { lat: number; lon: number } | null;
+  enrich?: AccommodationsServiceDeps["enrichHotelListingWithPlaces"];
+  provider: AccommodationProviderAdapter;
+}) {
+  const cache = new Map<string, unknown>();
+
+  const defaultEnrich: AccommodationsServiceDeps["enrichHotelListingWithPlaces"] =
+    async (listing) => listing;
+
+  const getCachedJson: AccommodationsServiceDeps["getCachedJson"] = <T>(
+    key: string
+  ): Promise<T | null> => {
+    if (!cache.has(key)) return Promise.resolve(null);
+    return Promise.resolve(unsafeCast<T>(cache.get(key)));
+  };
+
+  const setCachedJson: AccommodationsServiceDeps["setCachedJson"] = (key, value) => {
+    cache.set(key, value);
+    return Promise.resolve();
+  };
+
+  const deps: AccommodationsServiceDeps = {
+    bumpTag: vi.fn(async () => 1),
+    cacheTtlSeconds: 0,
+    canonicalizeParamsForCache: (params, prefix) =>
+      `${prefix}:${JSON.stringify(params)}`,
+    enrichHotelListingWithPlaces: options.enrich ?? defaultEnrich,
+    getCachedJson,
+    provider: options.provider,
+    resolveLocationToLatLng: async (_location) =>
+      options.coords === undefined ? { lat: 1.234, lon: 2.345 } : options.coords,
+    retryWithBackoff: async (fn, _options) => await fn(0),
+    setCachedJson,
+    supabase: async () => unsafeCast<TypedServerSupabase>({}),
+    versionedKey: async (_tag, key) => `tag:v1:${key}`,
+  };
+
+  return { cache, deps, service: new AccommodationsService(deps) };
+}
 
 describe("AccommodationsService (Amadeus)", () => {
   beforeEach(() => {
-    getUpstashCache().reset();
-    server.use(
-      http.post("https://places.googleapis.com/v1/places:searchText", () =>
-        HttpResponse.json({
-          places: [
-            { id: "places/abc", location: { latitude: 1.234, longitude: 2.345 } },
-          ],
-        })
-      )
-    );
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
   });
 
   it("injects geocoded lat/lng and maps provider search result", async () => {
-    vi.mocked(getCachedLatLng).mockResolvedValue({ lat: 1.234, lon: 2.345 });
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -91,11 +101,9 @@ describe("AccommodationsService (Amadeus)", () => {
       }),
     };
 
-    const service = new AccommodationsService({
-      cacheTtlSeconds: 0,
+    const { service } = createService({
+      coords: { lat: 1.234, lon: 2.345 },
       provider,
-      rateLimiter: undefined,
-      supabase: async () => unsafeCast<TypedServerSupabase>({}),
     });
 
     const result = await service.search({
@@ -116,7 +124,6 @@ describe("AccommodationsService (Amadeus)", () => {
   });
 
   it("keeps listings when cheaper rates are not first", async () => {
-    vi.mocked(getCachedLatLng).mockResolvedValue({ lat: 1, lon: 1 });
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -149,12 +156,7 @@ describe("AccommodationsService (Amadeus)", () => {
       }),
     };
 
-    const service = new AccommodationsService({
-      cacheTtlSeconds: 0,
-      provider,
-      rateLimiter: undefined,
-      supabase: async () => unsafeCast<TypedServerSupabase>({}),
-    });
+    const { service } = createService({ provider });
 
     const result = await service.search(
       {
@@ -173,7 +175,6 @@ describe("AccommodationsService (Amadeus)", () => {
   });
 
   it("propagates a deterministic sessionId derived from userId when missing", async () => {
-    vi.mocked(getCachedLatLng).mockResolvedValue({ lat: 1, lon: 1 });
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -187,12 +188,7 @@ describe("AccommodationsService (Amadeus)", () => {
       }),
     };
 
-    const service = new AccommodationsService({
-      cacheTtlSeconds: 0,
-      provider,
-      rateLimiter: undefined,
-      supabase: async () => unsafeCast<TypedServerSupabase>({}),
-    });
+    const { service } = createService({ provider });
 
     await service.search(
       {
@@ -202,7 +198,6 @@ describe("AccommodationsService (Amadeus)", () => {
         location: "Paris",
       },
       {
-        rateLimitKey: "ip:1.1.1.1",
         userId: "user-123",
       }
     );
@@ -213,27 +208,50 @@ describe("AccommodationsService (Amadeus)", () => {
     expect(providerCtx?.userId).toBe("user-123");
   });
 
-  it("enriches details with Google Places when available", async () => {
-    let callCount = 0;
-    server.use(
-      http.post("https://places.googleapis.com/v1/places:searchText", () => {
-        callCount++;
-        if (callCount === 1) {
-          return HttpResponse.json({
-            places: [{ id: "places/test", location: { latitude: 0, longitude: 0 } }],
-          });
-        }
-        return HttpResponse.json({
-          id: "places/test",
-          rating: 4.5,
-          userRatingCount: 123,
-        });
+  it("returns cached results without calling provider", async () => {
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn(),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
+    };
+
+    const { cache, deps, service } = createService({ provider });
+    const params = {
+      checkin: "2025-12-01",
+      checkout: "2025-12-02",
+      guests: 1,
+      location: "Paris",
+    };
+    const baseCacheKey = deps.canonicalizeParamsForCache(
+      { ...params, semanticQuery: "" },
+      CACHE_NAMESPACE
+    );
+    const versionedKey = await deps.versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
+    cache.set(
+      versionedKey,
+      accommodationSearchOutputSchema.parse({
+        fromCache: false,
+        listings: [],
+        provider: "amadeus",
+        resultsReturned: 0,
+        searchId: "search-1",
+        searchParameters: {},
+        status: "success",
+        tookMs: 1,
+        totalResults: 0,
       })
     );
 
-    // Cache misses; force live fetch to ensure enrichment path populates rating
-    vi.mocked(getCachedJson).mockResolvedValue(null);
+    const result = await service.search(params);
 
+    expect(result.fromCache).toBe(true);
+    expect(provider.search).not.toHaveBeenCalled();
+  });
+
+  it("enriches details output when enrichment adapter returns place data", async () => {
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -251,26 +269,41 @@ describe("AccommodationsService (Amadeus)", () => {
       search: vi.fn(),
     };
 
-    const service = new AccommodationsService({
-      cacheTtlSeconds: 0,
+    const { service } = createService({
+      enrich: async (listing) => ({
+        ...listing,
+        place: { id: "places/test" },
+      }),
       provider,
-      rateLimiter: undefined,
-      supabase: async () => unsafeCast<TypedServerSupabase>({}),
     });
 
-    const details = await service.details({ listingId: "H1" }, {});
+    const details = await service.details({ listingId: "H1" });
+    expect(details.provider).toBe("amadeus");
+    expect(details.status).toBe("success");
+    expect(unsafeCast<{ place?: { id?: string } }>(details.listing).place?.id).toBe(
+      "places/test"
+    );
+  });
 
-    const listing = details.listing as {
-      hotel?: { address?: { cityName?: string }; name?: string };
-      place?: { id?: string; rating?: number };
+  it("throws a not_found ProviderError when geocoding fails", async () => {
+    const provider: AccommodationProviderAdapter = {
+      buildBookingPayload: vi.fn(),
+      checkAvailability: vi.fn(),
+      createBooking: vi.fn(),
+      getDetails: vi.fn(),
+      name: "amadeus",
+      search: vi.fn(),
     };
 
-    expect(listing.hotel).toMatchObject({
-      address: { cityName: "Paris" },
-      name: "Test Hotel",
-    });
-    expect(listing.place).toMatchObject({
-      id: "places/test",
-    });
+    const { service } = createService({ coords: null, provider });
+
+    await expect(
+      service.search({
+        checkin: "2025-12-01",
+        checkout: "2025-12-02",
+        guests: 1,
+        location: "Paris",
+      })
+    ).rejects.toBeInstanceOf(ProviderError);
   });
 });

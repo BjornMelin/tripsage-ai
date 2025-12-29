@@ -16,8 +16,16 @@ vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn((_name, _opts, execute) => execute(TELEMETRY_SPAN)),
 }));
 
-vi.mock("@domain/activities/container", () => ({
-  getActivitiesService: vi.fn(),
+const MOCK_ACTIVITIES_SEARCH = vi.hoisted(() => vi.fn());
+const MOCK_ACTIVITIES_DETAILS = vi.hoisted(() => vi.fn());
+
+class MockActivitiesService {
+  details = MOCK_ACTIVITIES_DETAILS;
+  search = MOCK_ACTIVITIES_SEARCH;
+}
+
+vi.mock("@domain/activities/service", () => ({
+  ActivitiesService: MockActivitiesService,
 }));
 
 const mockContext = {
@@ -26,21 +34,8 @@ const mockContext = {
 };
 
 describe("activities tools", () => {
-  let mockService: {
-    search: ReturnType<typeof vi.fn>;
-    details: ReturnType<typeof vi.fn>;
-  };
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    mockService = {
-      details: vi.fn(),
-      search: vi.fn(),
-    };
-
-    const { getActivitiesService } = await import("@domain/activities/container");
-    vi.mocked(getActivitiesService).mockReturnValue(mockService as never);
   });
 
   afterEach(() => {
@@ -71,7 +66,7 @@ describe("activities tools", () => {
         },
       };
 
-      mockService.search.mockResolvedValue(mockResult);
+      MOCK_ACTIVITIES_SEARCH.mockResolvedValue(mockResult);
 
       const { searchActivities } = await import("@ai/tools/server/activities");
 
@@ -83,7 +78,7 @@ describe("activities tools", () => {
         mockContext
       );
 
-      expect(mockService.search).toHaveBeenCalledWith(
+      expect(MOCK_ACTIVITIES_SEARCH).toHaveBeenCalledWith(
         { category: "museums", destination: "Paris" },
         {}
       );
@@ -94,7 +89,7 @@ describe("activities tools", () => {
     });
 
     it("should handle service errors", async () => {
-      mockService.search.mockRejectedValue(new Error("Service error"));
+      MOCK_ACTIVITIES_SEARCH.mockRejectedValue(new Error("Service error"));
 
       const { searchActivities } = await import("@ai/tools/server/activities");
 
@@ -126,7 +121,7 @@ describe("activities tools", () => {
         },
       };
 
-      mockService.search.mockResolvedValue(mockResult);
+      MOCK_ACTIVITIES_SEARCH.mockResolvedValue(mockResult);
 
       const { searchActivities } = await import("@ai/tools/server/activities");
 
@@ -156,7 +151,7 @@ describe("activities tools", () => {
         type: "museum",
       };
 
-      mockService.details.mockResolvedValue(mockActivity);
+      MOCK_ACTIVITIES_DETAILS.mockResolvedValue(mockActivity);
 
       const { getActivityDetails } = await import("@ai/tools/server/activities");
 
@@ -165,12 +160,12 @@ describe("activities tools", () => {
         mockContext
       );
 
-      expect(mockService.details).toHaveBeenCalledWith("places/123", {});
+      expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith("places/123", {});
       expect(result).toEqual(mockActivity);
     });
 
     it("should handle service errors", async () => {
-      mockService.details.mockRejectedValue(new Error("Not found"));
+      MOCK_ACTIVITIES_DETAILS.mockRejectedValue(new Error("Not found"));
 
       const { getActivityDetails } = await import("@ai/tools/server/activities");
 
@@ -200,7 +195,7 @@ describe("activities tools", () => {
 
       // Verify execute rejects when called with invalid input
       // Mock service should validate placeId like real service does
-      mockService.details.mockImplementationOnce((placeId: string) => {
+      MOCK_ACTIVITIES_DETAILS.mockImplementationOnce((placeId: string) => {
         if (!placeId || placeId.trim().length === 0) {
           throw new Error("Place ID is required");
         }

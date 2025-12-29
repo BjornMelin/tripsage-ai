@@ -43,10 +43,10 @@ coverage output (prevents “unmeasured” critical modules).
 
 Enforced by Vitest via `vitest.config.ts`:
 
-- Statements: **45%**
-- Branches: **35%**
-- Functions: **50%**
-- Lines: **45%**
+- Statements: **50%**
+- Branches: **40%**
+- Functions: **55%**
+- Lines: **50%**
 
 ### Critical-surface thresholds
 
