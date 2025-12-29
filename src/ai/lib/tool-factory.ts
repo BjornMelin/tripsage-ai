@@ -46,7 +46,45 @@ const jsonValueSchema: z.ZodType<JSONValue> = z.lazy(() =>
   ])
 );
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function isJsonSafe(value: unknown, seen: WeakSet<object>): boolean {
+  if (value === null) return true;
+  if (typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object") return false;
+
+  if (seen.has(value)) return false;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!isJsonSafe(item, seen)) return false;
+    }
+    return true;
+  }
+
+  if (!isPlainObject(value)) return false;
+  for (const item of Object.values(value)) {
+    if (!isJsonSafe(item, seen)) return false;
+  }
+  return true;
+}
+
 function toJsonValue(value: unknown): JSONValue {
+  const seen = new WeakSet<object>();
+  if (isJsonSafe(value, seen)) {
+    try {
+      return jsonValueSchema.parse(value);
+    } catch {
+      // Fall back to JSON.stringify semantics for edge-cases (e.g. undefined handling).
+    }
+  }
+
   let serialized: string | undefined;
   try {
     serialized = JSON.stringify(value);

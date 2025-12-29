@@ -5,22 +5,12 @@
 import "server-only";
 
 import { isNotFoundError } from "@domain/activities/errors";
-import type { ActivitiesCache } from "@domain/activities/service";
-import { ActivitiesService } from "@domain/activities/service";
-import { activitySchema } from "@schemas/search";
-import { z } from "zod";
+import { createActivitiesService } from "@/lib/activities/service-factory";
+import { createSupabaseActivitiesDetailsCache } from "@/lib/activities/supabase-cache";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId } from "@/lib/api/route-helpers";
-import { hashInputForCache } from "@/lib/cache/hash";
-import {
-  buildActivitySearchQuery,
-  getActivityDetailsFromPlaces,
-  searchActivitiesWithPlaces,
-} from "@/lib/google/places-activities";
 import { getCurrentUser } from "@/lib/supabase/server";
-import { createServerLogger } from "@/lib/telemetry/logger";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /**
  * Determines whether the request contains Supabase authentication cookies.
@@ -78,43 +68,8 @@ export const GET = withApiGuards({
     userId = userResult.user?.id ?? undefined;
   }
 
-  const cache: ActivitiesCache = {
-    findActivityInRecentSearches: async ({ nowIso, placeId, userId }) => {
-      const { data } = await supabase
-        .from("search_activities")
-        .select("results")
-        .eq("user_id", userId)
-        .gt("expires_at", nowIso)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      const rows = Array.isArray(data) ? data : [];
-      for (const row of rows) {
-        const parsed = z.array(activitySchema).safeParse(row.results);
-        if (!parsed.success) continue;
-        const match = parsed.data.find((a) => a.id === placeId);
-        if (match) return match;
-      }
-      return null;
-    },
-    getSearch: async (_input) => null,
-    putSearch: async (_input) => undefined,
-  };
-
-  const service = new ActivitiesService({
-    cache,
-    hashInput: hashInputForCache,
-    logger: createServerLogger("activities.service"),
-    places: {
-      buildSearchQuery: buildActivitySearchQuery,
-      getDetails: getActivityDetailsFromPlaces,
-      search: searchActivitiesWithPlaces,
-    },
-    telemetry: {
-      withSpan: (name, options, fn) =>
-        withTelemetrySpan(name, options, async (span) => await fn(span)),
-    },
-  });
+  const cache = createSupabaseActivitiesDetailsCache(supabase);
+  const service = createActivitiesService({ cache });
 
   try {
     const activity = await service.details(validatedPlaceId, {

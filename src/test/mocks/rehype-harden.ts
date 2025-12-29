@@ -5,6 +5,12 @@
  * edge-cases in Vitest forks while still testing protocol hardening behavior.
  */
 
+import {
+  BLOCKED_PROTOCOLS,
+  INVALID_BLOB_MARKER,
+  SAFE_PROTOCOLS,
+} from "./rehype-harden.constants";
+
 type HardenOptions = {
   defaultOrigin?: string;
   allowedLinkPrefixes?: string[];
@@ -26,18 +32,6 @@ type HastRoot = { type: "root"; children: HastNode[] };
 type HastParent = HastElement | HastRoot;
 
 type HastNode = HastText | HastElement | HastRoot;
-
-const SAFE_PROTOCOLS = new Set([
-  "https:",
-  "http:",
-  "irc:",
-  "ircs:",
-  "mailto:",
-  "xmpp:",
-  "blob:",
-]);
-
-const BLOCKED_PROTOCOLS = new Set(["javascript:", "data:", "file:", "vbscript:"]);
 
 function parseUrl(url: unknown, defaultOrigin: string): URL | null {
   if (typeof url !== "string") return null;
@@ -100,7 +94,7 @@ function transformUrl(
       const blobUrl = new URL(url);
       if (blobUrl.protocol === "blob:" && url.length > 5) {
         const afterProtocol = url.slice("blob:".length);
-        if (afterProtocol && afterProtocol !== "invalid") return url;
+        if (afterProtocol && afterProtocol !== INVALID_BLOB_MARKER) return url;
       }
     } catch {
       return null;

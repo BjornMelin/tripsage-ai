@@ -29,6 +29,7 @@ vi.mock("@/lib/telemetry/span", () => ({
   ),
 }));
 
+const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 const { AccommodationsService } = await import("@domain/accommodations/service");
 
 describe("AccommodationsService booking payments", () => {
@@ -103,11 +104,12 @@ describe("AccommodationsService booking payments", () => {
       enrichHotelListingWithPlaces: async (listing) => listing,
       getCachedJson,
       provider,
-      resolveLocationToLatLng: async (_location) => ({ lat: 1, lon: 1 }),
-      retryWithBackoff: async (fn, _options) => await fn(0),
+      resolveLocationToLatLng: () => Promise.resolve({ lat: 1, lon: 1 }),
+      retryWithBackoff: (fn) => fn(0),
       setCachedJson: async () => undefined,
       supabase: async () => supabase,
       versionedKey: async (_tag: string, key: string) => `tag:v1:${key}`,
+      withTelemetrySpan,
     });
 
     await service.book(

@@ -8,50 +8,12 @@ import { createAiTool } from "@ai/lib/tool-factory";
 import type { ActivityModelOutput } from "@ai/tools/schemas/activities";
 import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { webSearch } from "@ai/tools/server/web-search";
-import type { WebSearchFn } from "@domain/activities/service";
-import { ActivitiesService } from "@domain/activities/service";
 import { activitySchema, activitySearchParamsSchema } from "@schemas/search";
-import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
-import { hashInputForCache } from "@/lib/cache/hash";
 import {
-  buildActivitySearchQuery,
-  getActivityDetailsFromPlaces,
-  searchActivitiesWithPlaces,
-} from "@/lib/google/places-activities";
-import { createServerLogger } from "@/lib/telemetry/logger";
-
-function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
-  return typeof value === "object" && value !== null && Symbol.asyncIterator in value;
-}
-
-async function resolveExecuteResult<T>(
-  value: AsyncIterable<T> | PromiseLike<T> | T
-): Promise<T> {
-  if (isAsyncIterable<T>(value)) {
-    let last: T | undefined;
-    for await (const chunk of value) {
-      last = chunk;
-    }
-    if (last === undefined) {
-      throw new Error("Tool returned no output");
-    }
-    return last;
-  }
-
-  return await value;
-}
-
-type WebSearchToolOutput = {
-  fromCache: boolean;
-  results: Array<{
-    url: string;
-    title?: string;
-    snippet?: string;
-    publishedAt?: string;
-  }>;
-  tookMs: number;
-};
+  createActivitiesService,
+  createWebSearchFallback,
+} from "@/lib/activities/service-factory";
 
 /**
  * Output schema for activity search tool.
@@ -84,49 +46,9 @@ export const searchActivities = createAiTool<
     "long-tail queries. Returns verified activities and AI-suggested ideas.",
   execute: async (params) => {
     try {
-      const fallbackWebSearch: WebSearchFn | undefined = webSearch.execute
-        ? async ({ limit, query, toolCallId, userId }) => {
-            const callOptions = {
-              messages: [],
-              toolCallId,
-            } satisfies ToolExecutionOptions;
-            const executed = webSearch.execute?.(
-              {
-                categories: null,
-                fresh: false,
-                freshness: null,
-                limit,
-                location: null,
-                query,
-                region: null,
-                scrapeOptions: null,
-                sources: ["web"],
-                tbs: null,
-                timeoutMs: null,
-                userId: userId ?? null,
-              },
-              callOptions
-            );
-            if (!executed) return null;
-
-            const result = await resolveExecuteResult<WebSearchToolOutput>(executed);
-            return { results: result.results };
-          }
-        : undefined;
-
-      const service = new ActivitiesService({
-        hashInput: hashInputForCache,
-        logger: createServerLogger("activities.service"),
-        places: {
-          buildSearchQuery: buildActivitySearchQuery,
-          getDetails: getActivityDetailsFromPlaces,
-          search: searchActivitiesWithPlaces,
-        },
-        webSearch: fallbackWebSearch,
-      });
-      const result = await service.search(params, {
-        // userId will be extracted from request context if available
-      });
+      const fallbackWebSearch = createWebSearchFallback(webSearch.execute);
+      const service = createActivitiesService({ webSearch: fallbackWebSearch });
+      const result = await service.search(params);
 
       return {
         activities: result.activities,
@@ -202,18 +124,8 @@ export const getActivityDetails = createAiTool<
     "Returns photos, ratings, descriptions, location, and other metadata.",
   execute: async (params) => {
     try {
-      const service = new ActivitiesService({
-        hashInput: hashInputForCache,
-        logger: createServerLogger("activities.service"),
-        places: {
-          buildSearchQuery: buildActivitySearchQuery,
-          getDetails: getActivityDetailsFromPlaces,
-          search: searchActivitiesWithPlaces,
-        },
-      });
-      const activity = await service.details(params.placeId, {
-        // userId will be extracted from request context if available
-      });
+      const service = createActivitiesService({});
+      const activity = await service.details(params.placeId);
 
       return activity;
     } catch (error) {

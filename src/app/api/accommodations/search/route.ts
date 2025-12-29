@@ -16,6 +16,7 @@ import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
 import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 import { retryWithBackoff } from "@/lib/http/retry";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 export const POST = withApiGuards({
   auth: false, // Allow anonymous searches
@@ -37,6 +38,7 @@ export const POST = withApiGuards({
     setCachedJson,
     supabase: async () => supabase,
     versionedKey,
+    withTelemetrySpan,
   });
 
   const result = await service.search(body, {

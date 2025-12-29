@@ -28,7 +28,6 @@ import {
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { type Span, withTelemetrySpan } from "@/lib/telemetry/span";
 
 type HotelLikeListing = {
   hotel?: {
@@ -38,6 +37,12 @@ type HotelLikeListing = {
       lines?: string[];
     };
   };
+};
+
+type TelemetrySpanAttributes = Record<string, string | number | boolean>;
+type TelemetrySpan = {
+  addEvent: (name: string, attributes?: TelemetrySpanAttributes) => void;
+  recordException: (error: Error) => void;
 };
 
 /** Dependencies for the accommodations service. */
@@ -63,6 +68,11 @@ export type AccommodationsServiceDeps = {
   ) => Promise<T>;
   setCachedJson: (key: string, value: unknown, ttlSeconds?: number) => Promise<void>;
   versionedKey: (tag: string, key: string) => Promise<string>;
+  withTelemetrySpan: <T>(
+    name: string,
+    options: { attributes?: TelemetrySpanAttributes; redactKeys?: string[] },
+    fn: (span: TelemetrySpan) => Promise<T> | T
+  ) => Promise<T>;
 };
 
 /**
@@ -103,7 +113,7 @@ export class AccommodationsService {
     params: AccommodationSearchParams,
     ctx?: ServiceContext
   ): Promise<AccommodationSearchResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.search",
       {
         attributes: {
@@ -136,7 +146,9 @@ export class AccommodationsService {
         try {
           coords = await this.deps.resolveLocationToLatLng(params.location);
         } catch (error) {
-          span.recordException(error as Error);
+          span.recordException(
+            error instanceof Error ? error : new Error("Unknown error")
+          );
           coords = null;
         }
         if (!coords) {
@@ -209,7 +221,7 @@ export class AccommodationsService {
     params: AccommodationDetailsParams,
     ctx?: ServiceContext
   ): Promise<AccommodationDetailsResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.details",
       {
         attributes: { listingId: params.listingId },
@@ -243,7 +255,7 @@ export class AccommodationsService {
     params: AccommodationCheckAvailabilityParams,
     ctx: ServiceContext
   ): Promise<AccommodationCheckAvailabilityResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.checkAvailability",
       {
         attributes: {
@@ -296,7 +308,7 @@ export class AccommodationsService {
     params: AccommodationBookingRequest,
     ctx: ServiceContext & { userId: string }
   ): Promise<AccommodationBookingResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.book",
       {
         attributes: {
@@ -454,7 +466,7 @@ export class AccommodationsService {
    */
   private validateBookingContext(
     ctx: ServiceContext & { userId: string },
-    span: Span,
+    span: TelemetrySpan,
     listingId: string
   ): void {
     if (!ctx.processPayment || !ctx.requestApproval) {

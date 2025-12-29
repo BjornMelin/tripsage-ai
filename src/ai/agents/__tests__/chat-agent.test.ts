@@ -61,7 +61,12 @@ vi.mock("@/app/api/_helpers/attachments", () => ({
 // Mock tokens
 const tokenMocks = vi.hoisted(() => ({
   clampMaxTokens: vi.fn(() => ({ maxTokens: 1024, reasons: [] })),
-  countTokens: vi.fn((_texts: string[], _modelId?: string) => 100),
+  countTokens: vi.fn((texts: string[], modelId?: string) => {
+    if (texts.length === -1 || modelId === "__never__") {
+      throw new Error("unreachable");
+    }
+    return 100;
+  }),
 }));
 vi.mock("@/lib/tokens/budget", () => ({
   clampMaxTokens: tokenMocks.clampMaxTokens,
@@ -208,17 +213,23 @@ describe("createChatAgent", () => {
   });
 
   it("compresses context and keeps adjacent tool call/result pairs together", async () => {
-    limitMocks.getModelContextLimit.mockReturnValue(2158);
+    const ContextLimit = 2158; // Context limit for this test model
+    const CompressionTrigger = 9999; // Token count that forces compression path
+    const SystemTokens = 10;
+    const UserMessageTokens = 60;
+    const ToolCallTokens = 20;
+
+    limitMocks.getModelContextLimit.mockReturnValue(ContextLimit);
     tokenMocks.countTokens.mockImplementation((texts: string[]) => {
-      if (texts.some((t) => t.includes("test message"))) return 10;
-      if (texts.length > 1) return 9999; // Trigger compression for step messages
+      if (texts.some((t) => t.includes("test message"))) return SystemTokens;
+      if (texts.length > 1) return CompressionTrigger;
 
       const joined = texts.join(" ");
-      if (joined.includes("system")) return 10;
-      if (joined.includes("old")) return 60;
-      if (joined.includes("searchFlights")) return 20;
-      if (joined.includes("tool-result-text")) return 20;
-      if (joined.includes("recent")) return 60;
+      if (joined.includes("system")) return SystemTokens;
+      if (joined.includes("old")) return UserMessageTokens;
+      if (joined.includes("searchFlights")) return ToolCallTokens;
+      if (joined.includes("tool-result-text")) return ToolCallTokens;
+      if (joined.includes("recent")) return UserMessageTokens;
       return 1;
     });
 
@@ -226,6 +237,7 @@ describe("createChatAgent", () => {
     const messages = createTestMessages();
     createChatAgent(deps, messages, { desiredMaxTokens: 4096, maxSteps: 20 });
 
+    expect(mockToolLoopAgent).toHaveBeenCalled();
     const toolLoopConfig = mockToolLoopAgent.mock.calls[0]?.[0];
     const prepareStep = unsafeCast<{ prepareStep?: unknown }>(
       toolLoopConfig

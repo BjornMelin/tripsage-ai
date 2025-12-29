@@ -46,6 +46,7 @@ import { retryWithBackoff } from "@/lib/http/retry";
 import { processBookingPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { requireApproval } from "./approvals";
 
 function createAccommodationsService(): AccommodationsService {
@@ -61,6 +62,7 @@ function createAccommodationsService(): AccommodationsService {
     setCachedJson,
     supabase: createServerSupabase,
     versionedKey,
+    withTelemetrySpan,
   });
 }
 
@@ -78,6 +80,13 @@ export const searchAccommodations = createAiTool<
     return service.search(params, {
       sessionId: await maybeGetUserIdentifier(),
     });
+  },
+  guardrails: {
+    rateLimit: {
+      errorCode: TOOL_ERROR_CODES.accomSearchRateLimited,
+      limit: 10,
+      window: "1 m",
+    },
   },
   inputSchema: accommodationSearchInputSchema,
   name: "searchAccommodations",

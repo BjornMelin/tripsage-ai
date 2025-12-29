@@ -30,8 +30,8 @@ function makePlacesAdapter(
     buildSearchQuery: vi.fn((destination: string, category?: string) =>
       [destination, category].filter(Boolean).join(" ")
     ),
-    getDetails: vi.fn(async (_placeId: string) => null),
-    search: vi.fn(async (_query: string, _limit: number) => []),
+    getDetails: vi.fn(() => Promise.resolve(null)),
+    search: vi.fn(() => Promise.resolve([])),
     ...overrides,
   };
 }
@@ -60,7 +60,7 @@ describe("ActivitiesService", () => {
   it("returns cached results when available (skips Places)", async () => {
     const cachedActivity = makeActivity({ id: "places/1", name: "Cached Activity" });
     const cache = makeCache({
-      getSearch: vi.fn(async (_input) => ({
+      getSearch: vi.fn(async () => ({
         results: [cachedActivity],
         source: "cached" as const,
       })),
@@ -198,11 +198,37 @@ describe("ActivitiesService", () => {
     expect(webSearch).toHaveBeenCalled();
     expect(result.metadata.primarySource).toBe("mixed");
     expect(result.metadata.sources).toEqual(["googleplaces", "ai_fallback"]);
+    expect(result.activities.some((a) => a.id.startsWith("ai_fallback:"))).toBe(true);
     expect(cache.putSearch).toHaveBeenCalledWith(
       expect.objectContaining({
         source: "googleplaces",
       })
     );
+  });
+
+  it("does not trigger fallback when destination is popular and results meet the threshold", async () => {
+    const places = makePlacesAdapter({
+      search: vi.fn(async () => [
+        makeActivity({ id: "places/1" }),
+        makeActivity({ id: "places/2" }),
+        makeActivity({ id: "places/3" }),
+      ]),
+    });
+    const webSearch: WebSearchFn = vi.fn(async () => ({
+      results: [{ title: "Should Not Be Used", url: "https://example.com/nope" }],
+    }));
+    const service = new ActivitiesService({
+      hashInput: () => "qhash",
+      places,
+      webSearch,
+    });
+
+    const result = await service.search({ destination: "Paris" }, { userId: "user-1" });
+
+    expect(webSearch).not.toHaveBeenCalled();
+    expect(result.metadata.primarySource).toBe("googleplaces");
+    expect(result.metadata.sources).toEqual(["googleplaces"]);
+    expect(result.activities.every((a) => a.id.startsWith("places/"))).toBe(true);
   });
 
   it("details returns cached activity when available", async () => {

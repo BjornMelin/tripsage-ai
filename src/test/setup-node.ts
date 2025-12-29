@@ -108,14 +108,11 @@ afterAll(() => {
       for (const item of items ?? []) {
         const name =
           typeof item === "object" && item && "constructor" in item
-            ? String(
-                (() => {
-                  const ctorName = unsafeCast<{ constructor?: { name?: unknown } }>(
-                    item
-                  ).constructor?.name;
-                  return typeof ctorName === "string" ? ctorName : "Object";
-                })()
-              )
+            ? (() => {
+                const ctorName = unsafeCast<{ constructor?: { name?: unknown } }>(item)
+                  .constructor?.name;
+                return typeof ctorName === "string" ? ctorName : "Object";
+              })()
             : typeof item;
         counts.set(name, (counts.get(name) ?? 0) + 1);
       }

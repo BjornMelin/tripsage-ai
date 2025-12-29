@@ -14,6 +14,10 @@ import { activitySearchParamsSchema } from "@schemas/search";
  */
 const PLACES_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
+const AI_FALLBACK_DEFAULT_DURATION_MINUTES = 120;
+const AI_FALLBACK_DEFAULT_PRICE_TIER = 2;
+const AI_FALLBACK_DEFAULT_RATING = 0;
+
 export type ActivitiesLogger = {
   info: (message: string, meta?: Record<string, unknown>) => void;
   warn: (message: string, meta?: Record<string, unknown>) => void;
@@ -119,7 +123,7 @@ const noopLogger: ActivitiesLogger = {
 
 const noopSpan: ActivitiesTelemetrySpan = {
   addEvent: () => undefined,
-  recordException: (_error) => undefined,
+  recordException: () => undefined,
   setAttribute: () => undefined,
 };
 
@@ -491,13 +495,13 @@ export class ActivitiesService {
         coordinates: undefined,
         date: date ?? this.clock.todayIsoDate(),
         description,
-        duration: 120,
+        duration: AI_FALLBACK_DEFAULT_DURATION_MINUTES,
         id: `ai_fallback:${this.deps.hashInput(result.url)}`,
         images: undefined,
         location: destination,
         name,
-        price: 2,
-        rating: 0,
+        price: AI_FALLBACK_DEFAULT_PRICE_TIER,
+        rating: AI_FALLBACK_DEFAULT_RATING,
         type,
       });
     }

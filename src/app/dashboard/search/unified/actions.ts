@@ -95,6 +95,7 @@ export async function searchHotelsAction(
     setCachedJson,
     supabase: createServerSupabase,
     versionedKey,
+    withTelemetrySpan,
   });
   const today = new Date();
   const todayIso = format(today, "yyyy-MM-dd");

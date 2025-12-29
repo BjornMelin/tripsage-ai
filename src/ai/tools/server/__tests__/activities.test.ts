@@ -78,10 +78,10 @@ describe("activities tools", () => {
         mockContext
       );
 
-      expect(MOCK_ACTIVITIES_SEARCH).toHaveBeenCalledWith(
-        { category: "museums", destination: "Paris" },
-        {}
-      );
+      expect(MOCK_ACTIVITIES_SEARCH).toHaveBeenCalledWith({
+        category: "museums",
+        destination: "Paris",
+      });
       expect(result).toEqual({
         activities: mockResult.activities,
         metadata: mockResult.metadata,
@@ -160,7 +160,7 @@ describe("activities tools", () => {
         mockContext
       );
 
-      expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith("places/123", {});
+      expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith("places/123");
       expect(result).toEqual(mockActivity);
     });
 

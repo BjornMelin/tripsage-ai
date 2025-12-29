@@ -22,6 +22,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
 
+const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 const { AccommodationsService } = await import("@domain/accommodations/service");
 
 const CACHE_NAMESPACE = "service:accom:search";
@@ -57,12 +58,15 @@ function createService(options: {
     enrichHotelListingWithPlaces: options.enrich ?? defaultEnrich,
     getCachedJson,
     provider: options.provider,
-    resolveLocationToLatLng: async (_location) =>
-      options.coords === undefined ? { lat: 1.234, lon: 2.345 } : options.coords,
-    retryWithBackoff: async (fn, _options) => await fn(0),
+    resolveLocationToLatLng: () =>
+      Promise.resolve(
+        options.coords === undefined ? { lat: 1.234, lon: 2.345 } : options.coords
+      ),
+    retryWithBackoff: (fn) => fn(0),
     setCachedJson,
     supabase: async () => unsafeCast<TypedServerSupabase>({}),
     versionedKey: async (_tag, key) => `tag:v1:${key}`,
+    withTelemetrySpan,
   };
 
   return { cache, deps, service: new AccommodationsService(deps) };

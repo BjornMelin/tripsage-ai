@@ -5,14 +5,17 @@
 import type { MermaidConfig, MermaidOptions, StreamdownProps } from "streamdown";
 import { defaultRehypePlugins, defaultRemarkPlugins } from "streamdown";
 import type { Pluggable, Plugin } from "unified";
+import { z } from "zod";
 
-type HardenOptions = {
-  allowedImagePrefixes?: string[];
-  allowedLinkPrefixes?: string[];
-  allowedProtocols?: string[];
-  defaultOrigin?: string | undefined;
-  allowDataImages?: boolean;
-};
+const hardenOptionsSchema = z.looseObject({
+  allowDataImages: z.boolean().optional(),
+  allowedImagePrefixes: z.array(z.string()).optional(),
+  allowedLinkPrefixes: z.array(z.string()).optional(),
+  allowedProtocols: z.array(z.string()).optional(),
+  defaultOrigin: z.string().optional(),
+});
+
+type HardenOptions = z.infer<typeof hardenOptionsSchema>;
 
 type UnifiedPlugin = Plugin<unknown[]>;
 type PluggableTuple = [plugin: UnifiedPlugin, ...parameters: unknown[]];
@@ -21,19 +24,28 @@ function isPluggableTuple(value: Pluggable): value is PluggableTuple {
   return Array.isArray(value);
 }
 
+function isUnifiedPlugin(value: unknown): value is UnifiedPlugin {
+  return typeof value === "function";
+}
+
 function resolvePluginDefaults(plugin: Pluggable): {
   plugin: UnifiedPlugin;
   defaults: HardenOptions;
 } {
   if (isPluggableTuple(plugin)) {
-    const defaults =
-      plugin[1] != null && typeof plugin[1] === "object"
-        ? (plugin[1] as HardenOptions)
-        : {};
+    const parsed = hardenOptionsSchema.safeParse(plugin[1]);
+    const defaults = parsed.success ? parsed.data : {};
+    if (!isUnifiedPlugin(plugin[0])) {
+      throw new Error("Invalid Streamdown rehype plugin configuration");
+    }
     return { defaults, plugin: plugin[0] };
   }
 
-  return { defaults: {}, plugin: plugin as UnifiedPlugin };
+  if (!isUnifiedPlugin(plugin)) {
+    throw new Error("Invalid Streamdown rehype plugin configuration");
+  }
+
+  return { defaults: {}, plugin };
 }
 
 const { plugin: hardenFn, defaults: hardenDefaults } = resolvePluginDefaults(
