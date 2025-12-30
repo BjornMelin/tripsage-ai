@@ -4,29 +4,19 @@
 
 import "server-only";
 
-import { z } from "zod";
-
+import { getIdempotencyFailOpenDefault } from "@/lib/env/server-flags";
 import { getRedis } from "@/lib/redis";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { warnRedisUnavailable } from "@/lib/telemetry/redis";
 
 const REDIS_FEATURE = "idempotency.keys";
 
-const idempotencyConfigSchema = z.strictObject({
-  // biome-ignore lint/style/useNamingConvention: Env var casing is uppercase by convention
-  IDEMPOTENCY_FAIL_OPEN: z.string().optional().default("true"),
-});
-
 /**
  * Default fail mode from environment variable.
  * Set IDEMPOTENCY_FAIL_OPEN=false to fail closed (throw on Redis unavailable).
  * Evaluated once at module load; pass `failOpen` option per call to override at runtime.
  */
-const { IDEMPOTENCY_FAIL_OPEN } = idempotencyConfigSchema.parse({
-  // biome-ignore lint/style/useNamingConvention: Env var casing is uppercase by convention
-  IDEMPOTENCY_FAIL_OPEN: process.env.IDEMPOTENCY_FAIL_OPEN,
-});
-const DEFAULT_FAIL_OPEN = IDEMPOTENCY_FAIL_OPEN !== "false";
+const DEFAULT_FAIL_OPEN = getIdempotencyFailOpenDefault();
 
 /**
  * Error thrown when idempotency check fails due to Redis unavailability

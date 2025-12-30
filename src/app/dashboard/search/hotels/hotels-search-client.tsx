@@ -9,11 +9,8 @@ import {
   AlertCircleIcon,
   Building2Icon,
   FilterIcon,
-  LightbulbIcon,
-  MapPinIcon,
   SearchIcon,
   SortAscIcon,
-  StarIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildHotelApiPayload } from "@/components/features/search/filters/api-payload";
@@ -22,7 +19,6 @@ import { HotelSearchForm } from "@/components/features/search/forms/hotel-search
 import { HotelResults } from "@/components/features/search/results/hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,7 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -53,92 +48,20 @@ import { useCurrencyStore } from "@/stores/currency-store";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { mapAccommodationToHotelResult } from "./hotel-mapping";
+import { HotelsEmptyState } from "./hotels-empty-state";
+import {
+  DEFAULT_POPULAR_DESTINATIONS,
+  mapPopularDestinationsFromApiResponse,
+  type PopularDestinationProps,
+  readCachedPopularDestinations,
+  writeCachedPopularDestinations,
+} from "./popular-destinations";
 
 /** Hotel search client component props. */
 interface HotelsSearchClientProps {
   onSubmitServer: (
     params: SearchAccommodationParams
   ) => Promise<SearchAccommodationParams>;
-}
-
-const POPULAR_DESTINATIONS = [
-  { destination: "New York", priceFrom: 199, rating: 4.8 },
-  { destination: "Paris", priceFrom: 229, rating: 4.7 },
-  { destination: "Tokyo", priceFrom: 179, rating: 4.9 },
-  { destination: "London", priceFrom: 249, rating: 4.6 },
-  { destination: "Barcelona", priceFrom: 189, rating: 4.8 },
-  { destination: "Rome", priceFrom: 219, rating: 4.7 },
-] as const;
-
-type PopularDestinationApiResponse = {
-  city: string;
-  country?: string;
-  avgPrice?: string;
-  imageUrl?: string;
-};
-
-const POPULAR_DESTINATIONS_BY_CITY = new Map(
-  POPULAR_DESTINATIONS.map((destination) => [
-    destination.destination.toLowerCase(),
-    destination,
-  ])
-);
-
-const POPULAR_DESTINATIONS_CACHE_KEY = "hotelsSearch:popularDestinations";
-const POPULAR_DESTINATIONS_CACHE_TTL_MS = 60 * 60 * 1000;
-
-function parseAvgPrice(value: string | undefined): number | null {
-  if (!value) return null;
-  const numeric = Number.parseFloat(value.replace(/[^\d.]/g, ""));
-  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
-}
-
-function readCachedPopularDestinations(): PopularDestinationProps[] | null {
-  try {
-    const stored = window.sessionStorage.getItem(POPULAR_DESTINATIONS_CACHE_KEY);
-    if (!stored) return null;
-    const parsed: unknown = JSON.parse(stored);
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      !("ts" in parsed) ||
-      !("destinations" in parsed)
-    ) {
-      return null;
-    }
-    const ts = (parsed as { ts: unknown }).ts;
-    if (typeof ts !== "number" || Date.now() - ts > POPULAR_DESTINATIONS_CACHE_TTL_MS) {
-      return null;
-    }
-    const destinations = (parsed as { destinations: unknown }).destinations;
-    if (
-      !Array.isArray(destinations) ||
-      !destinations.every(
-        (item) =>
-          typeof item === "object" &&
-          item !== null &&
-          "destination" in item &&
-          "priceFrom" in item &&
-          "rating" in item
-      )
-    ) {
-      return null;
-    }
-    return destinations as PopularDestinationProps[];
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedPopularDestinations(destinations: PopularDestinationProps[]): void {
-  try {
-    window.sessionStorage.setItem(
-      POPULAR_DESTINATIONS_CACHE_KEY,
-      JSON.stringify({ destinations, ts: Date.now() })
-    );
-  } catch {
-    // ignore
-  }
 }
 
 /** Hotel search client component. */
@@ -159,7 +82,7 @@ export default function HotelsSearchClient({
   const [isWishlistUpdating, setIsWishlistUpdating] = useState(false);
   const [popularDestinations, setPopularDestinations] = useState<
     PopularDestinationProps[]
-  >(() => POPULAR_DESTINATIONS.slice());
+  >(() => DEFAULT_POPULAR_DESTINATIONS.slice());
   const [isPopularDestinationsLoading, setIsPopularDestinationsLoading] =
     useState(false);
   const accommodationResults = useSearchResultsStore(
@@ -192,7 +115,7 @@ export default function HotelsSearchClient({
   }, []);
 
   useEffect(() => {
-    const cached = readCachedPopularDestinations();
+    const cached = readCachedPopularDestinations(window.sessionStorage, Date.now());
     if (cached) {
       setPopularDestinations(cached);
       return;
@@ -207,27 +130,11 @@ export default function HotelsSearchClient({
         });
         if (!res.ok) return;
         const body: unknown = await res.json();
-        if (!Array.isArray(body)) return;
-        const mapped = body
-          .filter(
-            (item): item is PopularDestinationApiResponse =>
-              typeof item === "object" && item !== null && "city" in item
-          )
-          .map((item) => {
-            const city = String(item.city ?? "").trim();
-            const fallback = POPULAR_DESTINATIONS_BY_CITY.get(city.toLowerCase());
-            const parsedPrice = parseAvgPrice(item.avgPrice);
-            return {
-              destination: city,
-              priceFrom: parsedPrice ?? fallback?.priceFrom ?? 0,
-              rating: fallback?.rating ?? 4.6,
-            } satisfies PopularDestinationProps;
-          })
-          .filter((item) => item.destination.length > 0 && item.priceFrom > 0);
+        const mapped = mapPopularDestinationsFromApiResponse(body);
 
         if (mapped.length > 0) {
           setPopularDestinations(mapped);
-          writeCachedPopularDestinations(mapped);
+          writeCachedPopularDestinations(window.sessionStorage, Date.now(), mapped);
         }
       } catch (error) {
         if (
@@ -493,71 +400,11 @@ export default function HotelsSearchClient({
 
             {/* Initial State - Popular Destinations & Tips */}
             {!hasSearched && !isSearching && (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPinIcon className="h-5 w-5" />
-                      Popular Destinations
-                    </CardTitle>
-                    <CardDescription>
-                      Trending hotel destinations and deals
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isPopularDestinationsLoading ? (
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Loading popular destinations…
-                      </p>
-                    ) : null}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {popularDestinations.map((destination) => (
-                        <PopularDestinationCard
-                          key={destination.destination}
-                          currencyCode={baseCurrency}
-                          {...destination}
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <LightbulbIcon className="h-5 w-5" />
-                      Accommodation Tips
-                    </CardTitle>
-                    <CardDescription>
-                      Tips to help you find the best accommodations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* TODO: Fetch personalized tips from AI service or content management system based on user context */}
-                    <div className="space-y-4">
-                      <AccommodationTip
-                        title="Book directly with hotels for possible benefits"
-                        description="While we show you the best deals from all sites, booking directly with hotels can sometimes get you perks like free breakfast, room upgrades, or loyalty points."
-                      />
-                      <Separator />
-                      <AccommodationTip
-                        title="Consider location carefully"
-                        description="A slightly higher price for a central location can save you time and transportation costs. Use the map view to see where properties are located relative to attractions."
-                      />
-                      <Separator />
-                      <AccommodationTip
-                        title="Check cancellation policies"
-                        description="For maximum flexibility, filter for properties with free cancellation. This allows you to lock in a good rate while still keeping your options open."
-                      />
-                      <Separator />
-                      <AccommodationTip
-                        title="Read recent reviews"
-                        description="Look at reviews from the last 3-6 months to get the most accurate picture of the current state of the property. Pay special attention to reviews from travelers similar to you."
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+              <HotelsEmptyState
+                baseCurrency={baseCurrency}
+                popularDestinations={popularDestinations}
+                isPopularDestinationsLoading={isPopularDestinationsLoading}
+              />
             )}
 
             {/* Empty State */}
@@ -595,83 +442,5 @@ export default function HotelsSearchClient({
         </div>
       </TooltipProvider>
     </SearchLayout>
-  );
-}
-
-interface PopularDestinationProps {
-  destination: string;
-  priceFrom: number;
-  rating: number;
-}
-
-interface PopularDestinationCardProps extends PopularDestinationProps {
-  currencyCode: string;
-}
-
-/**
- * Present a highlighted destination card with pricing and rating metadata.
- */
-function PopularDestinationCard({
-  destination,
-  currencyCode,
-  priceFrom,
-  rating,
-}: PopularDestinationCardProps) {
-  const formattedPrice = new Intl.NumberFormat(undefined, {
-    currency: currencyCode,
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(priceFrom);
-  return (
-    <Card className="h-full overflow-hidden transition-colors hover:bg-accent/50 group">
-      <div className="h-40 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
-        <Building2Icon className="h-16 w-16 text-primary/30" />
-        <div className="absolute top-3 right-3">
-          <Badge variant="secondary" className="text-xs flex items-center gap-1">
-            <StarIcon className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            {rating}
-          </Badge>
-        </div>
-      </div>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-medium group-hover:text-primary transition-colors">
-              {destination}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">Hotels & Resorts</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">from</p>
-            <span className="font-semibold text-lg">{formattedPrice}</span>
-            <p className="text-xs text-muted-foreground">per night</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-interface AccommodationTipProps {
-  title: string;
-  description: string;
-}
-
-/**
- * Display a single accommodation planning tip.
- */
-function AccommodationTip({ title, description }: AccommodationTipProps) {
-  return (
-    <div className="flex gap-4">
-      <div className="shrink-0">
-        <div className="rounded-full bg-primary/10 p-2">
-          <LightbulbIcon className="h-4 w-4 text-primary" />
-        </div>
-      </div>
-      <div>
-        <h3 className="font-medium mb-1">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-    </div>
   );
 }

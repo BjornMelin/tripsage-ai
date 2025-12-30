@@ -1,9 +1,23 @@
 /** @vitest-environment jsdom */
 
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Response } from "@/components/ai-elements/response";
+
+declare global {
+  interface SVGElement {
+    getBBox?(): { height: number; width: number; x: number; y: number };
+  }
+}
+
+// jsdom does not implement SVG getBBox which Mermaid uses during layout.
+if (!SVGElement.prototype.getBBox) {
+  Object.defineProperty(SVGElement.prototype, "getBBox", {
+    configurable: true,
+    value: () => ({ height: 0, width: 0, x: 0, y: 0 }),
+  });
+}
 
 /**
  * Test suite for Response component.
@@ -42,5 +56,39 @@ describe("ai-elements/response", () => {
     expect(link?.getAttribute("href")).toBe("https://example.com/");
     expect(link?.getAttribute("target")).toBe("_blank");
     expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
+  it("renders KaTeX math", async () => {
+    const { container } = render(
+      <Response>{["$$", "E=mc^2", "$$"].join("\n")}</Response>
+    );
+
+    await waitFor(() => expect(container.querySelector(".katex")).not.toBeNull());
+  });
+
+  it("renders fenced code blocks", async () => {
+    const { container } = render(
+      <Response>{["```ts", "const a = 1", "```"].join("\n")}</Response>
+    );
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-streamdown="code-block"]')).not.toBeNull()
+    );
+
+    expect(
+      container.querySelector('[data-streamdown="code-block"]')?.textContent
+    ).toContain("const a = 1");
+  });
+
+  it("renders Mermaid diagrams", async () => {
+    const { container } = render(
+      <Response>{["```mermaid", "graph TD;", "A-->B;", "```"].join("\n")}</Response>
+    );
+
+    await waitFor(() =>
+      expect(
+        container.querySelector('[data-streamdown="mermaid-block"]')
+      ).not.toBeNull()
+    );
   });
 });

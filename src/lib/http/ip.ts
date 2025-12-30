@@ -2,6 +2,8 @@
  * @fileoverview Client IP extraction with proxy header trust validation.
  */
 
+import { isTrustProxyEnabled, isVercelRuntime } from "@/lib/env/server-flags";
+
 // SECURITY: Proxy headers (X-Forwarded-For, X-Real-IP, CF-Connecting-IP) are only
 // trusted when running on Vercel, when explicitly enabled via TRUST_PROXY=true,
 // or in non-production environments (NODE_ENV=development|test).
@@ -21,7 +23,7 @@
  * client connection (set TRUST_PROXY=true once configured).
  */
 function shouldTrustProxyHeaders(): boolean {
-  if (process.env.VERCEL === "1" || process.env.TRUST_PROXY === "true") {
+  if (isVercelRuntime() || isTrustProxyEnabled()) {
     return true;
   }
 

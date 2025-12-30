@@ -2,18 +2,14 @@
  * @fileoverview Thin wrapper around the official Amadeus Node SDK.
  */
 
+import "server-only";
+
 import Amadeus from "amadeus";
+import { getServerEnvVar } from "@/lib/env/server"; // domain-infra-ok: server-only Amadeus SDK client requires env wiring until extracted to lib/app layer.
 
 type AmadeusClient = InstanceType<typeof Amadeus>;
 
 let singleton: AmadeusClient | undefined;
-
-/**
- * Test-only setter to inject a mock Amadeus client and reset the singleton.
- */
-export function setAmadeusClientForTests(client: AmadeusClient | null): void {
-  singleton = client ?? undefined;
-}
 
 /**
  * Retrieves a required environment variable value.
@@ -22,19 +18,15 @@ export function setAmadeusClientForTests(client: AmadeusClient | null): void {
  * @returns Environment variable value
  * @throws {Error} When environment variable is missing
  */
-function getEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable ${name}`);
-  }
-  return value;
+function getEnv(name: "AMADEUS_CLIENT_ID" | "AMADEUS_CLIENT_SECRET"): string {
+  return getServerEnvVar(name);
 }
 
 /**
  * Returns a singleton Amadeus client instance.
  *
  * Initializes the client on first call using AMADEUS_CLIENT_ID,
- * AMADEUS_CLIENT_SECRET, and AMADEUS_ENV environment variables.
+ * AMADEUS_CLIENT_SECRET, and AMADEUS_ENV (defaults to "test") environment variables.
  * Subsequent calls return the same instance.
  *
  * @returns Configured Amadeus client instance
@@ -42,13 +34,18 @@ function getEnv(name: string): string {
  */
 export function getAmadeusClient(): AmadeusClient {
   if (singleton) return singleton;
+
+  const amadeusEnv = (() => {
+    try {
+      return getServerEnvVar("AMADEUS_ENV");
+    } catch {
+      return "test";
+    }
+  })();
   singleton = new Amadeus({
     clientId: getEnv("AMADEUS_CLIENT_ID"),
     clientSecret: getEnv("AMADEUS_CLIENT_SECRET"),
-    hostname:
-      process.env.AMADEUS_ENV === "production"
-        ? "api.amadeus.com"
-        : "test.api.amadeus.com",
+    hostname: amadeusEnv,
   });
   return singleton;
 }

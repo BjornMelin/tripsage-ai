@@ -38,6 +38,10 @@ export default defineConfig({
       "@ai": path.resolve(__dirname, "./src/ai"),
       "@domain": path.resolve(__dirname, "./src/domain"),
       "@schemas": path.resolve(__dirname, "./src/domain/schemas"),
+      "katex/dist/katex.min.css": path.resolve(
+        __dirname,
+        "./src/test/mocks/empty-css.ts"
+      ),
       "rehype-harden": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
       "rehype-harden/dist/index.js": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
       "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
@@ -216,7 +220,9 @@ export default defineConfig({
 
     server: {
       deps: {
-        inline: ["rehype-harden"],
+        // Inline Streamdown so its KaTeX CSS dynamic import is handled by Vitest/Vite
+        // even with `test.css: false` (otherwise Node tries to import `.css` directly).
+        inline: ["rehype-harden", "streamdown"],
       },
     },
 

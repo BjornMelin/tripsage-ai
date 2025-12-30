@@ -90,7 +90,7 @@ describe("Search Filters Store - Presets", () => {
         result.current.clearAllFilters();
       });
 
-      expect(result.current.activeFilterCount).toBe(0);
+      expect(Object.keys(result.current.activeFilters).length).toBe(0);
 
       // Load the preset
       if (!presetId) {
@@ -101,7 +101,7 @@ describe("Search Filters Store - Presets", () => {
         success = result.current.loadFilterPreset(presetId as string);
       });
       expect(success).toBe(true);
-      expect(result.current.activeFilterCount).toBe(1);
+      expect(Object.keys(result.current.activeFilters).length).toBe(1);
       expect(result.current.activePreset?.id).toBe(presetId);
     });
 
@@ -226,7 +226,7 @@ describe("Search Filters Store - Presets", () => {
       });
 
       // Force re-render to ensure computed properties are updated
-      expect(result.current.activeFilterCount).toBeGreaterThan(0);
+      expect(Object.keys(result.current.activeFilters).length).toBeGreaterThan(0);
       expect(result.current.currentSearchType).toBe("flight");
       expect(result.current.filterPresets).toHaveLength(1);
 
@@ -270,7 +270,7 @@ describe("Search Filters Store - Presets", () => {
         });
       });
 
-      expect(result.current.activeFilterCount).toBeGreaterThan(0);
+      expect(Object.keys(result.current.activeFilters).length).toBeGreaterThan(0);
       expect(result.current.availableFilters.flight).toEqual(mockFilters);
 
       act(() => {

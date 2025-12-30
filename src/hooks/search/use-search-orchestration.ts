@@ -13,7 +13,11 @@ import type {
 } from "@schemas/stores";
 import { useCallback, useMemo } from "react";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
+import {
+  useActiveFilterCount,
+  useHasActiveFilters,
+  useSearchFiltersStore,
+} from "@/stores/search-filters-store";
 import { useSearchHistoryStore } from "@/stores/search-history";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
@@ -218,8 +222,8 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
   const activityParams = useSearchParamsStore((state) => state.activityParams);
   const destinationParams = useSearchParamsStore((state) => state.destinationParams);
 
-  const hasActiveFilters = useSearchFiltersStore((state) => state.hasActiveFilters);
-  const activeFilterCount = useSearchFiltersStore((state) => state.activeFilterCount);
+  const hasActiveFilters = useHasActiveFilters();
+  const activeFilterCount = useActiveFilterCount();
   const setFiltersSearchType = useSearchFiltersStore((state) => state.setSearchType);
   const validateAllFilters = useSearchFiltersStore((state) => state.validateAllFilters);
   const softResetFilters = useSearchFiltersStore((state) => state.softReset);

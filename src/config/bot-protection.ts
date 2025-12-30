@@ -5,6 +5,7 @@
 import "server-only";
 
 import { getRuntimeEnv } from "@/lib/env/runtime-env";
+import { getBotIdEnableCsv } from "@/lib/env/server-flags";
 
 export type HttpMethod =
   | "GET"
@@ -23,16 +24,9 @@ export const BOTID_PROTECT: BotIdProtectRule[] = [
   { method: "POST", path: "/api/chat/attachments" },
 ];
 
-const DEFAULT_BOTID_ENVIRONMENTS = "production,preview";
-
 // Default `BOTID_ENABLE` intentionally excludes "development" and "test" so BotId is disabled
 // locally and in tests unless overridden.
-const BOTID_ENABLE_RAW = process.env.BOTID_ENABLE;
-const BOTID_ENABLE_VALUE = BOTID_ENABLE_RAW?.trim();
-const BOTID_ENABLE =
-  BOTID_ENABLE_VALUE && BOTID_ENABLE_VALUE.length > 0
-    ? BOTID_ENABLE_VALUE
-    : DEFAULT_BOTID_ENVIRONMENTS;
+const BOTID_ENABLE = getBotIdEnableCsv();
 
 // Treat empty `BOTID_ENABLE` the same as undefined (fall back to defaults).
 const BOTID_ENABLED_ENVS = new Set(

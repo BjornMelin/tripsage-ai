@@ -72,12 +72,6 @@ const mermaidConfig: MermaidConfig = {
   theme: "base",
   themeVariables: {
     fontFamily: "Inter, system-ui, sans-serif",
-    lineColor: "hsl(var(--border))",
-    primaryBorderColor: "hsl(var(--border))",
-    primaryColor: "hsl(var(--muted))",
-    primaryTextColor: "hsl(var(--foreground))",
-    secondaryColor: "hsl(var(--background))",
-    tertiaryColor: "hsl(var(--accent))",
   },
 };
 

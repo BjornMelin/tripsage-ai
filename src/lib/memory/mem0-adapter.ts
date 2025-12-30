@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { MemoryContextResponse } from "@schemas/chat";
+import { getMem0ApiKey } from "@/lib/env/server-flags";
 import type {
   MemoryAdapter,
   MemoryAdapterContext,
@@ -78,14 +79,8 @@ async function loadMem0Client(): Promise<{
   return cachedClient;
 }
 
-function getMem0ApiKey(): string | undefined {
-  // Server-side only - never expose to client
-  return process.env.MEM0_API_KEY;
-}
-
 async function handleFetchContext(
-  intent: Extract<MemoryIntent, { type: "fetchContext" }>,
-  _ctx: MemoryAdapterContext
+  intent: Extract<MemoryIntent, { type: "fetchContext" }>
 ): Promise<MemoryAdapterExecutionResult> {
   const apiKey = getMem0ApiKey();
   if (!apiKey) {
@@ -144,13 +139,13 @@ export function createMem0Adapter(): MemoryAdapter | null {
   return {
     async handle(
       intent: MemoryIntent,
-      ctx: MemoryAdapterContext
+      _ctx: MemoryAdapterContext
     ): Promise<MemoryAdapterExecutionResult> {
       if (intent.type !== "fetchContext") {
         return { status: "skipped" };
       }
 
-      return await handleFetchContext(intent, ctx);
+      return await handleFetchContext(intent);
     },
     id: "mem0",
     supportedIntents: ["fetchContext"],
