@@ -5,6 +5,12 @@ import { describe, expect, it } from "vitest";
 
 import { Response } from "@/components/ai-elements/response";
 
+declare global {
+  interface SVGElement {
+    getBBox?(): { height: number; width: number; x: number; y: number };
+  }
+}
+
 // jsdom does not implement SVG getBBox which Mermaid uses during layout.
 if (!SVGElement.prototype.getBBox) {
   Object.defineProperty(SVGElement.prototype, "getBBox", {

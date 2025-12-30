@@ -23,7 +23,7 @@ export const createBudgetAlertsSlice =
           ...alert,
           createdAt: alert.createdAt || deps.nowIso(),
           id: alert.id || deps.generateId(),
-          isRead: false,
+          isRead: alert.isRead ?? false,
         };
 
         return {
