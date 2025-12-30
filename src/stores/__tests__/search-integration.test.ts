@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { AllTheProviders } from "@/test/test-utils";
-import { useSearchFiltersStore } from "../search-filters-store";
 import { selectCurrentFilters } from "../search-filters/selectors";
+import { useSearchFiltersStore } from "../search-filters-store";
 import { useSearchParamsStore } from "../search-params-store";
 import { useSearchResultsStore } from "../search-results-store";
 

@@ -9,7 +9,10 @@ import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "./helpers";
 import { withComputed } from "./middleware/computed";
 import { computeFilterState } from "./search-filters/computed";
-import { selectCurrentFilters, selectCurrentSortOptions } from "./search-filters/selectors";
+import {
+  selectCurrentFilters,
+  selectCurrentSortOptions,
+} from "./search-filters/selectors";
 import { createSearchFiltersCoreSlice } from "./search-filters/slices/core";
 import { createSearchFiltersFiltersSlice } from "./search-filters/slices/filters";
 import { createSearchFiltersPresetsSlice } from "./search-filters/slices/presets";
