@@ -7,10 +7,8 @@ import "server-only";
 import type { MemoryContextResponse, Message } from "@schemas/chat";
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-import { createMem0Adapter } from "./mem0-adapter";
 import { createSupabaseMemoryAdapter } from "./supabase-adapter";
 import type {
-  MemoryAdapter,
   MemoryAdapterContext,
   MemoryAdapterExecutionResult,
   MemoryAdapterResult,
@@ -220,24 +218,14 @@ export function runMemoryOrchestrator(
 }
 
 /**
- * Build the default orchestrator configuration using Supabase, Upstash, and Mem0 adapters.
+ * Build the default orchestrator configuration using Supabase and Upstash adapters.
  *
- * Mem0 adapter is included only when environment/configuration allows it
- * (e.g., MEM0_API_KEY or equivalent is present).
+ * Supabase handles both recency-based and semantic search retrieval using pgvector.
+ * Upstash handles queuing and caching.
  */
 export function createDefaultMemoryOrchestratorOptions(): MemoryOrchestratorOptions {
-  const adapters: MemoryAdapter[] = [
-    createSupabaseMemoryAdapter(),
-    createUpstashMemoryAdapter(),
-  ];
-
-  const mem0Adapter = createMem0Adapter();
-  if (mem0Adapter) {
-    adapters.push(mem0Adapter);
-  }
-
   return {
-    adapters,
+    adapters: [createSupabaseMemoryAdapter(), createUpstashMemoryAdapter()],
   };
 }
 

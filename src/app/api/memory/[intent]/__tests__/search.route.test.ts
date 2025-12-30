@@ -104,7 +104,7 @@ describe("/api/memory/search route", () => {
         score: 0.92,
         source: "supabase",
       },
-      { context: "Budget stay in Bangkok under 600", score: 0.55, source: "mem0" },
+      { context: "Budget stay in Bangkok under 600", score: 0.55, source: "supabase" },
     ];
 
     mockHandleMemoryIntent.mockResolvedValue({

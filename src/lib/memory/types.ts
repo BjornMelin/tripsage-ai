@@ -34,6 +34,12 @@ export type MemoryIntent =
       sessionId: string;
       userId: string;
       limit?: number;
+      /**
+       * Optional query for semantic search. When provided, the adapter uses
+       * vector similarity search against turn embeddings. When omitted, falls
+       * back to recency-based retrieval.
+       */
+      query?: string;
     };
 
 /** Execution context passed to adapters. */
@@ -59,7 +65,7 @@ export interface MemoryAdapterExecutionResult {
 
 /** Adapter interface for memory backends. */
 export interface MemoryAdapter {
-  /** Stable adapter identifier (e.g., "supabase", "upstash", "mem0"). */
+  /** Stable adapter identifier (e.g., "supabase", "upstash"). */
   id: string;
   /** Intents this adapter can handle. */
   supportedIntents: MemoryIntentType[];

@@ -12,7 +12,7 @@ graph TD
     API -->|"Background jobs"| QSTASH["Upstash QStash<br/>webhook tasks"]
     API -->|"Storage"| STORAGE["Supabase Storage<br/>signed URLs"]
     API -->|"Telemetry"| OTEL["OpenTelemetry via @vercel/otel"]
-    API -->|"External providers"| PROVIDERS["Vercel AI Gateway / OpenAI / Anthropic / xAI<br/>Google Maps · Stripe · Resend · mem0"]
+    API -->|"External providers"| PROVIDERS["Vercel AI Gateway / OpenAI / Anthropic / xAI<br/>Google Maps · Stripe · Resend"]
     FE --> RT["Supabase Realtime<br/>broadcast · presence"]
 ```
 
@@ -78,7 +78,7 @@ graph TD
 - AI providers via Vercel AI Gateway or BYOK (OpenAI, Anthropic, xAI).
 - Supabase platform services (Auth, Realtime, Storage, Vault, pgvector).
 - Upstash Redis/Ratelimit for caching and throttling; Upstash QStash for jobs.
-- Google Maps (types present), Stripe, Resend email, mem0 (memory SDK), Playwright for browser automation.
+- Google Maps (types present), Stripe, Resend email, Playwright for browser automation.
 
 ## Representative Workflows
 

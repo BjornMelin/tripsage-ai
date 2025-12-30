@@ -99,7 +99,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 const baseContext: MemoryContextResponse[] = [
   { context: "Trip to Paris cost 1200 with museums", score: 0.9, source: "supabase" },
-  { context: "Budget stay in Bangkok under 600", score: 0.7, source: "mem0" },
+  { context: "Budget stay in Bangkok under 600", score: 0.7, source: "supabase" },
 ];
 
 const aiInsightsFixture: MemoryInsightsResponse = {
@@ -361,7 +361,7 @@ describe("/api/memory/insights/[userId] route", () => {
       {
         context: "Normal travel memory about trip to Paris",
         score: 0.8,
-        source: "mem0",
+        source: "supabase",
       },
     ];
     mockHandleMemoryIntent.mockResolvedValueOnce({

@@ -136,7 +136,7 @@ Supabase SSR authentication:
 
 ### Memory (`/api/memory/*`)
 
-User context and preference storage via Mem0:
+User context and preference storage via Supabase pgvector:
 
 | Endpoint                           | Method | Description               |
 | ---------------------------------- | ------ | ------------------------- |
@@ -267,4 +267,3 @@ pnpm biome:fix
 | `zod`                   | ^4.2.1         | Schema validation                                         |
 | `@opentelemetry/api`    | 1.9.0          | Observability                                             |
 | `amadeus`               | ^11.0.0        | Flight/hotel search                                       |
-| `mem0ai`                | 2.1.38         | Memory/context storage                                    |

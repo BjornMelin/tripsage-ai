@@ -4,8 +4,6 @@
 
 import "server-only";
 
-import { z } from "zod";
-
 function normalizeOptionalEnvVar(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
   const trimmed = value.trim();
@@ -28,17 +26,6 @@ function parseEnvFlag(value: string | undefined, defaultValue: boolean): boolean
   if (lower === "1" || lower === "true") return true;
   if (lower === "0" || lower === "false") return false;
   return defaultValue;
-}
-
-const mem0ApiKeySchema = z.string().min(20, {
-  error: "MEM0_API_KEY must be at least 20 characters when configured",
-});
-
-export function getMem0ApiKey(): string | undefined {
-  const raw = normalizeOptionalEnvVar(process.env.MEM0_API_KEY);
-  if (!raw) return undefined;
-  const result = mem0ApiKeySchema.safeParse(raw);
-  return result.success ? result.data : undefined;
 }
 
 export function getBotIdEnableCsv(): string {

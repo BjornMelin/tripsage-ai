@@ -2242,6 +2242,25 @@ export type Database = {
           similarity: number;
         }[];
       };
+      match_turn_embeddings: {
+        Args: {
+          query_embedding: string;
+          match_threshold?: number;
+          match_count?: number;
+          filter_user_id?: string | null;
+          filter_session_id?: string | null;
+          ef_search_override?: number | null;
+        };
+        Returns: {
+          turn_id: string;
+          session_id: string;
+          user_id: string;
+          content: Json;
+          role: string;
+          similarity: number;
+          created_at: string;
+        }[];
+      };
       match_rag_documents: {
         Args: {
           query_embedding: string;
