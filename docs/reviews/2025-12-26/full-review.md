@@ -2,6 +2,9 @@
 
 > Phase 1 (analysis-only). No source-code changes were made during this phase.
 >
+> **Post-review updates:**
+> - `src/lib/memory/mem0-adapter.ts` was removed on 2025-12-30 (see ADR-0042 v1.1.0). Semantic search now handled natively by Supabase pgvector.
+>
 > **Repo state at time of review**
 >
 > - Worktree was **dirty** with a large set of local modifications/deletions (`git status -sb` showed many `M`/`D` entries, plus untracked `.knip-files.json`).

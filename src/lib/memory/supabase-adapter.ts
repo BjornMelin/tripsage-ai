@@ -1,14 +1,18 @@
 /**
- * @fileoverview Memory adapter backed by Supabase `memories.*` tables.
+ * @fileoverview Supabase memory adapter with recency-based retrieval and pgvector semantic search.
  */
 
 import "server-only";
 
+import { openai } from "@ai-sdk/openai";
 import type { MemoryContextResponse } from "@schemas/chat";
 import { jsonSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { embed } from "ai";
+import { toPgvector } from "@/lib/rag/pgvector";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import type {
   MemoryAdapter,
   MemoryAdapterContext,
@@ -16,12 +20,126 @@ import type {
   MemoryIntent,
 } from "./types";
 
+const logger = createServerLogger("memory.supabase-adapter");
+
 type AdminClient = SupabaseClient<Database>;
 type MemoryTurnRow = Database["memories"]["Tables"]["turns"]["Row"];
 
 const MAX_CONTEXT_ITEMS = 10;
+const DEFAULT_SIMILARITY_THRESHOLD = 0.7;
 
-async function handleFetchContext(
+function extractTextFromContent(contentValue: unknown): string {
+  if (typeof contentValue === "string") return contentValue;
+
+  if (contentValue && typeof contentValue === "object") {
+    const contentObj = contentValue as { text?: unknown };
+    if (typeof contentObj.text === "string") return contentObj.text;
+    return String(contentValue);
+  }
+
+  return "";
+}
+
+/**
+ * Semantic search over turn embeddings using pgvector.
+ *
+ * Generates an embedding for the query and searches for similar turns
+ * using the match_turn_embeddings RPC function.
+ */
+async function handleSemanticFetchContext(
+  supabase: AdminClient,
+  intent: Extract<MemoryIntent, { type: "fetchContext" }> & { query: string }
+): Promise<MemoryAdapterExecutionResult> {
+  const limit = intent.limit && intent.limit > 0 ? intent.limit : MAX_CONTEXT_ITEMS;
+  const similarityThreshold =
+    typeof intent.similarityThreshold === "number" &&
+    Number.isFinite(intent.similarityThreshold)
+      ? Math.min(1, Math.max(0, intent.similarityThreshold))
+      : DEFAULT_SIMILARITY_THRESHOLD;
+
+  try {
+    // Generate query embedding using OpenAI text-embedding-3-small (1536-d)
+    const { embedding } = await embed({
+      model: openai.embeddingModel("text-embedding-3-small"),
+      value: intent.query,
+    });
+
+    if (embedding.length !== 1536) {
+      logger.warn("embedding_dimension_mismatch", {
+        expected: 1536,
+        got: embedding.length,
+      });
+      // Fall back to recency-based search
+      return handleRecencyFetchContext(supabase, intent);
+    }
+
+    // Call the match_turn_embeddings RPC function
+    const { data, error } = await supabase.rpc("match_turn_embeddings", {
+      // biome-ignore lint/style/useNamingConvention: RPC parameter name
+      filter_session_id: intent.sessionId || null,
+      // biome-ignore lint/style/useNamingConvention: RPC parameter name
+      filter_user_id: intent.userId,
+      // biome-ignore lint/style/useNamingConvention: RPC parameter name
+      match_count: limit,
+      // biome-ignore lint/style/useNamingConvention: RPC parameter name
+      match_threshold: similarityThreshold,
+      // biome-ignore lint/style/useNamingConvention: RPC parameter name
+      query_embedding: toPgvector(embedding),
+    });
+
+    if (error) {
+      logger.warn("semantic_search_failed", { error: error.message });
+      // Fall back to recency-based search on RPC error
+      return handleRecencyFetchContext(supabase, intent);
+    }
+
+    if (!data || data.length === 0) {
+      return { contextItems: [], status: "ok" };
+    }
+
+    const contextItems: MemoryContextResponse[] = data
+      .map((row) => {
+        const contentValue = row.content;
+        const sessionId = row.session_id;
+        const source = sessionId
+          ? `supabase:memories:${sessionId}`
+          : "supabase:memories";
+
+        const context = extractTextFromContent(contentValue);
+
+        return {
+          context,
+          createdAt: row.created_at,
+          id: row.turn_id,
+          score: row.similarity,
+          source,
+        };
+      })
+      .filter((item) => item.context.length > 0);
+
+    logger.info("semantic_search_complete", {
+      query: intent.query.substring(0, 50),
+      resultCount: contextItems.length,
+    });
+
+    return {
+      contextItems,
+      status: "ok",
+    };
+  } catch (error) {
+    logger.warn("semantic_search_error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Fall back to recency-based search on any error
+    return handleRecencyFetchContext(supabase, intent);
+  }
+}
+
+/**
+ * Recency-based context retrieval (original behavior).
+ * Fetches most recent turns for a user/session without semantic matching.
+ */
+async function handleRecencyFetchContext(
   supabase: AdminClient,
   intent: Extract<MemoryIntent, { type: "fetchContext" }>
 ): Promise<MemoryAdapterExecutionResult> {
@@ -64,16 +182,7 @@ async function handleFetchContext(
       } = row as MemoryTurnRow;
       const source = sessionId ? `supabase:memories:${sessionId}` : "supabase:memories";
 
-      // Extract text content from JSONB content field
-      let context = "";
-      if (typeof contentValue === "string") {
-        context = contentValue;
-      } else if (contentValue && typeof contentValue === "object") {
-        // Handle JSONB content - extract text if it's a structured object
-        const contentObj = contentValue as Record<string, unknown>;
-        context =
-          typeof contentObj.text === "string" ? contentObj.text : String(contentValue);
-      }
+      const context = extractTextFromContent(contentValue);
 
       return {
         context,
@@ -89,6 +198,25 @@ async function handleFetchContext(
     contextItems,
     status: "ok",
   };
+}
+
+/**
+ * Route fetchContext to semantic or recency-based retrieval.
+ *
+ * Uses semantic search when a query is provided; otherwise falls back
+ * to recency-based retrieval (original behavior).
+ */
+function handleFetchContext(
+  supabase: AdminClient,
+  intent: Extract<MemoryIntent, { type: "fetchContext" }>
+): Promise<MemoryAdapterExecutionResult> {
+  if (intent.query && intent.query.trim().length > 0) {
+    return handleSemanticFetchContext(supabase, {
+      ...intent,
+      query: intent.query,
+    });
+  }
+  return handleRecencyFetchContext(supabase, intent);
 }
 
 async function handleOnTurnCommitted(

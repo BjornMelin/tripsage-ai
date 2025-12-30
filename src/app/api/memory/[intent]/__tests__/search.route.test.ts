@@ -97,27 +97,6 @@ describe("/api/memory/search route", () => {
       data: { user: { id: userId } },
       error: null,
     });
-
-    const context: MemoryContextResponse[] = [
-      {
-        context: "Trip to Paris cost 1200 with museums",
-        score: 0.92,
-        source: "supabase",
-      },
-      { context: "Budget stay in Bangkok under 600", score: 0.55, source: "mem0" },
-    ];
-
-    mockHandleMemoryIntent.mockResolvedValue({
-      context,
-      intent: {
-        limit: 10,
-        sessionId: "",
-        type: "fetchContext",
-        userId,
-      },
-      results: [],
-      status: "ok",
-    });
   });
 
   afterAll(() => {
@@ -128,6 +107,28 @@ describe("/api/memory/search route", () => {
 
   it("returns schema-compliant search results", async () => {
     const post = await importRoute();
+
+    const context: MemoryContextResponse[] = [
+      {
+        context: "Trip to Paris cost 1200 with museums",
+        score: 0.92,
+        source: "supabase",
+      },
+    ];
+
+    mockHandleMemoryIntent.mockResolvedValueOnce({
+      context,
+      intent: {
+        limit: 10,
+        query: "paris",
+        sessionId: "",
+        type: "fetchContext",
+        userId,
+      },
+      results: [],
+      status: "ok",
+    });
+
     const req = createMockNextRequest({
       body: {
         query: "paris",
@@ -148,10 +149,41 @@ describe("/api/memory/search route", () => {
     expect(body.memories[0]?.relevanceReason).toContain("Matched");
     expect(body.memories[0]?.memory.userId).toBe(userId);
     expect(body.memories[0]?.memory.content).toContain("Paris");
+
+    expect(mockHandleMemoryIntent).toHaveBeenCalledWith({
+      limit: 10,
+      query: "paris",
+      sessionId: "",
+      type: "fetchContext",
+      userId,
+    });
   });
 
   it("filters by similarityThreshold when provided", async () => {
     const post = await importRoute();
+
+    const context: MemoryContextResponse[] = [
+      {
+        context: "Trip to Paris cost 1200 with museums",
+        score: 0.92,
+        source: "supabase",
+      },
+    ];
+
+    mockHandleMemoryIntent.mockResolvedValueOnce({
+      context,
+      intent: {
+        limit: 10,
+        query: "trip",
+        sessionId: "",
+        similarityThreshold: 0.9,
+        type: "fetchContext",
+        userId,
+      },
+      results: [],
+      status: "ok",
+    });
+
     const req = createMockNextRequest({
       body: {
         query: "trip",
@@ -168,6 +200,15 @@ describe("/api/memory/search route", () => {
     expect(res.status).toBe(200);
     expect(body.totalFound).toBe(1);
     expect(body.memories[0]?.memory.content).toContain("Trip to Paris");
+
+    expect(mockHandleMemoryIntent).toHaveBeenCalledWith({
+      limit: 10,
+      query: "trip",
+      sessionId: "",
+      similarityThreshold: 0.9,
+      type: "fetchContext",
+      userId,
+    });
   });
 
   it("returns 403 when request userId does not match auth user", async () => {

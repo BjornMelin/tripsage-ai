@@ -54,7 +54,7 @@
 ## Memory Integration
 
 - **Memory Orchestrator**: When `sessionId` is provided, the stream handler calls `persistMemoryTurn()` before streaming to persist user messages to Supabase via the memory orchestrator (`lib/memory/orchestrator.ts`).
-- **Memory Intents**: The orchestrator handles `onTurnCommitted` intents, fanning out to Supabase (canonical), Upstash (queues), and Mem0 (optional enrichment) adapters.
+- **Memory Intents**: The orchestrator handles `onTurnCommitted` intents, fanning out to Supabase (canonical with pgvector semantic search) and Upstash (queues/caches) adapters.
 - **PII Redaction**: Non-canonical adapters receive sanitized intents with PII redacted for compliance.
 
 ## Notes

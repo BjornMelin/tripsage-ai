@@ -34,6 +34,17 @@ export type MemoryIntent =
       sessionId: string;
       userId: string;
       limit?: number;
+      /**
+       * Optional query for semantic search. When provided, the adapter uses
+       * vector similarity search against turn embeddings. When omitted, falls
+       * back to recency-based retrieval.
+       */
+      query?: string;
+      /**
+       * Optional similarity threshold for semantic search results (0..1).
+       * When omitted, adapters should use a reasonable default.
+       */
+      similarityThreshold?: number;
     };
 
 /** Execution context passed to adapters. */
@@ -51,15 +62,16 @@ export interface MemoryAdapterExecutionResult {
   error?: string;
   /**
    * Optional context items produced by adapters for fetchContext intents.
-   * Supabase canonical adapter should populate this from the primary store;
-   * Mem0 adapter may append enriched context snippets.
+   * Supabase canonical adapter should populate this from the primary store
+   * (optionally using semantic search), and other adapters (e.g. Upstash) may
+   * append additional context snippets.
    */
   contextItems?: MemoryContextResponse[];
 }
 
 /** Adapter interface for memory backends. */
 export interface MemoryAdapter {
-  /** Stable adapter identifier (e.g., "supabase", "upstash", "mem0"). */
+  /** Stable adapter identifier (e.g., "supabase", "upstash"). */
   id: string;
   /** Intents this adapter can handle. */
   supportedIntents: MemoryIntentType[];

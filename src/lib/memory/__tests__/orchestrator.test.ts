@@ -91,7 +91,7 @@ describe("runMemoryOrchestrator", () => {
       createMockAdapter("supabase", ["syncSession"], async () => ({
         status: "ok",
       })),
-      createMockAdapter("mem0", ["fetchContext"], async () => ({
+      createMockAdapter("secondary", ["fetchContext"], async () => ({
         status: "ok",
       })),
     ];
@@ -110,7 +110,7 @@ describe("runMemoryOrchestrator", () => {
       status: "ok",
     });
     expect(result.results[1]).toMatchObject({
-      adapterId: "mem0",
+      adapterId: "secondary",
       status: "skipped",
     });
   });
@@ -200,7 +200,7 @@ describe("runMemoryOrchestrator", () => {
         ],
         status: "ok",
       })),
-      createMockAdapter("mem0", ["fetchContext"], async () => ({
+      createMockAdapter("secondary", ["fetchContext"], async () => ({
         contextItems: [{ context: "AI-enriched context", score: 0.75 }],
         status: "ok",
       })),
@@ -310,7 +310,7 @@ describe("PII redaction", () => {
         expect(turnCommit.turn.content).toContain("john@example.com");
         return Promise.resolve({ status: "ok" });
       }),
-      createMockAdapter("mem0", ["onTurnCommitted"], (intent) => {
+      createMockAdapter("secondary", ["onTurnCommitted"], (intent) => {
         capturedIntent = intent;
         return Promise.resolve({ status: "ok" });
       }),
@@ -344,7 +344,7 @@ describe("PII redaction", () => {
     let capturedIntent: MemoryIntent | null = null;
 
     const adapters = [
-      createMockAdapter("mem0", ["onTurnCommitted"], (intent) => {
+      createMockAdapter("secondary", ["onTurnCommitted"], (intent) => {
         capturedIntent = intent;
         return Promise.resolve({ status: "ok" });
       }),
@@ -412,7 +412,7 @@ describe("PII redaction", () => {
     let capturedIntent: MemoryIntent | null = null;
 
     const adapters = [
-      createMockAdapter("mem0", ["onTurnCommitted"], (intent) => {
+      createMockAdapter("secondary", ["onTurnCommitted"], (intent) => {
         capturedIntent = intent;
         return Promise.resolve({ status: "ok" });
       }),
@@ -443,7 +443,7 @@ describe("PII redaction", () => {
     };
 
     let supabaseContent: string | null = null;
-    let mem0Content: string | null = null;
+    let secondaryContent: string | null = null;
 
     const adapters = [
       createMockAdapter("supabase", ["onTurnCommitted"], (intent) => {
@@ -451,9 +451,9 @@ describe("PII redaction", () => {
         supabaseContent = turnCommit.turn.content;
         return Promise.resolve({ status: "ok" });
       }),
-      createMockAdapter("mem0", ["onTurnCommitted"], (intent) => {
+      createMockAdapter("secondary", ["onTurnCommitted"], (intent) => {
         const turnCommit = intent as Extract<MemoryIntent, { type: "onTurnCommitted" }>;
-        mem0Content = turnCommit.turn.content;
+        secondaryContent = turnCommit.turn.content;
         return Promise.resolve({ status: "ok" });
       }),
     ];
@@ -467,9 +467,9 @@ describe("PII redaction", () => {
 
     // Supabase (canonical) gets original
     expect(supabaseContent).toBe("Contact: user@test.com");
-    // Mem0 (non-canonical) gets redacted
-    expect(mem0Content).toContain("[REDACTED]");
-    expect(mem0Content).not.toContain("user@test.com");
+    // Secondary (non-canonical) gets redacted
+    expect(secondaryContent).toContain("[REDACTED]");
+    expect(secondaryContent).not.toContain("user@test.com");
   });
 });
 
@@ -500,7 +500,7 @@ describe("edge cases", () => {
     };
 
     const adapters = [
-      createMockAdapter("mem0", ["fetchContext"], async () => ({
+      createMockAdapter("secondary", ["fetchContext"], async () => ({
         status: "ok",
       })),
     ];

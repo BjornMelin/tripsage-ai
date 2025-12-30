@@ -86,10 +86,18 @@ const postSearch = withApiGuards({
       "query" in validated ? validated.query : (validated.filters?.query ?? "");
 
     const processedQuery = query.trim();
+    const shouldSemanticSearch = processedQuery.length > 0;
+    const similarityThresholdProvided =
+      "similarityThreshold" in validated &&
+      typeof validated.similarityThreshold === "number";
 
     try {
       const memoryResult = await handleMemoryIntent({
         limit,
+        ...(shouldSemanticSearch ? { query: processedQuery } : {}),
+        ...(shouldSemanticSearch && similarityThresholdProvided
+          ? { similarityThreshold: similarityThresholdUsed }
+          : {}),
         sessionId: "",
         type: "fetchContext",
         userId,
@@ -101,7 +109,12 @@ const postSearch = withApiGuards({
         results = results.filter((item) => item.score >= similarityThresholdUsed);
       }
 
-      if (processedQuery.length > 0) {
+      const shouldApplySubstringFallbackFilter =
+        processedQuery.length > 0 &&
+        results.length > 0 &&
+        results.every((item) => item.score === 1);
+
+      if (shouldApplySubstringFallbackFilter) {
         const queryLower = processedQuery.toLowerCase();
         results = results.filter((item) =>
           item.context.toLowerCase().includes(queryLower)
