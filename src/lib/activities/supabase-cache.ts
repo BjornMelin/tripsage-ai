@@ -47,6 +47,28 @@ function createFindActivityInRecentSearches(
   };
 }
 
+type CacheInsertFailure = {
+  field: "queryParameters" | "results" | "searchMetadata";
+  issues: Array<{ code: string; message: string; path: string }>;
+};
+
+function mapZodError(
+  field: CacheInsertFailure["field"],
+  result: {
+    success: false;
+    error: z.ZodError;
+  }
+): CacheInsertFailure {
+  return {
+    field,
+    issues: result.error.issues.map((issue) => ({
+      code: issue.code,
+      message: issue.message,
+      path: issue.path.join("."),
+    })),
+  };
+}
+
 /**
  * Creates an ActivitiesCache implementation backed by Supabase for search caching.
  * Supports finding activities in recent searches, retrieving cached searches, and storing new search results.
@@ -97,42 +119,18 @@ export function createSupabaseActivitiesSearchCache(
         !resultsResult.success ||
         !searchMetadataResult.success
       ) {
-        const failed: Array<{
-          field: "queryParameters" | "results" | "searchMetadata";
-          issues: Array<{ code: string; message: string; path: string }>;
-        }> = [];
+        const failed: CacheInsertFailure[] = [];
 
         if (!queryParametersResult.success) {
-          failed.push({
-            field: "queryParameters",
-            issues: queryParametersResult.error.issues.map((issue) => ({
-              code: issue.code,
-              message: issue.message,
-              path: issue.path.join("."),
-            })),
-          });
+          failed.push(mapZodError("queryParameters", queryParametersResult));
         }
 
         if (!resultsResult.success) {
-          failed.push({
-            field: "results",
-            issues: resultsResult.error.issues.map((issue) => ({
-              code: issue.code,
-              message: issue.message,
-              path: issue.path.join("."),
-            })),
-          });
+          failed.push(mapZodError("results", resultsResult));
         }
 
         if (!searchMetadataResult.success) {
-          failed.push({
-            field: "searchMetadata",
-            issues: searchMetadataResult.error.issues.map((issue) => ({
-              code: issue.code,
-              message: issue.message,
-              path: issue.path.join("."),
-            })),
-          });
+          failed.push(mapZodError("searchMetadata", searchMetadataResult));
         }
 
         createServerLogger("activities.cache").warn(
