@@ -88,9 +88,65 @@ export function createSupabaseActivitiesSearchCache(
       return { results: parsed.data, source };
     },
     putSearch: async (input) => {
-      const queryParameters = jsonSchema.parse(input.queryParameters);
-      const results = jsonSchema.parse(input.results);
-      const searchMetadata = jsonSchema.parse(input.searchMetadata);
+      const queryParametersResult = jsonSchema.safeParse(input.queryParameters);
+      const resultsResult = jsonSchema.safeParse(input.results);
+      const searchMetadataResult = jsonSchema.safeParse(input.searchMetadata);
+
+      if (
+        !queryParametersResult.success ||
+        !resultsResult.success ||
+        !searchMetadataResult.success
+      ) {
+        const failed: Array<{
+          field: "queryParameters" | "results" | "searchMetadata";
+          issues: Array<{ code: string; message: string; path: string }>;
+        }> = [];
+
+        if (!queryParametersResult.success) {
+          failed.push({
+            field: "queryParameters",
+            issues: queryParametersResult.error.issues.map((issue) => ({
+              code: issue.code,
+              message: issue.message,
+              path: issue.path.join("."),
+            })),
+          });
+        }
+
+        if (!resultsResult.success) {
+          failed.push({
+            field: "results",
+            issues: resultsResult.error.issues.map((issue) => ({
+              code: issue.code,
+              message: issue.message,
+              path: issue.path.join("."),
+            })),
+          });
+        }
+
+        if (!searchMetadataResult.success) {
+          failed.push({
+            field: "searchMetadata",
+            issues: searchMetadataResult.error.issues.map((issue) => ({
+              code: issue.code,
+              message: issue.message,
+              path: issue.path.join("."),
+            })),
+          });
+        }
+
+        createServerLogger("activities.cache").warn(
+          "Skipping cache insert due to invalid JSON payload",
+          {
+            failed,
+          }
+        );
+        return;
+      }
+
+      const queryParameters = queryParametersResult.data;
+      const results = resultsResult.data;
+      const searchMetadata = searchMetadataResult.data;
 
       const { error } = await supabase.from("search_activities").insert({
         // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
