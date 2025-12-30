@@ -68,6 +68,8 @@ function createAccommodationsService(): AccommodationsService {
   });
 }
 
+const accommodationsService = createAccommodationsService();
+
 export { accommodationSearchInputSchema as searchAccommodationsInputSchema };
 
 /** Search for accommodations using Amadeus Self-Service API with Google Places enrichment. */
@@ -78,8 +80,7 @@ export const searchAccommodations = createAiTool<
   description:
     "Search for accommodations (hotels and stays) using Amadeus Self-Service APIs with Google Places enrichment. Supports semantic search via RAG for natural language queries.",
   execute: async (params) => {
-    const service = createAccommodationsService();
-    return service.search(params, {
+    return accommodationsService.search(params, {
       sessionId: await maybeGetUserIdentifier(),
     });
   },
@@ -154,9 +155,8 @@ export const getAccommodationDetails = createAiTool<
   description:
     "Retrieve details for a specific accommodation property from Amadeus hotel offers and Google Places content.",
   execute: async (params) => {
-    const service = createAccommodationsService();
     try {
-      return await service.details(params);
+      return await accommodationsService.details(params);
     } catch (error) {
       throw mapProviderError(error, {
         failed: TOOL_ERROR_CODES.accomDetailsFailed,
@@ -180,12 +180,11 @@ export const checkAvailability = createAiTool<
   description:
     "Check final availability and lock pricing for a specific rate. Returns a booking token that must be used quickly to finalize the booking.",
   execute: async (params) => {
-    const service = createAccommodationsService();
     const userId = await getAuthenticatedUserId(
       TOOL_ERROR_CODES.accomBookingSessionRequired
     );
     try {
-      return await service.checkAvailability(params, {
+      return await accommodationsService.checkAvailability(params, {
         sessionId: userId,
         userId,
       });
@@ -212,7 +211,6 @@ export const bookAccommodation = createAiTool<
   description:
     "Complete an accommodation booking via Amadeus Self-Service APIs. Requires a bookingToken from checkAvailability, payment method, and prior approval.",
   execute: async (params) => {
-    const service = createAccommodationsService();
     const sessionId = params.sessionId ?? (await maybeGetUserIdentifier());
     if (!sessionId) {
       throw createToolError(TOOL_ERROR_CODES.accomBookingSessionRequired);
@@ -223,7 +221,7 @@ export const bookAccommodation = createAiTool<
     const idempotencyKey = params.idempotencyKey ?? secureUuid();
 
     try {
-      return await service.book(params, {
+      return await accommodationsService.book(params, {
         processPayment: ({ amountCents, currency }) =>
           processBookingPayment({
             amount: amountCents,

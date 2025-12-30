@@ -30,22 +30,28 @@ function findActivityInRows(
   return null;
 }
 
+function createFindActivityInRecentSearches(
+  supabase: TypedServerSupabase
+): ActivitiesCache["findActivityInRecentSearches"] {
+  return async ({ nowIso, placeId, userId }) => {
+    const { data } = await supabase
+      .from("search_activities")
+      .select("results")
+      .eq("user_id", userId)
+      .gt("expires_at", nowIso)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    const rows = Array.isArray(data) ? data : [];
+    return findActivityInRows(rows, placeId);
+  };
+}
+
 export function createSupabaseActivitiesSearchCache(
   supabase: TypedServerSupabase
 ): ActivitiesCache {
   return {
-    findActivityInRecentSearches: async ({ nowIso, placeId, userId }) => {
-      const { data } = await supabase
-        .from("search_activities")
-        .select("results")
-        .eq("user_id", userId)
-        .gt("expires_at", nowIso)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      const rows = Array.isArray(data) ? data : [];
-      return findActivityInRows(rows, placeId);
-    },
+    findActivityInRecentSearches: createFindActivityInRecentSearches(supabase),
     getSearch: async ({ activityType, destination, nowIso, queryHash, userId }) => {
       let query = supabase
         .from("search_activities")
@@ -104,18 +110,7 @@ export function createSupabaseActivitiesDetailsCache(
   supabase: TypedServerSupabase
 ): ActivitiesCache {
   return {
-    findActivityInRecentSearches: async ({ nowIso, placeId, userId }) => {
-      const { data } = await supabase
-        .from("search_activities")
-        .select("results")
-        .eq("user_id", userId)
-        .gt("expires_at", nowIso)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      const rows = Array.isArray(data) ? data : [];
-      return findActivityInRows(rows, placeId);
-    },
+    findActivityInRecentSearches: createFindActivityInRecentSearches(supabase),
     getSearch: async (_input) => null,
     putSearch: async (_input) => undefined,
   };
