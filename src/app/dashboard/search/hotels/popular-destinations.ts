@@ -36,7 +36,9 @@ export const POPULAR_DESTINATIONS_CACHE_TTL_MS = 60 * 60 * 1000;
 
 export function parseAvgPrice(value: string | undefined): number | null {
   if (!value) return null;
-  const numeric = Number.parseFloat(value.replace(/[^\d.]/g, ""));
+  const cleaned = value.replace(/[^\d.]/g, "");
+  if (cleaned.split(".").length > 2) return null;
+  const numeric = Number.parseFloat(cleaned);
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
 }
 
@@ -57,7 +59,7 @@ export function readCachedPopularDestinations(
       return null;
     }
     const ts = (parsed as { ts: unknown }).ts;
-    if (typeof ts !== "number" || nowMs - ts > POPULAR_DESTINATIONS_CACHE_TTL_MS) {
+    if (typeof ts !== "number" || nowMs - ts >= POPULAR_DESTINATIONS_CACHE_TTL_MS) {
       return null;
     }
     const destinations = (parsed as { destinations: unknown }).destinations;

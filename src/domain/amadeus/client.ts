@@ -37,7 +37,7 @@ function getEnv(name: "AMADEUS_CLIENT_ID" | "AMADEUS_CLIENT_SECRET"): string {
  * Returns a singleton Amadeus client instance.
  *
  * Initializes the client on first call using AMADEUS_CLIENT_ID,
- * AMADEUS_CLIENT_SECRET, and AMADEUS_ENV environment variables.
+ * AMADEUS_CLIENT_SECRET, and AMADEUS_ENV (defaults to "test") environment variables.
  * Subsequent calls return the same instance.
  *
  * @returns Configured Amadeus client instance
@@ -46,7 +46,7 @@ function getEnv(name: "AMADEUS_CLIENT_ID" | "AMADEUS_CLIENT_SECRET"): string {
 export function getAmadeusClient(): AmadeusClient {
   if (singleton) return singleton;
 
-  const amadeusEnv = getServerEnvVarWithFallback("AMADEUS_ENV", undefined);
+  const amadeusEnv = getServerEnvVarWithFallback("AMADEUS_ENV", "test");
   singleton = new Amadeus({
     clientId: getEnv("AMADEUS_CLIENT_ID"),
     clientSecret: getEnv("AMADEUS_CLIENT_SECRET"),
