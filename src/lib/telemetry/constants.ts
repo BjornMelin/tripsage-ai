@@ -2,13 +2,11 @@
  * @fileoverview Shared telemetry constants.
  */
 
-import { isTelemetrySilent } from "@/lib/env/server-flags";
-
 /** Canonical tracer/service name for frontend observability. */
 export const TELEMETRY_SERVICE_NAME = "tripsage-frontend";
 
 /** Whether to suppress console output in telemetry alerts (for performance tests). */
-export const TELEMETRY_SILENT = isTelemetrySilent();
+export const TELEMETRY_SILENT = process.env.NEXT_PUBLIC_TELEMETRY_SILENT === "1";
 
 /** Maximum length for error messages in telemetry (truncate beyond this). */
 export const MAX_ERROR_MESSAGE_LENGTH = 200;

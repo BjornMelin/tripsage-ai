@@ -80,8 +80,7 @@ async function loadMem0Client(): Promise<{
 }
 
 async function handleFetchContext(
-  intent: Extract<MemoryIntent, { type: "fetchContext" }>,
-  _ctx: MemoryAdapterContext
+  intent: Extract<MemoryIntent, { type: "fetchContext" }>
 ): Promise<MemoryAdapterExecutionResult> {
   const apiKey = getMem0ApiKey();
   if (!apiKey) {
@@ -140,13 +139,13 @@ export function createMem0Adapter(): MemoryAdapter | null {
   return {
     async handle(
       intent: MemoryIntent,
-      ctx: MemoryAdapterContext
+      _ctx: MemoryAdapterContext
     ): Promise<MemoryAdapterExecutionResult> {
       if (intent.type !== "fetchContext") {
         return { status: "skipped" };
       }
 
-      return await handleFetchContext(intent, ctx);
+      return await handleFetchContext(intent);
     },
     id: "mem0",
     supportedIntents: ["fetchContext"],
