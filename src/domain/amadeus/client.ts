@@ -5,7 +5,7 @@
 import "server-only";
 
 import Amadeus from "amadeus";
-import { getServerEnvVarWithFallback } from "@/lib/env/server"; // domain-infra-ok: server-only Amadeus SDK client requires env wiring until extracted to lib/app layer.
+import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server"; // domain-infra-ok: server-only Amadeus SDK client requires env wiring until extracted to lib/app layer.
 
 type AmadeusClient = InstanceType<typeof Amadeus>;
 
@@ -26,11 +26,7 @@ export function setAmadeusClientForTests(client: AmadeusClient | null): void {
  * @throws {Error} When environment variable is missing
  */
 function getEnv(name: "AMADEUS_CLIENT_ID" | "AMADEUS_CLIENT_SECRET"): string {
-  const value = getServerEnvVarWithFallback(name, undefined);
-  if (!value) {
-    throw new Error(`Missing required environment variable ${name}`);
-  }
-  return value;
+  return getServerEnvVar(name);
 }
 
 /**
