@@ -41,6 +41,7 @@ type DestinationAutocompleteFieldProps = {
 
 const CACHE_TTL_MS = 2 * 60_000;
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
+const MAX_CACHE_ENTRIES = 50;
 
 function MapPlaceToSuggestion(place: PlacesApiPlace): DestinationSuggestion {
   return {
@@ -92,6 +93,8 @@ export function DestinationAutocompleteField({
       const limit = form.getValues("limit") ?? 10;
 
       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        cacheRef.current.delete(cacheKey);
+        cacheRef.current.set(cacheKey, cached);
         const filteredCached = filterPlaces(cached.places);
         setSuggestions(filteredCached.slice(0, limit).map(MapPlaceToSuggestion));
         setShowSuggestions(true);
@@ -131,6 +134,11 @@ export function DestinationAutocompleteField({
         const data = (await response.json()) as { places?: PlacesApiPlace[] };
         const places = data.places ?? [];
         cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
+        while (cacheRef.current.size > MAX_CACHE_ENTRIES) {
+          const oldestKey = cacheRef.current.keys().next().value;
+          if (typeof oldestKey !== "string") break;
+          cacheRef.current.delete(oldestKey);
+        }
 
         const filteredPlaces = filterPlaces(places);
         const mappedSuggestions = filteredPlaces
@@ -297,7 +305,7 @@ export function DestinationAutocompleteField({
               {showSuggestions &&
                 (suggestions.length > 0 ||
                   isLoadingSuggestions ||
-                  (!isLoadingSuggestions && (query?.length ?? 0) >= 2)) && (
+                  (query?.length ?? 0) >= 2) && (
                   <div
                     id={suggestionsListId}
                     role="listbox"
