@@ -1,9 +1,5 @@
 /**
- * @fileoverview Memory adapter backed by Supabase `memories.*` tables.
- *
- * Supports both recency-based and semantic search retrieval:
- * - When a query is provided, uses pgvector similarity search via match_turn_embeddings RPC
- * - When no query is provided, falls back to recency-based retrieval
+ * @fileoverview Supabase memory adapter with recency-based retrieval and pgvector semantic search.
  */
 
 import "server-only";
@@ -31,6 +27,18 @@ type MemoryTurnRow = Database["memories"]["Tables"]["turns"]["Row"];
 
 const MAX_CONTEXT_ITEMS = 10;
 const DEFAULT_SIMILARITY_THRESHOLD = 0.7;
+
+function extractTextFromContent(contentValue: unknown): string {
+  if (typeof contentValue === "string") return contentValue;
+
+  if (contentValue && typeof contentValue === "object") {
+    const contentObj = contentValue as { text?: unknown };
+    if (typeof contentObj.text === "string") return contentObj.text;
+    return String(contentValue);
+  }
+
+  return "";
+}
 
 /**
  * Semantic search over turn embeddings using pgvector.
@@ -97,17 +105,7 @@ async function handleSemanticFetchContext(
           ? `supabase:memories:${sessionId}`
           : "supabase:memories";
 
-        // Extract text content from JSONB content field
-        let context = "";
-        if (typeof contentValue === "string") {
-          context = contentValue;
-        } else if (contentValue && typeof contentValue === "object") {
-          const contentObj = contentValue as Record<string, unknown>;
-          context =
-            typeof contentObj.text === "string"
-              ? contentObj.text
-              : String(contentValue);
-        }
+        const context = extractTextFromContent(contentValue);
 
         return {
           context,
@@ -184,16 +182,7 @@ async function handleRecencyFetchContext(
       } = row as MemoryTurnRow;
       const source = sessionId ? `supabase:memories:${sessionId}` : "supabase:memories";
 
-      // Extract text content from JSONB content field
-      let context = "";
-      if (typeof contentValue === "string") {
-        context = contentValue;
-      } else if (contentValue && typeof contentValue === "object") {
-        // Handle JSONB content - extract text if it's a structured object
-        const contentObj = contentValue as Record<string, unknown>;
-        context =
-          typeof contentObj.text === "string" ? contentObj.text : String(contentValue);
-      }
+      const context = extractTextFromContent(contentValue);
 
       return {
         context,

@@ -106,7 +106,7 @@ COMMENT ON FUNCTION memories.match_turn_embeddings IS
 
 -- Restrict RPC access: functions are EXECUTE-able by PUBLIC by default.
 REVOKE EXECUTE ON FUNCTION memories.match_turn_embeddings(
-  extensions.vector,
+  extensions.vector(1536),
   double precision,
   integer,
   uuid,
@@ -115,7 +115,7 @@ REVOKE EXECUTE ON FUNCTION memories.match_turn_embeddings(
 ) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION memories.match_turn_embeddings(
-  extensions.vector,
+  extensions.vector(1536),
   double precision,
   integer,
   uuid,
