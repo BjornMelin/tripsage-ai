@@ -1,4 +1,6 @@
-/** @fileoverview Server-only env helpers for feature flags and optional integrations. */
+/**
+ * @fileoverview Server-only env helpers for feature flags and optional integrations.
+ */
 
 import "server-only";
 
