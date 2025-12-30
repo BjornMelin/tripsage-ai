@@ -279,7 +279,7 @@ describe("Search Filters Store - Filter Operations", () => {
 
       expect(result.current.activeFilters.price_range).toBeDefined();
       expect(result.current.activeFilters.airline).toBeDefined();
-      expect(result.current.activeFilterCount).toBe(2);
+      expect(Object.keys(result.current.activeFilters).length).toBe(2);
     });
   });
 
@@ -323,10 +323,10 @@ describe("Search Filters Store - Filter Operations", () => {
       expect(result.current.filterValidationErrors).toEqual({});
     });
 
-    it("computes hasActiveFilters correctly", () => {
+    it("derives hasActiveFilters from activeFilters", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      expect(result.current.hasActiveFilters).toBe(false);
+      expect(Object.keys(result.current.activeFilters).length).toBe(0);
 
       // Use default flight filters from store initialization
       act(() => {
@@ -337,15 +337,15 @@ describe("Search Filters Store - Filter Operations", () => {
         result.current.setActiveFilter("price_range", { max: 500, min: 100 });
       });
 
-      expect(result.current.hasActiveFilters).toBe(true);
+      expect(Object.keys(result.current.activeFilters).length).toBe(1);
     });
 
-    it("computes activeFilterCount correctly", () => {
+    it("derives activeFilterCount from activeFilters", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      expect(result.current.activeFilterCount).toBe(0);
+      expect(Object.keys(result.current.activeFilters).length).toBe(0);
 
-      // Directly set state to test computed property
+      // Directly set state to test derived count
       act(() => {
         useSearchFiltersStore.setState({
           activeFilters: {
@@ -363,7 +363,7 @@ describe("Search Filters Store - Filter Operations", () => {
         });
       });
 
-      expect(result.current.activeFilterCount).toBe(2);
+      expect(Object.keys(result.current.activeFilters).length).toBe(2);
     });
   });
 });

@@ -40,9 +40,6 @@ export interface SearchFiltersState {
   filterValidationErrors: Record<string, string>;
 
   // Computed properties
-  hasActiveFilters: boolean;
-  activeFilterCount: number;
-  canClearFilters: boolean;
   currentFilters: ValidatedFilterOption[];
   currentSortOptions: ValidatedSortOption[];
   appliedFilterSummary: string;

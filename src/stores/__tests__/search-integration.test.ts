@@ -206,16 +206,22 @@ describe("Search Store Integration", () => {
     it("should track active filter count", () => {
       useSearchFiltersStore.getState().setSearchType("flight");
 
-      expect(useSearchFiltersStore.getState().activeFilterCount).toBe(0);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        0
+      );
 
       useSearchFiltersStore.getState().setActiveFilter("stops", 1);
-      expect(useSearchFiltersStore.getState().activeFilterCount).toBe(1);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        1
+      );
 
       useSearchFiltersStore.getState().setActiveFilter("price_range", {
         max: 500,
         min: 100,
       });
-      expect(useSearchFiltersStore.getState().activeFilterCount).toBe(2);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        2
+      );
     });
 
     it("should clear all filters", () => {
@@ -225,11 +231,15 @@ describe("Search Store Integration", () => {
         .getState()
         .setActiveFilter("price_range", { max: 500, min: 100 });
 
-      expect(useSearchFiltersStore.getState().activeFilterCount).toBe(2);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        2
+      );
 
       useSearchFiltersStore.getState().clearAllFilters();
 
-      expect(useSearchFiltersStore.getState().activeFilterCount).toBe(0);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        0
+      );
       expect(useSearchFiltersStore.getState().activeFilters).toEqual({});
     });
   });
@@ -263,7 +273,9 @@ describe("Search Store Integration", () => {
       });
 
       expect(useSearchParamsStore.getState().flightParams).toEqual({});
-      expect(useSearchFiltersStore.getState().activeFilterCount).toBe(0);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        0
+      );
     });
 
     it("should expose current search state", () => {
@@ -308,11 +320,15 @@ describe("Search Store Integration", () => {
     it("should compute hasActiveFilters correctly", () => {
       useSearchFiltersStore.getState().setSearchType("flight");
 
-      expect(useSearchFiltersStore.getState().hasActiveFilters).toBe(false);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        0
+      );
 
       useSearchFiltersStore.getState().setActiveFilter("stops", 1);
 
-      expect(useSearchFiltersStore.getState().hasActiveFilters).toBe(true);
+      expect(Object.keys(useSearchFiltersStore.getState().activeFilters).length).toBe(
+        1
+      );
     });
 
     it("should compute canRetry correctly after error", () => {

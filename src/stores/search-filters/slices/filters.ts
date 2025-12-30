@@ -166,9 +166,15 @@ export const createSearchFiltersFiltersSlice =
       try {
         const newActiveFilters: Record<string, ActiveFilter> = {};
         const timestamp = deps.nowIso();
+        let allValid = true;
+        const invalidFilterIds: string[] = [];
 
         for (const [filterId, value] of Object.entries(filters)) {
           const isValid = get().validateFilter(filterId, value);
+          if (!isValid) {
+            allValid = false;
+            invalidFilterIds.push(filterId);
+          }
           if (isValid) {
             newActiveFilters[filterId] = {
               appliedAt: timestamp,
@@ -184,7 +190,13 @@ export const createSearchFiltersFiltersSlice =
           isApplyingFilters: false,
         });
 
-        return true;
+        if (!allValid) {
+          deps.logger.error("Some filters failed validation in batch update", {
+            invalidFilterIds,
+          });
+        }
+
+        return allValid;
       } catch (error) {
         deps.logger.error("Failed to set multiple filters", { error });
         set({ isApplyingFilters: false });
@@ -262,7 +274,28 @@ export const createSearchFiltersFiltersSlice =
         }
 
         if (typeof value === "string" && pattern) {
-          const regex = new RegExp(pattern);
+          const MaxPatternLength = 200;
+          const MaxValueLength = 500;
+
+          if (pattern.length > MaxPatternLength) {
+            deps.logger.error("Filter validation pattern too long", {
+              filterId,
+              patternLength: pattern.length,
+            });
+            return setError("Value format is invalid");
+          }
+
+          if (value.length > MaxValueLength) {
+            return setError("Value is too long");
+          }
+
+          let regex: RegExp;
+          try {
+            regex = new RegExp(pattern);
+          } catch (error) {
+            deps.logger.error("Invalid filter validation pattern", { error, filterId });
+            return setError("Value format is invalid");
+          }
           if (!regex.test(value)) {
             return setError("Value format is invalid");
           }

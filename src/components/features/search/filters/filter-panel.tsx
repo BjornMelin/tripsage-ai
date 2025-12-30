@@ -104,14 +104,14 @@ export function FilterPanel({
   const {
     currentFilters,
     activeFilters,
-    hasActiveFilters,
-    activeFilterCount,
     currentSearchType,
     setActiveFilter,
     removeActiveFilter,
     clearAllFilters,
     clearFiltersByCategory,
   } = useSearchFiltersStore();
+  const activeFilterCount = Object.keys(activeFilters).length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   // Group filters by category
   const filtersByCategory = useMemo(() => {

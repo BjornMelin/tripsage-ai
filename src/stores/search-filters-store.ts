@@ -56,9 +56,9 @@ export const useCurrentFilters = () =>
 export const useCurrentSortOptions = () =>
   useSearchFiltersStore((state) => state.currentSortOptions);
 export const useHasActiveFilters = () =>
-  useSearchFiltersStore((state) => state.hasActiveFilters);
+  useSearchFiltersStore((state) => Object.keys(state.activeFilters).length > 0);
 export const useActiveFilterCount = () =>
-  useSearchFiltersStore((state) => state.activeFilterCount);
+  useSearchFiltersStore((state) => Object.keys(state.activeFilters).length);
 export const useFilterPresets = (searchType?: SearchType) =>
   useSearchFiltersStore((state) =>
     searchType

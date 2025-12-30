@@ -50,7 +50,7 @@ export const createSearchFiltersPresetsSlice =
         set((state) => ({
           filterPresets: [...state.filterPresets, result.data],
         }));
-        return duplicatedPreset.id;
+        return result.data.id;
       }
 
       return null;
@@ -134,22 +134,29 @@ export const createSearchFiltersPresetsSlice =
 
     updateFilterPreset: (presetId, updates) => {
       try {
-        set((state) => {
-          const updatedPresets = state.filterPresets.map((preset) => {
-            if (preset.id === presetId) {
-              const updatedPreset = { ...preset, ...updates };
-              const result = filterPresetSchema.safeParse(updatedPreset);
-              return result.success ? result.data : preset;
-            }
-            return preset;
-          });
+        const currentPreset = get().filterPresets.find(
+          (preset) => preset.id === presetId
+        );
+        if (!currentPreset) return false;
 
-          return { filterPresets: updatedPresets };
-        });
+        const result = filterPresetSchema.safeParse({ ...currentPreset, ...updates });
+        if (!result.success) {
+          deps.logger.error("Invalid filter preset update", {
+            error: result.error,
+            presetId,
+          });
+          return false;
+        }
+
+        set((state) => ({
+          filterPresets: state.filterPresets.map((preset) =>
+            preset.id === presetId ? result.data : preset
+          ),
+        }));
 
         return true;
       } catch (error) {
-        deps.logger.error("Failed to update filter preset", { error });
+        deps.logger.error("Failed to update filter preset", { error, presetId });
         return false;
       }
     },

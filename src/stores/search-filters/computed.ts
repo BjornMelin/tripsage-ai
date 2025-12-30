@@ -6,7 +6,6 @@ import { createComputeFn } from "../middleware/computed";
 import type { SearchFiltersState } from "./types";
 
 export const computeFilterState = createComputeFn<SearchFiltersState>({
-  activeFilterCount: (state) => Object.keys(state.activeFilters || {}).length,
   appliedFilterSummary: (state) => {
     const currentFilters = state.currentSearchType
       ? state.availableFilters?.[state.currentSearchType] || []
@@ -30,9 +29,6 @@ export const computeFilterState = createComputeFn<SearchFiltersState>({
 
     return summaries.join("; ");
   },
-  canClearFilters: (state) =>
-    Object.keys(state.activeFilters || {}).length > 0 ||
-    state.activeSortOption !== null,
   currentFilters: (state) =>
     state.currentSearchType
       ? state.availableFilters?.[state.currentSearchType] || []
@@ -41,5 +37,4 @@ export const computeFilterState = createComputeFn<SearchFiltersState>({
     state.currentSearchType
       ? state.availableSortOptions?.[state.currentSearchType] || []
       : [],
-  hasActiveFilters: (state) => Object.keys(state.activeFilters || {}).length > 0,
 });

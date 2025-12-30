@@ -38,7 +38,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
+import {
+  useHasActiveFilters,
+  useSearchFiltersStore,
+} from "@/stores/search-filters-store";
 
 /** Props for the filter presets component */
 interface FilterPresetsProps {
@@ -55,7 +58,6 @@ export function FilterPresets({ className }: FilterPresetsProps) {
   const {
     filterPresets,
     activePreset,
-    hasActiveFilters,
     currentSearchType,
     saveFilterPreset,
     loadFilterPreset,
@@ -63,6 +65,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
     updateFilterPreset,
     duplicateFilterPreset,
   } = useSearchFiltersStore();
+  const hasActiveFilters = useHasActiveFilters();
 
   const effectiveSearchType = currentSearchType ?? "flight";
 

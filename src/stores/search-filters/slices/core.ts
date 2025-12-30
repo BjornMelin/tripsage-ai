@@ -9,17 +9,14 @@ import type { SearchFiltersState, SearchFiltersStoreDeps } from "../types";
 
 type SearchFiltersCoreSlice = Pick<
   SearchFiltersState,
-  | "activeFilterCount"
   | "activePreset"
   | "activeSortOption"
   | "appliedFilterSummary"
   | "availableFilters"
   | "availableSortOptions"
-  | "canClearFilters"
   | "currentFilters"
   | "currentSearchType"
   | "currentSortOptions"
-  | "hasActiveFilters"
   | "reset"
   | "resetFiltersToDefault"
   | "resetSortToDefault"
@@ -35,7 +32,6 @@ export const createSearchFiltersCoreSlice =
     deps: SearchFiltersStoreDeps
   ): StateCreator<SearchFiltersState, [], [], SearchFiltersCoreSlice> =>
   (set, get) => ({
-    activeFilterCount: 0,
     activePreset: null,
     activeSortOption: null,
     appliedFilterSummary: "",
@@ -43,13 +39,9 @@ export const createSearchFiltersCoreSlice =
     availableFilters: FILTER_CONFIGS,
     availableSortOptions: SORT_CONFIGS,
 
-    canClearFilters: false,
-
     currentFilters: [],
     currentSearchType: null,
     currentSortOptions: [],
-
-    hasActiveFilters: false,
 
     reset: () => {
       set({
