@@ -5,7 +5,7 @@
 import "server-only";
 
 import Amadeus from "amadeus";
-import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server"; // domain-infra-ok: server-only Amadeus SDK client requires env wiring until extracted to lib/app layer.
+import { getServerEnvVar } from "@/lib/env/server"; // domain-infra-ok: server-only Amadeus SDK client requires env wiring until extracted to lib/app layer.
 
 type AmadeusClient = InstanceType<typeof Amadeus>;
 
@@ -42,7 +42,13 @@ function getEnv(name: "AMADEUS_CLIENT_ID" | "AMADEUS_CLIENT_SECRET"): string {
 export function getAmadeusClient(): AmadeusClient {
   if (singleton) return singleton;
 
-  const amadeusEnv = getServerEnvVarWithFallback("AMADEUS_ENV", "test");
+  const amadeusEnv = (() => {
+    try {
+      return getServerEnvVar("AMADEUS_ENV");
+    } catch {
+      return "test";
+    }
+  })();
   singleton = new Amadeus({
     clientId: getEnv("AMADEUS_CLIENT_ID"),
     clientSecret: getEnv("AMADEUS_CLIENT_SECRET"),
