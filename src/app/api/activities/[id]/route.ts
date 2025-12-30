@@ -4,8 +4,9 @@
 
 import "server-only";
 
-import { getActivitiesService } from "@domain/activities/container";
 import { isNotFoundError } from "@domain/activities/errors";
+import { createActivitiesService } from "@/lib/activities/service-factory";
+import { createSupabaseActivitiesDetailsCache } from "@/lib/activities/supabase-cache";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId } from "@/lib/api/route-helpers";
@@ -61,13 +62,14 @@ export const GET = withApiGuards({
   const { id: validatedPlaceId } = placeIdResult;
 
   // Only call getCurrentUser if auth cookies are present to avoid unnecessary Supabase calls
-  let userId: string | undefined = "anon";
+  let userId: string | undefined;
   if (hasAuthCookies(req)) {
     const userResult = await getCurrentUser(supabase);
-    userId = userResult.user?.id ?? "anon";
+    userId = userResult.user?.id ?? undefined;
   }
 
-  const service = getActivitiesService();
+  const cache = createSupabaseActivitiesDetailsCache(supabase);
+  const service = createActivitiesService({ cache });
 
   try {
     const activity = await service.details(validatedPlaceId, {

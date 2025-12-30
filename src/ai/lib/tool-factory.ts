@@ -6,16 +6,24 @@ import "server-only";
 
 import type { RateLimitResult } from "@ai/tools/schemas/tools";
 import { rateLimitResultSchema } from "@ai/tools/schemas/tools";
-import { createToolError, type ToolErrorCode } from "@ai/tools/server/errors";
+import {
+  createToolError,
+  TOOL_ERROR_CODES,
+  type ToolErrorCode,
+} from "@ai/tools/server/errors";
 import type { AgentWorkflowKind } from "@schemas/agents";
 import { Ratelimit } from "@upstash/ratelimit";
-import type { FlexibleSchema, Tool, ToolExecutionOptions } from "ai";
-import { asSchema, tool } from "ai";
+import type { FlexibleSchema, JSONValue, Tool, ToolExecutionOptions } from "ai";
+import { asSchema } from "ai";
 import { headers } from "next/headers";
+import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { getClientIpFromHeaders } from "@/lib/http/ip";
-import { normalizeRateLimitResetToMs } from "@/lib/ratelimit/headers";
+import {
+  computeRetryAfterSeconds,
+  normalizeRateLimitResetToMs,
+} from "@/lib/ratelimit/headers";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { getRedis } from "@/lib/redis";
 import {
@@ -23,9 +31,78 @@ import {
   type TelemetrySpanAttributes,
   withTelemetrySpan,
 } from "@/lib/telemetry/span";
+import { isPlainObject } from "@/lib/utils/type-guards";
 
 /**Maximum length for rate limit identifiers to prevent abuse. */
 const MAX_RATE_LIMIT_IDENTIFIER_LENGTH = 128;
+
+const jsonValueSchema: z.ZodType<JSONValue> = z.lazy(() =>
+  z.union([
+    z.null(),
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ])
+);
+
+function isJsonSafe(value: unknown, seen: WeakSet<object>): boolean {
+  if (value === null) return true;
+  if (typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object") return false;
+
+  if (seen.has(value)) return false;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!isJsonSafe(item, seen)) return false;
+    }
+    return true;
+  }
+
+  if (!isPlainObject(value)) return false;
+  for (const item of Object.values(value)) {
+    if (!isJsonSafe(item, seen)) return false;
+  }
+  return true;
+}
+
+function toJsonValue(value: unknown): JSONValue {
+  const seen = new WeakSet<object>();
+  if (isJsonSafe(value, seen)) {
+    try {
+      return jsonValueSchema.parse(value);
+    } catch {
+      // Fall back to JSON.stringify semantics for edge-cases (e.g. undefined handling).
+    }
+  }
+
+  let serialized: string | undefined;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    serialized = undefined;
+  }
+
+  if (serialized === undefined) {
+    throw createToolError(
+      TOOL_ERROR_CODES.invalidOutput,
+      "Tool output is not JSON-serializable"
+    );
+  }
+
+  try {
+    return jsonValueSchema.parse(JSON.parse(serialized));
+  } catch {
+    throw createToolError(
+      TOOL_ERROR_CODES.invalidOutput,
+      "Tool output is not valid JSON"
+    );
+  }
+}
 
 /** Type alias for rate limit window duration accepted by Upstash Ratelimit. */
 type RateLimitWindow = Parameters<typeof Ratelimit.slidingWindow>[1];
@@ -41,8 +118,12 @@ type ToolExecute<InputValue, OutputValue> = (
   callOptions: ToolExecutionOptions
 ) => Promise<OutputValue>;
 
+type ToolOutputValue<T> = [T] extends [never] ? unknown : T;
+
 /** Transform function to convert tool output for model consumption. */
-export type ToModelOutputFn<OutputValue> = (output: OutputValue) => unknown;
+export type ToModelOutputFn<OutputValue> = (
+  output: ToolOutputValue<OutputValue>
+) => unknown;
 
 export type ToolOptions<InputValue, OutputValue> = {
   /** Unique tool identifier used for telemetry and cache namespacing. */
@@ -71,11 +152,19 @@ export type ToolOptions<InputValue, OutputValue> = {
  */
 export type LifecycleHooks<InputValue> = {
   /** Called when tool input streaming starts. */
-  onInputStart?: () => void;
+  onInputStart?: (options: ToolExecutionOptions) => void | PromiseLike<void>;
   /** Called for each chunk of streamed input text. */
-  onInputDelta?: (delta: { inputTextDelta: string }) => void;
+  onInputDelta?: (
+    options: {
+      inputTextDelta: string;
+    } & ToolExecutionOptions
+  ) => void | PromiseLike<void>;
   /** Called when complete input is available and validated. */
-  onInputAvailable?: (available: { input: InputValue }) => void;
+  onInputAvailable?: (
+    options: {
+      input: [InputValue] extends [never] ? unknown : InputValue;
+    } & ToolExecutionOptions
+  ) => void | PromiseLike<void>;
 };
 
 export type TelemetryOptions<InputValue> = {
@@ -189,9 +278,12 @@ function buildLifecycleHooks<InputValue>(
   lifecycle?: LifecycleHooks<InputValue>
 ): Partial<LifecycleHooks<InputValue>> {
   if (!lifecycle) return {};
-  return Object.fromEntries(
-    Object.entries(lifecycle).filter(([, value]) => value !== undefined)
-  ) as Partial<LifecycleHooks<InputValue>>;
+
+  const hooks: Partial<LifecycleHooks<InputValue>> = {};
+  if (lifecycle.onInputStart) hooks.onInputStart = lifecycle.onInputStart;
+  if (lifecycle.onInputDelta) hooks.onInputDelta = lifecycle.onInputDelta;
+  if (lifecycle.onInputAvailable) hooks.onInputAvailable = lifecycle.onInputAvailable;
+  return hooks;
 }
 
 /**
@@ -204,9 +296,10 @@ function buildLifecycleHooks<InputValue>(
  */
 export function createAiTool<InputValue, OutputValue>(
   options: CreateAiToolOptions<InputValue, OutputValue>
-): Tool<InputValue, OutputValue> {
+): Tool<InputValue, ToolOutputValue<OutputValue>> {
   const { guardrails } = options;
   const telemetryName = guardrails?.telemetry?.name ?? options.name;
+  const toModelOutput = options.toModelOutput;
 
   // Build output validator if validation is requested
   const outputValidator =
@@ -214,9 +307,7 @@ export function createAiTool<InputValue, OutputValue>(
       ? buildOutputValidator(options.outputSchema, options.name)
       : null;
 
-  // AI SDK v6 tool() cannot infer generics from object literals; safe assertion since structure matches.
-  // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed for AI SDK v6 tool() generic inference
-  return (tool as any)({
+  const toolDefinition: Tool<InputValue, ToolOutputValue<OutputValue>> = {
     description: options.description,
     execute: (params: InputValue, callOptions: ToolExecutionOptions) => {
       const startedAt = Date.now();
@@ -286,14 +377,21 @@ export function createAiTool<InputValue, OutputValue>(
         }
       );
     },
-    inputSchema: options.inputSchema as FlexibleSchema<InputValue>,
-    ...(options.outputSchema
-      ? { outputSchema: options.outputSchema as FlexibleSchema<OutputValue> }
+    inputSchema: options.inputSchema,
+    ...(options.outputSchema ? { outputSchema: options.outputSchema } : {}),
+    ...(toModelOutput
+      ? {
+          toModelOutput: ({ output }) => ({
+            type: "json",
+            value: toJsonValue(toModelOutput(output)),
+          }),
+        }
       : {}),
-    ...(options.toModelOutput ? { toModelOutput: options.toModelOutput } : {}),
     // Lifecycle hooks for streaming tool input progress (AI SDK v6)
     ...buildLifecycleHooks(options.lifecycle),
-  }) as Tool<InputValue, OutputValue>;
+  };
+
+  return toolDefinition;
 }
 
 /**
@@ -497,6 +595,14 @@ function resolveCacheKey<InputValue, OutputValue>(
 /**
  * Enforces rate limiting using Upstash Ratelimit.
  *
+ * Note: Tool rate limiting intentionally differs from HTTP route rate limiting:
+ * - HTTP routes use `withApiGuards` to return standardized error responses and attach
+ *   `X-RateLimit-*` + `Retry-After` headers via `applyRateLimitHeaders()`.
+ * - AI tools throw `ToolError` with structured metadata (no HTTP headers at this layer).
+ *
+ * Shared primitives (identifier hashing, reset normalization, retry-after math) live in
+ * `src/lib/ratelimit/*` to keep behavior consistent across response contracts.
+ *
  * Resolves identifier, creates cached limiter instance, checks limit, throws if exceeded.
  * Records events and handles Redis unavailability gracefully.
  *
@@ -569,7 +675,7 @@ async function enforceRateLimit<InputValue>(
   span.addEvent("rate_limited", { "ratelimit.subject_type": subjectType });
   const nowMs = Date.now();
   const retryAfter = validatedResult.reset
-    ? Math.max(0, Math.ceil((validatedResult.reset - nowMs) / 1000))
+    ? computeRetryAfterSeconds(validatedResult.reset, nowMs)
     : undefined;
   throw createToolError(config.errorCode, undefined, {
     limit: validatedResult.limit,

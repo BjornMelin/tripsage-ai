@@ -24,7 +24,10 @@ export function normalizeRateLimitResetToMs(reset: number): number {
   return reset;
 }
 
-function computeRetryAfterSeconds(resetMs: number, nowMs: number): number {
+export function computeRetryAfterSeconds(
+  resetMs: number,
+  nowMs: number = Date.now()
+): number {
   return Math.max(0, Math.ceil((resetMs - nowMs) / 1000));
 }
 
@@ -48,8 +51,9 @@ export function createRateLimitHeaders(
   if (resetMs !== undefined) headers["X-RateLimit-Reset"] = String(resetMs);
 
   if (meta.success === false && resetMs !== undefined) {
-    const nowMs = options?.nowMs ?? Date.now();
-    headers["Retry-After"] = String(computeRetryAfterSeconds(resetMs, nowMs));
+    headers["Retry-After"] = String(
+      computeRetryAfterSeconds(resetMs, options?.nowMs ?? Date.now())
+    );
   }
 
   return headers;

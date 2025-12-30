@@ -25,38 +25,63 @@ import {
   accommodationDetailsOutputSchema,
   accommodationSearchOutputSchema,
 } from "@schemas/accommodations";
-import type { Ratelimit } from "@upstash/ratelimit";
-import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { bumpTag, versionedKey } from "@/lib/cache/tags";
-import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
-import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
-import { retryWithBackoff } from "@/lib/http/retry";
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-// Extract Span type from withTelemetrySpan signature to avoid direct @opentelemetry/api import
-type TelemetrySpan = Parameters<Parameters<typeof withTelemetrySpan>[2]>[0];
+type HotelLikeListing = {
+  hotel?: {
+    name?: string;
+    address?: {
+      cityName?: string;
+      lines?: string[];
+    };
+  };
+};
+
+type TelemetrySpanAttributes = Record<string, string | number | boolean>;
+type TelemetrySpan = {
+  addEvent: (name: string, attributes?: TelemetrySpanAttributes) => void;
+  recordException: (error: Error) => void;
+};
 
 /** Dependencies for the accommodations service. */
 export type AccommodationsServiceDeps = {
   provider: AccommodationProviderAdapter;
   supabase: () => Promise<TypedServerSupabase>;
-  rateLimiter?: Ratelimit;
   cacheTtlSeconds: number;
+  bumpTag: (tag: string) => Promise<number>;
+  canonicalizeParamsForCache: (
+    params: Record<string, unknown>,
+    prefix: string
+  ) => string;
+  enrichHotelListingWithPlaces: <T extends HotelLikeListing>(
+    listing: T
+  ) => Promise<T & { place?: unknown; placeDetails?: unknown }>;
+  getCachedJson: <T>(key: string) => Promise<T | null>;
+  resolveLocationToLatLng: (
+    location: string
+  ) => Promise<{ lat: number; lon: number } | null>;
+  retryWithBackoff: <T>(
+    fn: (attempt: number) => Promise<T>,
+    options: { attempts: number; baseDelayMs: number; maxDelayMs?: number }
+  ) => Promise<T>;
+  setCachedJson: (key: string, value: unknown, ttlSeconds?: number) => Promise<void>;
+  versionedKey: (tag: string, key: string) => Promise<string>;
+  withTelemetrySpan: <T>(
+    name: string,
+    options: { attributes?: TelemetrySpanAttributes; redactKeys?: string[] },
+    fn: (span: TelemetrySpan) => Promise<T> | T
+  ) => Promise<T>;
 };
 
 /**
  * Context for the accommodations service.
  *
- * @property rateLimitKey - Optional explicit rate limit key. If not provided, falls back to `userId` from ProviderContext.
  * @property processPayment - Optional payment processing function for bookings.
  * @property requestApproval - Optional approval request function for bookings.
  */
 export type ServiceContext = ProviderContext & {
-  rateLimitKey?: string;
   processPayment?: (params: {
     amountCents: number;
     currency: string;
@@ -88,7 +113,7 @@ export class AccommodationsService {
     params: AccommodationSearchParams,
     ctx?: ServiceContext
   ): Promise<AccommodationSearchResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.search",
       {
         attributes: {
@@ -98,25 +123,15 @@ export class AccommodationsService {
       },
       async (span) => {
         const startedAt = Date.now();
-        if (this.deps.rateLimiter) {
-          const rateKey = ctx?.rateLimitKey ?? ctx?.userId ?? `anon:${params.location}`;
-          const limit = await this.deps.rateLimiter.limit(rateKey);
-          span.addEvent("ratelimit.checked", {
-            key: rateKey,
-            remaining: limit?.remaining ?? 0,
-          });
-          if (!limit?.success) {
-            throw new ProviderError("rate_limited", "rate limit exceeded", {
-              retryAfterMs: limit?.reset,
-            });
-          }
-        }
 
         const baseCacheKey = this.buildCacheKey(params);
         if (baseCacheKey) {
-          const versionedCacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
+          const versionedCacheKey = await this.deps.versionedKey(
+            CACHE_TAG_SEARCH,
+            baseCacheKey
+          );
           const cached =
-            await getCachedJson<AccommodationSearchResult>(versionedCacheKey);
+            await this.deps.getCachedJson<AccommodationSearchResult>(versionedCacheKey);
           if (cached) {
             span.addEvent("cache.hit", { key: versionedCacheKey });
             return {
@@ -129,9 +144,11 @@ export class AccommodationsService {
 
         let coords: { lat: number; lon: number } | null = null;
         try {
-          coords = await resolveLocationToLatLng(params.location);
+          coords = await this.deps.resolveLocationToLatLng(params.location);
         } catch (error) {
-          span.recordException(error as Error);
+          span.recordException(
+            error instanceof Error ? error : new Error("Unknown error")
+          );
           coords = null;
         }
         if (!coords) {
@@ -184,8 +201,15 @@ export class AccommodationsService {
         });
 
         if (baseCacheKey) {
-          const versionedCacheKey = await versionedKey(CACHE_TAG_SEARCH, baseCacheKey);
-          await setCachedJson(versionedCacheKey, result, this.deps.cacheTtlSeconds);
+          const versionedCacheKey = await this.deps.versionedKey(
+            CACHE_TAG_SEARCH,
+            baseCacheKey
+          );
+          await this.deps.setCachedJson(
+            versionedCacheKey,
+            result,
+            this.deps.cacheTtlSeconds
+          );
         }
         return result;
       }
@@ -197,36 +221,24 @@ export class AccommodationsService {
     params: AccommodationDetailsParams,
     ctx?: ServiceContext
   ): Promise<AccommodationDetailsResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.details",
       {
         attributes: { listingId: params.listingId },
         redactKeys: ["listingId"],
       },
       async (span) => {
-        if (this.deps.rateLimiter) {
-          const rateKey = ctx?.rateLimitKey ?? ctx?.userId ?? params.listingId;
-          const limit = await this.deps.rateLimiter.limit(rateKey ?? "anon");
-          span.addEvent("ratelimit.checked", {
-            key: rateKey ?? "anon",
-            remaining: limit?.remaining ?? 0,
-          });
-          if (!limit?.success) {
-            throw new ProviderError("rate_limited", "rate limit exceeded", {
-              retryAfterMs: limit?.reset,
-            });
-          }
-        }
-
         const result = await this.callProvider(
           (providerCtx) => this.deps.provider.getDetails(params, providerCtx),
           ctx
         );
 
-        const enriched = await enrichHotelListingWithPlaces(result.value.listing);
+        const enriched = await this.deps.enrichHotelListingWithPlaces(
+          result.value.listing
+        );
 
         span.addEvent("details.enriched", {
-          hasPlace: Boolean((enriched as { place?: unknown }).place),
+          hasPlace: Boolean(enriched.place),
         });
 
         return accommodationDetailsOutputSchema.parse({
@@ -243,7 +255,7 @@ export class AccommodationsService {
     params: AccommodationCheckAvailabilityParams,
     ctx: ServiceContext
   ): Promise<AccommodationCheckAvailabilityResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.checkAvailability",
       {
         attributes: {
@@ -255,27 +267,13 @@ export class AccommodationsService {
         redactKeys: ["userId", "sessionId"],
       },
       async (span) => {
-        if (this.deps.rateLimiter) {
-          const rateKey = ctx?.rateLimitKey ?? ctx?.userId ?? params.propertyId;
-          const limit = await this.deps.rateLimiter.limit(rateKey ?? "anon");
-          span.addEvent("ratelimit.checked", {
-            key: rateKey ?? "anon",
-            remaining: limit?.remaining ?? 0,
-          });
-          if (!limit?.success) {
-            throw new ProviderError("rate_limited", "rate limit exceeded", {
-              retryAfterMs: limit?.reset,
-            });
-          }
-        }
-
         const availability = await this.callProvider(
           (providerCtx) => this.deps.provider.checkAvailability(params, providerCtx),
           ctx
         );
 
         const bookingCacheKey = `${BOOKING_CACHE_NAMESPACE}:${availability.value.bookingToken}`;
-        const versionedBookingKey = await versionedKey(
+        const versionedBookingKey = await this.deps.versionedKey(
           CACHE_TAG_BOOKING,
           bookingCacheKey
         );
@@ -287,7 +285,7 @@ export class AccommodationsService {
           sessionId: ctx.sessionId,
           userId: ctx.userId,
         };
-        await setCachedJson(versionedBookingKey, cachedPriceData, 10 * 60);
+        await this.deps.setCachedJson(versionedBookingKey, cachedPriceData, 10 * 60);
 
         span.addEvent("availability.cached", {
           bookingToken: availability.value.bookingToken,
@@ -310,7 +308,7 @@ export class AccommodationsService {
     params: AccommodationBookingRequest,
     ctx: ServiceContext & { userId: string }
   ): Promise<AccommodationBookingResult> {
-    return await withTelemetrySpan(
+    return await this.deps.withTelemetrySpan(
       "accommodations.book",
       {
         attributes: {
@@ -322,18 +320,18 @@ export class AccommodationsService {
         redactKeys: ["userId", "sessionId"],
       },
       async (span) => {
-        await this.validateBookingContext(ctx, span, params.listingId);
+        this.validateBookingContext(ctx, span, params.listingId);
 
         const supabase = await this.deps.supabase();
         await this.validateTripOwnership(supabase, params.tripId, ctx.userId);
 
         const bookingCacheKey = `${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`;
-        const versionedBookingKey = await versionedKey(
+        const versionedBookingKey = await this.deps.versionedKey(
           CACHE_TAG_BOOKING,
           bookingCacheKey
         );
         const cachedPrice =
-          await getCachedJson<CachedBookingPrice>(versionedBookingKey);
+          await this.deps.getCachedJson<CachedBookingPrice>(versionedBookingKey);
 
         if (!cachedPrice) {
           throw new Error("booking_price_not_cached");
@@ -373,7 +371,7 @@ export class AccommodationsService {
               const persist = async () =>
                 await supabase.from("bookings").insert(bookingRow as never);
 
-              const { error } = await retryWithBackoff(persist, {
+              const { error } = await this.deps.retryWithBackoff(persist, {
                 attempts: 3,
                 baseDelayMs: 200,
                 maxDelayMs: 1_000,
@@ -418,7 +416,7 @@ export class AccommodationsService {
 
         // Invalidate search cache using tag-based invalidation
         // Bumping the tag invalidates all search cache entries for this tag
-        await bumpTag(CACHE_TAG_SEARCH);
+        await this.deps.bumpTag(CACHE_TAG_SEARCH);
         span.addEvent("cache.invalidated", { tag: CACHE_TAG_SEARCH });
 
         return accommodationBookingOutputSchema.parse(result);
@@ -450,7 +448,7 @@ export class AccommodationsService {
 
   /** Build a cache key for a search parameters object. */
   private buildCacheKey(params: AccommodationSearchParams): string | undefined {
-    return canonicalizeParamsForCache(
+    return this.deps.canonicalizeParamsForCache(
       {
         ...params,
         semanticQuery: params.semanticQuery || "",
@@ -460,34 +458,21 @@ export class AccommodationsService {
   }
 
   /**
-   * Validates booking context including payment/approval handlers and rate limiting.
+   * Validates booking context including payment/approval handlers.
    *
    * @param ctx - Service context with payment and approval handlers
    * @param span - Telemetry span for event recording
    * @throws Error if handlers are missing
-   * @throws ProviderError if rate limit exceeded
    */
-  private async validateBookingContext(
+  private validateBookingContext(
     ctx: ServiceContext & { userId: string },
     span: TelemetrySpan,
     listingId: string
-  ): Promise<void> {
+  ): void {
     if (!ctx.processPayment || !ctx.requestApproval) {
       throw new Error("booking context missing payment or approval handlers");
     }
-    if (this.deps.rateLimiter) {
-      const rateKey = ctx.rateLimitKey ?? ctx.userId ?? listingId;
-      const limit = await this.deps.rateLimiter.limit(rateKey ?? "anon");
-      span.addEvent("ratelimit.checked", {
-        key: rateKey ?? "anon",
-        remaining: limit?.remaining ?? 0,
-      });
-      if (!limit?.success) {
-        throw new ProviderError("rate_limited", "rate limit exceeded", {
-          retryAfterMs: limit?.reset,
-        });
-      }
-    }
+    span.addEvent("booking.handlers_validated", { listingId });
   }
 
   /**

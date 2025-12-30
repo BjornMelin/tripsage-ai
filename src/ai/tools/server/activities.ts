@@ -7,9 +7,13 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import type { ActivityModelOutput } from "@ai/tools/schemas/activities";
 import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import { getActivitiesService } from "@domain/activities/container";
+import { webSearch } from "@ai/tools/server/web-search";
 import { activitySchema, activitySearchParamsSchema } from "@schemas/search";
 import { z } from "zod";
+import {
+  createActivitiesService,
+  createWebSearchFallback,
+} from "@/lib/activities/service-factory";
 
 /**
  * Output schema for activity search tool.
@@ -42,10 +46,9 @@ export const searchActivities = createAiTool<
     "long-tail queries. Returns verified activities and AI-suggested ideas.",
   execute: async (params) => {
     try {
-      const service = getActivitiesService();
-      const result = await service.search(params, {
-        // userId will be extracted from request context if available
-      });
+      const fallbackWebSearch = createWebSearchFallback(webSearch.execute);
+      const service = createActivitiesService({ webSearch: fallbackWebSearch });
+      const result = await service.search(params);
 
       return {
         activities: result.activities,
@@ -121,10 +124,8 @@ export const getActivityDetails = createAiTool<
     "Returns photos, ratings, descriptions, location, and other metadata.",
   execute: async (params) => {
     try {
-      const service = getActivitiesService();
-      const activity = await service.details(params.placeId, {
-        // userId will be extracted from request context if available
-      });
+      const service = createActivitiesService({});
+      const activity = await service.details(params.placeId);
 
       return activity;
     } catch (error) {

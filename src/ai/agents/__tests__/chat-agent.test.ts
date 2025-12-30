@@ -59,13 +59,20 @@ vi.mock("@/app/api/_helpers/attachments", () => ({
 }));
 
 // Mock tokens
+const tokenMocks = vi.hoisted(() => ({
+  clampMaxTokens: vi.fn(() => ({ maxTokens: 1024, reasons: [] })),
+  countTokens: vi.fn((_texts: string[], _modelId?: string) => 100),
+}));
 vi.mock("@/lib/tokens/budget", () => ({
-  clampMaxTokens: () => ({ maxTokens: 1024, reasons: [] }),
-  countTokens: () => 100,
+  clampMaxTokens: tokenMocks.clampMaxTokens,
+  countTokens: tokenMocks.countTokens,
 }));
 
+const limitMocks = vi.hoisted(() => ({
+  getModelContextLimit: vi.fn(() => 128000),
+}));
 vi.mock("@/lib/tokens/limits", () => ({
-  getModelContextLimit: () => 128000,
+  getModelContextLimit: limitMocks.getModelContextLimit,
 }));
 
 // Mock AI tools
@@ -147,6 +154,12 @@ function createTestMessages(): UIMessage[] {
 describe("createChatAgent", () => {
   beforeEach(() => {
     mockToolLoopAgent.mockClear();
+    tokenMocks.clampMaxTokens.mockReset();
+    tokenMocks.clampMaxTokens.mockReturnValue({ maxTokens: 1024, reasons: [] });
+    tokenMocks.countTokens.mockReset();
+    tokenMocks.countTokens.mockReturnValue(100);
+    limitMocks.getModelContextLimit.mockReset();
+    limitMocks.getModelContextLimit.mockReturnValue(128000);
   });
 
   it("should create a chat agent with required config", () => {
@@ -192,6 +205,86 @@ describe("createChatAgent", () => {
         instructions: expect.stringContaining("User prefers boutique hotels."),
       })
     );
+  });
+
+  it("compresses context and keeps adjacent tool call/result pairs together", async () => {
+    const ContextLimit = 2158; // Context limit for this test model
+    const CompressionTrigger = 9999; // Token count that forces compression path
+    const SystemTokens = 10;
+    const UserMessageTokens = 60;
+    const ToolCallTokens = 20;
+
+    limitMocks.getModelContextLimit.mockReturnValue(ContextLimit);
+    tokenMocks.countTokens.mockImplementation((texts: string[]) => {
+      if (texts.some((t) => t.includes("test message"))) return SystemTokens;
+      if (texts.length > 1) return CompressionTrigger;
+
+      const joined = texts.join(" ");
+      if (joined.includes("system")) return SystemTokens;
+      if (joined.includes("old")) return UserMessageTokens;
+      if (joined.includes("searchFlights")) return ToolCallTokens;
+      if (joined.includes("tool-result-text")) return ToolCallTokens;
+      if (joined.includes("recent")) return UserMessageTokens;
+      return 1;
+    });
+
+    const deps = createTestDeps();
+    const messages = createTestMessages();
+    createChatAgent(deps, messages, { desiredMaxTokens: 4096, maxSteps: 20 });
+
+    expect(mockToolLoopAgent).toHaveBeenCalled();
+    const toolLoopConfig = mockToolLoopAgent.mock.calls[0]?.[0];
+    const prepareStep = unsafeCast<{ prepareStep?: unknown }>(
+      toolLoopConfig
+    ).prepareStep;
+    expect(typeof prepareStep).toBe("function");
+
+    const stepMessages = unsafeCast<import("ai").ModelMessage[]>([
+      { content: "system", role: "system" },
+      { content: "old", role: "user" },
+      {
+        content: [
+          {
+            input: { query: "paris" },
+            toolCallId: "call-1",
+            toolName: "searchFlights",
+            type: "tool-call",
+          },
+        ],
+        role: "assistant",
+      },
+      {
+        content: [
+          {
+            output: { type: "text", value: "tool-result-text" },
+            toolCallId: "call-1",
+            type: "tool-result",
+          },
+        ],
+        role: "tool",
+      },
+      { content: "recent", role: "user" },
+    ]);
+
+    const prepared = await unsafeCast<
+      (args: { messages: import("ai").ModelMessage[]; stepNumber: number }) => unknown
+    >(prepareStep)({ messages: stepMessages, stepNumber: 1 });
+
+    const keptMessages =
+      unsafeCast<{ messages?: import("ai").ModelMessage[] }>(prepared).messages ?? [];
+
+    expect(keptMessages.map((m) => m.role)).toEqual([
+      "system",
+      "assistant",
+      "tool",
+      "user",
+    ]);
+    expect(keptMessages.map((m) => m.content)).toEqual([
+      "system",
+      stepMessages[2]?.content,
+      stepMessages[3]?.content,
+      "recent",
+    ]);
   });
 });
 

@@ -369,32 +369,37 @@ export const updateTravelPlan = createAiTool({
  */
 export const combineSearchResults = createAiTool({
   description: "Combine flights, accommodations, activities, and destination info.",
-  execute: (args) => {
-    // biome-ignore lint/suspicious/noExplicitAny: Complex result structure
-    const recommendations: any = { accommodations: [], activities: [], flights: [] };
-    // biome-ignore lint/suspicious/noExplicitAny: Complex result structure
-    const result: any = {
+  execute: (args: z.infer<typeof combineSearchResultsInputSchema>) => {
+    type CombineResponse = z.infer<typeof combineSearchResultsResponseSchema>;
+    type Success = Extract<CombineResponse, { success: true }>;
+
+    const recommendations: Success["combinedResults"]["recommendations"] = {
+      accommodations: [],
+      activities: [],
+      flights: [],
+    };
+    const result: Success["combinedResults"] = {
       destinationHighlights: [],
       recommendations,
       totalEstimatedCost: 0,
       travelTips: [],
     };
 
-    const flights = Array.isArray(args.flightResults?.offers)
-      ? args.flightResults?.offers
-      : [];
+    const rawOffers = read(args.flightResults, "offers");
+    const flights = Array.isArray(rawOffers) ? rawOffers : [];
     if (flights.length) {
       const sorted = [...flights].sort(
-        // biome-ignore lint/suspicious/noExplicitAny: Flight data structure from API
-        (a: any, b: any) => coerceFloat(a.total_amount) - coerceFloat(b.total_amount)
+        (a, b) =>
+          coerceFloat(read(a, "total_amount")) - coerceFloat(read(b, "total_amount"))
       );
       result.recommendations.flights = sorted.slice(0, 3);
-      if (sorted[0]) result.totalEstimatedCost += coerceFloat(sorted[0].total_amount);
+      if (sorted[0]) {
+        result.totalEstimatedCost += coerceFloat(read(sorted[0], "total_amount"));
+      }
     }
 
-    const accoms = Array.isArray(args.accommodationResults?.accommodations)
-      ? args.accommodationResults?.accommodations
-      : [];
+    const rawAccommodations = read(args.accommodationResults, "accommodations");
+    const accoms = Array.isArray(rawAccommodations) ? rawAccommodations : [];
     if (accoms.length) {
       result.recommendations.accommodations = accoms.slice(0, 3);
       let nights = 3;
@@ -404,8 +409,10 @@ export const combineSearchResults = createAiTool({
         const diff = Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
         nights = Number.isFinite(diff) && diff > 0 ? diff : 1;
       }
-      if (accoms[0])
-        result.totalEstimatedCost += coerceFloat(accoms[0].price_per_night) * nights;
+      if (accoms[0]) {
+        result.totalEstimatedCost +=
+          coerceFloat(read(accoms[0], "price_per_night")) * nights;
+      }
     }
 
     return Promise.resolve({

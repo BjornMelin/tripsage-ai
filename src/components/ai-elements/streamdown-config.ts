@@ -4,23 +4,53 @@
 
 import type { MermaidConfig, MermaidOptions, StreamdownProps } from "streamdown";
 import { defaultRehypePlugins, defaultRemarkPlugins } from "streamdown";
-import type { Plugin } from "unified";
+import type { Pluggable, Plugin } from "unified";
+import { z } from "zod";
 
-type HardenOptions = {
-  allowedImagePrefixes?: string[];
-  allowedLinkPrefixes?: string[];
-  allowedProtocols?: string[];
-  defaultOrigin?: string | undefined;
-  allowDataImages?: boolean;
-};
+const hardenOptionsSchema = z.looseObject({
+  allowDataImages: z.boolean().optional(),
+  allowedImagePrefixes: z.array(z.string()).optional(),
+  allowedLinkPrefixes: z.array(z.string()).optional(),
+  allowedProtocols: z.array(z.string()).optional(),
+  defaultOrigin: z.string().optional(),
+});
 
-// Normalize dual plugin shapes (function or [function, options] tuple) and cast for streamdown's plugin type constraints.
-const hardenRaw = defaultRehypePlugins.harden as unknown;
-const hardenFn = (Array.isArray(hardenRaw) ? hardenRaw[0] : hardenRaw) as Plugin;
-const hardenDefaults =
-  Array.isArray(hardenRaw) && hardenRaw[1] != null && typeof hardenRaw[1] === "object"
-    ? (hardenRaw[1] as HardenOptions)
-    : {};
+type HardenOptions = z.infer<typeof hardenOptionsSchema>;
+
+type UnifiedPlugin = Plugin<unknown[]>;
+type PluggableTuple = [plugin: UnifiedPlugin, ...parameters: unknown[]];
+
+function isPluggableTuple(value: Pluggable): value is PluggableTuple {
+  return Array.isArray(value);
+}
+
+function isUnifiedPlugin(value: unknown): value is UnifiedPlugin {
+  return typeof value === "function";
+}
+
+function resolvePluginDefaults(plugin: Pluggable): {
+  plugin: UnifiedPlugin;
+  defaults: HardenOptions;
+} {
+  if (isPluggableTuple(plugin)) {
+    const parsed = hardenOptionsSchema.safeParse(plugin[1]);
+    const defaults = parsed.success ? parsed.data : {};
+    if (!isUnifiedPlugin(plugin[0])) {
+      throw new Error("Invalid Streamdown rehype plugin configuration");
+    }
+    return { defaults, plugin: plugin[0] };
+  }
+
+  if (!isUnifiedPlugin(plugin)) {
+    throw new Error("Invalid Streamdown rehype plugin configuration");
+  }
+
+  return { defaults: {}, plugin };
+}
+
+const { plugin: hardenFn, defaults: hardenDefaults } = resolvePluginDefaults(
+  defaultRehypePlugins.harden
+);
 
 export const streamdownShikiTheme: NonNullable<StreamdownProps["shikiTheme"]> = [
   "github-light",

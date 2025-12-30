@@ -6,7 +6,9 @@
 
 import "server-only";
 
-import { getAccommodationsService } from "@domain/accommodations/container";
+import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "@domain/accommodations/constants";
+import { AmadeusProviderAdapter } from "@domain/accommodations/providers/amadeus-adapter";
+import { AccommodationsService } from "@domain/accommodations/service";
 import { accommodationListingSchema } from "@schemas/accommodations";
 import {
   type HotelResult,
@@ -15,9 +17,16 @@ import {
   searchAccommodationParamsSchema,
 } from "@schemas/search";
 import { format } from "date-fns";
+import { canonicalizeParamsForCache } from "@/lib/cache/keys";
+import { bumpTag, versionedKey } from "@/lib/cache/tags";
+import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { FALLBACK_HOTEL_IMAGE } from "@/lib/constants/images";
 import { getGoogleMapsBrowserKey } from "@/lib/env/server";
+import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
+import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
+import { retryWithBackoff } from "@/lib/http/retry";
 import { secureUuid } from "@/lib/security/random";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -74,7 +83,20 @@ export async function searchHotelsAction(
   }
 
   const validatedParams = validation.data;
-  const service = getAccommodationsService();
+  const service = new AccommodationsService({
+    bumpTag,
+    cacheTtlSeconds: ACCOM_SEARCH_CACHE_TTL_SECONDS,
+    canonicalizeParamsForCache,
+    enrichHotelListingWithPlaces,
+    getCachedJson,
+    provider: new AmadeusProviderAdapter(),
+    resolveLocationToLatLng,
+    retryWithBackoff,
+    setCachedJson,
+    supabase: createServerSupabase,
+    versionedKey,
+    withTelemetrySpan,
+  });
   const today = new Date();
   const todayIso = format(today, "yyyy-MM-dd");
   const tomorrow = new Date(today);
