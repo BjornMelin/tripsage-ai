@@ -11,6 +11,8 @@ import { z } from "zod";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
+const activitiesCacheSourceSchema = z.enum(["googleplaces", "ai_fallback", "cached"]);
+
 function findActivityInRows(
   rows: unknown[],
   placeId: string
@@ -63,13 +65,9 @@ export function createSupabaseActivitiesSearchCache(
       const { data } = await query.maybeSingle();
       if (!data) return null;
 
-      const source =
-        data.source === "googleplaces" ||
-        data.source === "ai_fallback" ||
-        data.source === "cached"
-          ? data.source
-          : null;
-      if (!source) return null;
+      const sourceResult = activitiesCacheSourceSchema.safeParse(data.source);
+      if (!sourceResult.success) return null;
+      const source = sourceResult.data;
 
       const parsed = z.array(activitySchema).safeParse(data.results);
       if (!parsed.success) return null;

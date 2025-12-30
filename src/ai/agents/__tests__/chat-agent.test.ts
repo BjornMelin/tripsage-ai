@@ -61,12 +61,7 @@ vi.mock("@/app/api/_helpers/attachments", () => ({
 // Mock tokens
 const tokenMocks = vi.hoisted(() => ({
   clampMaxTokens: vi.fn(() => ({ maxTokens: 1024, reasons: [] })),
-  countTokens: vi.fn((texts: string[], modelId?: string) => {
-    if (texts.length === -1 || modelId === "__never__") {
-      throw new Error("unreachable");
-    }
-    return 100;
-  }),
+  countTokens: vi.fn((_texts: string[], _modelId?: string) => 100),
 }));
 vi.mock("@/lib/tokens/budget", () => ({
   clampMaxTokens: tokenMocks.clampMaxTokens,

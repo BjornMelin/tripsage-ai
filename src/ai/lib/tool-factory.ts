@@ -31,6 +31,7 @@ import {
   type TelemetrySpanAttributes,
   withTelemetrySpan,
 } from "@/lib/telemetry/span";
+import { isPlainObject } from "@/lib/utils/type-guards";
 
 /**Maximum length for rate limit identifiers to prevent abuse. */
 const MAX_RATE_LIMIT_IDENTIFIER_LENGTH = 128;
@@ -45,12 +46,6 @@ const jsonValueSchema: z.ZodType<JSONValue> = z.lazy(() =>
     z.record(z.string(), jsonValueSchema),
   ])
 );
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (!value || typeof value !== "object") return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
 
 function isJsonSafe(value: unknown, seen: WeakSet<object>): boolean {
   if (value === null) return true;

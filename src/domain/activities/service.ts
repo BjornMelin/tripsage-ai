@@ -313,13 +313,15 @@ export class ActivitiesService {
                 );
               }
             } catch (error) {
+              const wrappedError =
+                error instanceof Error
+                  ? error
+                  : new Error(String(error), { cause: error });
               this.logger.error("fallback_failed", {
                 destination,
-                error: error instanceof Error ? error.message : String(error),
+                error: wrappedError.message,
               });
-              span.recordException(
-                error instanceof Error ? error : new Error(String(error))
-              );
+              span.recordException(wrappedError);
             }
           } else {
             span.addEvent("activities.fallback.skipped", {
@@ -354,13 +356,15 @@ export class ActivitiesService {
               userId,
             });
           } catch (error) {
+            const wrappedError =
+              error instanceof Error
+                ? error
+                : new Error(String(error), { cause: error });
             this.logger.error("cache_insert_failed", {
               destination,
-              error: error instanceof Error ? error.message : String(error),
+              error: wrappedError.message,
             });
-            span.recordException(
-              error instanceof Error ? error : new Error(String(error))
-            );
+            span.recordException(wrappedError);
           }
         }
 

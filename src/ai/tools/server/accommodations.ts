@@ -49,6 +49,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { requireApproval } from "./approvals";
 
+const amadeusProvider = new AmadeusProviderAdapter();
+
 function createAccommodationsService(): AccommodationsService {
   return new AccommodationsService({
     bumpTag,
@@ -56,7 +58,7 @@ function createAccommodationsService(): AccommodationsService {
     canonicalizeParamsForCache,
     enrichHotelListingWithPlaces,
     getCachedJson,
-    provider: new AmadeusProviderAdapter(),
+    provider: amadeusProvider,
     resolveLocationToLatLng,
     retryWithBackoff,
     setCachedJson,
