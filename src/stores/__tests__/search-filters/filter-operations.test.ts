@@ -8,6 +8,7 @@ import type {
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useSearchFiltersStore } from "@/stores/search-filters-store";
+import { selectCurrentFilters } from "@/stores/search-filters/selectors";
 
 describe("Search Filters Store - Filter Operations", () => {
   beforeEach(() => {
@@ -104,18 +105,19 @@ describe("Search Filters Store - Filter Operations", () => {
       expect(result.current.activePreset).toBeNull();
     });
 
-    it("provides current filters for active search type", () => {
-      const { result } = renderHook(() => useSearchFiltersStore());
+	    it("provides current filters for active search type", () => {
+	      const { result } = renderHook(() => useSearchFiltersStore());
 
-      act(() => {
-        result.current.setSearchType("flight");
-      });
+	      act(() => {
+	        result.current.setSearchType("flight");
+	      });
 
-      // Uses default flight filters from store initialization
-      expect(result.current.currentFilters.length).toBeGreaterThan(0);
-      expect(result.current.currentFilters[0].id).toBe("price_range");
-    });
-  });
+	      // Uses default flight filters from store initialization
+	      const currentFilters = selectCurrentFilters(result.current);
+	      expect(currentFilters.length).toBeGreaterThan(0);
+	      expect(currentFilters[0]?.id).toBe("price_range");
+	    });
+	  });
 
   describe("Active Filter Management", () => {
     beforeEach(() => {

@@ -5,6 +5,7 @@
 import type { ActiveFilter, FilterValue, ValidatedFilterOption } from "@schemas/stores";
 import { filterValueSchema } from "@schemas/stores";
 import type { StateCreator } from "zustand";
+import { selectCurrentFilters } from "../selectors";
 import type { SearchFiltersState, SearchFiltersStoreDeps } from "../types";
 import { validateRangeValue } from "../validation";
 
@@ -43,7 +44,7 @@ export const createSearchFiltersFiltersSlice =
       set({ isApplyingFilters: true });
 
       try {
-        const { currentFilters } = get();
+        const currentFilters = selectCurrentFilters(get());
         const validFilterIds = new Set(currentFilters.map((f) => f.id));
         const filtersToApply: Record<string, FilterValue> = {};
 
@@ -79,7 +80,8 @@ export const createSearchFiltersFiltersSlice =
     },
 
     clearFiltersByCategory: (category) => {
-      const { currentFilters, activeFilters } = get();
+      const { activeFilters } = get();
+      const currentFilters = selectCurrentFilters(get());
       const filtersInCategory = currentFilters
         .filter((f) => f.category === category)
         .map((f) => f.id);
@@ -218,7 +220,7 @@ export const createSearchFiltersFiltersSlice =
     },
 
     validateFilter: (filterId, value) => {
-      const { currentFilters } = get();
+      const currentFilters = selectCurrentFilters(get());
       const filterConfig = getFilterConfig(currentFilters, filterId);
 
       const setError = (error: string) => {

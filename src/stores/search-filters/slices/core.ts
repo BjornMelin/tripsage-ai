@@ -5,6 +5,7 @@
 import { searchTypeSchema, sortOptionSchema } from "@schemas/stores";
 import type { StateCreator } from "zustand";
 import { FILTER_CONFIGS, getDefaultSortOptions, SORT_CONFIGS } from "../filter-configs";
+import { selectCurrentSortOptions } from "../selectors";
 import type { SearchFiltersState, SearchFiltersStoreDeps } from "../types";
 
 type SearchFiltersCoreSlice = Pick<
@@ -14,9 +15,7 @@ type SearchFiltersCoreSlice = Pick<
   | "appliedFilterSummary"
   | "availableFilters"
   | "availableSortOptions"
-  | "currentFilters"
   | "currentSearchType"
-  | "currentSortOptions"
   | "reset"
   | "resetFiltersToDefault"
   | "resetSortToDefault"
@@ -39,9 +38,7 @@ export const createSearchFiltersCoreSlice =
     availableFilters: FILTER_CONFIGS,
     availableSortOptions: SORT_CONFIGS,
 
-    currentFilters: [],
     currentSearchType: null,
-    currentSortOptions: [],
 
     reset: () => {
       set({
@@ -102,7 +99,7 @@ export const createSearchFiltersCoreSlice =
       const result = searchTypeSchema.safeParse(searchType);
       if (result.success) {
         const { availableSortOptions } = get();
-        const defaultSort = availableSortOptions[searchType]?.find((s) => s.isDefault);
+        const defaultSort = availableSortOptions[result.data]?.find((s) => s.isDefault);
 
         set({
           activePreset: null,
@@ -116,7 +113,7 @@ export const createSearchFiltersCoreSlice =
     },
 
     setSortById: (optionId) => {
-      const { currentSortOptions } = get();
+      const currentSortOptions = selectCurrentSortOptions(get());
       const option = currentSortOptions.find((o) => o.id === optionId);
       if (option) {
         get().setActiveSortOption(option);

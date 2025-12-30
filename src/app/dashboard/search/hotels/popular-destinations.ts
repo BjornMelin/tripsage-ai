@@ -134,7 +134,7 @@ export function mapPopularDestinationsFromApiResponse(
       isPopularDestinationApiResponse(item)
     )
     .map((item) => {
-      const city = String(item.city ?? "").trim();
+      const city = item.city.trim();
       const fallback = POPULAR_DESTINATIONS_BY_CITY.get(city.toLowerCase());
       const parsedPrice = parseAvgPrice(item.avgPrice);
       return {

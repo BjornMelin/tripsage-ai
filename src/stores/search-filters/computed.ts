@@ -3,6 +3,7 @@
  */
 
 import { createComputeFn } from "../middleware/computed";
+import { selectCurrentFilters } from "./selectors";
 import type { SearchFiltersState } from "./types";
 
 type RangeValue = { min?: number; max?: number };
@@ -20,9 +21,7 @@ function isRangeValue(value: unknown): value is RangeValue {
 
 export const computeFilterState = createComputeFn<SearchFiltersState>({
   appliedFilterSummary: (state) => {
-    const currentFilters = state.currentSearchType
-      ? state.availableFilters?.[state.currentSearchType] || []
-      : [];
+    const currentFilters = selectCurrentFilters(state);
     const summaries: string[] = [];
 
     Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
@@ -40,12 +39,4 @@ export const computeFilterState = createComputeFn<SearchFiltersState>({
 
     return summaries.join("; ");
   },
-  currentFilters: (state) =>
-    state.currentSearchType
-      ? state.availableFilters?.[state.currentSearchType] || []
-      : [],
-  currentSortOptions: (state) =>
-    state.currentSearchType
-      ? state.availableSortOptions?.[state.currentSearchType] || []
-      : [],
 });

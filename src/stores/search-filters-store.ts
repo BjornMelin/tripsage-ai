@@ -9,6 +9,7 @@ import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "./helpers";
 import { withComputed } from "./middleware/computed";
 import { computeFilterState } from "./search-filters/computed";
+import { selectCurrentFilters, selectCurrentSortOptions } from "./search-filters/selectors";
 import { createSearchFiltersCoreSlice } from "./search-filters/slices/core";
 import { createSearchFiltersFiltersSlice } from "./search-filters/slices/filters";
 import { createSearchFiltersPresetsSlice } from "./search-filters/slices/presets";
@@ -52,9 +53,9 @@ export const useActiveFilters = () =>
 export const useActiveSortOption = () =>
   useSearchFiltersStore((state) => state.activeSortOption);
 export const useCurrentFilters = () =>
-  useSearchFiltersStore((state) => state.currentFilters);
+  useSearchFiltersStore((state) => selectCurrentFilters(state));
 export const useCurrentSortOptions = () =>
-  useSearchFiltersStore((state) => state.currentSortOptions);
+  useSearchFiltersStore((state) => selectCurrentSortOptions(state));
 export const useHasActiveFilters = () =>
   useSearchFiltersStore((state) => Object.keys(state.activeFilters).length > 0);
 export const useActiveFilterCount = () =>

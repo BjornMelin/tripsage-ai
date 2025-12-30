@@ -39,7 +39,7 @@ export const createBudgetAlertsSlice =
     clearAlerts: (budgetId) =>
       set((state) => {
         const { [budgetId]: removedAlerts, ...alerts } = state.alerts;
-        if (!removedAlerts) return state;
+        if (removedAlerts === undefined) return state;
         return { alerts };
       }),
 

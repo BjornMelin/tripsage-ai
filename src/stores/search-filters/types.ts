@@ -41,8 +41,6 @@ export interface SearchFiltersState {
   filterValidationErrors: Record<string, string>;
 
   // Computed properties
-  currentFilters: ValidatedFilterOption[];
-  currentSortOptions: ValidatedSortOption[];
   appliedFilterSummary: string;
 
   // Active filter management

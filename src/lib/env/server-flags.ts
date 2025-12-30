@@ -24,8 +24,9 @@ function normalizeOptionalEnvVar(value: string | undefined): string | undefined 
 function parseEnvFlag(value: string | undefined, defaultValue: boolean): boolean {
   const normalized = normalizeOptionalEnvVar(value);
   if (!normalized) return defaultValue;
-  if (normalized === "1" || normalized === "true") return true;
-  if (normalized === "0" || normalized === "false") return false;
+  const lower = normalized.toLowerCase();
+  if (lower === "1" || lower === "true") return true;
+  if (lower === "0" || lower === "false") return false;
   return defaultValue;
 }
 
@@ -36,7 +37,8 @@ const mem0ApiKeySchema = z.string().min(20, {
 export function getMem0ApiKey(): string | undefined {
   const raw = normalizeOptionalEnvVar(process.env.MEM0_API_KEY);
   if (!raw) return undefined;
-  return mem0ApiKeySchema.parse(raw);
+  const result = mem0ApiKeySchema.safeParse(raw);
+  return result.success ? result.data : undefined;
 }
 
 export function getBotIdEnableCsv(): string {

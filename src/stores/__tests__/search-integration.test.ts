@@ -8,6 +8,7 @@ import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration"
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { AllTheProviders } from "@/test/test-utils";
 import { useSearchFiltersStore } from "../search-filters-store";
+import { selectCurrentFilters } from "../search-filters/selectors";
 import { useSearchParamsStore } from "../search-params-store";
 import { useSearchResultsStore } from "../search-results-store";
 
@@ -44,10 +45,11 @@ describe("Search Store Integration", () => {
       useSearchFiltersStore.getState().setSearchType("flight");
 
       const state = useSearchFiltersStore.getState();
-      expect(state.currentFilters.length).toBeGreaterThan(0);
+      const currentFilters = selectCurrentFilters(state);
+      expect(currentFilters.length).toBeGreaterThan(0);
 
       // Flight should have price_range and stops filters
-      const filterIds = state.currentFilters.map((f) => f.id);
+      const filterIds = currentFilters.map((f) => f.id);
       expect(filterIds).toContain("price_range");
       expect(filterIds).toContain("stops");
     });
@@ -55,11 +57,11 @@ describe("Search Store Integration", () => {
     it("should load different filters for different search types", () => {
       useSearchFiltersStore.getState().setSearchType("accommodation");
 
-      const accFilters = useSearchFiltersStore.getState().currentFilters;
+      const accFilters = selectCurrentFilters(useSearchFiltersStore.getState());
 
       useSearchFiltersStore.getState().setSearchType("flight");
 
-      const flightFilters = useSearchFiltersStore.getState().currentFilters;
+      const flightFilters = selectCurrentFilters(useSearchFiltersStore.getState());
 
       // Filter sets should be different
       expect(accFilters).not.toEqual(flightFilters);
