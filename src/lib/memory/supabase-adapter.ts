@@ -43,6 +43,11 @@ async function handleSemanticFetchContext(
   intent: Extract<MemoryIntent, { type: "fetchContext" }> & { query: string }
 ): Promise<MemoryAdapterExecutionResult> {
   const limit = intent.limit && intent.limit > 0 ? intent.limit : MAX_CONTEXT_ITEMS;
+  const similarityThreshold =
+    typeof intent.similarityThreshold === "number" &&
+    Number.isFinite(intent.similarityThreshold)
+      ? Math.min(1, Math.max(0, intent.similarityThreshold))
+      : DEFAULT_SIMILARITY_THRESHOLD;
 
   try {
     // Generate query embedding using OpenAI text-embedding-3-small (1536-d)
@@ -69,7 +74,7 @@ async function handleSemanticFetchContext(
       // biome-ignore lint/style/useNamingConvention: RPC parameter name
       match_count: limit,
       // biome-ignore lint/style/useNamingConvention: RPC parameter name
-      match_threshold: DEFAULT_SIMILARITY_THRESHOLD,
+      match_threshold: similarityThreshold,
       // biome-ignore lint/style/useNamingConvention: RPC parameter name
       query_embedding: toPgvector(embedding),
     });

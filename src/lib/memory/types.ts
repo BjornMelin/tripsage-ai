@@ -40,6 +40,11 @@ export type MemoryIntent =
        * back to recency-based retrieval.
        */
       query?: string;
+      /**
+       * Optional similarity threshold for semantic search results (0..1).
+       * When omitted, adapters should use a reasonable default.
+       */
+      similarityThreshold?: number;
     };
 
 /** Execution context passed to adapters. */
@@ -57,8 +62,9 @@ export interface MemoryAdapterExecutionResult {
   error?: string;
   /**
    * Optional context items produced by adapters for fetchContext intents.
-   * Supabase canonical adapter should populate this from the primary store;
-   * Mem0 adapter may append enriched context snippets.
+   * Supabase canonical adapter should populate this from the primary store
+   * (optionally using semantic search), and other adapters (e.g. Upstash) may
+   * append additional context snippets.
    */
   contextItems?: MemoryContextResponse[];
 }

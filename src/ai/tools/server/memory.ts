@@ -131,16 +131,28 @@ export const searchUserMemories = createAiTool({
 
     const memoryResult = await handleMemoryIntent({
       limit,
+      query,
       sessionId: "",
       type: "fetchContext",
       userId,
     });
 
-    const filtered = (memoryResult.context ?? []).filter((item) =>
-      item.context.toLowerCase().includes(query.toLowerCase())
-    );
+    const processedQuery = query.trim();
+    let results = memoryResult.context ?? [];
 
-    return filtered.map((item) => ({
+    const shouldApplySubstringFallbackFilter =
+      processedQuery.length > 0 &&
+      results.length > 0 &&
+      results.every((item) => item.score === 1);
+
+    if (shouldApplySubstringFallbackFilter) {
+      const queryLower = processedQuery.toLowerCase();
+      results = results.filter((item) =>
+        item.context.toLowerCase().includes(queryLower)
+      );
+    }
+
+    return results.map((item) => ({
       content: item.context,
       // Prefer canonical timestamps/ids when present
       // biome-ignore lint/style/useNamingConvention: Database field name

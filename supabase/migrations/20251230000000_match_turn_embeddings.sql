@@ -63,6 +63,16 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  IF match_threshold < 0 OR match_threshold > 1 THEN
+    RAISE EXCEPTION 'match_threshold must be between 0 and 1'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF ef_search_override IS NOT NULL AND (ef_search_override < 1 OR ef_search_override > 1000) THEN
+    RAISE EXCEPTION 'ef_search_override must be between 1 and 1000'
+      USING ERRCODE = '22023';
+  END IF;
+
   -- Set HNSW ef_search for this query (higher = better recall, slower)
   PERFORM set_config('hnsw.ef_search', v_ef_search::text, true);
 
