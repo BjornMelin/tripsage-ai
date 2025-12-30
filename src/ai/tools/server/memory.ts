@@ -143,6 +143,7 @@ export const searchUserMemories = createAiTool({
     const shouldApplySubstringFallbackFilter =
       processedQuery.length > 0 &&
       results.length > 0 &&
+      // Heuristic: recency retrieval assigns score=1; semantic retrieval assigns similarity scores.
       results.every((item) => item.score === 1);
 
     if (shouldApplySubstringFallbackFilter) {
