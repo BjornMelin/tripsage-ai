@@ -15,6 +15,38 @@ export type PopularDestinationApiResponse = {
   imageUrl?: string;
 };
 
+function isPopularDestinationProps(value: unknown): value is PopularDestinationProps {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record.destination !== "string" ||
+    record.destination.trim().length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    typeof record.priceFrom !== "number" ||
+    !Number.isFinite(record.priceFrom) ||
+    record.priceFrom < 0
+  ) {
+    return false;
+  }
+
+  if (typeof record.rating !== "number" || !Number.isFinite(record.rating))
+    return false;
+  return record.rating >= 0 && record.rating <= 5;
+}
+
+function isPopularDestinationApiResponse(
+  value: unknown
+): value is PopularDestinationApiResponse {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.city === "string";
+}
+
 export const DEFAULT_POPULAR_DESTINATIONS: PopularDestinationProps[] = [
   { destination: "New York", priceFrom: 199, rating: 4.8 },
   { destination: "Paris", priceFrom: 229, rating: 4.7 },
@@ -63,20 +95,15 @@ export function readCachedPopularDestinations(
       return null;
     }
     const destinations = (parsed as { destinations: unknown }).destinations;
-    if (
-      !Array.isArray(destinations) ||
-      !destinations.every(
-        (item) =>
-          typeof item === "object" &&
-          item !== null &&
-          "destination" in item &&
-          "priceFrom" in item &&
-          "rating" in item
-      )
-    ) {
-      return null;
+    if (!Array.isArray(destinations)) return null;
+
+    const parsedDestinations: PopularDestinationProps[] = [];
+    for (const item of destinations) {
+      if (!isPopularDestinationProps(item)) return null;
+      parsedDestinations.push(item);
     }
-    return destinations as PopularDestinationProps[];
+
+    return parsedDestinations;
   } catch {
     return null;
   }
@@ -103,9 +130,8 @@ export function mapPopularDestinationsFromApiResponse(
   if (!Array.isArray(body)) return [];
 
   return body
-    .filter(
-      (item): item is PopularDestinationApiResponse =>
-        typeof item === "object" && item !== null && "city" in item
+    .filter((item): item is PopularDestinationApiResponse =>
+      isPopularDestinationApiResponse(item)
     )
     .map((item) => {
       const city = String(item.city ?? "").trim();

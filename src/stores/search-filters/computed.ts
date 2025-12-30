@@ -5,6 +5,19 @@
 import { createComputeFn } from "../middleware/computed";
 import type { SearchFiltersState } from "./types";
 
+type RangeValue = { min?: number; max?: number };
+
+function isRangeValue(value: unknown): value is RangeValue {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  if (!("min" in record) && !("max" in record)) return false;
+
+  const isOptionalFiniteNumber = (item: unknown): item is number | undefined =>
+    item === undefined || (typeof item === "number" && Number.isFinite(item));
+
+  return isOptionalFiniteNumber(record.min) && isOptionalFiniteNumber(record.max);
+}
+
 export const computeFilterState = createComputeFn<SearchFiltersState>({
   appliedFilterSummary: (state) => {
     const currentFilters = state.currentSearchType
@@ -18,10 +31,8 @@ export const computeFilterState = createComputeFn<SearchFiltersState>({
 
       const valueStr = Array.isArray(activeFilter.value)
         ? activeFilter.value.join(", ")
-        : typeof activeFilter.value === "object" && activeFilter.value !== null
-          ? `${(activeFilter.value as { min?: number; max?: number }).min || ""} - ${
-              (activeFilter.value as { min?: number; max?: number }).max || ""
-            }`
+        : isRangeValue(activeFilter.value)
+          ? `${activeFilter.value.min ?? ""} - ${activeFilter.value.max ?? ""}`
           : String(activeFilter.value);
 
       summaries.push(`${filter.label}: ${valueStr}`);

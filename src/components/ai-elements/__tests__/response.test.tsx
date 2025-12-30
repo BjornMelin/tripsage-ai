@@ -58,12 +58,12 @@ describe("ai-elements/response", () => {
     expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
   });
 
-  it("renders KaTeX math", () => {
+  it("renders KaTeX math", async () => {
     const { container } = render(
       <Response>{["$$", "E=mc^2", "$$"].join("\n")}</Response>
     );
 
-    expect(container.querySelector(".katex")).not.toBeNull();
+    await waitFor(() => expect(container.querySelector(".katex")).not.toBeNull());
   });
 
   it("renders fenced code blocks", async () => {

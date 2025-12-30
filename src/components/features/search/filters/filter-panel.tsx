@@ -22,7 +22,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
+import {
+  useActiveFilterCount,
+  useHasActiveFilters,
+  useSearchFiltersStore,
+} from "@/stores/search-filters-store";
 import { formatCurrency, formatDurationMinutes } from "../common/format";
 import { AIRLINES_OPTIONS, FILTER_IDS, STOPS_OPTIONS, TIME_OPTIONS } from "./constants";
 import { FilterCheckboxGroup } from "./filter-checkbox-group";
@@ -110,8 +114,8 @@ export function FilterPanel({
     clearAllFilters,
     clearFiltersByCategory,
   } = useSearchFiltersStore();
-  const activeFilterCount = Object.keys(activeFilters).length;
-  const hasActiveFilters = activeFilterCount > 0;
+  const activeFilterCount = useActiveFilterCount();
+  const hasActiveFilters = useHasActiveFilters();
 
   // Group filters by category
   const filtersByCategory = useMemo(() => {

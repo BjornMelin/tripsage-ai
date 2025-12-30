@@ -8,6 +8,7 @@ import type { DestinationSearchFormData } from "@schemas/search";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
 import {
   FormControl,
   FormDescription,
@@ -27,12 +28,22 @@ type DestinationSuggestion = {
   types: string[];
 };
 
-type PlacesApiPlace = {
-  id: string;
-  displayName?: { text: string };
-  formattedAddress?: string;
-  types?: string[];
-};
+const PlacesApiPlaceSchema = z.strictObject({
+  displayName: z.strictObject({ text: z.string() }).optional(),
+  formattedAddress: z.string().optional(),
+  id: z.string(),
+  types: z.array(z.string()).optional(),
+});
+
+const PlacesApiResponseSchema = z.strictObject({
+  places: z.array(PlacesApiPlaceSchema).optional(),
+});
+
+const PlacesApiErrorSchema = z.strictObject({
+  reason: z.string().optional(),
+});
+
+type PlacesApiPlace = z.infer<typeof PlacesApiPlaceSchema>;
 
 type DestinationAutocompleteFieldProps = {
   form: UseFormReturn<DestinationSearchFormData>;
@@ -125,14 +136,18 @@ export function DestinationAutocompleteField({
           if (response.status === 429) {
             throw new Error("Too many requests. Please try again in a moment.");
           }
-          const errorData = (await response.json().catch(() => ({}))) as {
-            reason?: string;
-          };
-          throw new Error(errorData.reason ?? `Search failed: ${response.status}`);
+          const errorJson: unknown = await response.json().catch(() => null);
+          const parsedError = PlacesApiErrorSchema.safeParse(errorJson);
+          const reason = parsedError.success ? parsedError.data.reason : undefined;
+          throw new Error(reason ?? `Search failed: ${response.status}`);
         }
 
-        const data = (await response.json()) as { places?: PlacesApiPlace[] };
-        const places = data.places ?? [];
+        const dataJson: unknown = await response.json();
+        const parsedData = PlacesApiResponseSchema.safeParse(dataJson);
+        if (!parsedData.success) {
+          throw new Error("Unexpected response from places search.");
+        }
+        const places = parsedData.data.places ?? [];
         cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
         while (cacheRef.current.size > MAX_CACHE_ENTRIES) {
           const oldestKey = cacheRef.current.keys().next().value;

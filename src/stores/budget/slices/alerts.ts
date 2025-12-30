@@ -38,12 +38,9 @@ export const createBudgetAlertsSlice =
 
     clearAlerts: (budgetId) =>
       set((state) => {
-        const newAlerts = { ...state.alerts };
-        delete newAlerts[budgetId];
-
-        return {
-          alerts: newAlerts,
-        };
+        const { [budgetId]: removedAlerts, ...alerts } = state.alerts;
+        if (!removedAlerts) return state;
+        return { alerts };
       }),
 
     markAlertAsRead: (id, budgetId) =>

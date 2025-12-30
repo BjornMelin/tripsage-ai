@@ -13,6 +13,7 @@ import type {
 
 export type SearchFiltersStoreLogger = {
   error: (message: string, context?: Record<string, unknown>) => void;
+  warn: (message: string, context?: Record<string, unknown>) => void;
 };
 
 export type SearchFiltersStoreDeps = {

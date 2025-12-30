@@ -1,10 +1,4 @@
-/**
- * @fileoverview Server-only env helpers for small flags and optional integrations.
- *
- * Keep this module intentionally lightweight and focused. It exists to:
- * - centralize direct `process.env` reads to `src/lib/env/**` (repo exception)
- * - provide minimal validation/normalization for feature flags and optional keys
- */
+/** @fileoverview Server-only env helpers for feature flags and optional integrations. */
 
 import "server-only";
 

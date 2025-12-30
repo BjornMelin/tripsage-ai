@@ -120,6 +120,11 @@ export const createSearchFiltersCoreSlice =
       const option = currentSortOptions.find((o) => o.id === optionId);
       if (option) {
         get().setActiveSortOption(option);
+      } else {
+        deps.logger.warn("Sort option not found", {
+          currentSortOptionIds: currentSortOptions.map((current) => current.id),
+          optionId,
+        });
       }
     },
 
