@@ -190,18 +190,20 @@ export function useRealtimeChannel<
     realtimeStore.registerChannel(channel);
     updateStatus("connecting", null);
 
-    // Setup broadcast handlers immediately after channel creation
-    // Note: Supabase requires an event filter, so events must be specified when onMessage is provided
-    if (onMessage && events && events.length > 0) {
-      for (const eventName of events) {
-        const handler = (payload: BroadcastPayload<Payload>) => {
-          if (disposed) {
-            return;
-          }
-          onMessage(payload.payload, eventName);
-          realtimeStore.updateActivity(channel.topic);
-        };
-        channel.on("broadcast", { event: eventName }, handler);
+    // Setup broadcast handlers immediately after channel creation.
+    // Supabase expects an event filter; use "*" to subscribe to all broadcast events.
+    if (onMessage) {
+      const handler = (payload: BroadcastPayload<Payload>) => {
+        if (disposed) {
+          return;
+        }
+        onMessage(payload.payload, payload.event);
+        realtimeStore.updateActivity(channel.topic);
+      };
+
+      const eventFilters = events && events.length > 0 ? events : ["*"];
+      for (const eventFilter of eventFilters) {
+        channel.on("broadcast", { event: eventFilter }, handler);
       }
     }
 

@@ -11,7 +11,7 @@ import {
   destinationSearchParamsSchema,
 } from "@schemas/search";
 import { ClockIcon, StarIcon, TrendingUpIcon } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -30,32 +30,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
 import { useMemoryContext } from "@/hooks/use-memory";
 import { initTelemetry } from "@/lib/telemetry/client";
 import { useSearchHistoryStore } from "@/stores/search-history";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
+import { DestinationAutocompleteField } from "./destination-autocomplete-field";
 
 /** Type for destination search form values. */
 export type DestinationSearchFormValues = DestinationSearchFormData;
-
-/** Interface for destination suggestions. */
-interface DestinationSuggestion {
-  placeId: string;
-  description: string;
-  mainText: string;
-  secondaryText: string;
-  types: string[];
-}
-
-type PlacesApiPlace = {
-  id: string;
-  displayName?: { text: string };
-  formattedAddress?: string;
-  types?: string[];
-};
 
 /** Interface for destination search form props. */
 interface DestinationSearchFormProps {
@@ -120,27 +104,12 @@ export function DestinationSearchForm({
   userId,
   showMemoryRecommendations = true,
 }: DestinationSearchFormProps) {
-  const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
-
   // Memory-based recommendations
   const { data: memoryContext, isLoading: _memoryLoading } = useMemoryContext(
     userId || "",
     !!userId && showMemoryRecommendations
   );
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
-  const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const cacheRef = useRef<Map<string, { places: PlacesApiPlace[]; timestamp: number }>>(
-    new Map()
-  );
-  const suggestionsListId = useId();
-  const { toast } = useToast();
-  const CacheTtlMs = 2 * 60_000;
 
   const form = useSearchForm(
     destinationSearchFormSchema,
@@ -157,187 +126,8 @@ export function DestinationSearchForm({
     initTelemetry();
   }, []);
 
-  const query = form.watch("query");
   const watchedTypes = form.watch("types");
   const watchedLimit = form.watch("limit");
-
-  useEffect(() => {
-    return () => {
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current);
-        blurTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  /**
-   * Fetches autocomplete suggestions from `/api/places/search` with abort support.
-   *
-   * @param searchQuery - The query to search for.
-   * @returns Promise resolving to an array of destination suggestions.
-   * @throws Error if the search fails.
-   */
-  const fetchAutocompleteSuggestions = useCallback(
-    async (searchQuery: string) => {
-      const cacheKey = searchQuery.toLowerCase();
-      const cached = cacheRef.current.get(cacheKey);
-      const limit = form.getValues("limit") ?? 10;
-      const selectedTypes = form.getValues("types") ?? [];
-
-      if (cached && Date.now() - cached.timestamp < CacheTtlMs) {
-        const filteredCached =
-          selectedTypes.length > 0
-            ? cached.places.filter((place) =>
-                place.types?.some((type) =>
-                  selectedTypes.includes(
-                    type as DestinationSearchFormValues["types"][number]
-                  )
-                )
-              )
-            : cached.places;
-
-        const mappedCached = filteredCached.slice(0, limit).map((place) => ({
-          description: place.formattedAddress ?? place.displayName?.text ?? "",
-          mainText: place.displayName?.text ?? "Unknown",
-          placeId: place.id,
-          secondaryText: place.formattedAddress ?? "",
-          types: place.types ?? [],
-        }));
-        setSuggestions(mappedCached);
-        setShowSuggestions(true);
-        setSuggestionsError(null);
-        setIsLoadingSuggestions(false);
-        return;
-      }
-
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-      setSuggestionsError(null);
-
-      try {
-        const requestBody = {
-          maxResultCount: limit,
-          textQuery: searchQuery,
-        };
-
-        const response = await fetch("/api/places/search", {
-          body: JSON.stringify(requestBody),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-          signal: abortController.signal,
-        });
-
-        if (!response.ok) {
-          if (response.status === 429) {
-            throw new Error("Too many requests. Please try again in a moment.");
-          }
-          const errorData = (await response.json().catch(() => ({}))) as {
-            reason?: string;
-          };
-          throw new Error(errorData.reason ?? `Search failed: ${response.status}`);
-        }
-
-        const data = (await response.json()) as { places?: PlacesApiPlace[] };
-
-        const places = data.places ?? [];
-        cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
-
-        const filteredPlaces =
-          selectedTypes.length > 0
-            ? places.filter((place) =>
-                place.types?.some((type) =>
-                  selectedTypes.includes(
-                    type as DestinationSearchFormValues["types"][number]
-                  )
-                )
-              )
-            : places;
-
-        const mappedSuggestions: DestinationSuggestion[] = filteredPlaces
-          .slice(0, limit)
-          .map((place) => ({
-            description: place.formattedAddress ?? place.displayName?.text ?? "",
-            mainText: place.displayName?.text ?? "Unknown",
-            placeId: place.id,
-            secondaryText: place.formattedAddress ?? "",
-            types: place.types ?? [],
-          }));
-
-        if (searchQuery !== form.getValues("query")) {
-          return;
-        }
-
-        setSuggestions(mappedSuggestions);
-        setSuggestionsError(null);
-        setShowSuggestions(true);
-        setActiveSuggestionIndex(-1);
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          return;
-        }
-        setSuggestionsError(
-          error instanceof Error ? error.message : "Unable to fetch suggestions."
-        );
-        toast({
-          description:
-            error instanceof Error ? error.message : "Unable to fetch suggestions.",
-          title: "Places search failed",
-          variant: "destructive",
-        });
-        setSuggestions([]);
-        setActiveSuggestionIndex(-1);
-        setShowSuggestions(true);
-      } finally {
-        setIsLoadingSuggestions(false);
-        abortControllerRef.current = null;
-      }
-    },
-    [form, toast]
-  );
-
-  // Debounced autocomplete suggestions
-  useEffect(() => {
-    if (suggestionsTimeoutRef.current) {
-      clearTimeout(suggestionsTimeoutRef.current);
-    }
-
-    if (query && query.length >= 2) {
-      suggestionsTimeoutRef.current = setTimeout(() => {
-        setIsLoadingSuggestions(true);
-        fetchAutocompleteSuggestions(query);
-      }, 300);
-    } else {
-      setSuggestions([]);
-      setActiveSuggestionIndex(-1);
-      setShowSuggestions(false);
-      setIsLoadingSuggestions(false);
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (suggestionsTimeoutRef.current) {
-        clearTimeout(suggestionsTimeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    };
-  }, [fetchAutocompleteSuggestions, query]);
-
-  /** Applies a selected suggestion to the form and hides the dropdown. */
-  const handleSuggestionSelect = (suggestion: DestinationSuggestion) => {
-    form.setValue("query", suggestion.description);
-    setShowSuggestions(false);
-    setSuggestions([]);
-    setActiveSuggestionIndex(-1);
-  };
 
   const recentSearchesByType = useSearchHistoryStore(
     (state) => state.recentSearchesByType.destination
@@ -426,7 +216,6 @@ export function DestinationSearchForm({
     }
 
     inputRef.current?.focus();
-    setShowSuggestions(false);
   };
 
   const handleSubmit = async (data: DestinationSearchFormValues) => {
@@ -463,148 +252,9 @@ export function DestinationSearchForm({
           recentLabel="Recent searches"
           onRecentItemSelect={(item) => handleQuickSelectDestination(item.params)}
         >
-          {(form) => (
+          {(renderForm) => (
             <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="query"
-                render={({ field: { ref, ...fieldProps } }) => (
-                  <FormItem className="relative">
-                    <FormLabel>Destination</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          ref={(el) => {
-                            ref(el);
-                            inputRef.current = el;
-                          }}
-                          placeholder="Search for cities, countries, or landmarks..."
-                          {...fieldProps}
-                          autoComplete="off"
-                          role="combobox"
-                          aria-autocomplete="list"
-                          aria-expanded={showSuggestions}
-                          aria-controls={suggestionsListId}
-                          aria-activedescendant={
-                            activeSuggestionIndex >= 0 &&
-                            suggestions[activeSuggestionIndex]
-                              ? `destination-suggestion-${suggestions[activeSuggestionIndex].placeId}`
-                              : undefined
-                          }
-                          onKeyDown={(event) => {
-                            if (!showSuggestions) return;
-
-                            if (event.key === "Escape") {
-                              event.preventDefault();
-                              setShowSuggestions(false);
-                              setActiveSuggestionIndex(-1);
-                              return;
-                            }
-
-                            if (suggestions.length === 0) return;
-
-                            if (event.key === "ArrowDown") {
-                              event.preventDefault();
-                              setActiveSuggestionIndex((prev) =>
-                                Math.min(prev + 1, suggestions.length - 1)
-                              );
-                              return;
-                            }
-
-                            if (event.key === "ArrowUp") {
-                              event.preventDefault();
-                              setActiveSuggestionIndex((prev) => Math.max(prev - 1, 0));
-                              return;
-                            }
-
-                            if (event.key === "Enter" && activeSuggestionIndex >= 0) {
-                              event.preventDefault();
-                              const suggestion = suggestions[activeSuggestionIndex];
-                              if (suggestion) handleSuggestionSelect(suggestion);
-                            }
-                          }}
-                          onFocus={() => {
-                            if (blurTimeoutRef.current) {
-                              clearTimeout(blurTimeoutRef.current);
-                              blurTimeoutRef.current = null;
-                            }
-                            if (suggestions.length > 0) {
-                              setShowSuggestions(true);
-                            }
-                          }}
-                          onBlur={() => {
-                            // Delay hiding suggestions to allow for clicks
-                            if (blurTimeoutRef.current) {
-                              clearTimeout(blurTimeoutRef.current);
-                            }
-                            blurTimeoutRef.current = setTimeout(() => {
-                              setShowSuggestions(false);
-                              setActiveSuggestionIndex(-1);
-                            }, 200);
-                          }}
-                        />
-
-                        {/* Autocomplete Suggestions Dropdown */}
-                        {showSuggestions &&
-                          (suggestions.length > 0 ||
-                            isLoadingSuggestions ||
-                            (!isLoadingSuggestions && (query?.length ?? 0) >= 2)) && (
-                            <div
-                              id={suggestionsListId}
-                              role="listbox"
-                              className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
-                            >
-                              {isLoadingSuggestions ? (
-                                <div className="p-3 text-sm text-gray-500">
-                                  Loading suggestions...
-                                </div>
-                              ) : suggestionsError ? (
-                                <div className="p-3 text-sm text-red-600">
-                                  {suggestionsError}
-                                </div>
-                              ) : suggestions.length > 0 ? (
-                                suggestions.map((suggestion, index) => (
-                                  <div
-                                    key={suggestion.placeId}
-                                    aria-label={suggestion.mainText}
-                                    role="option"
-                                    id={`destination-suggestion-${suggestion.placeId}`}
-                                    aria-selected={activeSuggestionIndex === index}
-                                    className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 data-[active=true]:bg-gray-50"
-                                    tabIndex={-1}
-                                    onMouseDown={(event) => {
-                                      event.preventDefault();
-                                      handleSuggestionSelect(suggestion);
-                                    }}
-                                    onMouseEnter={() => {
-                                      setActiveSuggestionIndex(index);
-                                    }}
-                                    data-active={activeSuggestionIndex === index}
-                                  >
-                                    <div className="font-medium text-sm">
-                                      {suggestion.mainText}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {suggestion.secondaryText}
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="p-3 text-sm text-gray-500">
-                                  No suggestions found.
-                                </div>
-                              )}
-                            </div>
-                          )}
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Start typing to see destination suggestions
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <DestinationAutocompleteField form={renderForm} inputRef={inputRef} />
 
               {/* Memory-based Recommendations */}
               {showMemoryRecommendations && memoryContext?.context && (

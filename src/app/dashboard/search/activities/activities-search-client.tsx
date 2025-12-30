@@ -12,7 +12,6 @@ import {
   SearchIcon,
   SparklesIcon,
   TicketIcon,
-  XIcon,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,14 +24,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { CardLoadingSkeleton } from "@/components/ui/query-states";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -48,8 +39,9 @@ import { getErrorMessage } from "@/lib/api/error-types";
 import { useComparisonStore } from "@/stores/comparison-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
+import { ActivitiesSelectionDialog } from "./activities-selection-dialog";
+import { isActivity, partitionActivitiesByFallback } from "./activity-results";
 
-const AI_FALLBACK_PREFIX = "ai_fallback:";
 /** Maximum number of items allowed in comparison views. */
 const MAX_COMPARISON_ITEMS = 3;
 
@@ -63,9 +55,6 @@ const ACTIVITY_COLORS = {
   aiSuggestionIcon: "text-purple-500",
   successIcon: "text-green-700",
 } as const;
-
-const isActivity = (data: unknown): data is Activity =>
-  typeof data === "object" && data !== null && "id" in data && "name" in data;
 
 /** Activity search client component props. */
 interface ActivitiesSearchClientProps {
@@ -339,40 +328,10 @@ export default function ActivitiesSearchClient({
     .map((item) => item.data)
     .filter(isActivity);
 
-  const { verifiedActivities, aiSuggestions, allAi } = useMemo(() => {
-    const hasAi = activities.some((activity) =>
-      activity.id.startsWith(AI_FALLBACK_PREFIX)
-    );
-    const hasNonAi = activities.some(
-      (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
-    );
-
-    if (hasAi && hasNonAi) {
-      return {
-        aiSuggestions: activities.filter((activity) =>
-          activity.id.startsWith(AI_FALLBACK_PREFIX)
-        ),
-        allAi: false,
-        verifiedActivities: activities.filter(
-          (activity) => !activity.id.startsWith(AI_FALLBACK_PREFIX)
-        ),
-      };
-    }
-
-    if (hasAi) {
-      return {
-        aiSuggestions: activities,
-        allAi: true,
-        verifiedActivities: [] as Activity[],
-      };
-    }
-
-    return {
-      aiSuggestions: [] as Activity[],
-      allAi: false,
-      verifiedActivities: activities,
-    };
-  }, [activities]);
+  const { verifiedActivities, aiSuggestions, allAi } = useMemo(
+    () => partitionActivitiesByFallback(activities),
+    [activities]
+  );
 
   useEffect(() => {
     if (!selectedActivity) return;
@@ -691,52 +650,16 @@ export default function ActivitiesSearchClient({
             onAddToTrip={handleAddFromComparison}
           />
 
-          {/* Activity Selection Dialog */}
-          <Dialog
-            open={!!selectedActivity && !isTripModalOpen}
-            onOpenChange={(open) => !open && setSelectedActivity(null)}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <TicketIcon className="h-5 w-5" />
-                  Activity Selected
-                </DialogTitle>
-                <DialogDescription>{selectedActivity?.name}</DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <p className="text-sm text-muted-foreground">
-                  What would you like to do with this activity?
-                </p>
-              </div>
-              <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  ref={closeButtonRef}
-                  onClick={() => setSelectedActivity(null)}
-                  className="flex-1"
-                >
-                  <XIcon className="h-4 w-4 mr-2" />
-                  Close
-                </Button>
-                <Button
-                  ref={primaryActionRef}
-                  onClick={handleAddToTripClick}
-                  disabled={isPending}
-                  className="flex-1"
-                >
-                  {isPending ? "Loading..." : "Add to Trip"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleBookActivity}
-                  className="flex-1"
-                >
-                  Book Now
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <ActivitiesSelectionDialog
+            selectedActivity={selectedActivity}
+            isOpen={Boolean(selectedActivity) && !isTripModalOpen}
+            onClose={() => setSelectedActivity(null)}
+            onAddToTrip={handleAddToTripClick}
+            onBookActivity={handleBookActivity}
+            isPending={isPending}
+            primaryActionRef={primaryActionRef}
+            closeButtonRef={closeButtonRef}
+          />
 
           {/* Trip Selection Modal */}
           {selectedActivity && isTripModalOpen && (

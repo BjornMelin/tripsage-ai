@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { MemoryContextResponse } from "@schemas/chat";
+import { getMem0ApiKey } from "@/lib/env/server-flags";
 import type {
   MemoryAdapter,
   MemoryAdapterContext,
@@ -76,11 +77,6 @@ async function loadMem0Client(): Promise<{
   cachedApiKey = apiKey;
 
   return cachedClient;
-}
-
-function getMem0ApiKey(): string | undefined {
-  // Server-side only - never expose to client
-  return process.env.MEM0_API_KEY;
 }
 
 async function handleFetchContext(

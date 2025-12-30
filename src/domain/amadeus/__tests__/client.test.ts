@@ -30,8 +30,8 @@ import {
 
 describe("Amadeus client wrapper", () => {
   beforeEach(() => {
-    process.env.AMADEUS_CLIENT_ID = "id";
-    process.env.AMADEUS_CLIENT_SECRET = "secret";
+    process.env.AMADEUS_CLIENT_ID = "test-amadeus-client-id";
+    process.env.AMADEUS_CLIENT_SECRET = "test-amadeus-client-secret";
     process.env.AMADEUS_ENV = "test";
     getMock.mockReset();
     offersGetMock.mockReset();

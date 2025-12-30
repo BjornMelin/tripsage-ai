@@ -2,7 +2,10 @@
  * @fileoverview Thin wrapper around the official Amadeus Node SDK.
  */
 
+import "server-only";
+
 import Amadeus from "amadeus";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 type AmadeusClient = InstanceType<typeof Amadeus>;
 
@@ -22,8 +25,8 @@ export function setAmadeusClientForTests(client: AmadeusClient | null): void {
  * @returns Environment variable value
  * @throws {Error} When environment variable is missing
  */
-function getEnv(name: string): string {
-  const value = process.env[name];
+function getEnv(name: "AMADEUS_CLIENT_ID" | "AMADEUS_CLIENT_SECRET"): string {
+  const value = getServerEnvVarWithFallback(name, undefined);
   if (!value) {
     throw new Error(`Missing required environment variable ${name}`);
   }
@@ -42,13 +45,12 @@ function getEnv(name: string): string {
  */
 export function getAmadeusClient(): AmadeusClient {
   if (singleton) return singleton;
+
+  const amadeusEnv = getServerEnvVarWithFallback("AMADEUS_ENV", undefined);
   singleton = new Amadeus({
     clientId: getEnv("AMADEUS_CLIENT_ID"),
     clientSecret: getEnv("AMADEUS_CLIENT_SECRET"),
-    hostname:
-      process.env.AMADEUS_ENV === "production"
-        ? "api.amadeus.com"
-        : "test.api.amadeus.com",
+    hostname: amadeusEnv === "production" ? "api.amadeus.com" : "test.api.amadeus.com",
   });
   return singleton;
 }
