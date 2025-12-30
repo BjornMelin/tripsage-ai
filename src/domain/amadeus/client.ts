@@ -5,7 +5,7 @@
 import "server-only";
 
 import Amadeus from "amadeus";
-import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { getServerEnvVarWithFallback } from "@/lib/env/server"; // domain-infra-ok: server-only Amadeus SDK client requires env wiring until extracted to lib/app layer.
 
 type AmadeusClient = InstanceType<typeof Amadeus>;
 
