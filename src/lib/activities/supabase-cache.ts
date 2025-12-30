@@ -47,6 +47,13 @@ function createFindActivityInRecentSearches(
   };
 }
 
+/**
+ * Creates an ActivitiesCache implementation backed by Supabase for search caching.
+ * Supports finding activities in recent searches, retrieving cached searches, and storing new search results.
+ *
+ * @param supabase - Typed Supabase server client instance
+ * @returns ActivitiesCache with full read/write operations
+ */
 export function createSupabaseActivitiesSearchCache(
   supabase: TypedServerSupabase
 ): ActivitiesCache {
@@ -86,15 +93,21 @@ export function createSupabaseActivitiesSearchCache(
       const searchMetadata = jsonSchema.parse(input.searchMetadata);
 
       const { error } = await supabase.from("search_activities").insert({
-        ["activity_type"]: input.activityType,
+        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+        activity_type: input.activityType,
         destination: input.destination,
-        ["expires_at"]: input.expiresAtIso,
-        ["query_hash"]: input.queryHash,
-        ["query_parameters"]: queryParameters,
+        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+        expires_at: input.expiresAtIso,
+        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+        query_hash: input.queryHash,
+        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+        query_parameters: queryParameters,
         results,
-        ["search_metadata"]: searchMetadata,
+        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+        search_metadata: searchMetadata,
         source: input.source,
-        ["user_id"]: input.userId,
+        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+        user_id: input.userId,
       });
 
       if (error) {
@@ -106,6 +119,13 @@ export function createSupabaseActivitiesSearchCache(
   };
 }
 
+/**
+ * Creates a minimal ActivitiesCache implementation backed by Supabase for the details route.
+ * Only supports finding activities in recent searches; getSearch and putSearch are no-ops.
+ *
+ * @param supabase - Typed Supabase server client instance
+ * @returns ActivitiesCache with findActivityInRecentSearches only
+ */
 export function createSupabaseActivitiesDetailsCache(
   supabase: TypedServerSupabase
 ): ActivitiesCache {
