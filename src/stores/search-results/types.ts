@@ -10,8 +10,13 @@ import type {
   SearchStatus,
 } from "@schemas/stores";
 
+export type SearchResultsStoreLogger = {
+  error: (message: string, context?: Record<string, unknown>) => void;
+};
+
 export type SearchResultsStoreDeps = {
   generateSearchId: () => string;
+  logger: SearchResultsStoreLogger;
   nowIso: () => string;
 };
 

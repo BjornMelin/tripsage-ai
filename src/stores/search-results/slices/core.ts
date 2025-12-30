@@ -8,6 +8,10 @@ import type { StateCreator } from "zustand";
 import { DEFAULT_PAGINATION } from "../computed";
 import type { SearchResultsState, SearchResultsStoreDeps } from "../types";
 
+const assertNever = (value: never): never => {
+  throw new Error(`Unhandled search type: ${value satisfies SearchType}`);
+};
+
 type SearchResultsCoreSlice = Pick<
   SearchResultsState,
   | "appendResults"
@@ -55,7 +59,7 @@ const mapSearchTypeToResultsKey = (searchType: SearchType): keyof SearchResults 
     case "flight":
       return "flights";
     default:
-      return searchType;
+      return assertNever(searchType);
   }
 };
 
@@ -230,6 +234,13 @@ export const createSearchResultsCoreSlice =
           occurredAt: deps.nowIso(),
         };
 
+        deps.logger.error("search_error", {
+          code: error.code,
+          message: error.message,
+          searchId,
+          searchType: currentContext.searchType,
+        });
+
         const completedAt = deps.nowIso();
         const updatedContext: SearchContext = {
           ...currentContext,
@@ -251,13 +262,15 @@ export const createSearchResultsCoreSlice =
     },
 
     setSearchResults: (searchId, results, metrics) => {
-      const { currentSearchId, searchHistory, currentContext } = get();
+      set((state) => {
+        if (state.currentSearchId !== searchId || !state.currentContext) {
+          return {};
+        }
 
-      if (currentSearchId === searchId && currentContext) {
         const completedAt = deps.nowIso();
         const calculatedDuration =
           new Date(completedAt).getTime() -
-          new Date(currentContext.startedAt).getTime();
+          new Date(state.currentContext.startedAt).getTime();
 
         const calculatedTotal = Object.values(results).reduce(
           (total: number, typeResults: unknown) => {
@@ -280,7 +293,7 @@ export const createSearchResultsCoreSlice =
         };
 
         const updatedContext: SearchContext = {
-          ...currentContext,
+          ...state.currentContext,
           completedAt,
           metrics: finalMetrics,
         };
@@ -289,31 +302,31 @@ export const createSearchResultsCoreSlice =
         const resultsPerPage = finalMetrics.resultsPerPage;
         const totalPages = Math.ceil(totalResults / resultsPerPage);
 
-        set({
+        return {
           currentContext: updatedContext,
           isSearching: false,
           metrics: finalMetrics,
           pagination: {
-            ...get().pagination,
-            hasNextPage: get().pagination.currentPage < totalPages,
-            hasPreviousPage: get().pagination.currentPage > 1,
+            ...state.pagination,
+            hasNextPage: state.pagination.currentPage < totalPages,
+            hasPreviousPage: state.pagination.currentPage > 1,
             totalPages,
             totalResults,
           },
           performanceHistory: [
-            ...get().performanceHistory,
+            ...state.performanceHistory,
             { ...finalMetrics, searchId },
           ].slice(-50),
           results,
           resultsBySearch: {
-            ...get().resultsBySearch,
+            ...state.resultsBySearch,
             [searchId]: results,
           },
-          searchHistory: [...searchHistory, updatedContext],
+          searchHistory: [...state.searchHistory, updatedContext],
           searchProgress: 100,
           status: "success",
-        });
-      }
+        };
+      });
     },
 
     softReset: () => {

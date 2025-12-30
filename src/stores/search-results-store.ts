@@ -5,6 +5,7 @@
 import type { SearchType } from "@schemas/search";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import { generateId, getCurrentTimestamp } from "./helpers";
 import { withComputed } from "./middleware/computed";
 import { computeResultsState } from "./search-results/computed";
@@ -16,8 +17,11 @@ import type {
   SearchResultsStoreDeps,
 } from "./search-results/types";
 
+const logger = createStoreLogger({ storeName: "search-results" });
+
 const deps: SearchResultsStoreDeps = {
   generateSearchId: () => `search_${generateId(12)}`,
+  logger,
   nowIso: getCurrentTimestamp,
 };
 

@@ -34,13 +34,15 @@ export const createSearchResultsHistorySlice: StateCreator<
   },
 
   getAverageSearchDuration: (searchType?: SearchType) => {
-    const { performanceHistory } = get();
+    const { performanceHistory, searchHistory } = get();
     let relevantMetrics = performanceHistory;
 
     if (searchType) {
+      const searchTypeMap = new Map(
+        searchHistory.map((search) => [search.searchId, search.searchType])
+      );
       relevantMetrics = performanceHistory.filter((perf) => {
-        const search = get().getSearchById(perf.searchId);
-        return search?.searchType === searchType;
+        return searchTypeMap.get(perf.searchId) === searchType;
       });
     }
 
@@ -110,19 +112,18 @@ export const createSearchResultsHistorySlice: StateCreator<
   },
 
   removeSearchFromHistory: (searchId: string) => {
-    set((state) => ({
-      errorHistory: state.errorHistory.filter((error) => error.searchId !== searchId),
-      performanceHistory: state.performanceHistory.filter(
-        (perf) => perf.searchId !== searchId
-      ),
-      resultsBySearch: (() => {
-        const newResults = { ...state.resultsBySearch };
-        delete newResults[searchId];
-        return newResults;
-      })(),
-      searchHistory: state.searchHistory.filter(
-        (search) => search.searchId !== searchId
-      ),
-    }));
+    set((state) => {
+      const { [searchId]: _omit, ...remainingResults } = state.resultsBySearch;
+      return {
+        errorHistory: state.errorHistory.filter((error) => error.searchId !== searchId),
+        performanceHistory: state.performanceHistory.filter(
+          (perf) => perf.searchId !== searchId
+        ),
+        resultsBySearch: remainingResults,
+        searchHistory: state.searchHistory.filter(
+          (search) => search.searchId !== searchId
+        ),
+      };
+    });
   },
 });

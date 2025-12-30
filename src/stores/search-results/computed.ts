@@ -16,7 +16,7 @@ export const DEFAULT_PAGINATION: SearchResultsState["pagination"] = {
 };
 
 function hasAnyResults(results: SearchResults): boolean {
-  return Object.keys(results || {}).some((key) => {
+  return Object.keys(results).some((key) => {
     const typeResults = results[key as keyof SearchResults];
     return Array.isArray(typeResults) && typeResults.length > 0;
   });
