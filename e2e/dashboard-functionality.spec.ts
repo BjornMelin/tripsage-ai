@@ -45,7 +45,7 @@ test.describe("Dashboard Functionality", () => {
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
 
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Verify dashboard content
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
@@ -64,7 +64,7 @@ test.describe("Dashboard Functionality", () => {
 
   test("dashboard navigation works correctly", async ({ page }) => {
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Test sidebar navigation
     await page.getByRole("navigation").getByRole("link", { name: "My Trips" }).click();
@@ -80,13 +80,17 @@ test.describe("Dashboard Functionality", () => {
     await expect(page).toHaveURL("/chat", { timeout: navigationTimeoutMs });
 
     // Return to dashboard home from /chat
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
   });
 
   test("user navigation menu works", async ({ page }) => {
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+    await expect(
+      page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
+    ).toBeVisible({ timeout: visibilityTimeoutMs });
 
     // Click on user menu
     await page.getByRole("button", { name: "User" }).click();
@@ -113,7 +117,11 @@ test.describe("Dashboard Functionality", () => {
     });
 
     // Navigate back and test settings
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+    await expect(
+      page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
+    ).toBeVisible({ timeout: visibilityTimeoutMs });
     await page.getByRole("button", { name: "User" }).click();
 
     // Wait for popover again and click settings
@@ -126,7 +134,7 @@ test.describe("Dashboard Functionality", () => {
 
   test("logout functionality works", async ({ page }) => {
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Click on user menu and logout
     await page.getByRole("button", { name: "User" }).click();
@@ -143,7 +151,7 @@ test.describe("Dashboard Functionality", () => {
     });
 
     // Verify that trying to access dashboard redirects to login
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
       timeout: visibilityTimeoutMs,
@@ -152,7 +160,7 @@ test.describe("Dashboard Functionality", () => {
 
   test("theme toggle works", async ({ page }) => {
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Target theme toggle specifically in the header banner to avoid duplicates
     const headerThemeToggle = page
@@ -177,7 +185,7 @@ test.describe("Dashboard Functionality", () => {
 
   test("dashboard quick actions work", async ({ page }) => {
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Test quick action navigation
     const searchFlightsLink = page
@@ -210,7 +218,7 @@ test.describe("Dashboard Functionality", () => {
     await page.setViewportSize({ height: 667, width: 375 });
 
     await authenticateAsTestUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Verify dashboard renders on mobile
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

@@ -7,7 +7,7 @@
 import { SettingsIcon, ShieldIcon, SlidersIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
 import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
 import { PreferencesSection } from "@/components/features/profile/preferences-section";
@@ -26,17 +26,38 @@ import { useAuthCore } from "@/stores/auth/auth-core";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isLoading } = useAuthCore();
+  const { initialize, isLoading, user } = useAuthCore();
+  const [isInitializing, setIsInitializing] = useState(() => user === null);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (!isInitializing) return;
+
+    let cancelled = false;
+
+    initialize()
+      .catch(() => {
+        // initialize swallows expected errors; ignore unexpected rejections.
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsInitializing(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialize, isInitializing]);
+
+  useEffect(() => {
+    if (isLoading || isInitializing) return;
     if (user) return;
     const query = new URLSearchParams({ from: ROUTES.dashboard.profile }).toString();
     const target = `${ROUTES.login}?${query}`;
     router.replace(target);
-  }, [isLoading, router, user]);
+  }, [isInitializing, isLoading, router, user]);
 
-  if (isLoading) {
+  if (isLoading || isInitializing) {
     return (
       <div
         className="container mx-auto py-6 space-y-8"

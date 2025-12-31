@@ -29,6 +29,7 @@ const MOCK_USER = {
 
 vi.mock("@/stores/auth/auth-core", () => ({
   useAuthCore: () => ({
+    initialize: vi.fn().mockResolvedValue(undefined),
     isLoading: false,
     logout: vi.fn(),
     setUser: vi.fn(),

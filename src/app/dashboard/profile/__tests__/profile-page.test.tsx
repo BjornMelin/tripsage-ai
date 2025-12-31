@@ -82,6 +82,8 @@ vi.mock("@/components/ui/tabs", () => {
 interface AuthStoreReturn {
   /** Whether authentication is loading */
   isLoading: boolean;
+  /** Initializes auth state from /auth/me */
+  initialize: () => Promise<void>;
   /** Current user data */
   user: User | null;
 }
@@ -144,6 +146,7 @@ describe("ProfilePage", () => {
 
   const setupAuthState = (overrides: Partial<AuthStoreReturn> = {}) => {
     vi.mocked(useAuthCore).mockReturnValue({
+      initialize: vi.fn().mockResolvedValue(undefined),
       isLoading: false,
       user: MOCK_USER as User,
       ...overrides,
