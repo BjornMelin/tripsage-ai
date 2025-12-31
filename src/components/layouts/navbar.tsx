@@ -61,10 +61,10 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button variant="outline" size="sm" asChild>
-            <Link href="/login">Log in</Link>
+            <Link href={ROUTES.login}>Log in</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link href="/signup">Sign up</Link>
+            <Link href={ROUTES.register}>Sign up</Link>
           </Button>
 
           {/* Mobile menu button */}

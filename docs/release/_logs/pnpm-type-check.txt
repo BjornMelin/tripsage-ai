@@ -1,0 +1,4 @@
+
+> tripsage-ai-frontend@1.22.5 type-check /home/bjorn/repos/agents/tripsage-ai
+> tsc --noEmit
+

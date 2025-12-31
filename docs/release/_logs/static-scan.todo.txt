@@ -1,0 +1,212 @@
+src/config/__tests__/bot-protection.test.ts:12:  vi.stubEnv("BOTID_ENABLE", botidEnable);
+src/config/__tests__/bot-protection.test.ts:13:  vi.stubEnv("NODE_ENV", nodeEnv);
+src/config/__tests__/bot-protection.test.ts:14:  vi.stubEnv("VERCEL_ENV", vercelEnv);
+src/config/__tests__/bot-protection.test.ts:21:    vi.unstubAllEnvs();
+scripts/check-no-secrets.mjs:167:  // Repeated single character strings are commonly used as non-secret stubs in CI/test.
+src/hooks/__tests__/use-error-handler.test.ts:118:      vi.stubEnv("NODE_ENV", "development");
+src/hooks/__tests__/use-error-handler.test.ts:140:      vi.stubEnv("NODE_ENV", originalEnv);
+src/hooks/__tests__/use-error-handler.test.ts:146:      vi.stubEnv("NODE_ENV", "production");
+src/hooks/__tests__/use-error-handler.test.ts:160:      vi.stubEnv("NODE_ENV", originalEnv);
+src/test/msw/handlers/chat.ts:40:  // POST /api/chat/stream - Streaming chat endpoint (stubbed as immediate response)
+src/test/helpers/env.ts:2: * @fileoverview Test helpers for stubbing environment variables and controlling module reloads.
+src/test/helpers/env.ts:8: * Disables Upstash rate limiting by stubbing empty environment values.
+src/test/helpers/env.ts:10:export function stubRateLimitDisabled(): void {
+src/test/helpers/env.ts:12:  vi.stubEnv?.("UPSTASH_REDIS_REST_URL", "");
+src/test/helpers/env.ts:13:  vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "");
+src/test/helpers/env.ts:15:  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/test/helpers/env.ts:16:  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+src/test/helpers/env.ts:17:  vi.stubEnv?.("SUPABASE_SERVICE_ROLE_KEY", "srk-test-key");
+src/test/helpers/env.ts:21: * Enables Upstash rate limiting by stubbing placeholder environment values.
+src/test/helpers/env.ts:23:export function stubRateLimitEnabled(): void {
+src/test/helpers/env.ts:24:  vi.stubEnv?.("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+src/test/helpers/env.ts:25:  vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "test-token");
+src/test/helpers/env.ts:27:  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/test/helpers/env.ts:28:  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+src/test/helpers/env.ts:29:  vi.stubEnv?.("SUPABASE_SERVICE_ROLE_KEY", "srk-test-key");
+src/test/helpers/env.ts:44: * Best-effort unstubbing of all environment variables for older/newer Vitest versions.
+src/test/helpers/env.ts:46:export function unstubAllEnvs(): void {
+src/test/helpers/env.ts:48:    vi.unstubAllEnvs?.();
+src/components/error/__tests__/error-fallback.test.tsx:52:      vi.stubEnv("NODE_ENV", "development");
+src/components/error/__tests__/error-fallback.test.tsx:59:      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+src/components/error/__tests__/error-fallback.test.tsx:64:      vi.stubEnv("NODE_ENV", "production");
+src/components/error/__tests__/error-fallback.test.tsx:71:      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+src/components/error/__tests__/error-fallback.test.tsx:223:      vi.stubEnv("NODE_ENV", "development");
+src/components/error/__tests__/error-fallback.test.tsx:236:      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+src/components/error/__tests__/error-fallback.test.tsx:242:      vi.stubEnv("NODE_ENV", "production");
+src/components/error/__tests__/error-fallback.test.tsx:251:      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+src/components/error/__tests__/error-boundary.test.tsx:155:      vi.stubEnv("NODE_ENV", "development");
+src/components/error/__tests__/error-boundary.test.tsx:166:      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+src/test/mocks/empty-css.ts:2: * @fileoverview Empty module used to stub CSS-only imports in Vitest.
+src/test/mocks/botid.ts:4: * Route tests commonly stub `botid/server` to avoid noisy warnings and to keep
+src/test/mocks/supabase.ts:425:    return jsonResponse({ message: "Mock endpoint not implemented" }, { status: 404 });
+src/components/ui/__tests__/error-boundary.test.tsx:71:    vi.stubEnv("NODE_ENV", "development");
+src/components/ui/__tests__/error-boundary.test.tsx:81:    vi.unstubAllEnvs();
+src/lib/webhooks/__tests__/rate-limit.test.ts:14:    vi.stubEnv("VERCEL", "1");
+src/lib/webhooks/__tests__/rate-limit.test.ts:18:    vi.unstubAllEnvs();
+src/test/factories/stores.ts:83: * the test to control via vi.setSystemTime/Date stubs when needed.
+src/lib/webhooks/__tests__/rate-limit.timeout.test.ts:52:    vi.stubEnv("VERCEL", "1");
+src/lib/webhooks/__tests__/rate-limit.timeout.test.ts:60:    vi.unstubAllEnvs();
+src/lib/supabase/__tests__/client.dom.test.ts:23:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+src/lib/supabase/__tests__/client.dom.test.ts:24:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+src/lib/supabase/__tests__/client.dom.test.ts:34:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:35:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/client.dom.test.ts:43:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+src/lib/supabase/__tests__/client.dom.test.ts:44:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/client.dom.test.ts:51:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:52:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+src/lib/supabase/__tests__/client.dom.test.ts:59:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+src/lib/supabase/__tests__/client.dom.test.ts:60:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+src/lib/supabase/__tests__/client.dom.test.ts:67:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", undefined);
+src/lib/supabase/__tests__/client.dom.test.ts:68:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined);
+src/lib/supabase/__tests__/client.dom.test.ts:78:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", prodUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:79:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", prodKey);
+src/lib/supabase/__tests__/client.dom.test.ts:90:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", localUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:91:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", localKey);
+src/lib/supabase/__tests__/client.dom.test.ts:99:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:100:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/client.dom.test.ts:110:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:111:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/client.dom.test.ts:121:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", invalidUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:122:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", validKey);
+src/lib/supabase/__tests__/client.dom.test.ts:130:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+src/lib/supabase/__tests__/client.dom.test.ts:131:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/client.dom.test.ts:138:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+src/lib/supabase/__tests__/client.dom.test.ts:139:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/server.test.ts:48:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+src/lib/supabase/__tests__/server.test.ts:49:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+src/lib/supabase/__tests__/server.test.ts:189:  vi.unstubAllEnvs();
+src/lib/ratelimit/__tests__/identifier.test.ts:12:    vi.stubEnv("VERCEL", "1");
+src/lib/ratelimit/__tests__/identifier.test.ts:16:    vi.unstubAllEnvs();
+src/lib/env/__tests__/server.test.ts:14:    vi.stubEnv("NODE_ENV", "test");
+src/lib/env/__tests__/server.test.ts:15:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/server.test.ts:16:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/server.test.ts:38:      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+src/lib/env/__tests__/server.test.ts:45:      vi.stubEnv("NODE_ENV", "test");
+src/lib/env/__tests__/server.test.ts:46:      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key-for-google-maps-api");
+src/lib/env/__tests__/server.test.ts:58:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
+src/lib/env/__tests__/server.test.ts:65:      vi.stubEnv("NODE_ENV", "invalid");
+src/lib/env/__tests__/server.test.ts:73:      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-key-for-google-maps-server-api");
+src/lib/env/__tests__/server.test.ts:90:      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-key-for-google-maps-server-api");
+src/lib/env/__tests__/server.test.ts:112:      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "test-server-key-for-google-maps-api");
+src/lib/env/__tests__/server.test.ts:133:      vi.stubEnv("GOOGLE_MAPS_SERVER_API_KEY", "undefined");
+src/lib/env/__tests__/client.test.ts:17:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:18:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:19:      vi.stubEnv("NEXT_PUBLIC_APP_NAME", "TestApp");
+src/lib/env/__tests__/client.test.ts:32:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:33:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
+src/lib/env/__tests__/client.test.ts:44:      vi.stubEnv("NODE_ENV", "production");
+src/lib/env/__tests__/client.test.ts:55:      vi.stubEnv("NODE_ENV", "production");
+src/lib/env/__tests__/client.test.ts:56:      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+src/lib/env/__tests__/client.test.ts:67:      vi.stubEnv("NODE_ENV", "production");
+src/lib/env/__tests__/client.test.ts:68:      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+src/lib/env/__tests__/client.test.ts:69:      vi.stubEnv("NEXT_PUBLIC_ALLOW_PLACEHOLDER_ENV", "true");
+src/lib/env/__tests__/client.test.ts:82:      vi.stubEnv("NODE_ENV", "development");
+src/lib/env/__tests__/client.test.ts:97:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:98:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:108:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:109:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:123:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:124:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:138:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:139:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:155:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:156:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:157:      vi.stubEnv("NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY", "test-browser-key");
+src/lib/env/__tests__/client.test.ts:169:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:170:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/env/__tests__/client.test.ts:185:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+src/lib/env/__tests__/client.test.ts:186:      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+src/lib/supabase/typed-helpers.ts:81:      // Some tests stub a very lightweight query builder without select/single methods.
+src/lib/http/__tests__/ip.test.ts:9:      vi.stubEnv("VERCEL", "1");
+src/lib/http/__tests__/ip.test.ts:13:      vi.unstubAllEnvs();
+src/lib/http/__tests__/ip.test.ts:51:      vi.stubEnv("VERCEL", undefined);
+src/lib/http/__tests__/ip.test.ts:52:      vi.stubEnv("TRUST_PROXY", undefined);
+src/lib/http/__tests__/ip.test.ts:53:      vi.stubEnv("NODE_ENV", "production");
+src/lib/http/__tests__/ip.test.ts:57:      vi.unstubAllEnvs();
+src/lib/http/__tests__/ip.test.ts:82:      vi.stubEnv("VERCEL", undefined);
+src/lib/http/__tests__/ip.test.ts:83:      vi.stubEnv("TRUST_PROXY", undefined);
+src/lib/http/__tests__/ip.test.ts:84:      vi.stubEnv("NODE_ENV", "development");
+src/lib/http/__tests__/ip.test.ts:88:      vi.unstubAllEnvs();
+src/lib/http/__tests__/ip.test.ts:101:      vi.unstubAllEnvs();
+src/lib/http/__tests__/ip.test.ts:105:      vi.stubEnv("VERCEL", undefined);
+src/lib/http/__tests__/ip.test.ts:106:      vi.stubEnv("NODE_ENV", "production");
+src/lib/http/__tests__/ip.test.ts:107:      vi.stubEnv("TRUST_PROXY", "true");
+src/lib/http/__tests__/ip.test.ts:115:      vi.stubEnv("VERCEL", undefined);
+src/lib/http/__tests__/ip.test.ts:116:      vi.stubEnv("NODE_ENV", "production");
+src/lib/http/__tests__/ip.test.ts:117:      vi.stubEnv("TRUST_PROXY", undefined);
+src/app/api/embeddings/__tests__/route.test.ts:80:    vi.stubEnv("EMBEDDINGS_API_KEY", "test-embeddings-key-1234567890");
+src/app/api/embeddings/__tests__/route.test.ts:92:    vi.unstubAllEnvs();
+src/app/api/embeddings/__tests__/route.test.ts:97:    vi.stubEnv("EMBEDDINGS_API_KEY", "");
+src/ai/models/__tests__/registry.telemetry.test.ts:71:    vi.stubEnv("AI_GATEWAY_API_KEY", "team-key");
+src/ai/models/__tests__/registry.telemetry.test.ts:72:    vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1");
+src/lib/security/__tests__/random.test.ts:38:    vi.stubGlobal("crypto", unsafeCast<Crypto>(undefined));
+src/lib/security/__tests__/random.test.ts:46:      vi.unstubAllGlobals();
+src/app/api/itineraries/__tests__/route.test.ts:9:import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
+src/app/api/itineraries/__tests__/route.test.ts:152:    stubRateLimitDisabled();
+src/app/api/itineraries/__tests__/route.test.ts:164:    unstubAllEnvs();
+src/app/api/memory/[intent]/[userId]/__tests__/insights.route.test.ts:177:      model: { id: "model-stub" },
+src/ai/lib/__tests__/tool-factory.test.ts:126:  vi.stubEnv("VERCEL", "1");
+src/ai/lib/__tests__/tool-factory.test.ts:144:  vi.unstubAllEnvs();
+src/app/api/hooks/files/__tests__/route.test.ts:233:      const stub = createSupabaseStub();
+src/app/api/hooks/files/__tests__/route.test.ts:234:      stub.from = vi.fn(() => ({ select: selectSpy }));
+src/app/api/hooks/files/__tests__/route.test.ts:235:      return stub;
+src/app/api/hooks/files/__tests__/route.test.ts:260:      const stub = createSupabaseStub();
+src/app/api/hooks/files/__tests__/route.test.ts:261:      stub.from = vi.fn(() => ({ select: selectSpy }));
+src/app/api/hooks/files/__tests__/route.test.ts:262:      return stub;
+src/app/auth/password/reset-request/__tests__/route.test.ts:15:    vi.unstubAllEnvs();
+src/app/auth/password/reset-request/__tests__/route.test.ts:20:    vi.stubEnv("APP_BASE_URL", "https://example.com");
+src/app/auth/password/reset-request/__tests__/route.test.ts:45:    vi.stubEnv("APP_BASE_URL", "https://app.example.com");
+src/app/auth/password/reset-request/__tests__/route.test.ts:46:    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://example.com");
+src/app/auth/password/reset-request/__tests__/route.test.ts:82:    vi.stubEnv("APP_BASE_URL", "https://app.example.com");
+src/app/auth/password/reset-request/__tests__/route.test.ts:118:    vi.stubEnv("APP_BASE_URL", "https://example.com");
+src/app/auth/password/reset-request/__tests__/route.test.ts:153:    vi.stubEnv("APP_BASE_URL", "https://example.com");
+src/app/api/keys/validate/__tests__/route.test.ts:11:  stubRateLimitDisabled,
+src/app/api/keys/validate/__tests__/route.test.ts:12:  stubRateLimitEnabled,
+src/app/api/keys/validate/__tests__/route.test.ts:13:  unstubAllEnvs,
+src/app/api/keys/validate/__tests__/route.test.ts:99:    // In test environment, check process.env directly (vi.stubEnv sets process.env)
+src/app/api/keys/validate/__tests__/route.test.ts:133:    unstubAllEnvs();
+src/app/api/keys/validate/__tests__/route.test.ts:134:    stubRateLimitDisabled();
+src/app/api/keys/validate/__tests__/route.test.ts:167:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+src/app/api/keys/validate/__tests__/route.test.ts:168:    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+src/app/api/keys/validate/__tests__/route.test.ts:329:    stubRateLimitEnabled();
+src/app/api/keys/validate/__tests__/route.test.ts:363:    stubRateLimitEnabled();
+src/app/api/keys/__tests__/route.test.ts:11:import { unstubAllEnvs } from "@/test/helpers/env";
+src/app/api/keys/__tests__/route.test.ts:45:    unstubAllEnvs();
+src/app/api/trips/[id]/__tests__/route.test.ts:9:import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
+src/app/api/trips/[id]/__tests__/route.test.ts:134:    stubRateLimitDisabled();
+src/app/api/trips/[id]/__tests__/route.test.ts:146:    unstubAllEnvs();
+src/app/api/telemetry/ai-demo/__tests__/route.test.ts:23:    vi.stubEnv("ENABLE_AI_DEMO", "true");
+src/app/api/telemetry/ai-demo/__tests__/route.test.ts:24:    vi.stubEnv("TELEMETRY_AI_DEMO_KEY", "test-telemetry-ai-demo-key-1234567890");
+src/app/api/telemetry/ai-demo/__tests__/route.test.ts:25:    vi.stubEnv("TELEMETRY_HASH_SECRET", "test-telemetry-hash-secret-1234567890");
+src/app/api/telemetry/ai-demo/__tests__/route.test.ts:40:    vi.unstubAllEnvs();
+src/app/api/telemetry/ai-demo/__tests__/route.test.ts:45:    vi.stubEnv("ENABLE_AI_DEMO", "");
+src/app/api/telemetry/ai-demo/__tests__/route.test.ts:63:    vi.stubEnv("TELEMETRY_AI_DEMO_KEY", "");
+src/app/api/ai/stream/__tests__/route.integration.test.ts:99:    vi.stubEnv("ENABLE_AI_DEMO", "true");
+src/app/api/ai/stream/__tests__/route.integration.test.ts:119:    vi.unstubAllEnvs();
+src/app/api/ai/stream/__tests__/route.integration.test.ts:124:    vi.stubEnv("ENABLE_AI_DEMO", "");
+src/app/api/flights/__tests__/popular-routes-route.test.ts:11:import { stubRateLimitDisabled } from "@/test/helpers/env";
+src/app/api/flights/__tests__/popular-routes-route.test.ts:50:    stubRateLimitDisabled();
+src/app/api/trips/[id]/collaborators/__tests__/route.test.ts:9:import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
+src/app/api/trips/[id]/collaborators/__tests__/route.test.ts:126:    stubRateLimitDisabled();
+src/app/api/trips/[id]/collaborators/__tests__/route.test.ts:142:    unstubAllEnvs();
+src/app/api/flights/__tests__/popular-destinations-route.test.ts:8:import { stubRateLimitDisabled } from "@/test/helpers/env";
+src/app/api/flights/__tests__/popular-destinations-route.test.ts:50:    stubRateLimitDisabled();
+src/app/api/trips/__tests__/suggestions-route.test.ts:8:import { stubRateLimitDisabled } from "@/test/helpers/env";
+src/app/api/trips/__tests__/suggestions-route.test.ts:91:    stubRateLimitDisabled();
+src/app/api/trips/__tests__/suggestions-route.test.ts:111:    stubRateLimitDisabled();
+src/app/api/trips/__tests__/suggestions-route.test.ts:126:    stubRateLimitDisabled();
+src/app/api/trips/__tests__/suggestions-route.test.ts:155:    stubRateLimitDisabled();
+src/app/api/trips/[id]/collaborators/[userId]/__tests__/route.test.ts:9:import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";
+src/app/api/trips/[id]/collaborators/[userId]/__tests__/route.test.ts:106:    stubRateLimitDisabled();
+src/app/api/trips/[id]/collaborators/[userId]/__tests__/route.test.ts:118:    unstubAllEnvs();
+src/ai/tools/server/travel-advisory.ts:85: * Falls back to stub if API unavailable or country not found.
+src/ai/tools/server/travel-advisory.ts:111:      // Fallback to stub if API unavailable or country not found
+src/ai/tools/server/travel-advisory.ts:117:        provider: "stub",
+src/app/dashboard/search/unified/unified-search-client.tsx:113:        throw new Error("Flight search is not implemented yet.");
+src/app/dashboard/trips/__tests__/page.test.tsx:247:      vi.stubEnv("NODE_ENV", "development");
+src/app/dashboard/trips/__tests__/page.test.tsx:262:        vi.stubEnv("NODE_ENV", originalNodeEnv);
+src/ai/tools/server/__tests__/travel-advisory.test.ts:40:  it("returns stub for unmappable destinations", async () => {
+src/ai/tools/server/__tests__/travel-advisory.test.ts:53:      provider: "stub",
+src/ai/tools/server/__tests__/google-places.test.ts:105:  it("returns stub when API key not configured", async () => {
+src/ai/tools/server/__tests__/google-places.test.ts:125:      provider: "stub",
+src/ai/tools/server/google-places.ts:141:        provider: "stub",

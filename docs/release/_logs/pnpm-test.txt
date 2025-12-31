@@ -1,0 +1,230 @@
+
+> tripsage-ai-frontend@1.22.5 test /home/bjorn/repos/agents/tripsage-ai
+> vitest run
+
+
+ RUN  v4.0.16 /home/bjorn/repos/agents/tripsage-ai
+
+························································································································stderr | src/app/api/chat/stream/__tests__/route.adapter.test.ts > /api/chat/stream route adapter > parses body and forwards ip/messages to handleChatStream
+Possible misconfiguration of Vercel BotId. 
+Ensure that the client-side protection is properly configured for 'POST <your protected endpoint>'.
+Add the following item to your BotId client side protection:
+{
+  path: '<your protected endpoint>',
+  method: 'POST',
+}
+More info at https://vercel.com/docs/botid/get-started#add-client-side-protection
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+
+·······················································································································································································---··············································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································stderr | src/components/features/profile/__tests__/profile-smoke.test.tsx > Profile Components Smoke Tests > renders PersonalInfoSection without crashing
+Cannot update a component (`Controller`) while rendering a different component (`Controller`). To locate the bad setState() call inside `Controller`, follow the stack trace as described in https://react.dev/link/setstate-in-render
+
+···············································································································stderr | src/components/features/profile/__tests__/account-settings-section.test.tsx > AccountSettingsSection > renders email settings with current email
+Cannot update a component (`AccountSettingsSection`) while rendering a different component (`Controller`). To locate the bad setState() call inside `Controller`, follow the stack trace as described in https://react.dev/link/setstate-in-render
+
+··························································Not implemented: navigation to another Document
+································································································································································································································································································stderr | src/components/providers/__tests__/query-error-boundary.test.tsx > QueryErrorBoundary > records telemetry with retry metadata when an error is thrown
+ApiError: boom
+    at /home/bjorn/repos/agents/tripsage-ai/src/components/providers/__tests__/query-error-boundary.test.tsx:46:35
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:12) {
+  [stack]: [Getter/Setter],
+  [message]: 'boom',
+  name: 'ApiError',
+  status: 503,
+  code: 'SERVER_ERROR',
+  data: undefined,
+  endpoint: undefined,
+  validationErrors: undefined,
+  fieldErrors: undefined,
+  timestamp: '2025-12-31T20:27:01.342Z',
+  [isClientError]: [Getter],
+  [isServerError]: [Getter],
+  [shouldRetry]: [Getter],
+  [userMessage]: [Getter]
+}
+
+The above error occurred in the <ThrowingComponent> component.
+
+React will try to recreate this component tree from scratch using the error boundary you provided, l.
+
+
+stderr | src/components/providers/__tests__/query-error-boundary.test.tsx > QueryErrorBoundary > invokes injected onError asynchronously with meta
+ApiError: auth
+    at /home/bjorn/repos/agents/tripsage-ai/src/components/providers/__tests__/query-error-boundary.test.tsx:69:35
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:12) {
+  [stack]: [Getter/Setter],
+  [message]: 'auth',
+  name: 'ApiError',
+  status: 401,
+  code: 'UNAUTHORIZED',
+  data: undefined,
+  endpoint: undefined,
+  validationErrors: undefined,
+  fieldErrors: undefined,
+  timestamp: '2025-12-31T20:27:01.511Z',
+  [isClientError]: [Getter],
+  [isServerError]: [Getter],
+  [shouldRetry]: [Getter],
+  [userMessage]: [Getter]
+}
+
+The above error occurred in the <ThrowingComponent> component.
+
+React will try to recreate this component tree from scratch using the error boundary you provided, l.
+
+
+stderr | src/components/providers/__tests__/query-error-boundary.test.tsx > QueryErrorBoundary > invokes onOperationalAlert before onError with metadata
+ApiError: server
+    at /home/bjorn/repos/agents/tripsage-ai/src/components/providers/__tests__/query-error-boundary.test.tsx:94:35
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:12) {
+  [stack]: [Getter/Setter],
+  [message]: 'server',
+  name: 'ApiError',
+  status: 500,
+  code: 'SERVER_ERROR',
+  data: undefined,
+  endpoint: undefined,
+  validationErrors: undefined,
+  fieldErrors: undefined,
+  timestamp: '2025-12-31T20:27:01.549Z',
+  [isClientError]: [Getter],
+  [isServerError]: [Getter],
+  [shouldRetry]: [Getter],
+  [userMessage]: [Getter]
+}
+
+The above error occurred in the <ThrowingComponent> component.
+
+React will try to recreate this component tree from scratch using the error boundary you provided, l.
+
+
+stderr | src/components/providers/__tests__/query-error-boundary.test.tsx > QueryErrorBoundary > disables retry UI for non-retryable errors
+ApiError: denied
+    at /home/bjorn/repos/agents/tripsage-ai/src/components/providers/__tests__/query-error-boundary.test.tsx:120:35
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:12) {
+  [stack]: [Getter/Setter],
+  [message]: 'denied',
+  name: 'ApiError',
+  status: 403,
+  code: 'FORBIDDEN',
+  data: undefined,
+  endpoint: undefined,
+  validationErrors: undefined,
+  fieldErrors: undefined,
+  timestamp: '2025-12-31T20:27:01.575Z',
+  [isClientError]: [Getter],
+  [isServerError]: [Getter],
+  [shouldRetry]: [Getter],
+  [userMessage]: [Getter]
+}
+
+The above error occurred in the <ThrowingComponent> component.
+
+React will try to recreate this component tree from scratch using the error boundary you provided, l.
+
+
+stderr | src/components/providers/__tests__/query-error-boundary.test.tsx > QueryErrorBoundary > resets the boundary when retry is invoked
+ApiError: server
+    at /home/bjorn/repos/agents/tripsage-ai/src/components/providers/__tests__/query-error-boundary.test.tsx:133:35
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:12) {
+  [stack]: [Getter/Setter],
+  [message]: 'server',
+  name: 'ApiError',
+  status: 500,
+  code: 'SERVER_ERROR',
+  data: undefined,
+  endpoint: undefined,
+  validationErrors: undefined,
+  fieldErrors: undefined,
+  timestamp: '2025-12-31T20:27:01.597Z',
+  [isClientError]: [Getter],
+  [isServerError]: [Getter],
+  [shouldRetry]: [Getter],
+  [userMessage]: [Getter]
+}
+
+The above error occurred in the <ThrowingComponent> component.
+
+React will try to recreate this component tree from scratch using the error boundary you provided, l.
+
+
+····stderr | src/components/providers/__tests__/query-error-boundary.test.tsx > QueryErrorBoundary > resets the boundary when retry is invoked
+ApiError: server
+    at /home/bjorn/repos/agents/tripsage-ai/src/components/providers/__tests__/query-error-boundary.test.tsx:133:35
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/vitest@4.0.16_@opentelemetry+api@1.9.0_@types+node@25.0.3_@vitest+ui@4.0.16_jiti@2.6.1__cfd214fd961dc4d2283112102259599e/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/bjorn/repos/agents/tripsage-ai/node_modules/.pnpm/@vitest+runner@4.0.16/node_modules/@vitest/runner/dist/index.js:1653:12) {
+  [stack]: [Getter/Setter],
+  [message]: 'server',
+  name: 'ApiError',
+  status: 500,
+  code: 'SERVER_ERROR',
+  data: undefined,
+  endpoint: undefined,
+  validationErrors: undefined,
+  fieldErrors: undefined,
+  timestamp: '2025-12-31T20:27:01.597Z',
+  [isClientError]: [Getter],
+  [isServerError]: [Getter],
+  [shouldRetry]: [Getter],
+  [userMessage]: [Getter]
+}
+
+The above error occurred in the <ThrowingComponent> component.
+
+React will try to recreate this component tree from scratch using the error boundary you provided, l.
+
+
+·······································································································································································································································································································································································································································································································································································································································································································································································································································································································
+
+ Test Files  337 passed | 2 skipped (339)
+      Tests  3377 passed | 3 skipped (3380)
+   Start at  14:25:57
+   Duration  97.54s (transform 16.24s, setup 66.27s, import 83.91s, tests 88.61s, environment 43.20s)
+

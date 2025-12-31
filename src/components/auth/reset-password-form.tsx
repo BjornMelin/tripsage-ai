@@ -70,7 +70,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
     return {
       loginPath: `${normalizedBasePath}/login`,
       resetRequestPath: `${normalizedBasePath}/auth/password/reset-request`,
-      supportPath: `${normalizedBasePath}/support`,
+      supportPath: `${normalizedBasePath}/contact`,
     };
   }, []);
 

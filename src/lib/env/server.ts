@@ -102,6 +102,60 @@ function parseServerEnv(): ServerEnv {
       envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY = resolvedSupabaseKey;
     }
 
+    const nodeEnvRaw =
+      normalizeOptionalEnvVar(envForParse.NODE_ENV) ??
+      normalizeOptionalEnvVar(process.env.NODE_ENV) ??
+      "development";
+    const isProduction = nodeEnvRaw === "production";
+
+    /**
+     * In non-production, tolerate obviously invalid placeholder values for optional
+     * env vars so the dev server can boot without requiring every integration to be
+     * configured.
+     *
+     * Production remains strict and will still fail fast for misconfiguration.
+     */
+    function deleteIfInvalidNonProd(
+      key: keyof NodeJS.ProcessEnv,
+      isInvalid: (value: string) => boolean
+    ) {
+      if (isProduction) return;
+      const rawValue = envForParse[key];
+      const value = normalizeOptionalEnvVar(rawValue);
+      if (!value) {
+        // Some schemas (e.g., z.url().optional()) cannot accept empty strings; treat
+        // empty/undefined placeholders as "unset" in non-production.
+        if (rawValue !== undefined) {
+          Reflect.deleteProperty(envForParse, key);
+        }
+        return;
+      }
+      if (isInvalid(value) || isPlaceholderValue(value)) {
+        Reflect.deleteProperty(envForParse, key);
+      }
+    }
+
+    deleteIfInvalidNonProd(
+      "QSTASH_CURRENT_SIGNING_KEY",
+      (value) => value !== "" && value.length < 32
+    );
+    deleteIfInvalidNonProd(
+      "QSTASH_NEXT_SIGNING_KEY",
+      (value) => value !== "" && value.length < 32
+    );
+    deleteIfInvalidNonProd(
+      "QSTASH_TOKEN",
+      (value) => value !== "" && value.length < 20
+    );
+    deleteIfInvalidNonProd("COLLAB_WEBHOOK_URL", (value) => {
+      try {
+        new URL(value);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+
     envCache = envSchema.parse(envForParse);
     return envCache;
   } catch (error) {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
+import { ROUTES } from "@/lib/routes";
 import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default async function ResetPasswordPage() {
   const { user } = await getCurrentUser(supabase);
 
   if (user) {
-    redirect("/dashboard");
+    redirect(ROUTES.dashboard.root);
   }
 
   return (
@@ -43,13 +44,19 @@ export default async function ResetPasswordPage() {
         <div className="text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             Remember your password?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link
+              href={ROUTES.login}
+              className="text-primary hover:underline font-medium"
+            >
               Sign in instead
             </Link>
           </p>
           <p className="text-sm text-muted-foreground">
             Need help?{" "}
-            <Link href="/support" className="text-primary hover:underline font-medium">
+            <Link
+              href={ROUTES.contact}
+              className="text-primary hover:underline font-medium"
+            >
               Contact support
             </Link>
           </p>
