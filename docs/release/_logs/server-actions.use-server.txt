@@ -1,0 +1,7 @@
+src/lib/auth/actions.ts:5:"use server";
+src/app/dashboard/settings/api-keys/actions.ts:5:"use server";
+src/app/dashboard/search/unified/actions.ts:5:"use server";
+src/app/dashboard/search/flights/actions.ts:5:"use server";
+src/app/dashboard/search/destinations/actions.ts:5:"use server";
+src/app/dashboard/search/hotels/actions.ts:5:"use server";
+src/app/dashboard/search/activities/actions.ts:5:"use server";

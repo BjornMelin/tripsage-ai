@@ -22,19 +22,6 @@ import { ROUTES } from "@/lib/routes";
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
-        <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
-          TripSage AI
-        </Link>
-        <div className="ml-auto flex items-center gap-4">
-          <Link href={ROUTES.login}>
-            <Button variant="outline">Log in</Button>
-          </Link>
-          <Link href={ROUTES.register}>
-            <Button>Sign up</Button>
-          </Link>
-        </div>
-      </header>
       <main className="flex-1">
         <section className="px-4 py-12 md:py-24 lg:py-32">
           <div className="container mx-auto grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">

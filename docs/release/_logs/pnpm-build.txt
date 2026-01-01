@@ -1,0 +1,141 @@
+
+> tripsage-ai-frontend@1.22.5 build /home/bjorn/repos/agents/tripsage-ai
+> next build
+
+▲ Next.js 16.1.1 (Turbopack, Cache Components)
+- Environments: .env.local
+- Experiments (use with caution):
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 15.6s
+  Running TypeScript ...
+  Collecting page data using 23 workers ...
+  Generating static pages using 23 workers (0/98) ...
+  Generating static pages using 23 workers (24/98) 
+  Generating static pages using 23 workers (48/98) 
+  Generating static pages using 23 workers (73/98) 
+✓ Generating static pages using 23 workers (98/98) in 891.7ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /ai-demo
+├ ƒ /api/accommodations/personalize
+├ ƒ /api/accommodations/popular-destinations
+├ ƒ /api/accommodations/search
+├ ƒ /api/activities/[id]
+├ ƒ /api/activities/search
+├ ƒ /api/agents/accommodations
+├ ƒ /api/agents/budget
+├ ƒ /api/agents/destinations
+├ ƒ /api/agents/flights
+├ ƒ /api/agents/itineraries
+├ ƒ /api/agents/memory
+├ ƒ /api/agents/router
+├ ƒ /api/ai/stream
+├ ƒ /api/attachments/files
+├ ƒ /api/auth/login
+├ ƒ /api/auth/mfa/backup/regenerate
+├ ƒ /api/auth/mfa/backup/verify
+├ ƒ /api/auth/mfa/challenge
+├ ƒ /api/auth/mfa/factors/list
+├ ƒ /api/auth/mfa/sessions/revoke
+├ ƒ /api/auth/mfa/setup
+├ ƒ /api/auth/mfa/verify
+├ ƒ /api/calendar/events
+├ ƒ /api/calendar/freebusy
+├ ƒ /api/calendar/ics/export
+├ ƒ /api/calendar/ics/import
+├ ƒ /api/calendar/status
+├ ƒ /api/chat/attachments
+├ ƒ /api/chat/sessions
+├ ƒ /api/chat/sessions/[id]
+├ ƒ /api/chat/sessions/[id]/messages
+├ ƒ /api/chat/stream
+├ ƒ /api/config/agents/[agentType]
+├ ƒ /api/config/agents/[agentType]/rollback/[versionId]
+├ ƒ /api/config/agents/[agentType]/versions
+├ ƒ /api/dashboard
+├ ƒ /api/embeddings
+├ ƒ /api/flights/popular-destinations
+├ ƒ /api/flights/popular-routes
+├ ƒ /api/flights/search
+├ ƒ /api/geocode
+├ ƒ /api/hooks/cache
+├ ƒ /api/hooks/files
+├ ƒ /api/hooks/trips
+├ ƒ /api/itineraries
+├ ƒ /api/jobs/memory-sync
+├ ƒ /api/jobs/notify-collaborators
+├ ƒ /api/keys
+├ ƒ /api/keys/[service]
+├ ƒ /api/keys/validate
+├ ƒ /api/memory/[intent]
+├ ƒ /api/memory/[intent]/[userId]
+├ ƒ /api/places/details/[id]
+├ ƒ /api/places/nearby
+├ ƒ /api/places/photo
+├ ƒ /api/places/search
+├ ƒ /api/rag/index
+├ ƒ /api/rag/search
+├ ƒ /api/route-matrix
+├ ƒ /api/routes
+├ ƒ /api/security/events
+├ ƒ /api/security/metrics
+├ ƒ /api/security/sessions
+├ ƒ /api/security/sessions/[sessionId]
+├ ƒ /api/telemetry/activities
+├ ƒ /api/telemetry/ai-demo
+├ ƒ /api/timezone
+├ ƒ /api/trips
+├ ƒ /api/trips/[id]
+├ ƒ /api/trips/[id]/collaborators
+├ ƒ /api/trips/[id]/collaborators/[userId]
+├ ƒ /api/trips/suggestions
+├ ƒ /api/user-settings
+├ ƒ /auth/callback
+├ ƒ /auth/confirm
+├ ƒ /auth/delete
+├ ƒ /auth/email/resend
+├ ƒ /auth/email/verify
+├ ƒ /auth/logout
+├ ƒ /auth/me
+├ ƒ /auth/password/change
+├ ƒ /auth/password/reset
+├ ƒ /auth/password/reset-request
+├ ƒ /auth/register
+├ ◐ /chat
+├ ◐ /dashboard
+├ ◐ /dashboard/admin/configuration
+├ ◐ /dashboard/agent-status
+├ ◐ /dashboard/calendar
+├ ◐ /dashboard/demo/realtime
+├ ◐ /dashboard/profile
+├ ◐ /dashboard/search
+├ ◐ /dashboard/search/activities
+├ ◐ /dashboard/search/destinations
+├ ◐ /dashboard/search/flights
+├ ◐ /dashboard/search/flights/results
+├ ◐ /dashboard/search/hotels
+├ ◐ /dashboard/search/unified
+├ ◐ /dashboard/security
+├ ◐ /dashboard/settings
+├ ◐ /dashboard/settings/api-keys
+├ ◐ /dashboard/trips
+├ ◐ /dashboard/trips/[id]
+│ └ /dashboard/trips/[id]
+├ ◐ /dashboard/trips/[id]/collaborate
+│ └ /dashboard/trips/[id]/collaborate
+├ ◐ /login
+├ ◐ /register
+└ ◐ /reset-password
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+

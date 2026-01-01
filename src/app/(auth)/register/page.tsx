@@ -17,10 +17,15 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; status?: string; error?: string }>;
+  searchParams: Promise<{
+    from?: string;
+    next?: string;
+    status?: string;
+    error?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const redirectTo = params.from || "/dashboard";
+  const redirectTo = params.from || params.next || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

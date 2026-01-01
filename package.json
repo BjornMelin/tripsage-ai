@@ -33,6 +33,7 @@
     "test:coverage:shard": "vitest run --coverage.enabled --coverage.provider=v8 --reporter=blob --shard=$VITEST_SHARD",
     "test:merge": "vitest --merge-reports",
     "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
     "ops": "tsx scripts/ops.ts",
     "test:analyze": "pnpm ops test analyze failures",
     "test:analyze:all": "pnpm ops test analyze all",

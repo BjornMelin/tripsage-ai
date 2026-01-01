@@ -32,7 +32,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="font-bold text-xl flex items-center">
@@ -61,10 +61,10 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button variant="outline" size="sm" asChild>
-            <Link href="/login">Log in</Link>
+            <Link href={ROUTES.login}>Log in</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link href="/signup">Sign up</Link>
+            <Link href={ROUTES.register}>Sign up</Link>
           </Button>
 
           {/* Mobile menu button */}

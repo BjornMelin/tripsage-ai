@@ -127,27 +127,38 @@ WHERE state = 'active' AND now() - query_start > interval '1 second';
 
 ```typescript
 // Debug Zustand state
-import { useAuthStore } from '@/stores/auth-store';
+ import { useAuthCore } from "@/stores/auth/auth-core";
 
 // In component
-const state = useAuthStore.getState();
-console.log('Auth state:', state);
+const state = useAuthCore.getState();
+console.log("Auth state:", state);
 ```
 
 ### Testing in Development
 
-**Run Specific Tests:**
+**Run targeted shards:**
 
 ```bash
-# Run specific test
-pnpm test TripCard.test.tsx
+pnpm test:affected
+pnpm test:unit
+pnpm test:components
+pnpm test:api
 ```
 
-**Debug Test Failures:**
+**Run a specific test file (Vitest):**
 
 ```bash
-# Run with watch mode
-pnpm test --watch
+pnpm exec vitest src/stores/__tests__/auth/auth-core.test.ts
+```
+
+**Debug test failures / hangs:**
+
+```bash
+# Watch mode (note: `pnpm test` runs once)
+pnpm exec vitest
+
+# If Vitest hangs after finishing:
+VITEST_DEBUG_OPEN_HANDLES=1 pnpm test
 ```
 
 ## Performance Optimization

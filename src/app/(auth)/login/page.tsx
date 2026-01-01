@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; error?: string }>;
+  searchParams: Promise<{ from?: string; next?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const redirectTo = params.from || "/dashboard";
+  const redirectTo = params.from || params.next || "/dashboard";
 
   return (
     <div className="min-h-screen flex">

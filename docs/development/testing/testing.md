@@ -321,7 +321,8 @@ Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determin
 ## Running and Debugging
 
 ```bash
-pnpm test                               # all tests
+pnpm test                               # all tests (single run)
+pnpm exec vitest                        # watch mode (local)
 pnpm test:unit                          # unit tests only
 pnpm test:components                    # component tests only
 pnpm test:api                           # API route tests only
@@ -343,7 +344,11 @@ pnpm test:changed                       # only changed files
 ## Playwright (E2E)
 
 - Config: `playwright.config.ts`; specs in `e2e/`
-- Commands: `pnpm test:e2e`, `--project=chromium`, `--headed`
+- Commands:
+  - `pnpm test:e2e:chromium` (recommended local default)
+  - `pnpm test:e2e` (all configured browsers)
+  - `pnpm exec playwright test --project=chromium --headed` (use `pnpm exec` for Playwright CLI flags; avoid `pnpm test:* -- <flags>`)
+- Fresh machine setup: `pnpm exec playwright install chromium` (Linux deps: `pnpm exec playwright install-deps chromium`)
 - Reserve for flows requiring real browser execution.
 
 ## Performance and Anti-Patterns

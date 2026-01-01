@@ -26,17 +26,25 @@ import { useAuthCore } from "@/stores/auth/auth-core";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isLoading } = useAuthCore();
+  const hasInitialized = useAuthCore((state) => state.hasInitialized);
+  const initialize = useAuthCore((state) => state.initialize);
+  const isLoading = useAuthCore((state) => state.isLoading);
+  const user = useAuthCore((state) => state.user);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (hasInitialized || isLoading) return;
+    initialize().catch(() => undefined);
+  }, [hasInitialized, initialize, isLoading]);
+
+  useEffect(() => {
+    if (!hasInitialized || isLoading) return;
     if (user) return;
     const query = new URLSearchParams({ from: ROUTES.dashboard.profile }).toString();
     const target = `${ROUTES.login}?${query}`;
     router.replace(target);
-  }, [isLoading, router, user]);
+  }, [hasInitialized, isLoading, router, user]);
 
-  if (isLoading) {
+  if ((!hasInitialized || isLoading) && !user) {
     return (
       <div
         className="container mx-auto py-6 space-y-8"

@@ -30,6 +30,7 @@ describe("AuthCore", () => {
       const { result } = renderHook(() => useAuthCore());
 
       expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.hasInitialized).toBe(false);
       expect(result.current.user).toBeNull();
       expect(result.current.error).toBeNull();
       expect(result.current.isLoading).toBe(false);
@@ -158,6 +159,7 @@ describe("AuthCore", () => {
       });
 
       expect(result.current.isAuthenticated).toBe(true);
+      expect(result.current.hasInitialized).toBe(true);
       expect(result.current.user).toEqual(mockUser);
     });
 
@@ -173,6 +175,7 @@ describe("AuthCore", () => {
       });
 
       expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.hasInitialized).toBe(true);
       expect(result.current.user).toBeNull();
     });
   });
@@ -241,6 +244,7 @@ describe("AuthCore", () => {
       act(() => {
         useAuthCore.setState({
           error: "Some error",
+          hasInitialized: true,
           isAuthenticated: true,
           isLoading: true,
           isLoggingIn: true,

@@ -1,0 +1,2 @@
+zsh:1: command not found: python
+exit_code=127

@@ -89,7 +89,7 @@ export default function RootLayout({
             >
               {/* Keep Supabase Realtime authorized with the current access token */}
               <RealtimeAuthProvider />
-              <main className="flex flex-col min-h-screen">{children}</main>
+              <div className="flex flex-col min-h-screen">{children}</div>
               <Toaster />
             </ThemeProvider>
           </TanStackQueryProvider>

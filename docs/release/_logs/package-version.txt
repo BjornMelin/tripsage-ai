@@ -1,0 +1,1 @@
+tripsage-ai-frontend 1.22.5

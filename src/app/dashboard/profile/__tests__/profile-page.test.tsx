@@ -4,6 +4,7 @@ import type { AuthUser as User } from "@schemas/stores";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthCore } from "@/stores/auth/auth-core";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const { mockReplace } = vi.hoisted(() => ({
   mockReplace: vi.fn(),
@@ -80,8 +81,12 @@ vi.mock("@/components/ui/tabs", () => {
  * Type definition for auth store return values.
  */
 interface AuthStoreReturn {
+  /** Whether the auth store has initialized at least once */
+  hasInitialized: boolean;
   /** Whether authentication is loading */
   isLoading: boolean;
+  /** Initializes auth state from /auth/me */
+  initialize: () => Promise<void>;
   /** Current user data */
   user: User | null;
 }
@@ -143,11 +148,22 @@ describe("ProfilePage", () => {
   });
 
   const setupAuthState = (overrides: Partial<AuthStoreReturn> = {}) => {
-    vi.mocked(useAuthCore).mockReturnValue({
+    const state: AuthStoreReturn = {
+      hasInitialized: true,
+      initialize: vi.fn().mockResolvedValue(undefined),
       isLoading: false,
       user: MOCK_USER as User,
       ...overrides,
-    } as AuthStoreReturn);
+    };
+
+    vi.mocked(useAuthCore).mockImplementation(
+      unsafeCast((selector?: (state: AuthStoreReturn) => unknown) => {
+        if (typeof selector === "function") {
+          return selector(state);
+        }
+        return state;
+      })
+    );
   };
 
   it("renders loading state when user data is loading", () => {
