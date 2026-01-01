@@ -34,7 +34,7 @@ We must confirm Supabase database + storage policies enforce least privilege and
 
 ## Verification (commands)
 
-Prereqs: Supabase CLI installed (https://supabase.com/docs/guides/cli).
+Prereqs: Supabase CLI installed ([Supabase CLI docs](https://supabase.com/docs/guides/cli)).
 
 - `cd supabase && supabase start`
 - `cd supabase && supabase db reset --debug`
@@ -48,6 +48,5 @@ Prereqs: Supabase CLI installed (https://supabase.com/docs/guides/cli).
 
 ## Notes / Links (full URLs only)
 
-- Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
-- Supabase Storage policies: https://supabase.com/docs/guides/storage/security/access-control
-
+- [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Supabase Storage policies](https://supabase.com/docs/guides/storage/security/access-control)

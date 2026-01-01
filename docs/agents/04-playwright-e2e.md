@@ -38,10 +38,10 @@ Role: Implement deterministic Playwright flows for the v1.0.0 critical journey a
 
 ## References (full URLs)
 
-- Playwright test runner: https://playwright.dev/docs/test-intro
-- Playwright browsers + deps install: https://playwright.dev/docs/browsers
-- Playwright CLI: https://playwright.dev/docs/test-cli
-- Playwright install (pnpm): https://playwright.dev/docs/intro
+- [Playwright test runner](https://playwright.dev/docs/test-intro)
+- [Playwright browsers + deps install](https://playwright.dev/docs/browsers)
+- [Playwright CLI](https://playwright.dev/docs/test-cli)
+- [Playwright install (pnpm)](https://playwright.dev/docs/intro)
 
 ## When stuck
 

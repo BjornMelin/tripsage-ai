@@ -25,5 +25,5 @@ Role: Make v1.0.0 deployable and cost-safe on free tiers, with sane caching and 
 
 ## References (full URLs)
 
-- Vercel docs: https://vercel.com/docs
-- Next.js caching docs: https://nextjs.org/docs/app/building-your-application/caching
+- [Vercel docs](https://vercel.com/docs)
+- [Next.js caching docs](https://nextjs.org/docs/app/building-your-application/caching)

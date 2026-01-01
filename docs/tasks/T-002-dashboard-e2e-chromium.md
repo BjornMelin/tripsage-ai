@@ -42,8 +42,8 @@ Chromium E2E failures in `e2e/dashboard-functionality.spec.ts`:
 
 ## Notes / Links (full URLs only)
 
-- Playwright navigation timing: https://playwright.dev/docs/api/class-page#page-goto
-- WAI-ARIA landmark roles (banner): https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/
+- [Playwright `page.goto` navigation timing](https://playwright.dev/docs/api/class-page#page-goto)
+- [WAI-ARIA landmark roles (banner)](https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/)
 
 ## Resolution Summary
 
@@ -77,4 +77,4 @@ Chromium E2E failures in `e2e/dashboard-functionality.spec.ts`:
 
 ## Extra References (full URLs only)
 
-- Next.js project structure / layout conventions: https://nextjs.org/docs/app/getting-started/project-structure
+- [Next.js project structure / layout conventions](https://nextjs.org/docs/app/getting-started/project-structure)

@@ -30,10 +30,10 @@ What is broken/missing/unwired?
 
 1. Start Next DevTools browser automation via `browser_eval` (use `browser=chrome|firefox|webkit|msedge`).
 2. Navigate to `http://localhost:3000`
-2. Assert `...` exists via accessibility snapshot
-3. Click `...`
-4. Type `...`
-5. Assert `...` final state
+3. Assert `...` exists via accessibility snapshot
+4. Click `...`
+5. Type `...`
+6. Assert `...` final state
 
 ## Notes / Links (full URLs only)
 

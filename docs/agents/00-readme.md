@@ -7,7 +7,7 @@ These prompts are designed to run **multiple independent Codex sessions** agains
 - **Claim tasks**: edit exactly one file in `docs/tasks/` and set Owner + Status before coding.
 - **Browser verification** is mandatory for user-facing changes:
   - Write explicit Next DevTools `browser_eval` steps in the task file (navigate → snapshot → interact → snapshot).
-  - If `browser_eval` is unavailable in your environment, run Playwright test runner equivalents and document the limitation (example: `pnpm exec playwright test --project=chromium`).
+  - If `browser_eval` is unavailable in your environment, run the repo’s Playwright scripts (example: `pnpm test:e2e:chromium`) and document the limitation (fallback: `pnpm exec playwright test --project=chromium`).
 - **Shipping > refactoring**: only refactor to unblock shipping or remove defect-causing duplication.
 - **Strict typing**: no `any` (TS) and full type hints (Python).
 - **Real-world references allowed**: use `gh_grep.searchGitHub` when unsure about patterns/APIs and record full URLs in task notes.

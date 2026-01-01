@@ -27,5 +27,5 @@ Role: Ensure Supabase SSR auth flow and RLS policies match product intent with l
 
 ## References (full URLs)
 
-- Supabase SSR docs: https://supabase.com/docs/guides/auth/server-side/nextjs
-- Supabase RLS docs: https://supabase.com/docs/guides/database/postgres/row-level-security
+- [Supabase SSR docs](https://supabase.com/docs/guides/auth/server-side/nextjs)
+- [Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security)

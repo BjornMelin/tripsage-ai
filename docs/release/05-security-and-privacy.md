@@ -26,8 +26,11 @@
 ## Authentication & Session Security
 
 - SSR auth should use Supabase SSR helpers (server-only).
-- Routes that require auth must return standardized 401/403 responses.
-- Logout must revoke tokens/server sessions (verify in browser automation).
+- Routes that require auth must return standardized 401/403 responses via `src/lib/api/route-helpers.ts`:
+  - 401: `unauthorizedResponse()` → `{ "error": "unauthorized", "reason": "Authentication required" }`
+  - 403: `forbiddenResponse("...")` → `{ "error": "forbidden", "reason": "..." }`
+- Logout must revoke tokens/server sessions and be verified via browser automation (Playwright):
+  - `e2e/dashboard-functionality.spec.ts` → `test("logout functionality works", ...)`
 
 ## Rate Limiting / Abuse Controls
 
@@ -43,3 +46,8 @@
 ## Output
 
 Concrete findings and tasks will be tracked in `docs/tasks/INDEX.md` with P0/P1 labels.
+
+- P0 (release blocker): security issue with credible exploit path or cross-tenant/PII impact; must be fixed (or feature removed) before release.
+- P1 (post-release): security hardening or low-confidence risk; should be fixed soon after release with an explicit owner and follow-up date.
+- Workflow: discovery → task created → remediation PR → verification (tests and/or Playwright) → close with evidence links.
+- Ownership: release owner triages and assigns; code owners implement and attach verification output.

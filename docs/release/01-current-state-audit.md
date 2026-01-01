@@ -569,7 +569,7 @@ OK: no secrets detected in changed files.
   - `app/(auth)/layout.tsx`
   - `app/layout.tsx`
   - `app/(auth)/login/page.tsx`
-  - boundary files: `app/(auth)/error.tsx`, `app/error.tsx`, `app/global-error.tsx`, `app/loading.tsx`, plus builtin `not-found.js`
+  - boundary files: `app/(auth)/error.tsx`, `app/error.tsx`, `app/global-error.tsx`, `app/loading.tsx`, plus built-in `not-found.js`
 
 ### Browser automation (next-devtools `browser_eval`)
 

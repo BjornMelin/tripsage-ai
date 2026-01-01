@@ -10,7 +10,7 @@
 
 ## Problem
 
-Deployment is not “one click obvious” yet:
+Deployment is not “one-click obvious” yet:
 
 - `vercel.json` sets `"git.deploymentEnabled": false` (may be intentional, but must be decided for v1.0.0).
 - Env var inventory is spread across `.env.example` and `@schemas/env`; we need a single, accurate runbook.
@@ -45,6 +45,5 @@ Deployment is not “one click obvious” yet:
 
 ## Notes / Links (full URLs only)
 
-- Vercel env vars: https://vercel.com/docs/projects/environment-variables
-- Next.js deploying: https://nextjs.org/docs/app/building-your-application/deploying
-
+- [Vercel environment variables](https://vercel.com/docs/projects/environment-variables)
+- [Next.js deploying](https://nextjs.org/docs/app/building-your-application/deploying)

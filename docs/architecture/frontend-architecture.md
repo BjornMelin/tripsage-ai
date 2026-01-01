@@ -269,6 +269,7 @@ flowchart LR
 - Types: `pnpm type-check`.
 - Tests: `pnpm test*` (Vitest projects; add `/** @vitest-environment jsdom */` when DOM is used).
 - Typical targeted runs: `pnpm test:unit` (unit), `pnpm test:components` (UI), `pnpm test:api` (route handlers), `pnpm test:e2e:chromium` (Playwright, Chromium-only), `pnpm test:e2e` (Playwright, all browsers).
+- Playwright patterns and gotchas: see `docs/agents/04-playwright-e2e.md`.
 - Follow AGENTS “final-only” rule: delete superseded code and tests when replacements land.
 
 ## Deployment

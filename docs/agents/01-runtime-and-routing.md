@@ -27,4 +27,4 @@ Role: Fix runtime/build issues, route wiring, navigation correctness.
 
 ## References (full URLs)
 
-- Next.js App Router docs: https://nextjs.org/docs/app
+- [Next.js App Router docs](https://nextjs.org/docs/app)

@@ -27,4 +27,4 @@ Role: Ensure Vercel AI SDK v6 is wired correctly (models, streaming, tools, erro
 
 ## References (full URLs)
 
-- Vercel AI SDK: https://sdk.vercel.ai/docs
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)

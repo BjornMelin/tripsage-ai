@@ -74,15 +74,15 @@ Additionally, passing `--project=chromium` through `pnpm test:e2e` is unreliable
 - Repro of pnpm arg-forwarding trap:
   - Command: `pnpm test:e2e -- --project=chromium --help`
   - Observed: `playwright test -- --project=chromium --help` → `Error: No tests found.` (exit 1)
-- Required run: `pnpm exec playwright test --project=chromium` → `16 passed, 1 skipped` (≈1.9m)
+- Baseline run: `pnpm exec playwright test --project=chromium` → `16 passed, 1 skipped` (≈1.9m)
 - Script alias run: `pnpm test:e2e:chromium` → `16 passed, 1 skipped` (≈1.8m)
 
 ## Notes / Links (full URLs only)
 
-- Playwright browsers install + deps: https://playwright.dev/docs/browsers
-- Playwright CLI (`install`, `install-deps`, `--with-deps`): https://playwright.dev/docs/test-cli
-- Playwright install (pnpm): https://playwright.dev/docs/intro
-- Playwright test runner: https://playwright.dev/docs/test-intro
+- [Playwright browsers install + deps](https://playwright.dev/docs/browsers)
+- [Playwright CLI (`install`, `install-deps`, `--with-deps`)](https://playwright.dev/docs/test-cli)
+- [Playwright install (pnpm)](https://playwright.dev/docs/intro)
+- [Playwright test runner](https://playwright.dev/docs/test-intro)
 - Real-world “Chromium-only by default” script patterns:
-  - https://github.com/tldraw/tldraw/blob/main/apps/dotcom/client/package.json
-  - https://github.com/TanStack/router/blob/main/e2e/react-start/basic/package.json
+  - <https://github.com/tldraw/tldraw/blob/main/apps/dotcom/client/package.json>
+  - <https://github.com/TanStack/router/blob/main/e2e/react-start/basic/package.json>
