@@ -2,6 +2,8 @@
  * @fileoverview Privacy policy (v1 placeholder) for public marketing routes.
  */
 
+"use cache";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
