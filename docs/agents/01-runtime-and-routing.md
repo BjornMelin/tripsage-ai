@@ -4,7 +4,8 @@ Role: Fix runtime/build issues, route wiring, navigation correctness.
 
 ## Task Claiming (required)
 
-- Choose a task from `docs/tasks/INDEX.md`, then edit its `docs/tasks/T-###-*.md` file:
+- Choose a task from `docs/tasks/INDEX.md`.
+  - Edit the corresponding `docs/tasks/T-###-*.md` file:
   - Set Status to `CLAIMED`
   - Set Owner to your identifier
 
@@ -23,7 +24,8 @@ Role: Fix runtime/build issues, route wiring, navigation correctness.
 
 ## When stuck
 
-- Use `gh_grep.searchGitHub` to find real-world Next.js 16 patterns and record full URLs/snippets in the task file.
+- Use `gh_grep.searchGitHub` to find real-world Next.js 16 patterns.
+- Record full URLs/snippets in the task file.
 
 ## References (full URLs)
 
