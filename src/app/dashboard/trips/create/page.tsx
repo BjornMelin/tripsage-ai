@@ -4,8 +4,8 @@
 
 "use client";
 
-import { ISO_DATE_STRING } from "@schemas/shared/time";
-import type { TripCreateInput, TripSuggestion } from "@schemas/trips";
+import type { TripSuggestion } from "@schemas/trips";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -17,7 +17,6 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,117 +41,28 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useCreateTrip } from "@/hooks/use-trips";
 import { useZodForm } from "@/hooks/use-zod-form";
-import { getErrorMessage } from "@/lib/api/error-types";
+import { ApiError, getErrorMessage } from "@/lib/api/error-types";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import {
+  computeDefaultTripDates,
+  computeDefaultTripTitle,
+  makeCreateTripPayload,
+  PLAN_TRIP_FORM_SCHEMA,
+} from "@/lib/trips/create-trip-flow";
 
-const OPTIONAL_ISO_DATE_STRING = z.union([ISO_DATE_STRING, z.literal("")]).optional();
-
-const PLAN_TRIP_FORM_SCHEMA = z
-  .strictObject({
-    description: z.string().max(1000, { error: "Notes too long" }).optional(),
-    destination: z
-      .string()
-      .min(1, { error: "Destination is required" })
-      .max(200, { error: "Destination too long" }),
-    endDate: OPTIONAL_ISO_DATE_STRING,
-    startDate: OPTIONAL_ISO_DATE_STRING,
-    title: z.string().max(200, { error: "Title too long" }).optional(),
-  })
-  .refine(
-    (value) => {
-      if (!value.startDate || !value.endDate) return true;
-      // YYYY-MM-DD sorts lexicographically in chronological order.
-      return value.endDate > value.startDate;
-    },
-    { error: "End date must be after start date", path: ["endDate"] }
-  );
-
-type PlanTripFormData = z.infer<typeof PLAN_TRIP_FORM_SCHEMA>;
-
-const DEFAULT_SUGGESTION_LIMIT = 12;
-
-function computeDefaultDates(): { startDate: string; endDate: string } {
-  const start = DateUtils.add(new Date(), 1, "days");
-  const end = DateUtils.add(start, 7, "days");
-  return {
-    endDate: DateUtils.format(end, "yyyy-MM-dd"),
-    startDate: DateUtils.format(start, "yyyy-MM-dd"),
-  };
-}
-
-function isoDateToIsoDateTime(value: string): string {
-  return DateUtils.formatForApi(DateUtils.parse(value));
-}
-
-function computeDefaultTripTitle(destination: string): string {
-  const clean = destination.trim();
-  if (!clean) return "New Trip";
-  return `Trip to ${clean}`;
-}
-
-function makeCreatePayload(
-  values: PlanTripFormData,
-  defaults: { startDate: string; endDate: string },
-  suggestion: TripSuggestion | null
-): TripCreateInput {
-  const destination = values.destination.trim();
-  const title =
-    values.title?.trim() ||
-    suggestion?.title?.trim() ||
-    computeDefaultTripTitle(destination);
-
-  const durationDays =
-    suggestion?.duration && suggestion.duration > 0 ? suggestion.duration : 7;
-  const requestedStartIsoDate = values.startDate?.trim() ?? "";
-  const requestedEndIsoDate = values.endDate?.trim() ?? "";
-
-  let startIsoDate = requestedStartIsoDate || defaults.startDate;
-  let endIsoDate = requestedEndIsoDate;
-
-  if (!endIsoDate) {
-    endIsoDate = DateUtils.format(
-      DateUtils.add(DateUtils.parse(startIsoDate), durationDays, "days"),
-      "yyyy-MM-dd"
-    );
-  }
-
-  if (!requestedStartIsoDate && requestedEndIsoDate) {
-    startIsoDate = DateUtils.format(
-      DateUtils.subtract(DateUtils.parse(requestedEndIsoDate), durationDays, "days"),
-      "yyyy-MM-dd"
-    );
-    endIsoDate = requestedEndIsoDate;
-  }
-  const startDate = isoDateToIsoDateTime(startIsoDate);
-  const endDate = isoDateToIsoDateTime(endIsoDate);
-
-  const description =
-    values.description?.trim() || suggestion?.description?.trim() || undefined;
-
-  return {
-    currency: suggestion?.currency ?? "USD",
-    description,
-    destination,
-    endDate,
-    startDate,
-    status: "planning",
-    title,
-    travelers: 1,
-    tripType: "leisure",
-    visibility: "private",
-  };
-}
+const DEFAULT_SUGGESTION_LIMIT = 6;
 
 export default function CreateTripPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const suggestionId = searchParams.get("suggestion") ?? undefined;
+  const queryClient = useQueryClient();
 
   const { authenticatedApi, cancelRequests } = useAuthenticatedApi();
   const { toast } = useToast();
   const createTripMutation = useCreateTrip();
 
-  const defaultDates = useMemo(() => computeDefaultDates(), []);
+  const defaultDates = useMemo(() => computeDefaultTripDates(new Date()), []);
 
   const form = useZodForm({
     defaultValues: {
@@ -182,24 +92,64 @@ export default function CreateTripPage() {
       return;
     }
 
+    let isActive = true;
     setSuggestionState({ id: suggestionId, kind: "loading" });
+
+    const cachedSuggestions = queryClient.getQueriesData<TripSuggestion[]>({
+      queryKey: ["trips", "suggestions"],
+    });
+
+    for (const [, suggestions] of cachedSuggestions) {
+      const match = suggestions?.find((item) => item.id === suggestionId);
+      if (match) {
+        setSuggestionState({ id: suggestionId, kind: "loaded", suggestion: match });
+        return;
+      }
+    }
+
+    const rawLimit = searchParams.get("limit");
+    const parsedLimit = rawLimit ? Number.parseInt(rawLimit, 10) : Number.NaN;
+    const suggestionLimit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? parsedLimit
+        : DEFAULT_SUGGESTION_LIMIT;
+
+    const rawBudgetMax = searchParams.get("budget_max");
+    const parsedBudgetMax = rawBudgetMax ? Number.parseFloat(rawBudgetMax) : Number.NaN;
+    const budgetMax =
+      Number.isFinite(parsedBudgetMax) && parsedBudgetMax > 0
+        ? parsedBudgetMax
+        : undefined;
+
+    const params: Record<string, number> = { limit: suggestionLimit };
+    if (budgetMax) {
+      params.budget_max = budgetMax;
+    }
 
     authenticatedApi
       .get<TripSuggestion[]>("/api/trips/suggestions", {
-        params: { limit: DEFAULT_SUGGESTION_LIMIT },
+        params,
       })
       .then((suggestions) => {
+        if (!isActive) return;
         const match = suggestions.find((item) => item.id === suggestionId) ?? null;
+        if (!match) {
+          setSuggestionState({ id: suggestionId, kind: "error" });
+          return;
+        }
         setSuggestionState({ id: suggestionId, kind: "loaded", suggestion: match });
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        if (error instanceof ApiError && error.code === "REQUEST_CANCELLED") return;
         setSuggestionState({ id: suggestionId, kind: "error" });
       });
 
     return () => {
+      isActive = false;
       cancelRequests();
     };
-  }, [authenticatedApi, cancelRequests, suggestionId]);
+  }, [authenticatedApi, cancelRequests, queryClient, searchParams, suggestionId]);
 
   useEffect(() => {
     if (!suggestion) return;
@@ -236,7 +186,7 @@ export default function CreateTripPage() {
 
   const onSubmit = form.handleSubmitSafe(async (values) => {
     try {
-      const payload = makeCreatePayload(values, defaultDates, suggestion);
+      const payload = makeCreateTripPayload(values, defaultDates, suggestion);
       const created = await createTripMutation.mutateAsync(payload);
       toast({
         description: suggestionId
@@ -432,7 +382,7 @@ export default function CreateTripPage() {
                       <FormControl>
                         <Textarea
                           {...field}
-                          placeholder="Anything to keep in mind? (budget, pace, must‑see spots)"
+                          placeholder="Anything to keep in mind? (budget, pace, must-see spots)"
                           rows={4}
                         />
                       </FormControl>

@@ -4,8 +4,8 @@
 
 - ID: `T-011`
 - Priority: `P0`
-- Status: `UNCLAIMED`
-- Owner: `@handle-or-session`
+- Status: `DONE`
+- Owner: `codex-session-t008-gpt52`
 - Depends on: `-`
 
 ## Problem
@@ -39,5 +39,4 @@ Running `pnpm dlx supabase start --debug` fails with:
 
 ## Notes / Links (full URLs only)
 
-- Supabase CLI local development: https://supabase.com/docs/guides/cli/local-development
-
+- Supabase CLI local development: <https://supabase.com/docs/guides/cli/local-development>

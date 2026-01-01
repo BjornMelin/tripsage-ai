@@ -110,10 +110,10 @@ Prereq: Use a seeded local Supabase project or a mocked auth/session approach fo
 
 ## Notes / Links (full URLs only)
 
-- Next.js routing and route structure: https://nextjs.org/docs/app/getting-started/layouts-and-pages
-- Next.js `useSearchParams`: https://nextjs.org/docs/app/api-reference/functions/use-search-params
-- Next.js `useRouter`: https://nextjs.org/docs/app/api-reference/functions/use-router
-- Supabase SSR client: https://supabase.com/docs/guides/auth/server-side/creating-a-client
-- Supabase SSR advanced guide: https://supabase.com/docs/guides/auth/server-side/advanced-guide
-- shadcn/ui Card docs: https://ui.shadcn.com/docs/components/card
-- shadcn/ui Form docs: https://ui.shadcn.com/docs/components/form
+- Next.js routing and route structure: <https://nextjs.org/docs/app/getting-started/layouts-and-pages>
+- Next.js `useSearchParams`: <https://nextjs.org/docs/app/api-reference/functions/use-search-params>
+- Next.js `useRouter`: <https://nextjs.org/docs/app/api-reference/functions/use-router>
+- Supabase SSR client: <https://supabase.com/docs/guides/auth/server-side/creating-a-client>
+- Supabase SSR advanced guide: <https://supabase.com/docs/guides/auth/server-side/advanced-guide>
+- shadcn/ui Card docs: <https://ui.shadcn.com/docs/components/card>
+- shadcn/ui Form docs: <https://ui.shadcn.com/docs/components/form>

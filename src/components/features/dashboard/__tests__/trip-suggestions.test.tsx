@@ -277,7 +277,10 @@ describe("TripSuggestions", () => {
       if (planButtons.length > 0) {
         const firstButton = planButtons[0].closest("a");
         expect(firstButton).toHaveAttribute("href");
-        expect(firstButton?.getAttribute("href")).toContain("/dashboard/trips");
+        expect(firstButton?.getAttribute("href")).toContain(
+          "/dashboard/trips/create?suggestion="
+        );
+        expect(firstButton?.getAttribute("href")).toContain("&limit=");
       }
     });
 
