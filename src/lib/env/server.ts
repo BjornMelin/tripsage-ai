@@ -135,18 +135,9 @@ function parseServerEnv(): ServerEnv {
       }
     }
 
-    deleteIfInvalidNonProd(
-      "QSTASH_CURRENT_SIGNING_KEY",
-      (value) => value !== "" && value.length < 32
-    );
-    deleteIfInvalidNonProd(
-      "QSTASH_NEXT_SIGNING_KEY",
-      (value) => value !== "" && value.length < 32
-    );
-    deleteIfInvalidNonProd(
-      "QSTASH_TOKEN",
-      (value) => value !== "" && value.length < 20
-    );
+    deleteIfInvalidNonProd("QSTASH_CURRENT_SIGNING_KEY", (value) => value.length < 32);
+    deleteIfInvalidNonProd("QSTASH_NEXT_SIGNING_KEY", (value) => value.length < 32);
+    deleteIfInvalidNonProd("QSTASH_TOKEN", (value) => value.length < 20);
     deleteIfInvalidNonProd("COLLAB_WEBHOOK_URL", (value) => {
       try {
         new URL(value);
