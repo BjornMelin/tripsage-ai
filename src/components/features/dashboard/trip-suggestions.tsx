@@ -80,7 +80,13 @@ function SuggestionCardSkeleton() {
  * @param suggestion - The trip suggestion data to display.
  * @returns The suggestion card component.
  */
-function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
+function SuggestionCard({
+  planTripHref,
+  suggestion,
+}: {
+  readonly suggestion: TripSuggestion;
+  readonly planTripHref: string;
+}) {
   /**
    * Get emoji icon for trip category.
    *
@@ -211,9 +217,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
           Best time: {suggestion.bestTimeToVisit}
         </span>
         <Button size="sm" variant="outline" asChild>
-          <Link href={`/dashboard/trips/create?suggestion=${suggestion.id}`}>
-            Plan Trip
-          </Link>
+          <Link href={planTripHref}>Plan Trip</Link>
         </Button>
       </div>
     </div>
@@ -260,11 +264,12 @@ export function TripSuggestions({
   showMemoryBased = true,
 }: TripSuggestionsProps) {
   const { activeBudget } = useBudgetStore();
+  const suggestionFetchLimit = limit + 2;
 
   // Use React Query hook to fetch trip suggestions
   const { data: apiSuggestions, isLoading } = useTripSuggestions({
     budgetMax: activeBudget?.totalAmount,
-    limit: limit + 2, // Get extra in case we filter some out
+    limit: suggestionFetchLimit, // Get extra in case we filter some out
   });
 
   // Memory-based recommendations
@@ -348,6 +353,15 @@ export function TripSuggestions({
   // Limit the number of suggestions
   const filteredSuggestions = allSuggestions.slice(0, limit);
 
+  const buildCreateTripHref = (suggestionId: string): string => {
+    const query = new URLSearchParams({ suggestion: suggestionId });
+    query.set("limit", String(suggestionFetchLimit));
+    if (activeBudget?.totalAmount) {
+      query.set("budget_max", String(activeBudget.totalAmount));
+    }
+    return `/dashboard/trips/create?${query.toString()}`;
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -409,7 +423,10 @@ export function TripSuggestions({
                       </Badge>
                     </div>
                     <div className="border border-purple-200 rounded-lg bg-purple-50/30">
-                      <SuggestionCard suggestion={suggestion} />
+                      <SuggestionCard
+                        suggestion={suggestion}
+                        planTripHref={buildCreateTripHref(suggestion.id)}
+                      />
                     </div>
                   </div>
                 ))}
@@ -423,7 +440,11 @@ export function TripSuggestions({
             {filteredSuggestions
               .filter((s) => !s.id.startsWith("memory-"))
               .map((suggestion) => (
-                <SuggestionCard key={suggestion.id} suggestion={suggestion} />
+                <SuggestionCard
+                  key={suggestion.id}
+                  suggestion={suggestion}
+                  planTripHref={buildCreateTripHref(suggestion.id)}
+                />
               ))}
           </div>
         )}
