@@ -9,6 +9,7 @@ Release date: `TBD`
 ## Notable Fixes
 
 - Dev server now boots in non-production even if optional integration env vars are left blank/placeholder (`T-001`).
+- Chromium dashboard E2E stabilized (`T-002`).
 - Public navigation fixes:
   - Navbar “Sign up” now routes to `/register` (removed `/signup` 404) (`T-006`).
   - Added public `/privacy`, `/terms`, `/contact` pages to unblock onboarding/legal links (`T-007`).
@@ -20,5 +21,4 @@ Release date: `TBD`
 
 ## Known Issues
 
-- Dashboard E2E is not yet green in Chromium (`T-002`).
 - Trip create CTA links to a missing route (`/dashboard/trips/create`) until `T-008` lands.

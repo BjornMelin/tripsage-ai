@@ -10,9 +10,9 @@ This plan is designed for **parallel Codex sessions** with minimal merge conflic
   - `T-006` fixed marketing navbar “Sign up” pointing to `/signup` (404).
   - `T-007` added `/privacy`, `/terms`, `/contact` pages for onboarding + footer links.
   - `T-009` fixed `/reset-password` “Contact support” link pointing to `/support` (404).
-- E2E currently not green:
-  - Chromium: failures in dashboard navigation timing + theme toggle banner targeting (`T-002`).
-  - Firefox/WebKit: missing local browser executables by default (`T-003`).
+- E2E status:
+  - Chromium dashboard spec stabilized (`T-002`).
+  - Local/CI browser install guidance is documented and a Chromium-only script alias exists (`T-003`).
 
 ## Milestones
 
@@ -30,7 +30,7 @@ T-006 (DONE)  Navbar “Sign up” → /register (remove /signup 404)
 T-007 (DONE)  Add /privacy /terms /contact (remove legal 404s)
 T-009 (DONE)  Reset password “Contact support” → /contact (remove /support 404)
 
-T-002 (P0)  Chromium E2E: /dashboard load + theme toggle banner
+T-002 (DONE)  Chromium E2E: /dashboard load + theme toggle banner
   |
   +--> T-008 (P1)  Trip create flow: fix /dashboard/trips/create dead link
 
@@ -50,8 +50,7 @@ T-005 (P1)  Supabase RLS + Storage policy audit (least privilege)
 
 ## Lane Assignment Suggestions (v1.0.0)
 
-- Lane D: `T-002` (P0)
-- Lane D/F: `T-003` (P1)
+- Lane D: `T-003` (P1) (keep E2E guidance stable; expand critical-journey coverage only after remaining P1s land)
 - Lane F: `T-004` (P1)
 - Lane B: `T-005` (P1)
 - Lane A/C: `T-008` (P1)
@@ -77,7 +76,7 @@ T-005 (P1)  Supabase RLS + Storage policy audit (least privilege)
 - Auth-dependent flows are hard to verify without a seeded Supabase dev project.
   - Mitigation: `T-004` must include a local/dev Supabase bootstrap + seed path; `T-005` must align RLS with that seed.
 - Dashboard E2E failures may mask deeper route wiring issues.
-  - Mitigation: Fix `T-002` first, then immediately validate the trip-create path (`T-008`) in a real browser.
+  - Mitigation: `T-002` is complete; validate the trip-create path (`T-008`) next in a real browser.
 - CI flakiness from Playwright browser installs.
   - Mitigation: `T-003` to standardize browser install steps and CI caching assumptions.
 
