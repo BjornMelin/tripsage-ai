@@ -183,7 +183,7 @@ Minimum setup:
 1. Set `HMAC_SECRET` in Vercel (prod + preview if using webhooks in preview).
 2. Configure Supabase to emit HTTP requests to the Vercel endpoints when relevant tables change.
    - The SQL trigger-based approach described in `docs/specs/active/0021-spec-supabase-webhooks-vercel-consolidation.md` matches the expected payload/headers.
-   - If you use `pg_net`, Supabase provides a debugging guide: https://supabase.com/docs/guides/troubleshooting/webhook-debugging-guide-M8sk47
+   - If you use `pg_net`, Supabase provides a debugging guide: https://supabase.com/docs/guides/troubleshooting/webhook-debugging-guide
 
 ## 5) Upstash setup (minimum viable)
 
@@ -260,7 +260,7 @@ After deploy (or local `pnpm dev`), verify:
 - Supabase API keys: https://supabase.com/docs/guides/api/api-keys
 - Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
 - Supabase Storage access control: https://supabase.com/docs/guides/storage/security/access-control
-- Supabase pg_net webhook debugging: https://supabase.com/docs/guides/troubleshooting/webhook-debugging-guide-M8sk47
+- Supabase pg_net webhook debugging: https://supabase.com/docs/guides/troubleshooting/webhook-debugging-guide
 - Upstash Redis connect: https://upstash.com/docs/redis/howto/connectwithupstashredis
 - Upstash QStash signature verification: https://upstash.com/docs/qstash/howto/signature
 - Upstash QStash key rotation: https://upstash.com/docs/qstash/howto/roll-signing-keys

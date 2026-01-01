@@ -132,7 +132,7 @@ Deployment was not “one-click obvious” yet:
 - Supabase auth redirect URLs: https://supabase.com/docs/guides/auth/redirect-urls
 - Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
 - Supabase Storage access control: https://supabase.com/docs/guides/storage/security/access-control
-- Supabase pg_net webhook debugging: https://supabase.com/docs/guides/troubleshooting/webhook-debugging-guide-M8sk47
+- Supabase pg_net webhook debugging: https://supabase.com/docs/guides/troubleshooting/webhook-debugging-guide
 - Upstash Redis connect: https://upstash.com/docs/redis/howto/connectwithupstashredis
 - Upstash QStash signature verification: https://upstash.com/docs/qstash/howto/signature
 - Upstash QStash key rotation: https://upstash.com/docs/qstash/howto/roll-signing-keys
