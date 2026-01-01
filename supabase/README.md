@@ -589,8 +589,8 @@ supabase db reset --debug
 ### Integration Testing
 
 ```bash
-# Run frontend integration tests
-cd ../frontend && pnpm test:e2e
+# Run frontend E2E (Chromium-only)
+cd .. && pnpm test:e2e:chromium
 ```
 
 ### Performance Testing

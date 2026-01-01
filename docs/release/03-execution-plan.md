@@ -70,7 +70,7 @@ T-005 (P1)  Supabase RLS + Storage policy audit (least privilege)
   - `pnpm test:affected`
 - Browser verification:
   - Prefer Next DevTools `browser_eval` for deterministic navigate → snapshot → interact → snapshot validation.
-  - If adding/changing E2E specs, ensure `pnpm test:e2e` and `pnpm exec playwright test --project=chromium` pass.
+  - If adding/changing E2E specs, ensure `pnpm test:e2e:chromium` passes (or `pnpm exec playwright test --project=chromium`). Run `pnpm test:e2e` when validating the full browser matrix.
 
 ## Risks & Mitigations (ship-focused)
 

@@ -98,7 +98,7 @@ pnpm test
 ## Development Workflow
 
 - **Lint/format/type:** `pnpm biome:check`, `pnpm biome:fix`, `pnpm type-check`
-- **Tests:** `pnpm test` (or `--project=<name>`), `pnpm test:e2e` for Playwright
+- **Tests:** `pnpm test` (or `--project=<name>`), `pnpm test:e2e:chromium` for Playwright (or `pnpm test:e2e` for the full browser matrix)
 - **Troubleshooting:** restart TS server, re-run `pnpm type-check`, verify env loaded (`env | grep SUPABASE`)
 
 ## Next Steps

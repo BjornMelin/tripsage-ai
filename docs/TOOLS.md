@@ -48,4 +48,5 @@ Official docs index URL: https://nextjs.org/docs/llms.txt
 - Types: `pnpm type-check`
 - Tests: `pnpm test:affected`
 - Browser validation: `next-devtools.browser_eval` flows documented per task.
-- E2E suite: `pnpm test:e2e` (runs all configured browser projects; may require `pnpm exec playwright install`)
+- E2E (recommended local default): `pnpm test:e2e:chromium` (fresh machine: `pnpm exec playwright install chromium`)
+- E2E (all browsers): `pnpm test:e2e` (may require `pnpm exec playwright install`)

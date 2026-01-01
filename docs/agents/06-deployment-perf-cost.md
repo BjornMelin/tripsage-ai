@@ -17,7 +17,7 @@ Role: Make v1.0.0 deployable and cost-safe on free tiers, with sane caching and 
 ## Verification
 
 - `pnpm build`
-- `pnpm test:e2e` (if runtime changes impact browser flows; also require Next DevTools `browser_eval` steps for changed UX)
+- `pnpm test:e2e:chromium` (if runtime changes impact browser flows; run `pnpm test:e2e` when validating the full browser matrix; also require Next DevTools `browser_eval` steps for changed UX)
 
 ## When stuck
 

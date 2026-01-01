@@ -39,7 +39,7 @@ Common operational env vars (non-exhaustive, names only):
 ## Deployment Checklist
 
 - Build passes locally: `pnpm build`
-- E2E passes locally: `pnpm test:e2e`
+- E2E passes locally (Chromium): `pnpm test:e2e:chromium` (fresh machine: `pnpm exec playwright install chromium`)
 - Supabase migrations applied
 - RLS policies reviewed and enabled
 - Upstash keys configured (rate limiting, QStash signing)

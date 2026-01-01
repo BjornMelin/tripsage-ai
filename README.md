@@ -111,7 +111,9 @@ pnpm dev            # Next.js dev server (includes API routes)
 pnpm type-check
 pnpm biome:check
 pnpm test           # Vitest
-pnpm test:e2e       # Playwright
+pnpm exec playwright install chromium  # one-time browser install (fresh machine)
+pnpm test:e2e:chromium                # Playwright (Chromium-only; recommended local default)
+pnpm test:e2e                         # Playwright (all configured browsers)
 
 # Supabase tooling (optional)
 make supa.link PROJECT_REF=...

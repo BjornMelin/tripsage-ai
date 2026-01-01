@@ -208,6 +208,7 @@ throw error; // Let withApiGuards handle unknown errors
 
 - **Principle:** Test behavior, not implementation. Lightest test that proves behavior: unit → component → API → integration → E2E.
 - **Framework:** Vitest + jsdom, Playwright (e2e). Tests: `src/**/__tests__`; mocks: `src/test`; factories: `@/test/factories`.
+- **Playwright E2E:** Prefer `pnpm test:e2e:chromium` (Chromium-only). Use `pnpm test:e2e` for the full browser matrix. For Playwright CLI flags (headed/ui/grep), prefer `pnpm exec playwright ...` (pnpm script arg forwarding inserts `--`).
 - **Environment (MANDATORY):** `/** @vitest-environment jsdom */` first line for DOM/React; `node` for routes/actions.
 - **MSW-first:** Network mocking via MSW only; never `vi.mock("fetch")`. Handlers in `src/test/msw/handlers/*`.
 - **Mock order:** Mock `next/headers` BEFORE importing modules that read cookies. Use `vi.hoisted()` for spies.

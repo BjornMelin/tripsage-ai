@@ -30,7 +30,8 @@ This repo is organized for parallel Codex sessions to implement tasks without co
   - `pnpm type-check`
   - `pnpm test:affected`
 - E2E-impacting changes should run:
-  - `pnpm test:e2e`
+  - `pnpm test:e2e:chromium` (or `pnpm exec playwright test --project=chromium`)
+  - `pnpm test:e2e` (full browser matrix, when relevant)
 
 ## Browser Evidence (Next DevTools `browser_eval`)
 

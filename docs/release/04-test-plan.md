@@ -12,9 +12,12 @@
 - Targeted tests: `pnpm test:affected`
 - Full suite: `pnpm test`
 - Browser automation (manual but deterministic): Next DevTools `browser_eval` (see task files for per-flow steps)
+- E2E (recommended local default, Chromium-only): `pnpm test:e2e:chromium` (or `pnpm exec playwright test --project=chromium`)
 - E2E (all configured browsers): `pnpm test:e2e`
-- E2E (Chromium-only): `pnpm exec playwright test --project=chromium`
-- Install Playwright browsers: `pnpm exec playwright install`
+- Install Playwright browsers:
+  - Chromium-only: `pnpm exec playwright install chromium`
+  - All (chromium/firefox/webkit): `pnpm exec playwright install`
+  - Linux deps (Ubuntu/WSL/CI): `pnpm exec playwright install-deps chromium` (or `pnpm exec playwright install --with-deps chromium`)
 
 ## E2E Strategy (Playwright)
 
@@ -38,6 +41,7 @@ For user-facing changes, add an explicit verification section to the task file u
 ### Local gotchas
 
 - Don’t run `pnpm dev` at the same time as Playwright’s `webServer` (used by `pnpm test:e2e`). Next.js will fail with `.next/dev/lock` held by the other instance.
+- Avoid `pnpm test:e2e -- --project=chromium` — pnpm forwards args as `playwright test -- --project=chromium` (the extra `--` breaks Playwright option parsing). Use `pnpm test:e2e:chromium` or `pnpm exec playwright test --project=chromium`.
 
 ## Test Data
 

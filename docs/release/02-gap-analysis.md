@@ -22,7 +22,7 @@ This document lists **missing, broken, unwired, or incomplete** parts discovered
 
 ## P1 — Must-haves
 
-- **T-003 (OPEN):** `pnpm test:e2e` fails in fresh env due to missing Firefox/WebKit browser installs; docs/config needed for runnable defaults. See `docs/tasks/T-003-playwright-e2e-runnable.md`.
+- **T-003 (DONE):** Added Chromium-only script alias + documented Playwright browser install requirements (incl pnpm arg-forwarding gotcha). See `docs/tasks/T-003-playwright-e2e-runnable.md`.
 - **T-004 (OPEN):** Deployment readiness decision + consolidated env inventory/runbook. See `docs/tasks/T-004-deployment-readiness.md`.
 - **T-005 (OPEN):** Supabase RLS + Storage policy audit for least privilege. See `docs/tasks/T-005-supabase-rls-storage-audit.md`.
 - **T-008 (OPEN):** “Plan New Trip” links to `/dashboard/trips/create` but route is missing; implement create flow or reroute CTA. See `docs/tasks/T-008-trip-create-route-or-flow.md`.

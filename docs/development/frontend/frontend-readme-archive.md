@@ -358,7 +358,8 @@ pnpm test:short     # Run tests with short timeouts
 pnpm test:ui        # Run tests with UI
 pnpm test:coverage  # Run tests with coverage
 pnpm test:benchmark # Run performance benchmarks
-pnpm test:e2e       # Run E2E tests
+pnpm test:e2e:chromium # Run E2E tests (Chromium-only)
+pnpm test:e2e          # Run E2E tests (all configured browsers)
 ```
 
 #### Performance Benchmarks

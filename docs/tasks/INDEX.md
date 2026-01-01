@@ -13,7 +13,7 @@ T-007 | P0 | DONE | release-orchestrator | Add `/privacy`, `/terms`, `/contact` 
 
 ## P1
 
-T-003 | P1 | UNCLAIMED | - | Make `pnpm test:e2e` runnable (browser installs/docs/config) | -
+T-003 | P1 | DONE | codex-session-t003-a | Make `pnpm test:e2e` runnable (browser installs/docs/config) | -
 T-004 | P1 | UNCLAIMED | - | Deployment readiness (Vercel deploy strategy + env inventory) | -
 T-005 | P1 | UNCLAIMED | - | Supabase RLS + Storage policy audit (least privilege) | -
 T-008 | P1 | UNCLAIMED | - | Implement “Plan New Trip” create flow (fix /dashboard/trips/create) | T-002
