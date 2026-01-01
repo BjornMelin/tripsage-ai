@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   title: "Contact - TripSage AI",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  await Promise.resolve();
   return (
     <main className="container py-12 space-y-8">
       <header className="space-y-2">

@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   title: "Terms of Service - TripSage AI",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  await Promise.resolve();
   return (
     <main className="container py-12 space-y-8">
       <header className="space-y-2">
