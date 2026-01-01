@@ -7,7 +7,7 @@
 import { SettingsIcon, ShieldIcon, SlidersIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
 import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
 import { PreferencesSection } from "@/components/features/profile/preferences-section";
@@ -26,38 +26,25 @@ import { useAuthCore } from "@/stores/auth/auth-core";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { initialize, isLoading, user } = useAuthCore();
-  const [isInitializing, setIsInitializing] = useState(() => user === null);
+  const hasInitialized = useAuthCore((state) => state.hasInitialized);
+  const initialize = useAuthCore((state) => state.initialize);
+  const isLoading = useAuthCore((state) => state.isLoading);
+  const user = useAuthCore((state) => state.user);
 
   useEffect(() => {
-    if (!isInitializing) return;
-
-    let cancelled = false;
-
-    initialize()
-      .catch(() => {
-        // initialize swallows expected errors; ignore unexpected rejections.
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsInitializing(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [initialize, isInitializing]);
+    if (hasInitialized || isLoading) return;
+    initialize().catch(() => undefined);
+  }, [hasInitialized, initialize, isLoading]);
 
   useEffect(() => {
-    if (isLoading || isInitializing) return;
+    if (!hasInitialized || isLoading) return;
     if (user) return;
     const query = new URLSearchParams({ from: ROUTES.dashboard.profile }).toString();
     const target = `${ROUTES.login}?${query}`;
     router.replace(target);
-  }, [isInitializing, isLoading, router, user]);
+  }, [hasInitialized, isLoading, router, user]);
 
-  if (isLoading || isInitializing) {
+  if ((!hasInitialized || isLoading) && !user) {
     return (
       <div
         className="container mx-auto py-6 space-y-8"

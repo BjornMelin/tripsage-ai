@@ -16,6 +16,7 @@ const computeUserDisplayName = (user: AuthUser | null): string => getDisplayName
 interface AuthCoreState {
   // State
   isAuthenticated: boolean;
+  hasInitialized: boolean;
   user: AuthUser | null;
   error: string | null;
   isLoading: boolean;
@@ -39,6 +40,7 @@ interface AuthCoreState {
 export const authCoreInitialState: Pick<
   AuthCoreState,
   | "isAuthenticated"
+  | "hasInitialized"
   | "user"
   | "error"
   | "isLoading"
@@ -47,6 +49,7 @@ export const authCoreInitialState: Pick<
   | "userDisplayName"
 > = {
   error: null,
+  hasInitialized: false,
   isAuthenticated: false,
   isLoading: false,
   isLoggingIn: false,
@@ -70,6 +73,9 @@ export const useAuthCore = create<AuthCoreState>()(
         },
 
         initialize: async () => {
+          if (_get().isLoading) return;
+          set({ isLoading: true });
+
           // Check if user is already authenticated via Supabase SSR session.
           try {
             const response = await fetch("/auth/me", {
@@ -87,14 +93,24 @@ export const useAuthCore = create<AuthCoreState>()(
                 return;
               }
             }
+            set({
+              isAuthenticated: false,
+              user: null,
+              userDisplayName: "",
+            });
           } catch (_error) {
             // Swallow errors and fall through to resetting state.
+            set({
+              isAuthenticated: false,
+              user: null,
+              userDisplayName: "",
+            });
+          } finally {
+            set({
+              hasInitialized: true,
+              isLoading: false,
+            });
           }
-          set({
-            isAuthenticated: false,
-            user: null,
-            userDisplayName: "",
-          });
         },
 
         logout: async () => {
