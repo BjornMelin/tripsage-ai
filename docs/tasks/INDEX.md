@@ -7,7 +7,7 @@ Columns: `ID | Priority | Status | Owner | Summary | Dependencies`
 ## P0
 
 T-001 | P0 | DONE | release-orchestrator | Dev server env validation blocks `pnpm dev` | -
-T-002 | P0 | UNCLAIMED | - | Fix Chromium e2e failures (dashboard load + theme toggle banner) | T-001
+T-002 | P0 | DONE | codex-session-t002-a | Fix Chromium e2e failures (dashboard load + theme toggle banner) | T-001
 T-006 | P0 | DONE | release-orchestrator | Fix marketing navbar “Sign up” link (/signup 404) | -
 T-007 | P0 | DONE | release-orchestrator | Add `/privacy`, `/terms`, `/contact` pages (fix broken legal links) | -
 T-010 | P0 | DONE | codex-session-t010-a | UI audit: fix auth page layout + remove duplicate navbar | -
