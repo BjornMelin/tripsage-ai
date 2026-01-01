@@ -39,28 +39,6 @@ export default async function ResetPasswordPage() {
 
         {/* Form */}
         <ResetPasswordForm />
-
-        {/* Additional help */}
-        <div className="text-center space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Remember your password?{" "}
-            <Link
-              href={ROUTES.login}
-              className="text-primary hover:underline font-medium"
-            >
-              Sign in instead
-            </Link>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Need help?{" "}
-            <Link
-              href={ROUTES.contact}
-              className="text-primary hover:underline font-medium"
-            >
-              Contact support
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
