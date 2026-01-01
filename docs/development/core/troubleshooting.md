@@ -146,8 +146,8 @@ pnpm test TripCard.test.tsx
 **Debug Test Failures:**
 
 ```bash
-# Run with watch mode
-pnpm test --watch
+# Watch mode (note: `pnpm test` runs once)
+pnpm exec vitest
 ```
 
 ## Performance Optimization

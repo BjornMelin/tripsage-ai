@@ -321,7 +321,8 @@ Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determin
 ## Running and Debugging
 
 ```bash
-pnpm test                               # all tests
+pnpm test                               # all tests (single run)
+pnpm exec vitest                        # watch mode (local)
 pnpm test:unit                          # unit tests only
 pnpm test:components                    # component tests only
 pnpm test:api                           # API route tests only

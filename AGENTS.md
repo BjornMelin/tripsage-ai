@@ -231,6 +231,8 @@ Do not return final response until all gates pass for code changes.
 
 **During iteration:** Prefer the smallest relevant shard (`pnpm test:unit`, `pnpm test:api`, `pnpm test:components`, `pnpm test:schemas`, `pnpm test:integration`). Run `pnpm test` only when changing test harness/config (e.g. `vitest.config.ts`, `src/test/**`) or before merging.
 
+**Note:** `pnpm test` runs once (script: `vitest run`). For watch mode locally, use `pnpm exec vitest`.
+
 **If Vitest hangs after finishing:** run `VITEST_DEBUG_OPEN_HANDLES=1 pnpm test` and ensure MSW is not bypassing unhandled requests (`MSW_ON_UNHANDLED_REQUEST=error`).
 
 ### 6.3 Dependency and bundle hygiene (recommended)
