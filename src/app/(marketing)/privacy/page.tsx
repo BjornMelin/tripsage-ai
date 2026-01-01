@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   title: "Privacy Policy - TripSage AI",
 };
 
+// biome-ignore lint/suspicious/useAwait: Next.js `"use cache"` requires an async function export.
 export default async function PrivacyPage() {
-  await Promise.resolve();
   return (
     <main className="container py-12 space-y-8">
       <header className="space-y-2">
