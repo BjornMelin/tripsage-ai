@@ -6,12 +6,12 @@ import "server-only";
 
 import { type DashboardMetrics, dashboardMetricsSchema } from "@schemas/dashboard";
 import { getRedis } from "@/lib/redis";
-import type { ApiMetric } from "@/lib/supabase/database.types";
+import type { Tables } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Metric row shape for api_metrics queries (subset of columns needed). */
-type ApiMetricRow = Pick<ApiMetric, "duration_ms" | "status_code">;
+type ApiMetricRow = Pick<Tables<"api_metrics">, "duration_ms" | "status_code">;
 
 /**
  * Aggregates dashboard metrics from Supabase with Redis caching.

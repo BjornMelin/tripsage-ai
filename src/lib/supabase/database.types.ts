@@ -1,9 +1,3 @@
-/**
- * @fileoverview Supabase generated types with manual patch notes.
- */
-
-// MANUAL PATCH 2025-11-29: trips.notes removed; trips.tags text[]|null added.
-// After Supabase DB migration, regenerate via `supabase gen types typescript --local` and remove this notice.
 export type Json =
   | string
   | number
@@ -959,6 +953,7 @@ export type Database = {
           session_id: string;
           tool_calls: Json;
           tool_results: Json;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
@@ -971,6 +966,7 @@ export type Database = {
           session_id: string;
           tool_calls?: Json;
           tool_results?: Json;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
@@ -983,6 +979,7 @@ export type Database = {
           session_id?: string;
           tool_calls?: Json;
           tool_results?: Json;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -1000,7 +997,25 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      match_turn_embeddings: {
+        Args: {
+          ef_search_override?: number;
+          filter_session_id?: string;
+          filter_user_id?: string;
+          match_count?: number;
+          match_threshold?: number;
+          query_embedding: string;
+        };
+        Returns: {
+          content: Json;
+          created_at: string;
+          role: string;
+          session_id: string;
+          similarity: number;
+          turn_id: string;
+          user_id: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -1011,77 +1026,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      api_metrics: {
-        Row: {
-          id: string;
-          endpoint: string;
-          method: string;
-          status_code: number;
-          duration_ms: number;
-          user_id: string | null;
-          created_at: string;
-          error_type: string | null;
-          rate_limit_key: string | null;
-        };
-        Insert: {
-          id?: string;
-          endpoint: string;
-          method: string;
-          status_code: number;
-          duration_ms: number;
-          user_id?: string | null;
-          created_at?: string;
-          error_type?: string | null;
-          rate_limit_key?: string | null;
-        };
-        Update: {
-          id?: string;
-          endpoint?: string;
-          method?: string;
-          status_code?: number;
-          duration_ms?: number;
-          user_id?: string | null;
-          created_at?: string;
-          error_type?: string | null;
-          rate_limit_key?: string | null;
-        };
-        Relationships: [];
-      };
-      auth_backup_codes: {
-        Row: {
-          code_hash: string;
-          consumed_at: string | null;
-          id: string;
-          issued_at: string;
-          label: string | null;
-          user_id: string;
-        };
-        Insert: {
-          code_hash: string;
-          consumed_at?: string | null;
-          id?: string;
-          issued_at?: string;
-          label?: string | null;
-          user_id: string;
-        };
-        Update: {
-          code_hash?: string;
-          consumed_at?: string | null;
-          id?: string;
-          issued_at?: string;
-          label?: string | null;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "auth_backup_codes_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       accommodation_embeddings: {
         Row: {
           amenities: string | null;
@@ -1112,43 +1056,6 @@ export type Database = {
           name?: string | null;
           source?: string;
           updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-      rag_documents: {
-        Row: {
-          chunk_index: number;
-          content: string;
-          created_at: string;
-          embedding: string | null;
-          fts: unknown | null;
-          id: string;
-          metadata: Json;
-          namespace: string;
-          source_id: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          chunk_index?: number;
-          content: string;
-          created_at?: string;
-          embedding?: string | null;
-          id?: string;
-          metadata?: Json;
-          namespace?: string;
-          source_id?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          chunk_index?: number;
-          content?: string;
-          created_at?: string;
-          embedding?: string | null;
-          id?: string;
-          metadata?: Json;
-          namespace?: string;
-          source_id?: string | null;
-          updated_at?: string;
         };
         Relationships: [];
       };
@@ -1327,6 +1234,69 @@ export type Database = {
           service?: string;
           user_id?: string;
           vault_secret_name?: string;
+        };
+        Relationships: [];
+      };
+      api_metrics: {
+        Row: {
+          created_at: string;
+          duration_ms: number;
+          endpoint: string;
+          error_type: string | null;
+          id: string;
+          method: string;
+          rate_limit_key: string | null;
+          status_code: number;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          duration_ms: number;
+          endpoint: string;
+          error_type?: string | null;
+          id?: string;
+          method: string;
+          rate_limit_key?: string | null;
+          status_code: number;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          duration_ms?: number;
+          endpoint?: string;
+          error_type?: string | null;
+          id?: string;
+          method?: string;
+          rate_limit_key?: string | null;
+          status_code?: number;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      auth_backup_codes: {
+        Row: {
+          code_hash: string;
+          consumed_at: string | null;
+          id: string;
+          issued_at: string;
+          label: string | null;
+          user_id: string;
+        };
+        Insert: {
+          code_hash: string;
+          consumed_at?: string | null;
+          id?: string;
+          issued_at?: string;
+          label?: string | null;
+          user_id: string;
+        };
+        Update: {
+          code_hash?: string;
+          consumed_at?: string | null;
+          id?: string;
+          issued_at?: string;
+          label?: string | null;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -1521,6 +1491,7 @@ export type Database = {
       file_attachments: {
         Row: {
           bucket_name: string;
+          chat_id: string | null;
           chat_message_id: number | null;
           created_at: string | null;
           file_path: string;
@@ -1539,6 +1510,7 @@ export type Database = {
         };
         Insert: {
           bucket_name?: string;
+          chat_id?: string | null;
           chat_message_id?: number | null;
           created_at?: string | null;
           file_path: string;
@@ -1557,6 +1529,7 @@ export type Database = {
         };
         Update: {
           bucket_name?: string;
+          chat_id?: string | null;
           chat_message_id?: number | null;
           created_at?: string | null;
           file_path?: string;
@@ -1574,6 +1547,13 @@ export type Database = {
           virus_scan_status?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "file_attachments_chat_id_fkey";
+            columns: ["chat_id"];
+            isOneToOne: false;
+            referencedRelation: "chat_sessions";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "file_attachments_chat_message_id_fkey";
             columns: ["chat_message_id"];
@@ -1837,6 +1817,159 @@ export type Database = {
           },
         ];
       };
+      mfa_backup_code_audit: {
+        Row: {
+          count: number;
+          created_at: string;
+          event: string;
+          id: string;
+          ip: string | null;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          count?: number;
+          created_at?: string;
+          event: string;
+          id?: string;
+          ip?: string | null;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: {
+          count?: number;
+          created_at?: string;
+          event?: string;
+          id?: string;
+          ip?: string | null;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      mfa_enrollments: {
+        Row: {
+          challenge_id: string;
+          consumed_at: string | null;
+          expires_at: string;
+          factor_id: string;
+          id: string;
+          issued_at: string;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          challenge_id: string;
+          consumed_at?: string | null;
+          expires_at: string;
+          factor_id: string;
+          id?: string;
+          issued_at?: string;
+          status: string;
+          user_id: string;
+        };
+        Update: {
+          challenge_id?: string;
+          consumed_at?: string | null;
+          expires_at?: string;
+          factor_id?: string;
+          id?: string;
+          issued_at?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          avatar_url: string | null;
+          created_at: string;
+          full_name: string | null;
+          id: string;
+          is_admin: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          created_at?: string;
+          full_name?: string | null;
+          id: string;
+          is_admin?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          created_at?: string;
+          full_name?: string | null;
+          id?: string;
+          is_admin?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rag_documents: {
+        Row: {
+          chat_id: string | null;
+          chunk_index: number | null;
+          content: string;
+          created_at: string;
+          embedding: string | null;
+          fts: unknown;
+          id: string;
+          metadata: Json | null;
+          namespace: string;
+          source_id: string | null;
+          trip_id: number | null;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          chat_id?: string | null;
+          chunk_index?: number | null;
+          content: string;
+          created_at?: string;
+          embedding?: string | null;
+          fts?: unknown;
+          id?: string;
+          metadata?: Json | null;
+          namespace?: string;
+          source_id?: string | null;
+          trip_id?: number | null;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          chat_id?: string | null;
+          chunk_index?: number | null;
+          content?: string;
+          created_at?: string;
+          embedding?: string | null;
+          fts?: unknown;
+          id?: string;
+          metadata?: Json | null;
+          namespace?: string;
+          source_id?: string | null;
+          trip_id?: number | null;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rag_documents_chat_id_fkey";
+            columns: ["chat_id"];
+            isOneToOne: false;
+            referencedRelation: "chat_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rag_documents_trip_id_fkey";
+            columns: ["trip_id"];
+            isOneToOne: false;
+            referencedRelation: "trips";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       search_activities: {
         Row: {
           activity_type: string | null;
@@ -1878,47 +2011,6 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
-      };
-      mfa_enrollments: {
-        Row: {
-          challenge_id: string;
-          consumed_at: string | null;
-          expires_at: string;
-          factor_id: string;
-          id: string;
-          issued_at: string;
-          status: string;
-          user_id: string;
-        };
-        Insert: {
-          challenge_id: string;
-          consumed_at?: string | null;
-          expires_at: string;
-          factor_id: string;
-          id?: string;
-          issued_at?: string;
-          status: string;
-          user_id: string;
-        };
-        Update: {
-          challenge_id?: string;
-          consumed_at?: string | null;
-          expires_at?: string;
-          factor_id?: string;
-          id?: string;
-          issued_at?: string;
-          status?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "mfa_enrollments_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       search_destinations: {
         Row: {
@@ -2103,10 +2195,10 @@ export type Database = {
           flexibility: Json | null;
           id: number;
           name: string;
-          tags: string[] | null;
           search_metadata: Json | null;
           start_date: string;
           status: string;
+          tags: string[] | null;
           travelers: number;
           trip_type: string;
           updated_at: string | null;
@@ -2121,10 +2213,10 @@ export type Database = {
           flexibility?: Json | null;
           id?: never;
           name: string;
-          tags?: string[] | null;
           search_metadata?: Json | null;
           start_date: string;
           status?: string;
+          tags?: string[] | null;
           travelers: number;
           trip_type?: string;
           updated_at?: string | null;
@@ -2139,10 +2231,10 @@ export type Database = {
           flexibility?: Json | null;
           id?: never;
           name?: string;
-          tags?: string[] | null;
           search_metadata?: Json | null;
           start_date?: string;
           status?: string;
+          tags?: string[] | null;
           travelers?: number;
           trip_type?: string;
           updated_at?: string | null;
@@ -2165,6 +2257,112 @@ export type Database = {
         };
         Relationships: [];
       };
+      webhook_configs: {
+        Row: {
+          created_at: string;
+          enabled: boolean;
+          endpoint: string;
+          id: string;
+          name: string;
+          secret: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          enabled?: boolean;
+          endpoint: string;
+          id?: string;
+          name: string;
+          secret?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          enabled?: boolean;
+          endpoint?: string;
+          id?: string;
+          name?: string;
+          secret?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      webhook_events: {
+        Row: {
+          config_id: string | null;
+          created_at: string;
+          delivered_at: string | null;
+          delivery_status: string;
+          event_type: string;
+          id: string;
+          last_error: string | null;
+          payload: Json;
+        };
+        Insert: {
+          config_id?: string | null;
+          created_at?: string;
+          delivered_at?: string | null;
+          delivery_status?: string;
+          event_type: string;
+          id?: string;
+          last_error?: string | null;
+          payload: Json;
+        };
+        Update: {
+          config_id?: string | null;
+          created_at?: string;
+          delivered_at?: string | null;
+          delivery_status?: string;
+          event_type?: string;
+          id?: string;
+          last_error?: string | null;
+          payload?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_config_id_fkey";
+            columns: ["config_id"];
+            isOneToOne: false;
+            referencedRelation: "webhook_configs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      webhook_logs: {
+        Row: {
+          attempt_number: number;
+          created_at: string;
+          event_id: string | null;
+          id: number;
+          response_body: string | null;
+          status_code: number | null;
+        };
+        Insert: {
+          attempt_number?: number;
+          created_at?: string;
+          event_id?: string | null;
+          id?: never;
+          response_body?: string | null;
+          status_code?: number | null;
+        };
+        Update: {
+          attempt_number?: number;
+          created_at?: string;
+          event_id?: string | null;
+          id?: never;
+          response_body?: string | null;
+          status_code?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "webhook_events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -2183,8 +2381,20 @@ export type Database = {
           version_id: string;
         }[];
       };
+      auth_user_emails_by_ids: {
+        Args: { p_user_ids: string[] };
+        Returns: {
+          email: string;
+          user_id: string;
+        }[];
+      };
+      auth_user_id_by_email: { Args: { p_email: string }; Returns: string };
       delete_user_api_key: {
         Args: { p_service: string; p_user_id: string };
+        Returns: undefined;
+      };
+      delete_user_gateway_config: {
+        Args: { p_user_id: string };
         Returns: undefined;
       };
       delete_user_memories: {
@@ -2192,21 +2402,6 @@ export type Database = {
         Returns: {
           deleted_sessions: number;
           deleted_turns: number;
-        }[];
-      };
-      delete_user_gateway_config: {
-        Args: { p_user_id: string };
-        Returns: undefined;
-      };
-      auth_user_id_by_email: {
-        Args: { p_email: string };
-        Returns: string;
-      };
-      auth_user_emails_by_ids: {
-        Args: { p_user_ids: string[] };
-        Returns: {
-          user_id: string;
-          email: string | null;
         }[];
       };
       extract_trip_id_from_path: {
@@ -2225,6 +2420,28 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: string;
       };
+      hybrid_rag_search: {
+        Args: {
+          filter_namespace?: string;
+          keyword_weight?: number;
+          match_count?: number;
+          match_threshold?: number;
+          query_embedding: string;
+          query_text: string;
+          semantic_weight?: number;
+        };
+        Returns: {
+          chunk_index: number;
+          combined_score: number;
+          content: string;
+          id: string;
+          keyword_rank: number;
+          metadata: Json;
+          namespace: string;
+          similarity: number;
+          source_id: string;
+        }[];
+      };
       insert_user_api_key: {
         Args: { p_api_key: string; p_service: string; p_user_id: string };
         Returns: string;
@@ -2232,7 +2449,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean };
       match_accommodation_embeddings: {
         Args: {
-          ef_search_override?: number | null;
+          ef_search_override?: number;
           match_count?: number;
           match_threshold?: number;
           query_embedding: string;
@@ -2240,64 +2457,23 @@ export type Database = {
         Returns: {
           id: string;
           similarity: number;
-        }[];
-      };
-      match_turn_embeddings: {
-        Args: {
-          query_embedding: string;
-          match_threshold?: number;
-          match_count?: number;
-          filter_user_id?: string | null;
-          filter_session_id?: string | null;
-          ef_search_override?: number | null;
-        };
-        Returns: {
-          turn_id: string;
-          session_id: string;
-          user_id: string;
-          content: Json;
-          role: string;
-          similarity: number;
-          created_at: string;
         }[];
       };
       match_rag_documents: {
         Args: {
-          query_embedding: string;
-          filter_namespace?: string | null;
-          match_threshold?: number;
-          match_count?: number;
-        };
-        Returns: {
-          id: string;
-          content: string;
-          metadata: Json;
-          namespace: string;
-          source_id: string | null;
-          chunk_index: number;
-          similarity: number;
-        }[];
-      };
-      hybrid_rag_search: {
-        Args: {
-          query_text: string;
-          query_embedding: string;
-          filter_namespace?: string | null;
+          filter_namespace?: string;
           match_count?: number;
           match_threshold?: number;
-          keyword_weight?: number;
-          semantic_weight?: number;
+          query_embedding: string;
         };
         Returns: {
-          id: string;
+          chunk_index: number;
           content: string;
+          id: string;
           metadata: Json;
           namespace: string;
-          source_id: string | null;
-          chunk_index: number;
           similarity: number;
-          keyword_rank: number;
-          combined_score: number;
+          source_id: string;
         }[];
       };
       replace_backup_codes: {
@@ -2307,16 +2483,28 @@ export type Database = {
       rt_is_session_member: { Args: never; Returns: boolean };
       rt_topic_prefix: { Args: never; Returns: string };
       rt_topic_suffix: { Args: never; Returns: string };
+      show_limit: { Args: never; Returns: number };
+      show_trgm: { Args: { "": string }; Returns: string[] };
       touch_user_api_key: {
         Args: { p_service: string; p_user_id: string };
         Returns: undefined;
       };
+      try_cast_bigint: { Args: { p_value: string }; Returns: number };
+      try_cast_uuid: { Args: { p_value: string }; Returns: string };
       upsert_user_gateway_config: {
         Args: { p_base_url: string; p_user_id: string };
         Returns: undefined;
       };
       user_has_trip_access: {
-        Args: { trip_id: number; user_id: string };
+        Args: { p_trip_id: number; p_user_id: string };
+        Returns: boolean;
+      };
+      user_has_trip_edit_access: {
+        Args: { p_trip_id: number; p_user_id: string };
+        Returns: boolean;
+      };
+      user_is_trip_owner: {
+        Args: { p_trip_id: number; p_user_id: string };
         Returns: boolean;
       };
     };
@@ -2749,26 +2937,44 @@ export type Database = {
         Returns: undefined;
       };
       operation: { Args: never; Returns: string };
-      search: {
-        Args: {
-          bucketname: string;
-          levels?: number;
-          limits?: number;
-          offsets?: number;
-          prefix: string;
-          search?: string;
-          sortcolumn?: string;
-          sortorder?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
+      search:
+        | {
+            Args: {
+              bucketname: string;
+              levels?: number;
+              limits?: number;
+              offsets?: number;
+              prefix: string;
+            };
+            Returns: {
+              created_at: string;
+              id: string;
+              last_accessed_at: string;
+              metadata: Json;
+              name: string;
+              updated_at: string;
+            }[];
+          }
+        | {
+            Args: {
+              bucketname: string;
+              levels?: number;
+              limits?: number;
+              offsets?: number;
+              prefix: string;
+              search?: string;
+              sortcolumn?: string;
+              sortorder?: string;
+            };
+            Returns: {
+              created_at: string;
+              id: string;
+              last_accessed_at: string;
+              metadata: Json;
+              name: string;
+              updated_at: string;
+            }[];
+          };
       search_legacy_v1: {
         Args: {
           bucketname: string;
@@ -2809,27 +3015,45 @@ export type Database = {
           updated_at: string;
         }[];
       };
-      search_v2: {
-        Args: {
-          bucket_name: string;
-          levels?: number;
-          limits?: number;
-          prefix: string;
-          sort_column?: string;
-          sort_column_after?: string;
-          sort_order?: string;
-          start_after?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
+      search_v2:
+        | {
+            Args: {
+              bucket_name: string;
+              levels?: number;
+              limits?: number;
+              prefix: string;
+              start_after?: string;
+            };
+            Returns: {
+              created_at: string;
+              id: string;
+              key: string;
+              metadata: Json;
+              name: string;
+              updated_at: string;
+            }[];
+          }
+        | {
+            Args: {
+              bucket_name: string;
+              levels?: number;
+              limits?: number;
+              prefix: string;
+              sort_column?: string;
+              sort_column_after?: string;
+              sort_order?: string;
+              start_after?: string;
+            };
+            Returns: {
+              created_at: string;
+              id: string;
+              key: string;
+              last_accessed_at: string;
+              metadata: Json;
+              name: string;
+              updated_at: string;
+            }[];
+          };
     };
     Enums: {
       buckettype: "STANDARD" | "ANALYTICS";
@@ -2990,59 +3214,3 @@ export const Constants = {
     },
   },
 } as const;
-
-// Helper type aliases for ergonomic access to generated helpers
-type PublicTables = keyof DefaultSchema["Tables"];
-type SchemaName = keyof DatabaseWithoutInternals;
-
-export type InsertTables<TableName extends PublicTables> =
-  DefaultSchema["Tables"][TableName] extends { Insert: infer I } ? I : never;
-export type InsertTablesInSchema<
-  Schema extends SchemaName,
-  TableName extends keyof DatabaseWithoutInternals[Schema]["Tables"],
-> = DatabaseWithoutInternals[Schema]["Tables"][TableName] extends { Insert: infer I }
-  ? I
-  : never;
-
-export type UpdateTables<TableName extends PublicTables> =
-  DefaultSchema["Tables"][TableName] extends { Update: infer U } ? U : never;
-export type UpdateTablesInSchema<
-  Schema extends SchemaName,
-  TableName extends keyof DatabaseWithoutInternals[Schema]["Tables"],
-> = DatabaseWithoutInternals[Schema]["Tables"][TableName] extends { Update: infer U }
-  ? U
-  : never;
-
-// Convenience aliases for common tables
-export type Trip = Tables<"trips">;
-export type TripInsert = InsertTables<"trips">;
-export type TripUpdate = UpdateTables<"trips">;
-
-export type Accommodation = Tables<"accommodations">;
-export type AccommodationInsert = InsertTables<"accommodations">;
-export type AccommodationUpdate = UpdateTables<"accommodations">;
-
-export type ApiMetric = Tables<"api_metrics">;
-export type ApiMetricInsert = InsertTables<"api_metrics">;
-export type ApiMetricUpdate = UpdateTables<"api_metrics">;
-
-export type FileAttachment = Tables<"file_attachments">;
-export type FileAttachmentInsert = InsertTables<"file_attachments">;
-export type FileAttachmentUpdate = UpdateTables<"file_attachments">;
-export type UploadStatus = FileAttachment["upload_status"];
-export type VirusScanStatus = FileAttachment["virus_scan_status"];
-
-export type ChatSession = Tables<"chat_sessions">;
-export type ChatSessionInsert = InsertTables<"chat_sessions">;
-export type ChatMessage = Tables<"chat_messages">;
-export type ChatMessageInsert = InsertTables<"chat_messages">;
-export type ChatToolCall = Tables<"chat_tool_calls">;
-export type ChatToolCallInsert = InsertTables<"chat_tool_calls">;
-export type ChatRole = ChatMessage["role"];
-
-export type MemorySession = Tables<{ schema: "memories" }, "sessions">;
-export type MemorySessionInsert = InsertTablesInSchema<"memories", "sessions">;
-export type MemorySessionUpdate = UpdateTablesInSchema<"memories", "sessions">;
-export type MemoryTurn = Tables<{ schema: "memories" }, "turns">;
-export type MemoryTurnInsert = InsertTablesInSchema<"memories", "turns">;
-export type MemoryTurnUpdate = UpdateTablesInSchema<"memories", "turns">;

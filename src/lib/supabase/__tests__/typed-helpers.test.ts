@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
-import type { InsertTables, Tables, UpdateTables } from "@/lib/supabase/database.types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/lib/supabase/typed-helpers";
 import {
   deleteSingle,
@@ -86,7 +86,7 @@ describe("typed-helpers", () => {
   describe("insertSingle", () => {
     it("returns the inserted row for trips", async () => {
       const { client, chain } = makeClientWithChain();
-      const payload: InsertTables<"trips"> = {
+      const payload: TablesInsert<"trips"> = {
         budget: 1000,
         destination: "NYC",
         end_date: "2025-01-10T00:00:00Z",
@@ -129,7 +129,7 @@ describe("typed-helpers", () => {
   describe("updateSingle", () => {
     it("applies filters and returns the updated row", async () => {
       const { client, chain } = makeClientWithChain();
-      const updates: Partial<UpdateTables<"trips">> = { name: "Updated" };
+      const updates: Partial<TablesUpdate<"trips">> = { name: "Updated" };
       const row = mockTripsRow({ id: 2, name: "Updated" });
 
       chain.single.mockResolvedValue({ data: row, error: null });
@@ -249,7 +249,7 @@ describe("typed-helpers", () => {
   describe("upsertSingle", () => {
     it("returns the upserted row for trips", async () => {
       const { client, chain } = makeClientWithChain();
-      const payload: InsertTables<"trips"> = {
+      const payload: TablesInsert<"trips"> = {
         budget: 1500,
         destination: "LAX",
         end_date: "2025-03-15T00:00:00Z",

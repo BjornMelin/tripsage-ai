@@ -89,7 +89,7 @@ export async function retrieveDocuments(
       // Execute hybrid search RPC
       const { data, error } = await supabase.rpc("hybrid_rag_search", {
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
-        filter_namespace: config.namespace ?? null,
+        filter_namespace: config.namespace,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
         keyword_weight: config.keywordWeight,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
@@ -200,7 +200,7 @@ export async function semanticSearch(params: {
   // Call simpler match function
   const { data, error } = await supabase.rpc("match_rag_documents", {
     // biome-ignore lint/style/useNamingConvention: RPC parameter name
-    filter_namespace: namespace ?? null,
+    filter_namespace: namespace,
     // biome-ignore lint/style/useNamingConvention: RPC parameter name
     match_count: limit,
     // biome-ignore lint/style/useNamingConvention: RPC parameter name

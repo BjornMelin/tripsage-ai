@@ -23,7 +23,7 @@ import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
-import type { UpdateTables } from "@/lib/supabase/database.types";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 
 /** Trip type alias using canonical schema from @schemas/trips. */
 export type Trip = UiTrip;
@@ -119,7 +119,7 @@ export function useCreateTrip() {
   });
 }
 
-type TripTableUpdate = Omit<UpdateTables<"trips">, "id">;
+type TripTableUpdate = Omit<TablesUpdate<"trips">, "id">;
 
 /** Data structure for updating a trip. */
 export type UpdateTripData = TripUpdateInput & TripTableUpdate;

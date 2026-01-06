@@ -19,7 +19,7 @@ import {
   uiMessageToMemoryTurn,
 } from "@/lib/memory/turn-utils";
 import { secureUuid } from "@/lib/security/random";
-import type { InsertTables, Json } from "@/lib/supabase/database.types";
+import type { Json, TablesInsert } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 
@@ -216,7 +216,7 @@ export async function handleChatStream(
             userId,
           });
 
-          const chatMessagePayload: InsertTables<"chat_messages"> & {
+          const chatMessagePayload: TablesInsert<"chat_messages"> & {
             // Some deployments may expose request_id; keep optional to avoid schema breakage
             // biome-ignore lint/style/useNamingConvention: Database field name
             request_id?: string | null;

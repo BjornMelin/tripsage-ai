@@ -31,10 +31,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type UpdateTripData, useTrip, useUpdateTrip } from "@/hooks/use-trips";
 import { keys } from "@/lib/keys";
-import type { UpdateTables } from "@/lib/supabase/database.types";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 import { statusVariants } from "@/lib/variants/status";
 
-type TripUpdate = UpdateTables<"trips">;
+type TripUpdate = TablesUpdate<"trips">;
 type TripUpdateKey = keyof TripUpdate;
 
 /**

@@ -19,7 +19,7 @@ import {
   requireUserId,
   validateSchema,
 } from "@/lib/api/route-helpers";
-import type { InsertTables } from "@/lib/supabase/database.types";
+import type { TablesInsert } from "@/lib/supabase/database.types";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
 
 const updateUserSettingsSchema = z.strictObject({
@@ -72,7 +72,7 @@ export const POST = withApiGuards({
   const { allowGatewayFallback } = validation.data;
 
   // Upsert row with owner RLS via SSR client
-  type UserSettingsInsert = InsertTables<"user_settings">;
+  type UserSettingsInsert = TablesInsert<"user_settings">;
   // DB column names use snake_case by convention
   const payload: UserSettingsInsert = {
     allow_gateway_fallback: allowGatewayFallback,
