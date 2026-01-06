@@ -21,7 +21,7 @@ Finalize migration to Tailwind v4: CSS-first configuration, PostCSS plugin, remo
 Date: 2025-10-23
 
 - Replaced one deprecated v3 opacity utility:
-  - bg-opacity-75 → bg-black/75 in `src/components/features/agent-monitoring/dashboard/agent-status-dashboard.tsx`
+  - bg-opacity-75 → bg-black/75 in `src/features/agent-monitoring/components/dashboard/agent-status-dashboard.tsx`
 - Observed outline utilities such as `focus:outline-none` in multiple components. Tailwind v4 introduces `outline-hidden`; current usage remains acceptable and will be revisited if focus styles require adjustment.
 - No further v3-only opacity utilities found across representative pages (chat, trips, settings, dashboard).
 

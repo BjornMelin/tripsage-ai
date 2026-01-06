@@ -25,20 +25,24 @@ specific features or components.
 
 ## Directory Layout
 
-- `active/` — Draft, proposed, or in-progress specifications.
-- `archive/` — Completed, accepted, implemented, or superseded specifications (including migrations).
+- `active/` — Current baseline specifications.
+- `archive/` — Historical, completed, accepted, implemented, or superseded specifications (including migrations).
 
 ## Active Specifications
 
 | Spec | Title | Status | Date |
 |------|-------|--------|------|
-| [SPEC-0017](active/0017-spec-attachments-migration-next.md) | Attachments & File Uploads Migration (Next.js) | Implemented | 2025-11-04 |
-| [SPEC-0018](active/0018-spec-rag-retriever-indexer.md) | RAG Retriever & Indexer (AI SDK v6) | Partial | 2025-11-04 |
-| [SPEC-0021](active/0021-spec-supabase-webhooks-vercel-consolidation.md) | Supabase Webhooks to Vercel Consolidation | Draft | 2025-11-12 |
-| [SPEC-0037](active/0037-spec-attachments-v2-supabase-storage.md) | Attachments V2 (Supabase Storage) | Accepted | 2025-12-10 |
-| [SPEC-0032](active/0032-spec-upstash-testing-harness.md) | Upstash Testing Harness (Mocks, Emulators, Smoke) | Proposed | 2025-11-24 |
-| [SPEC-0033](active/0033-spec-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Proposed | 2025-11-26 |
-| [SPEC-0034](active/0034-spec-popular-routes-flights.md) | Popular Routes for Flights (Amadeus + Upstash) | Proposed | 2025-12-03 |
+| [SPEC-0100](active/0100-spec-application-architecture.md) | Application architecture (Next.js RSC + TanStack Query) | Final | 2026-01-05 |
+| [SPEC-0101](active/0101-spec-auth-and-session.md) | Auth and session | Final | 2026-01-05 |
+| [SPEC-0102](active/0102-spec-trips-domain.md) | Trips domain | Final | 2026-01-05 |
+| [SPEC-0103](active/0103-spec-chat-and-agents.md) | Chat and agents (AI SDK v6) | Final | 2026-01-05 |
+| [SPEC-0104](active/0104-spec-memory-and-rag.md) | Memory and RAG | Final | 2026-01-05 |
+| [SPEC-0105](active/0105-spec-attachments.md) | Attachments (Supabase Storage + ingestion pipeline) | Final | 2026-01-05 |
+| [SPEC-0106](active/0106-spec-search-and-places.md) | Search and places | Final | 2026-01-05 |
+| [SPEC-0107](active/0107-spec-jobs-and-webhooks.md) | Jobs and webhooks | Final | 2026-01-05 |
+| [SPEC-0108](active/0108-spec-security-and-abuse-protection.md) | Security and abuse protection | Final | 2026-01-05 |
+| [SPEC-0109](active/0109-spec-testing-quality-and-ci.md) | Testing, quality, and CI | Final | 2026-01-05 |
+| [SPEC-0110](active/0110-spec-deployment-and-operations.md) | Deployment and operations (Vercel + Supabase + Upstash) | Final | 2026-01-05 |
 
 ## Archived Specifications
 
@@ -46,7 +50,9 @@ Completed, accepted, implemented, and superseded specs (plus historical migratio
 
 Notable archived specs:
 
-- **SPEC-0036** (Attachments V2 Vercel Blob) — Superseded by SPEC-0037 (Supabase Storage)
+- **SPEC-0036** (Attachments V2 Vercel Blob) — Superseded by SPEC-0105 (Supabase Storage + ingestion)
+- **SPEC-0037** (Attachments V2 Supabase Storage) — Superseded by SPEC-0105
+- **SPEC-0038** (BotID integration) — Superseded by SPEC-0108
 
 ## Creating a New Spec
 

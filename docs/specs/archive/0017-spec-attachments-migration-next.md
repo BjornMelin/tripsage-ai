@@ -8,7 +8,7 @@
 
 - Goal: Replace FastAPI attachments endpoints with Next.js Route Handlers using Supabase Storage for file storage, Supabase Postgres for metadata, MIME/size validation, and stricter rate limits.
 
-**Current Status:** Upload endpoint (`POST /api/chat/attachments`) uploads directly to Supabase Storage with metadata stored in Supabase Postgres. Listing endpoint (`GET /api/attachments/files`) queries Supabase directly with per-user Redis caching and generates signed URLs for secure file access. Legacy backend proxy has been removed. See ADR-0059 and SPEC-0037 for the detailed implementation.
+**Current Status:** Upload endpoint (`POST /api/chat/attachments`) uploads directly to Supabase Storage with metadata stored in Supabase Postgres. Listing endpoint (`GET /api/attachments/files`) queries Supabase directly with per-user Redis caching and generates signed URLs for secure file access. Legacy backend proxy has been removed. See ADR-0060 and SPEC-0037 for the detailed implementation.
 
 ## Routes (Current Implementation)
 

@@ -3,7 +3,7 @@
 **Version**: 1.0.0
 **Status**: Accepted
 **Date**: 2025-12-10
-**Related ADRs**: ADR-0059
+**Related ADRs**: ADR-0060
 **Supersedes**: SPEC-0036
 
 ## Overview
@@ -646,7 +646,7 @@ database count for cursor math, but `items.length` may be less if any items were
 
 ## References
 
-- ADR-0059: Supabase Storage for Chat Attachments
+- ADR-0060: Supabase Storage for Chat Attachments
 - Supersedes: SPEC-0036 (Attachments V2 with Vercel Blob)
 - SPEC-0017: Attachments Migration Next.js
 - Supabase Storage: <https://supabase.com/docs/guides/storage>
