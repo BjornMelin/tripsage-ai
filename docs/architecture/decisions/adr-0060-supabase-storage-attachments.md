@@ -1,4 +1,4 @@
-# ADR-0059: Supabase Storage for Chat Attachments
+# ADR-0060: Supabase Storage for Chat Attachments
 
 **Version**: 1.0.0
 **Status**: Accepted

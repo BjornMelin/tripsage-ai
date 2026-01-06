@@ -87,7 +87,7 @@ FilterPanel (Card)
 ### 5. File Structure
 
 ```text
-src/components/features/search/
+src/features/search/components/
 ├── cards/                        # Card components
 │   ├── accommodation-card.tsx
 │   ├── activity-card.tsx
@@ -141,7 +141,7 @@ src/components/features/search/
 **Example test file structure:**
 
 ```typescript
-// src/components/features/search/filters/__tests__/filter-panel.test.tsx
+// src/features/search/components/filters/__tests__/filter-panel.test.tsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FilterPanel } from '../filter-panel';
@@ -325,5 +325,5 @@ Update `flights/page.tsx` sidebar:
 - [Zustand Slices Pattern](https://docs.pmnd.rs/zustand/guides/slices-pattern)
 - [Radix UI Primitives](https://www.radix-ui.com/primitives)
 - Existing: `src/stores/search-filters-store.ts`
-- Existing: `src/components/features/search/filters/filter-presets.tsx`
-- Existing: `src/components/features/search/filters/filter-panel.tsx`
+- Existing: `src/features/search/components/filters/filter-presets.tsx`
+- Existing: `src/features/search/components/filters/filter-panel.tsx`

@@ -4,6 +4,8 @@ This directory contains Architecture Decision Records (ADRs) for the TripSage
 project. ADRs document significant architectural decisions made during the
 project's development.
 
+The canonical index is [`docs/architecture/decisions/index.md`](index.md).
+
 ## What is an ADR?
 
 An Architecture Decision Record (ADR) is a document that captures an important
@@ -67,7 +69,17 @@ architectural decision made along with its context and consequences.
 | [ADR-0050](adr-0050-amadeus-google-places-stripe-hybrid.md) | Replace Expedia Rapid with Amadeus + Google Places + Stripe | Accepted | 2025-11-20 |
 | [ADR-0053](adr-0053-activity-search-google-places-integration.md) | Activity Search & Booking via Google Places API (Hybrid + Web Fallback) | Proposed | 2025-11-24 |
 | [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | Superseded | 2025-12-10 |
-| [ADR-0059](adr-0059-supabase-storage-attachments.md) | Supabase Storage for Chat Attachments | Accepted | 2025-12-10 |
+| [ADR-0059](adr-0059-botid-chat-and-agents.md) | BotID Integration for Chat and Agent Endpoints | Accepted | 2025-12-11 |
+| [ADR-0060](adr-0060-supabase-storage-attachments.md) | Supabase Storage for Chat Attachments | Accepted | 2025-12-10 |
+| [ADR-0061](adr-0061-rsc-shell-tanstack-query-doughnut.md) | RSC shell + TanStack Query “doughnut” architecture | Accepted | 2026-01-05 |
+| [ADR-0062](adr-0062-server-actions-transport-and-route-handler-policy.md) | Server Actions transport and Route Handler policy | Accepted | 2026-01-05 |
+| [ADR-0063](adr-0063-zod-v4-boundary-validation-and-schema-organization.md) | Zod v4 boundary validation and schema organization | Accepted | 2026-01-05 |
+| [ADR-0064](adr-0064-caching-use-cache-and-consistency-rules.md) | Caching (`use cache`) and consistency rules | Accepted | 2026-01-05 |
+| [ADR-0065](adr-0065-supabase-ssr-auth-and-rls-first-data-access.md) | Supabase SSR auth and RLS-first data access | Accepted | 2026-01-05 |
+| [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md) | AI SDK v6 agents, MCP, and message persistence | Accepted | 2026-01-05 |
+| [ADR-0067](adr-0067-upstash-redis-qstash-rate-limit-and-jobs.md) | Upstash Redis/QStash rate limits and jobs | Accepted | 2026-01-05 |
+| [ADR-0068](adr-0068-security-headers-csp-botid-and-abuse-controls.md) | Security headers, CSP, BotID, and abuse controls | Accepted | 2026-01-05 |
+| [ADR-0069](adr-0069-repo-structure-feature-first-and-server-only-boundaries.md) | Repo structure (feature-first) and server-only boundaries | Accepted | 2026-01-05 |
 
 ## Superseded ADRs
 
@@ -90,7 +102,7 @@ The following ADRs have been superseded by newer decisions:
 | [ADR-0022](superseded/adr-0022-python-pytest-foundation.md) | Standardize Python Test Suite Foundations | ADR-0007 | 2025-10-24 |
 | [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | ADR-0050 | 2025-11-20 |
 | [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | ADR-0050 | 2025-11-20 |
-| [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | ADR-0059 | 2025-12-10 |
+| [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | ADR-0060 | 2025-12-10 |
 
 ## By Category
 
@@ -120,7 +132,8 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0055: Flatten Next.js App Structure to Repository Root
 - ADR-0056: Popular Routes for Flights (Amadeus + Upstash Caching)
 - ADR-0057: Search Filter Panel System
-- ADR-0059: Supabase Storage for Chat Attachments
+- ADR-0059: BotID Integration for Chat and Agent Endpoints
+- ADR-0060: Supabase Storage for Chat Attachments
 
 ### Backend
 

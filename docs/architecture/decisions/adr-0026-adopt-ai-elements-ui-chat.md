@@ -10,7 +10,7 @@
 
 ## Context
 
-The project previously shipped bespoke chat UIs and hooks spread across `src/components/chat` and `src/components/features/chat`, with mixed transports (websocket, custom SSE) and duplicated logic. AI SDK v6 ships AI Elements primitives and `useChat` that standardize message shape, streaming, and tool usage.
+The project previously shipped bespoke chat UIs and hooks spread across `src/components/chat` and feature modules (now under `src/features/chat`), with mixed transports (websocket, custom SSE) and duplicated logic. AI SDK v6 ships AI Elements primitives and `useChat` that standardize message shape, streaming, and tool usage.
 
 ## Decision
 
