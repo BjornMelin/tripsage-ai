@@ -324,6 +324,6 @@ Update `flights/page.tsx` sidebar:
 - [shadcn/ui Slider](https://ui.shadcn.com/docs/components/slider)
 - [Zustand Slices Pattern](https://docs.pmnd.rs/zustand/guides/slices-pattern)
 - [Radix UI Primitives](https://www.radix-ui.com/primitives)
-- Existing: `src/stores/search-filters-store.ts`
+- Existing: `src/features/search/store/search-filters-store.ts`
 - Existing: `src/features/search/components/filters/filter-presets.tsx`
 - Existing: `src/features/search/components/filters/filter-panel.tsx`

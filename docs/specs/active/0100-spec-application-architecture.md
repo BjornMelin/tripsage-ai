@@ -42,18 +42,18 @@
 
 ## Data flow contract
 
-1) Ingress (UI -> Action)
+1) Ingress (UI → Action)
 
 - Form submits to server action.
 - Action validates with Zod, performs DB mutation, returns typed result.
 
-1) Read (RSC)
+2) Read (RSC)
 
-- RSC calls `src/server/queries/*` which use `use cache` when safe.
+- RSC calls `src/server/queries/*` which use `use cache` when safe (see [ADR-0064](../../architecture/decisions/adr-0064-caching-use-cache-and-consistency-rules.md) for cache criteria and invalidation strategy).
 
-1) Read (Client)
+3) Read (Client)
 
-- `useQuery` uses server-prefetched dehydrated state or fetches via a small Route Handler only when needed.
+- `useQuery` uses server-prefetched dehydrated state or fetches via a small Route Handler only when needed (cache misses, refocus, manual retry; see [ADR-0064](../../architecture/decisions/adr-0064-caching-use-cache-and-consistency-rules.md)).
 
 ## Performance requirements
 
@@ -64,7 +64,8 @@
 ## References
 
 ```text
-TanStack Query Advanced SSR: https://tanstack.com/query/v5/docs/react/guides/advanced-ssr
-Next.js caching and `use cache`: https://nextjs.org/docs/app/getting-started/caching
 Next.js `use cache` directive: https://nextjs.org/docs/app/api-reference/directives/use-cache
+Next.js caching and `use cache`: https://nextjs.org/docs/app/getting-started/caching
+TanStack Query Advanced SSR: https://tanstack.com/query/v5/docs/react/guides/advanced-ssr
+Zod v4 Documentation: https://zod.dev/
 ```

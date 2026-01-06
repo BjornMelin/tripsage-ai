@@ -9,7 +9,7 @@ Feature-first keeps ownership clear and prevents shared utility sprawl. It also 
 - `src/server/*` is server-only. No imports from client components.
 - `src/features/*/server/*` is server-only (actions/queries/helpers for that feature).
 - `src/components/ui/*` is shadcn/ui only. No business logic.
-- `src/app/*` should be thin routing and composition only.
+- Routes in `src/app/*` should be thin routing and composition only.
 
 ## Import rules (enforced by lint)
 

@@ -14,7 +14,11 @@
 
 - Storage bucket: `attachments`
 - Object key: `{userId}/{tripId?}/{chatId}/{attachmentId}/{filename}`
+- `tripId` is included when the attachment is trip-scoped, omitted for user-level attachments.
+  - Example (trip-scoped): `{userId}/{tripId}/{chatId}/{attachmentId}/{filename}`
+  - Example (user-level): `{userId}/{chatId}/{attachmentId}/{filename}`
 - Metadata table: `attachments` referencing storage path, mime, size, checksum.
+  - Store which variant was used (e.g., `trip_id` nullable) and validate key shape accordingly.
 
 ## Pipeline
 

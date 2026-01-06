@@ -19,7 +19,7 @@ TripSage is feature-rich (trips, chat, search, memory, attachments, jobs). A fla
 - Use a feature-first structure under `src/features/<feature>/...`.
 - Enforce server-only boundaries:
   - DB access only inside `src/server/*`.
-  - Server Actions in `src/server/actions/*`.
+  - Server Actions are co-located in `src/app/**/actions.ts` or `src/lib/*/actions.ts` (and must remain server-only).
   - Cached reads in `src/server/queries/*`.
 - UI:
   - shadcn/ui only under `src/components/ui`.

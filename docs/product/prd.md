@@ -21,20 +21,20 @@ TripSage AI is an AI-powered travel planning application that helps a user:
 - Sign up / login
 - Create first trip
 
-1) Trip planning
+2) Trip planning
 
 - Create trip
 - Add constraints (dates, budget, style)
 - Search places and save candidates
 - Build itinerary timeline
 
-1) AI chat assistance
+3) AI chat assistance
 
 - Ask TripSage questions scoped to a trip
 - Accept tool-driven itinerary edits (with approval where needed)
 - Store results as notes and memories
 
-1) Memory and attachments
+4) Memory and attachments
 
 - Upload confirmations or documents
 - Auto-ingest into trip memory

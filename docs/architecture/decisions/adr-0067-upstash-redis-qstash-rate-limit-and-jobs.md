@@ -30,7 +30,7 @@ TripSage needs:
 
 - Minimal infrastructure, serverless-friendly.
 - Built-in retry behavior and signatures for jobs.
-- Requires disciplined handler verification and idempotency.
+- Requires disciplined implementation of handler verification and idempotency.
 
 ## References
 

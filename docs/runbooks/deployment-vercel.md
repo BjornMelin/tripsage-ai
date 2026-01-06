@@ -17,7 +17,7 @@
   - NEXT_PUBLIC_SUPABASE_ANON_KEY
   - SUPABASE_SERVICE_ROLE_KEY (server-only)
 
-1) Upstash integration
+2) Upstash integration
 
 - Inject:
   - UPSTASH_REDIS_REST_URL
@@ -26,7 +26,7 @@
   - QSTASH_CURRENT_SIGNING_KEY
   - QSTASH_NEXT_SIGNING_KEY
 
-1) AI provider keys
+3) AI provider keys
 
 - Store as server-only env vars
 - Do not prefix with NEXT_PUBLIC_

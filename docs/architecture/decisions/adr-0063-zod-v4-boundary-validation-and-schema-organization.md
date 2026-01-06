@@ -23,7 +23,7 @@ TypeScript alone cannot protect these boundaries.
 - Zod v4 is the single runtime validation standard.
 - All boundary inputs are parsed with Zod, with early returns on failure.
 - All boundary outputs are also validated when:
-  - coming from external systems (webhooks, 3rd party APIs)
+  - coming from external systems (webhooks, third-party APIs)
   - or used as tool inputs to agents
 
 Schema organization:
@@ -35,7 +35,7 @@ Schema organization:
 Zod v4 constraints:
 
 - No `deepPartial` (use shallow `partial()` or explicit nested partials).
-- Use the `error` param (not deprecated message patterns) for custom messages where applicable.
+- Use the `error` param (not deprecated message patterns) for custom messages where applicable (example: `z.string().min(5, { error: "Value must be at least 5 characters" })`).
 
 ## Consequences
 

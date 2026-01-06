@@ -44,15 +44,15 @@ Adopt a “doughnut” architecture:
 
 1) Server reads live in `src/server/queries/*` and must be:
 
-- Pure, side-effect free, and safe to cache.
+- Pure, side-effect-free, and safe to cache.
 - Validated output (Zod) at the boundary.
 
-1) Client reads use `useQuery` with:
+2) Client reads use `useQuery` with:
 
 - Stable `queryKey` from `src/lib/keys.ts`
 - `queryFn` calling a typed Route Handler only when a read cannot be done server-side (rare).
 
-1) Avoid “internal REST” for mutations:
+3) Avoid “internal REST” for mutations:
 
 - Mutations must be Server Actions, except for webhooks and streaming endpoints.
 

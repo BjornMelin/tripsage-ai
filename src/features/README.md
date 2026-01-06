@@ -1,3 +1,5 @@
+# Feature Modules
+
 Feature-first modules live under `src/features/<feature>/...`.
 
 Conventions (see ADR-0069):
