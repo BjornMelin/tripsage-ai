@@ -17,14 +17,30 @@
 
 ### Client creation
 
-- Server client uses `@supabase/ssr` and Next cookies integration.
-- Browser client uses `@supabase/supabase-js`.
+- Server client uses `@supabase/ssr` and Next `cookies()` integration:
+  - `src/lib/supabase/server.ts` (`createServerSupabase()`)
+  - `src/lib/supabase/factory.ts` (`createServerSupabaseClient()`, `createMiddlewareSupabase()`)
+- Browser client uses `@supabase/ssr` `createBrowserClient()` (typed singleton):
+  - `src/lib/supabase/client.ts` (`getBrowserClient()`, `useSupabaseRequired()`)
+- Service role client is server-only:
+  - `src/lib/supabase/admin.ts` (`getAdminSupabase()` / `createAdminSupabase()`)
+
+### Session refresh (SSR cookies)
+
+- Use Next.js Proxy to refresh Supabase session cookies for Server Components:
+  - `src/proxy.ts` (`proxy()`), built on `createMiddlewareSupabase()` + `getCurrentUser()`.
 
 ### Auth flows
 
 - Email/password and OAuth (configurable).
-- Protected routes under `src/app/app/*`.
-- Redirect unauthenticated users to login.
+- Email/password uses Server Actions (credentials never hit client bundles):
+  - `src/lib/auth/actions.ts` (`loginWithPasswordAction`, `registerWithPasswordAction`, `logoutAction`)
+  - `src/components/auth/login-form.tsx`, `src/components/auth/register-form.tsx`
+- OAuth uses browser client redirect flows from the auth forms.
+- Logout:
+  - Server Action: `src/lib/auth/actions.ts` (`logoutAction`)
+  - Route handler: `src/app/auth/logout/route.ts` (GET/POST `/auth/logout`)
+- Protected routes live under `src/app/(app)/*` and must redirect unauthenticated users to `/login`.
 
 ### RLS baseline
 
@@ -42,8 +58,9 @@
 
 ## Testing
 
-- Unit tests for server helpers (cookie parsing, client creation).
-- E2E login and protected route checks.
+- Unit tests for server helpers (cookie parsing, client creation): `src/lib/supabase/__tests__/*`.
+- Auth action tests: `src/lib/auth/__tests__/*`.
+- E2E login and protected route checks (Playwright): `e2e/*` (when present).
 
 ## References
 

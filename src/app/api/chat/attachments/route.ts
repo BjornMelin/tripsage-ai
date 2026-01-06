@@ -9,6 +9,7 @@ import {
   ATTACHMENT_MAX_FILE_SIZE,
   ATTACHMENT_MAX_FILES,
   ATTACHMENT_MAX_TOTAL_SIZE,
+  attachmentUploadOptionsSchema,
   isAllowedMimeType,
   sanitizeFilename,
 } from "@schemas/attachments";
@@ -138,10 +139,41 @@ async function verifyMimeType(
 /** Result of a single file upload operation. */
 interface UploadResult {
   file: File;
+  id: string;
+  insertedMetadata: boolean;
   path: string;
+  uploaded: boolean;
   detectedType?: string;
-  errorKind?: "validation" | "storage";
+  errorKind?: "metadata" | "validation" | "storage";
   error: Error | null;
+  signedUrl: string | null;
+}
+
+/**
+ * Storage object path conventions:
+ * - Chat-scoped: `{userId}/{chatId}/{attachmentId}/{fileName}`
+ * - Trip-scoped: `{userId}/{tripId}/{attachmentId}/{fileName}`
+ * - Trip + chat: `{userId}/{tripId}/{chatId}/{attachmentId}/{fileName}`
+ */
+function buildAttachmentStoragePath(options: {
+  attachmentId: string;
+  chatId?: string;
+  fileName: string;
+  tripId?: number;
+  userId: string;
+}): string {
+  const { attachmentId, chatId, fileName, tripId, userId } = options;
+  if (tripId !== undefined) {
+    return chatId !== undefined
+      ? `${userId}/${tripId}/${chatId}/${attachmentId}/${fileName}`
+      : `${userId}/${tripId}/${attachmentId}/${fileName}`;
+  }
+
+  if (chatId !== undefined) {
+    return `${userId}/${chatId}/${attachmentId}/${fileName}`;
+  }
+
+  throw new Error("Invariant violation: either chatId or tripId is required.");
 }
 
 /**
@@ -152,15 +184,39 @@ interface UploadResult {
  * @param supabase - Supabase client.
  * @returns Upload result with path or error.
  */
-async function uploadToSupabaseStorage(
-  file: File,
-  userId: string,
-  supabase: TypedServerSupabase
-): Promise<UploadResult> {
-  const uuid = secureUuid();
+async function uploadToSupabaseStorage(options: {
+  chatId?: string;
+  chatMessageId?: number;
+  file: File;
+  supabase: TypedServerSupabase;
+  tripId?: number;
+  userId: string;
+}): Promise<UploadResult> {
+  const { chatId, chatMessageId, file, supabase, tripId, userId } = options;
+
+  if (chatId === undefined && tripId === undefined) {
+    return {
+      detectedType: undefined,
+      error: new Error("Either chatId or tripId is required."),
+      errorKind: "validation",
+      file,
+      id: "",
+      insertedMetadata: false,
+      path: "",
+      signedUrl: null,
+      uploaded: false,
+    };
+  }
+
+  const attachmentId = secureUuid();
   const sanitizedName = sanitizeFilename(file.name);
-  // Path format per SPEC-0036: chat/{userId}/filename
-  const storagePath = `chat/${userId}/${uuid}-${sanitizedName}`;
+  const storagePath = buildAttachmentStoragePath({
+    attachmentId,
+    chatId,
+    fileName: sanitizedName,
+    tripId,
+    userId,
+  });
 
   // Convert File to Buffer for magic byte verification
   const arrayBuffer = await file.arrayBuffer();
@@ -174,11 +230,44 @@ async function uploadToSupabaseStorage(
       error: new Error(mimeVerification.reason),
       errorKind: "validation",
       file,
+      id: attachmentId,
+      insertedMetadata: false,
       path: "",
+      signedUrl: null,
+      uploaded: false,
     };
   }
 
   const contentType = mimeVerification.detectedType ?? file.type;
+
+  // Create metadata record first so Storage RLS can validate the upload.
+  const { error: insertError } = await supabase.from("file_attachments").insert({
+    bucket_name: STORAGE_BUCKET,
+    chat_id: chatId ?? null,
+    chat_message_id: chatMessageId ?? null,
+    file_path: storagePath,
+    file_size: file.size,
+    filename: attachmentId,
+    id: attachmentId,
+    mime_type: contentType,
+    original_filename: file.name,
+    trip_id: tripId ?? null,
+    upload_status: "uploading",
+    user_id: userId,
+  });
+
+  if (insertError) {
+    return {
+      error: new Error(insertError.message),
+      errorKind: "metadata",
+      file,
+      id: attachmentId,
+      insertedMetadata: false,
+      path: storagePath,
+      signedUrl: null,
+      uploaded: false,
+    };
+  }
 
   // Upload to Supabase Storage
   const { error } = await supabase.storage
@@ -189,20 +278,68 @@ async function uploadToSupabaseStorage(
     });
 
   if (error) {
+    try {
+      await supabase
+        .from("file_attachments")
+        .update({ upload_status: "failed" })
+        .eq("id", attachmentId);
+    } catch (updateFailedError) {
+      logger.warn("failed_to_mark_attachment_failed", {
+        attachmentId,
+        error:
+          updateFailedError instanceof Error
+            ? updateFailedError.message
+            : String(updateFailedError),
+      });
+    }
     return {
       detectedType: mimeVerification.detectedType,
       error: new Error(error.message),
       errorKind: "storage",
       file,
+      id: attachmentId,
+      insertedMetadata: true,
       path: storagePath,
+      signedUrl: null,
+      uploaded: false,
     };
   }
+
+  const { error: updateError } = await supabase
+    .from("file_attachments")
+    .update({ upload_status: "completed" })
+    .eq("id", attachmentId);
+
+  if (updateError) {
+    return {
+      detectedType: mimeVerification.detectedType,
+      error: new Error(updateError.message),
+      errorKind: "metadata",
+      file,
+      id: attachmentId,
+      insertedMetadata: true,
+      path: storagePath,
+      signedUrl: null,
+      uploaded: true,
+    };
+  }
+
+  // Generate signed URL for the uploaded file (1 hour expiry)
+  const { data: signedUrlData } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .createSignedUrl(storagePath, 3600, { download: true });
+
+  const signedUrl = signedUrlData?.signedUrl ?? null;
 
   return {
     detectedType: mimeVerification.detectedType,
     error: null,
     file,
+    id: attachmentId,
+    insertedMetadata: true,
     path: storagePath,
+    signedUrl,
+    uploaded: true,
   };
 }
 
@@ -280,12 +417,39 @@ export const POST = withApiGuards({
   }
   const files = validation.data;
 
+  const optionsResult = attachmentUploadOptionsSchema.safeParse({
+    chatId: formData.get("chatId") ?? undefined,
+    chatMessageId: formData.get("chatMessageId") ?? undefined,
+    tripId: formData.get("tripId") ?? undefined,
+  });
+
+  if (!optionsResult.success) {
+    return errorResponse({
+      err: optionsResult.error,
+      error: "invalid_request",
+      issues: optionsResult.error.issues,
+      reason: "Invalid upload options",
+      status: 400,
+    });
+  }
+
+  const { chatId, chatMessageId, tripId } = optionsResult.data;
+
   // Upload files to Supabase Storage in parallel
   const uploadResults = await Promise.allSettled(
-    files.map((file) => uploadToSupabaseStorage(file, userId, supabase))
+    files.map((file) =>
+      uploadToSupabaseStorage({
+        chatId,
+        chatMessageId,
+        file,
+        supabase,
+        tripId,
+        userId,
+      })
+    )
   );
 
-  // Process upload results and store metadata
+  // Process upload results
   const uploadedFiles: UploadedFileRecord[] = [];
   const urls: string[] = [];
   const uploadedPaths: string[] = []; // Track successful uploads for cleanup
@@ -306,7 +470,27 @@ export const POST = withApiGuards({
       continue; // Don't return yet - need to cleanup uploaded files
     }
 
-    const { detectedType, file, path, error: uploadError, errorKind } = result.value;
+    const {
+      detectedType,
+      file,
+      id,
+      insertedMetadata,
+      path,
+      uploaded,
+      error: uploadError,
+      errorKind,
+      signedUrl,
+    } = result.value;
+
+    const isMetadataStatusUpdateFailure =
+      errorKind === "metadata" && insertedMetadata && uploaded && uploadError;
+
+    if (insertedMetadata && !isMetadataStatusUpdateFailure) {
+      insertedAttachmentIds.push(id);
+    }
+    if (uploaded && !uploadError) {
+      uploadedPaths.push(path);
+    }
 
     if (uploadError) {
       // Upload returned an error (validation or storage error)
@@ -316,6 +500,20 @@ export const POST = withApiGuards({
         fileName: file.name,
         userId,
       });
+
+      // Metadata insert failures are treated as per-file failures (no storage object to clean up).
+      if (errorKind === "metadata" && !insertedMetadata) {
+        uploadedFiles.push({
+          id,
+          name: file.name,
+          size: file.size,
+          status: "failed",
+          type: detectedType ?? file.type,
+          url: null,
+        });
+        continue;
+      }
+
       if (!firstUploadError) {
         firstUploadError = uploadError;
         firstUploadStatus = errorKind === "validation" ? 400 : 500;
@@ -323,73 +521,14 @@ export const POST = withApiGuards({
       continue; // Don't return yet - need to cleanup uploaded files
     }
 
-    // Track this successful upload for potential cleanup
-    uploadedPaths.push(path);
-
-    // Generate file ID for metadata
-    const fileId = secureUuid();
-
-    // Insert metadata into Supabase
-    // Note: filename = storage key (UUID), original_filename = user-facing name
-    const { error: insertError } = await supabase.from("file_attachments").insert({
-      bucket_name: STORAGE_BUCKET,
-      file_path: path,
-      file_size: file.size,
-      filename: fileId, // Storage key (UUID)
-      id: fileId,
-      mime_type: detectedType ?? file.type,
-      original_filename: file.name, // User-facing name
-      upload_status: "completed",
-      user_id: userId,
-    });
-
-    if (insertError) {
-      logger.error("Failed to insert attachment metadata", {
-        error: insertError.message,
-        fileId,
-        userId,
-      });
-      // Clean up uploaded file on metadata failure
-      try {
-        await deleteFromStorage(path, supabase);
-      } catch (cleanupError) {
-        logger.warn("Failed to clean up storage after metadata insert failure", {
-          cleanupError:
-            cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-          fileId,
-          path,
-          userId,
-        });
-      }
-      // Mark this file as failed but continue with others
-      uploadedFiles.push({
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        status: "failed",
-        type: detectedType ?? file.type,
-        url: null,
-      });
-      continue;
-    }
-
-    // Generate signed URL for the uploaded file (1 hour expiry)
-    const { data: signedUrlData } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(path, 3600, { download: true });
-
-    const signedUrl = signedUrlData?.signedUrl ?? null;
-
     uploadedFiles.push({
-      id: fileId,
+      id,
       name: file.name,
       size: file.size,
       status: "completed",
       type: detectedType ?? file.type,
       url: signedUrl,
     });
-
-    insertedAttachmentIds.push(fileId);
 
     if (signedUrl) {
       urls.push(signedUrl);
@@ -403,37 +542,14 @@ export const POST = withApiGuards({
       userId,
     });
 
-    if (insertedAttachmentIds.length > 0) {
-      const metadataCleanupResults = await Promise.allSettled(
-        insertedAttachmentIds.map((id) =>
-          supabase.from("file_attachments").delete().eq("id", id)
-        )
-      );
+    const uniqueUploadedPaths = Array.from(new Set(uploadedPaths));
+    const uniqueAttachmentIds = Array.from(new Set(insertedAttachmentIds));
 
-      for (const [index, result] of metadataCleanupResults.entries()) {
-        if (result.status === "fulfilled" && result.value?.error) {
-          logger.error("Failed to cleanup attachment metadata", {
-            error: result.value.error.message,
-            fileId: insertedAttachmentIds[index],
-            userId,
-          });
-        }
-        if (result.status === "rejected") {
-          logger.error("Failed to cleanup attachment metadata", {
-            error:
-              result.reason instanceof Error
-                ? result.reason.message
-                : String(result.reason),
-            fileId: insertedAttachmentIds[index],
-            userId,
-          });
-        }
-      }
-    }
-
-    // Delete all successfully uploaded files
+    // Delete storage objects before removing their metadata: the Storage RLS DELETE policy
+    // authorizes deletes by verifying a matching metadata row, so removing metadata first
+    // would block storage deletion.
     const cleanupResults = await Promise.allSettled(
-      uploadedPaths.map((path) => deleteFromStorage(path, supabase))
+      uniqueUploadedPaths.map((path) => deleteFromStorage(path, supabase))
     );
 
     // Log cleanup failures but don't block the error response
@@ -444,9 +560,37 @@ export const POST = withApiGuards({
             result.reason instanceof Error
               ? result.reason.message
               : String(result.reason),
-          path: uploadedPaths[index],
+          path: uniqueUploadedPaths[index],
           userId,
         });
+      }
+    }
+
+    if (uniqueAttachmentIds.length > 0) {
+      const metadataCleanupResults = await Promise.allSettled(
+        uniqueAttachmentIds.map((id) =>
+          supabase.from("file_attachments").delete().eq("id", id)
+        )
+      );
+
+      for (const [index, result] of metadataCleanupResults.entries()) {
+        if (result.status === "fulfilled" && result.value?.error) {
+          logger.error("Failed to cleanup attachment metadata", {
+            error: result.value.error.message,
+            fileId: uniqueAttachmentIds[index],
+            userId,
+          });
+        }
+        if (result.status === "rejected") {
+          logger.error("Failed to cleanup attachment metadata", {
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : String(result.reason),
+            fileId: uniqueAttachmentIds[index],
+            userId,
+          });
+        }
       }
     }
 

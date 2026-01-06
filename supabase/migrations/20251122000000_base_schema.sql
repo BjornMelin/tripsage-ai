@@ -201,9 +201,9 @@ BEGIN
       PERFORM cron.schedule(
         'mfa_enrollments_cleanup_daily',
         '0 3 * * *',
-        $$DELETE FROM public.mfa_enrollments
+        $cron$DELETE FROM public.mfa_enrollments
             WHERE status IN ('expired','consumed')
-              AND expires_at < now() - interval '1 day';$$
+              AND expires_at < now() - interval '1 day';$cron$
       );
     END IF;
   END IF;
@@ -671,7 +671,7 @@ BEGIN
             PERFORM cron.schedule(
                 'cleanup_api_metrics_90d',
                 '0 3 * * *',
-                $$DELETE FROM public.api_metrics WHERE created_at < NOW() - INTERVAL '90 days'$$
+                $cron$DELETE FROM public.api_metrics WHERE created_at < NOW() - INTERVAL '90 days'$cron$
             );
         END IF;
     END IF;
@@ -686,12 +686,12 @@ BEGIN
             PERFORM cron.schedule(
                 'cleanup_search_caches_daily',
                 '15 3 * * *',
-                $$
+                $cron$
                   DELETE FROM public.search_destinations WHERE expires_at < now();
                   DELETE FROM public.search_activities WHERE expires_at < now();
                   DELETE FROM public.search_flights WHERE expires_at < now();
                   DELETE FROM public.search_hotels WHERE expires_at < now();
-                $$
+                $cron$
             );
         END IF;
     END IF;
@@ -1458,7 +1458,7 @@ CREATE POLICY "Users can update their own attachments"
 ON storage.objects FOR UPDATE TO authenticated
 USING (
   bucket_id = 'attachments' AND (
-    coalesce(owner_id, owner) = auth.uid() OR
+    coalesce(owner_id::text, owner::text) = auth.uid()::text OR
     EXISTS (
       SELECT 1 FROM public.file_attachments fa
       WHERE fa.file_path = name AND fa.user_id = auth.uid()
@@ -1467,7 +1467,7 @@ USING (
 )
 WITH CHECK (
   bucket_id = 'attachments' AND (
-    coalesce(owner_id, owner) = auth.uid() OR
+    coalesce(owner_id::text, owner::text) = auth.uid()::text OR
     EXISTS (
       SELECT 1 FROM public.file_attachments fa
       WHERE fa.file_path = name AND fa.user_id = auth.uid()
@@ -1479,7 +1479,7 @@ CREATE POLICY "Users can delete their own attachments"
 ON storage.objects FOR DELETE TO authenticated
 USING (
   bucket_id = 'attachments' AND (
-    coalesce(owner_id, owner) = auth.uid() OR
+    coalesce(owner_id::text, owner::text) = auth.uid()::text OR
     public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name)) OR
     EXISTS (
       SELECT 1 FROM public.file_attachments fa
@@ -1500,12 +1500,12 @@ WITH CHECK (
 
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'avatars' AND coalesce(owner_id, owner) = auth.uid())
-WITH CHECK (bucket_id = 'avatars' AND coalesce(owner_id, owner) = auth.uid());
+USING (bucket_id = 'avatars' AND coalesce(owner_id::text, owner::text) = auth.uid()::text)
+WITH CHECK (bucket_id = 'avatars' AND coalesce(owner_id::text, owner::text) = auth.uid()::text);
 
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE TO authenticated
-USING (bucket_id = 'avatars' AND coalesce(owner_id, owner) = auth.uid());
+USING (bucket_id = 'avatars' AND coalesce(owner_id::text, owner::text) = auth.uid()::text);
 
 CREATE POLICY "Users can upload trip images" ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (bucket_id = 'trip-images' AND public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name)));
@@ -1518,13 +1518,13 @@ USING (
 CREATE POLICY "Users can update their trip images" ON storage.objects FOR UPDATE TO authenticated
 USING (
   bucket_id = 'trip-images' AND (
-    coalesce(owner_id, owner) = auth.uid() OR
+    coalesce(owner_id::text, owner::text) = auth.uid()::text OR
     public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
   )
 )
 WITH CHECK (
   bucket_id = 'trip-images' AND (
-    coalesce(owner_id, owner) = auth.uid() OR
+    coalesce(owner_id::text, owner::text) = auth.uid()::text OR
     public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
   )
 );
@@ -1532,7 +1532,7 @@ WITH CHECK (
 CREATE POLICY "Users can delete trip images" ON storage.objects FOR DELETE TO authenticated
 USING (
   bucket_id = 'trip-images' AND (
-    coalesce(owner_id, owner) = auth.uid() OR
+    coalesce(owner_id::text, owner::text) = auth.uid()::text OR
     public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
   )
 );
@@ -1551,9 +1551,26 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.trips, public.trip_collabor
 -- ===========================
 DO $$
 BEGIN
-  EXECUTE format('ALTER DATABASE %I SET app.vercel_webhook_trips = %L', current_database(), '');
-  EXECUTE format('ALTER DATABASE %I SET app.vercel_webhook_cache = %L', current_database(), '');
-  EXECUTE format('ALTER DATABASE %I SET app.webhook_hmac_secret = %L', current_database(), '');
+  BEGIN
+    EXECUTE format(
+      'ALTER DATABASE %I SET app.vercel_webhook_trips = %L',
+      current_database(),
+      ''
+    );
+    EXECUTE format(
+      'ALTER DATABASE %I SET app.vercel_webhook_cache = %L',
+      current_database(),
+      ''
+    );
+    EXECUTE format(
+      'ALTER DATABASE %I SET app.webhook_hmac_secret = %L',
+      current_database(),
+      ''
+    );
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE 'Skipping ALTER DATABASE app.* settings (insufficient privilege)';
+  END;
 END;
 $$;
 

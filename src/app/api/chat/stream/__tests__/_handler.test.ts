@@ -3,6 +3,7 @@
 import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import type { ChatDeps, ProviderResolver } from "../_handler";
 
@@ -49,6 +50,17 @@ vi.mock("@/lib/memory/turn-utils", () => ({
 
 vi.mock("@/lib/security/random", () => ({
   secureUuid: () => "test-uuid-123",
+}));
+
+const mockInsertSingle = vi.hoisted(() =>
+  vi.fn(async (_client: unknown, _table: string, _values: unknown) => ({
+    data: null,
+    error: null,
+  }))
+);
+
+vi.mock("@/lib/supabase/typed-helpers", () => ({
+  insertSingle: mockInsertSingle,
 }));
 
 import { validateChatMessages } from "@ai/agents";
@@ -375,6 +387,23 @@ describe("handleChatStream", () => {
           userId: "u9",
         })
       );
+
+      expect(mockInsertSingle).toHaveBeenCalledWith(
+        expect.anything(),
+        "chat_messages",
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            requestId: "test-uuid-123",
+          }),
+        })
+      );
+
+      const calls = unsafeCast<unknown[][]>(mockInsertSingle.mock.calls);
+      const lastPayload = unsafeCast<Record<string, unknown> | undefined>(
+        calls[calls.length - 1]?.[2]
+      );
+      expect(lastPayload).toBeDefined();
+      expect(lastPayload).not.toHaveProperty("request_id");
     }
   });
 });

@@ -95,6 +95,38 @@ Impact:
 - Zen:
   - `zen.version` ✅ (v9.8.2; default model `gemini3-flash`)
 
+### Addendum — 2026-01-06 (Supabase SSR + RLS end-to-end session)
+
+- Next DevTools MCP:
+  - `next-devtools.init` ✅
+  - `next-devtools.nextjs_index` ✅ (server on port `3000`)
+  - `nextjs_call:get_routes` ✅ (includes `/dashboard/trips/create`)
+  - `nextjs_call:get_errors` ✅ (after browser session: “No errors detected in 1 browser session(s).”)
+  - `nextjs_call:get_logs` ✅ (log path: `.next/dev/logs/next-development.log`)
+  - `browser_eval` ✅
+    - `http://localhost:3000/dashboard` redirects to `http://localhost:3000/login?next=%2Fdashboard`
+    - Screenshot: `/tmp/playwright-mcp-output/1767683646792/page-2026-01-06T07-14-15-548Z.png`
+- shadcn:
+  - `shadcn.get_project_registries` ✅ (`@shadcn`)
+  - `shadcn.search_items_in_registries` ✅ (query: `form`)
+  - Examples referenced:
+    - `card-with-form`
+- Supabase docs:
+  - `supabase.search_docs` ✅
+    - “Creating a Supabase client for SSR”
+    - “Generating TypeScript Types”
+    - Storage signed upload URL references
+- Context7:
+  - `context7.resolve-library-id` ✅ (selected `/supabase/ssr`)
+  - `context7.query-docs` ✅ (SSR cookie methods + Next patterns)
+- Exa:
+  - `exa.web_search_exa` ✅ (SSR cookie/caching pitfalls signals)
+  - `exa.deep_search_exa` ✅ (RLS membership patterns; recursion avoidance via SECURITY DEFINER)
+- GitHub Grep:
+  - `gh_grep.searchGitHub` ❌ FAILED (tool returned invalid JSON; likely rate limited: “Too Many Requests”)
+- Zen:
+  - `zen.version` ✅ (v9.8.2; default model `gemini3-flash`)
+
 ## Runtime Evidence (Next DevTools)
 
 - Before: `nextjs_call:get_routes` did **not** include `/dashboard/trips/create`.

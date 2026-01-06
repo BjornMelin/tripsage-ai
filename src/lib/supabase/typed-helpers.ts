@@ -5,7 +5,7 @@
 import { getSupabaseSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
-import type { Database, InsertTables, Tables, UpdateTables } from "./database.types";
+import type { Database, Tables, TablesInsert, TablesUpdate } from "./database.types";
 
 export type TypedClient = SupabaseClient<Database>;
 
@@ -46,7 +46,7 @@ const isSupportedTable = (table: TableName): table is SupportedTable =>
 export function insertSingle<T extends keyof Database["public"]["Tables"]>(
   client: TypedClient,
   table: T,
-  values: InsertTables<T> | InsertTables<T>[]
+  values: TablesInsert<T> | TablesInsert<T>[]
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.insert",
@@ -120,7 +120,7 @@ export function insertSingle<T extends keyof Database["public"]["Tables"]>(
 export function updateSingle<T extends TableName>(
   client: TypedClient,
   table: T,
-  updates: Partial<UpdateTables<T>>,
+  updates: Partial<TablesUpdate<T>>,
   where: (qb: TableFilterBuilder) => TableFilterBuilder
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   return withTelemetrySpan(
@@ -349,7 +349,7 @@ export function getMaybeSingle<T extends TableName>(
 export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
   client: TypedClient,
   table: T,
-  values: InsertTables<T>,
+  values: TablesInsert<T>,
   onConflict: string
 ): Promise<{ data: Tables<T> | null; error: unknown }> {
   return withTelemetrySpan(

@@ -74,18 +74,20 @@ async function handleSemanticFetchContext(
     }
 
     // Call the match_turn_embeddings RPC function
-    const { data, error } = await supabase.rpc("match_turn_embeddings", {
-      // biome-ignore lint/style/useNamingConvention: RPC parameter name
-      filter_session_id: intent.sessionId || null,
-      // biome-ignore lint/style/useNamingConvention: RPC parameter name
-      filter_user_id: intent.userId,
-      // biome-ignore lint/style/useNamingConvention: RPC parameter name
-      match_count: limit,
-      // biome-ignore lint/style/useNamingConvention: RPC parameter name
-      match_threshold: similarityThreshold,
-      // biome-ignore lint/style/useNamingConvention: RPC parameter name
-      query_embedding: toPgvector(embedding),
-    });
+    const { data, error } = await supabase
+      .schema("memories")
+      .rpc("match_turn_embeddings", {
+        // biome-ignore lint/style/useNamingConvention: RPC parameter name
+        filter_session_id: intent.sessionId || undefined,
+        // biome-ignore lint/style/useNamingConvention: RPC parameter name
+        filter_user_id: intent.userId,
+        // biome-ignore lint/style/useNamingConvention: RPC parameter name
+        match_count: limit,
+        // biome-ignore lint/style/useNamingConvention: RPC parameter name
+        match_threshold: similarityThreshold,
+        // biome-ignore lint/style/useNamingConvention: RPC parameter name
+        query_embedding: toPgvector(embedding),
+      });
 
     if (error) {
       logger.warn("semantic_search_failed", { error: error.message });

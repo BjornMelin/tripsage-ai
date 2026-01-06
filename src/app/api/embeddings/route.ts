@@ -19,7 +19,7 @@ import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { toPgvector } from "@/lib/rag/pgvector";
 import { isValidInternalKey } from "@/lib/security/internal-key";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import type { InsertTables } from "@/lib/supabase/database.types";
+import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const MAX_INPUT_LENGTH = 8000;
@@ -69,7 +69,7 @@ async function persistAccommodationEmbedding(
   embedding: number[]
 ): Promise<void> {
   const supabase = createAdminSupabase();
-  const payload: InsertTables<"accommodation_embeddings"> = {
+  const payload: TablesInsert<"accommodation_embeddings"> = {
     amenities: normalizeAmenities(property.amenities),
     description: property.description ?? null,
     embedding: toPgvector(embedding),

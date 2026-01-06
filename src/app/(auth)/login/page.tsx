@@ -20,6 +20,12 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const redirectTo = params.from || params.next || "/dashboard";
+  const errorMessage =
+    params.error === "oauth_failed"
+      ? "OAuth sign-in failed. Please try again."
+      : params.error
+        ? "Sign-in failed. Please try again."
+        : null;
 
   return (
     <div className="min-h-screen flex">
@@ -135,6 +141,11 @@ export default async function LoginPage({
       {/* Right side - Login form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-lg">
+          {errorMessage ? (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          ) : null}
           <LoginForm redirectTo={redirectTo} />
         </div>
       </div>

@@ -6,9 +6,11 @@ import "server-only";
 
 import type { HttpMethod } from "@schemas/supabase";
 import { getRedis, incrCounter } from "@/lib/redis";
-import type { ApiMetricInsert } from "@/lib/supabase/database.types";
+import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+type ApiMetricInsertRow = TablesInsert<"api_metrics">;
 
 /**
  * API metric data for recording.
@@ -62,7 +64,7 @@ export async function recordApiMetric(metric: ApiMetric): Promise<void> {
       try {
         const supabase = await createServerSupabase();
         // Supabase table columns use snake_case
-        const insertPayload: ApiMetricInsert = {
+        const insertPayload: ApiMetricInsertRow = {
           /* biome-ignore lint/style/useNamingConvention: Supabase column */
           duration_ms: metric.durationMs,
           endpoint: metric.endpoint,
