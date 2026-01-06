@@ -304,7 +304,7 @@ Use for new search types when:
 Use `SearchFormShell` component for consistent form handling:
 
 ```typescript
-import { SearchFormShell } from "@/components/features/search/common/search-form-shell";
+import { SearchFormShell } from "@/features/search/components/common/search-form-shell";
 
 <SearchFormShell
   schema={flightSearchSchema}

@@ -33,7 +33,7 @@ export default async function TripsPage() {
 
 ```typescript
 // Client Component - requires directive
-// src/components/features/trips/trip-form.tsx
+// src/features/trips/components/trip-form.tsx
 
 /**
  * @fileoverview Trip creation form component.
