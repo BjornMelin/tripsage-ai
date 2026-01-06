@@ -13,6 +13,22 @@ import { createQueryClient } from "@/lib/query/query-client";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
+/**
+ * Prefetches queries on the server and returns dehydrated state for client hydration.
+ *
+ * Creates a `QueryClient`, executes the provided `prefetch` callback to populate
+ * queries, and dehydrates the resulting state for SSR/RSC hydration workflows.
+ *
+ * Errors are logged via the server logger and re-thrown for upstream handling.
+ *
+ * @param prefetch - Async callback that receives a `QueryClient` to prefetch queries.
+ * @returns Dehydrated query state for client rehydration.
+ *
+ * @example
+ * const state = await prefetchDehydratedState(async (queryClient) => {
+ *   await queryClient.prefetchQuery({ queryKey: ["example"], queryFn: fetcher });
+ * });
+ */
 export function prefetchDehydratedState(
   prefetch: (queryClient: QueryClient) => Promise<void>
 ): Promise<DehydratedState> {
