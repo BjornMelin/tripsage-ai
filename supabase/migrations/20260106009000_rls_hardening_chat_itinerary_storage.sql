@@ -20,7 +20,7 @@ CREATE POLICY chat_sessions_insert
   FOR INSERT
   TO authenticated
   WITH CHECK (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
     AND (
       trip_id IS NULL
       OR public.user_has_trip_access((select auth.uid()), trip_id)
@@ -33,15 +33,15 @@ CREATE POLICY chat_sessions_update_owner
   ON public.chat_sessions
   FOR UPDATE
   TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+  USING (user_id = (select auth.uid()))
+  WITH CHECK (user_id = (select auth.uid()));
 
 DROP POLICY IF EXISTS chat_sessions_delete_owner ON public.chat_sessions;
 CREATE POLICY chat_sessions_delete_owner
   ON public.chat_sessions
   FOR DELETE
   TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 
 -- ===========================
 -- ITINERARY ITEMS

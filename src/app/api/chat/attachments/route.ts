@@ -545,7 +545,9 @@ export const POST = withApiGuards({
     const uniqueUploadedPaths = Array.from(new Set(uploadedPaths));
     const uniqueAttachmentIds = Array.from(new Set(insertedAttachmentIds));
 
-    // Delete files first (storage delete policy requires metadata row to exist)
+    // Delete storage objects before removing their metadata: the Storage RLS DELETE policy
+    // authorizes deletes by verifying a matching metadata row, so removing metadata first
+    // would block storage deletion.
     const cleanupResults = await Promise.allSettled(
       uniqueUploadedPaths.map((path) => deleteFromStorage(path, supabase))
     );
