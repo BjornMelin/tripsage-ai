@@ -57,7 +57,7 @@ Chromium E2E failures in `e2e/dashboard-functionality.spec.ts`:
 - `src/app/dashboard/profile/page.tsx` — initialize auth store via `/auth/me` (cookie-based SSR session) before redirecting unauth users.
 - `e2e/dashboard-functionality.spec.ts` — use `waitUntil: "domcontentloaded"` for `/dashboard` navigations; added a hydration-ready wait in the user-nav test.
 - `src/app/dashboard/profile/__tests__/profile-page.test.tsx` — updated auth store mock to include `initialize`.
-- `src/components/features/profile/__tests__/profile-smoke.test.tsx` — updated auth store mock to include `initialize`.
+- `src/features/profile/components/__tests__/profile-smoke.test.tsx` — updated auth store mock to include `initialize`.
 
 ## Browser Verification (Next DevTools MCP)
 
