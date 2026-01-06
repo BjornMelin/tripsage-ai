@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 
 describe("useTripItineraryStore", () => {
   it("adds, updates, and removes destinations per trip", async () => {
-    const { useTripItineraryStore } = await import("../trip-itinerary-store");
+    const { useTripItineraryStore } = await import(
+      "@/features/trips/store/trip-itinerary-store"
+    );
     localStorage.removeItem("trip-storage");
     useTripItineraryStore.setState({ destinationsByTripId: {} });
 
@@ -32,7 +34,9 @@ describe("useTripItineraryStore", () => {
   });
 
   it("sets destination order explicitly", async () => {
-    const { useTripItineraryStore } = await import("../trip-itinerary-store");
+    const { useTripItineraryStore } = await import(
+      "@/features/trips/store/trip-itinerary-store"
+    );
     localStorage.removeItem("trip-storage");
     useTripItineraryStore.setState({ destinationsByTripId: {} });
 

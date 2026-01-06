@@ -3,13 +3,13 @@
  */
 
 import { Suspense } from "react";
-import { DashboardMetrics } from "@/components/features/dashboard/dashboard-metrics";
-import { QuickActions } from "@/components/features/dashboard/quick-actions";
-import { RecentTrips } from "@/components/features/dashboard/recent-trips";
-import { TripSuggestions } from "@/components/features/dashboard/trip-suggestions";
-import { UpcomingFlights } from "@/components/features/dashboard/upcoming-flights";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardMetrics } from "@/features/dashboard/components/dashboard-metrics";
+import { QuickActions } from "@/features/dashboard/components/quick-actions";
+import { RecentTrips } from "@/features/dashboard/components/recent-trips";
+import { TripSuggestions } from "@/features/dashboard/components/trip-suggestions";
+import { UpcomingFlights } from "@/features/dashboard/components/upcoming-flights";
 
 function DashboardSkeleton() {
   return (

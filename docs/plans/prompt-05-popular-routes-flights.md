@@ -15,7 +15,7 @@ You specialize in:
 
 ## Background and context
 
-SPEC-0034 (`docs/specs/active/0034-spec-popular-routes-flights.md`) defines a
+SPEC-0034 (`docs/specs/archive/0034-spec-popular-routes-flights.md`) defines a
 feature for **popular routes** in the flights search flow:
 
 - A section that shows high-value popular routes (e.g., “NYC → LAX this month”).
@@ -91,7 +91,7 @@ YOU MUST USE the following skills explicitly in your workflow:
 
 1. Local:
 
-   - `docs/specs/active/0034-spec-popular-routes-flights.md`
+   - `docs/specs/archive/0034-spec-popular-routes-flights.md`
    - `docs/architecture/decisions/adr-0056-popular-routes-flights.md`
    - `docs/architecture/decisions/adr-0045-flights-dto-frontend-zod.md`
    - `src/app/(dashboard)/search/flights/flights-search-client.tsx`

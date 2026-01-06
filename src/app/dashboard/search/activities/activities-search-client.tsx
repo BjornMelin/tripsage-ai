@@ -15,10 +15,6 @@ import {
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityCard } from "@/components/features/search/cards/activity-card";
-import { ActivitySearchForm } from "@/components/features/search/forms/activity-search-form";
-import { ActivityComparisonModal } from "@/components/features/search/modals/activity-comparison-modal";
-import { TripSelectionModal } from "@/components/features/search/modals/trip-selection-modal";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -33,11 +29,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { ActivityCard } from "@/features/search/components/cards/activity-card";
+import { ActivitySearchForm } from "@/features/search/components/forms/activity-search-form";
+import { ActivityComparisonModal } from "@/features/search/components/modals/activity-comparison-modal";
+import { TripSelectionModal } from "@/features/search/components/modals/trip-selection-modal";
+import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
+import { useComparisonStore } from "@/features/search/store/comparison-store";
+import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { getErrorMessage } from "@/lib/api/error-types";
-import { useComparisonStore } from "@/stores/comparison-store";
-import { useSearchResultsStore } from "@/stores/search-results-store";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 import { ActivitiesSelectionDialog } from "./activities-selection-dialog";
 import { isActivity, partitionActivitiesByFallback } from "./activity-results";

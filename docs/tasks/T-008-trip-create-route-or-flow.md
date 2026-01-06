@@ -16,9 +16,9 @@ Evidence:
 
 - `docs/release/_logs/nextjs-routes.json` includes `/dashboard/trips` and `/dashboard/trips/[id]` but NOT `/dashboard/trips/create`.
 - Hard-coded link usage:
-  - `src/components/features/dashboard/quick-actions.tsx` (action “Plan New Trip”)
-  - `src/components/features/dashboard/trip-suggestions.tsx` (links into `/dashboard/trips/create?suggestion=...`)
-  - Tests assert the link target is `/dashboard/trips/create` (`src/components/features/dashboard/__tests__/quick-actions.test.tsx`)
+  - `src/features/dashboard/components/quick-actions.tsx` (action “Plan New Trip”)
+  - `src/features/dashboard/components/trip-suggestions.tsx` (links into `/dashboard/trips/create?suggestion=...`)
+  - Tests assert the link target is `/dashboard/trips/create` (`src/features/dashboard/components/__tests__/quick-actions.test.tsx`)
 
 Impact:
 
@@ -32,9 +32,9 @@ Impact:
 
 ## Likely Files
 
-- `src/components/features/dashboard/quick-actions.tsx`
-- `src/components/features/dashboard/trip-suggestions.tsx`
-- `src/components/features/dashboard/__tests__/quick-actions.test.tsx`
+- `src/features/dashboard/components/quick-actions.tsx`
+- `src/features/dashboard/components/trip-suggestions.tsx`
+- `src/features/dashboard/components/__tests__/quick-actions.test.tsx`
 - New route file(s) expected (one of):
   - `src/app/dashboard/trips/create/page.tsx`
   - Or refactor CTA to use an existing route + modal/action within `src/app/dashboard/trips/page.tsx`

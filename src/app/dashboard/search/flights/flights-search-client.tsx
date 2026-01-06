@@ -17,10 +17,6 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { z } from "zod";
-import { buildFlightApiPayload } from "@/components/features/search/filters/api-payload";
-import { FilterPanel } from "@/components/features/search/filters/filter-panel";
-import { FilterPresets } from "@/components/features/search/filters/filter-presets";
-import { FlightSearchForm } from "@/components/features/search/forms/flight-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,11 +34,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { buildFlightApiPayload } from "@/features/search/components/filters/api-payload";
+import { FilterPanel } from "@/features/search/components/filters/filter-panel";
+import { FilterPresets } from "@/features/search/components/filters/filter-presets";
+import { FlightSearchForm } from "@/features/search/components/forms/flight-search-form";
+import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
+import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
 
 /** Flight search client component props. */
 interface FlightsSearchClientProps {

@@ -4,13 +4,13 @@ import type { Flight } from "@schemas/search";
 import { act, renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
+import { selectCurrentFilters } from "@/features/search/store/search-filters/selectors";
+import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
+import { useSearchParamsStore } from "@/features/search/store/search-params-store";
+import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { AllTheProviders } from "@/test/test-utils";
-import { selectCurrentFilters } from "../search-filters/selectors";
-import { useSearchFiltersStore } from "../search-filters-store";
-import { useSearchParamsStore } from "../search-params-store";
-import { useSearchResultsStore } from "../search-results-store";
 
 describe("Search Store Integration", () => {
   beforeEach(() => {

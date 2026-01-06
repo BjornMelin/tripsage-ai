@@ -2,9 +2,9 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAgentStatusWebSocket } from "@/hooks/chat/use-agent-status-websocket";
+import { useAgentStatusStore } from "@/features/agent-monitoring/store/agent-status-store";
+import { useAgentStatusWebSocket } from "@/features/chat/hooks/chat/use-agent-status-websocket";
 import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
 
 const mockSendBroadcast = vi.fn().mockResolvedValue(undefined);
 const mockUnsubscribe = vi.fn();
@@ -30,7 +30,7 @@ vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   }),
 }));
 
-vi.mock("@/stores/auth/auth-core", () => ({
+vi.mock("@/features/auth/store/auth/auth-core", () => ({
   useAuthCore: mockUseAuthStore,
 }));
 

@@ -2,8 +2,8 @@
 
 import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useChatMessages } from "@/stores/chat/chat-messages";
-import { useChatRealtime } from "@/stores/chat/chat-realtime";
+import { useChatMessages } from "@/features/chat/store/chat/chat-messages";
+import { useChatRealtime } from "@/features/chat/store/chat/chat-realtime";
 import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 describe("ChatRealtime", () => {

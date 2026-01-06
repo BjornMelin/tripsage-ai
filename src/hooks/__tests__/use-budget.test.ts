@@ -37,7 +37,7 @@ vi.mock("@/hooks/use-authenticated-api", () => ({
 }));
 
 // Mock the budget store
-vi.mock("@/stores/budget-store", () => ({
+vi.mock("@/features/budget/store/budget-store", () => ({
   useBudgetStore: vi.fn().mockImplementation(() => ({
     activeBudget: {
       categories: [],

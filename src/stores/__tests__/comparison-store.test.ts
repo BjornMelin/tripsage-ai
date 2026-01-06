@@ -9,7 +9,7 @@ import {
   useComparisonItems,
   useComparisonStore,
   useHasComparisonItem,
-} from "../comparison-store";
+} from "@/features/search/store/comparison-store";
 
 const flightStub = {} as FlightResult;
 const accommodationStub = {} as Accommodation;

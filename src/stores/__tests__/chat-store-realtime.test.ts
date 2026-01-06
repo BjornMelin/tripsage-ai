@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import { describe, expect, it } from "vitest";
-import { useChatMessages } from "@/stores/chat/chat-messages";
-import { useChatRealtime } from "@/stores/chat/chat-realtime";
+import { useChatMessages } from "@/features/chat/store/chat/chat-messages";
+import { useChatRealtime } from "@/features/chat/store/chat/chat-realtime";
 
 describe("chat realtime integration", () => {
   it("resetRealtimeState resets realtime state and connection status", () => {

@@ -7,7 +7,7 @@
 
 > **SUPERSEDED**: This specification was superseded by [SPEC-0037](../active/0037-spec-attachments-v2-supabase-storage.md).
 > The implementation uses Supabase Storage instead of Vercel Blob for enhanced security
-> through native RLS integration and signed URLs. See SPEC-0037 and ADR-0059 for the current architecture.
+> through native RLS integration and signed URLs. See SPEC-0037 and ADR-0060 for the current architecture.
 
 ## Overview
 

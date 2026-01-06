@@ -55,11 +55,11 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 
 Thin wrapper for search-specific forms. Simpler API for quick search implementations.
 
-**Location:** `@/components/features/search/common/use-search-form`
+**Location:** `@/features/search/components/common/use-search-form`
 
 ```typescript
-import { useSearchForm } from "@/components/features/search/common/use-search-form";
-import { HotelSearchForm } from "@/components/features/search/forms/hotel-search-form";
+import { useSearchForm } from "@/features/search/components/common/use-search-form";
+import { HotelSearchForm } from "@/features/search/components/forms/hotel-search-form";
 import { hotelSearchSchema } from "@schemas/search";
 
 function HotelSearch() {

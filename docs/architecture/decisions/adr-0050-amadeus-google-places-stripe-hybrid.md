@@ -66,7 +66,7 @@
 - **Search pages:**
     `src/app/(dashboard)/trips/[tripId]/stay/page.tsx` and `src/app/(marketing)/stays/page.tsx` (hero, forms, but results placeholder commented out)
 - **Cards and lists:**
-    `src/components/features/search/cards/accommodation-card.tsx` and related hotel UI.
+    `src/features/search/components/cards/accommodation-card.tsx` and related hotel UI.
 
 **Infrastructure:**
 

@@ -18,8 +18,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { SearchAnalytics } from "@/components/features/search/search-analytics";
-import { SearchCollections } from "@/components/features/search/search-collections";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,8 +35,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SearchAnalytics } from "@/features/search/components/search-analytics";
+import { SearchCollections } from "@/features/search/components/search-collections";
+import { useSearchHistoryStore } from "@/features/search/store/search-history/index";
 import { ROUTES } from "@/lib/routes";
-import { useSearchHistoryStore } from "@/stores/search-history/index";
 
 type RepeatSearchParams = Record<string, string | number | boolean | null | undefined>;
 

@@ -6,8 +6,8 @@
 
 import type { Deal, DealFilters, DealState, DealType } from "@schemas/deals";
 import { useCallback, useEffect, useMemo } from "react";
+import { useDealsStore } from "@/features/search/store/deals-store";
 import { groupBy, mapToUnique } from "@/lib/collection-utils";
-import { useDealsStore } from "@/stores/deals-store";
 
 /**
  * Hook for accessing and managing deals.

@@ -14,7 +14,7 @@ You specialize in:
 
 ## Background and context
 
-SPEC-0035 (`docs/specs/active/0035-spec-search-personalization-history.md`)
+SPEC-0035 (`docs/specs/archive/0035-spec-search-personalization-history.md`)
 defines a feature for **search history-based personalization**:
 
 - Capture recent searches (flights, hotels, unified).
@@ -80,7 +80,7 @@ YOU MUST USE the following skills explicitly in your workflow:
 
 1. Local:
 
-   - `docs/specs/active/0035-spec-search-personalization-history.md`
+   - `docs/specs/archive/0035-spec-search-personalization-history.md`
    - Any existing search logging or analytics modules.
    - Flight/hotel/unified search flows:
      - `src/app/(dashboard)/search/flights/*`

@@ -6,13 +6,13 @@
 
 import { ActivityIcon, BrainIcon, NetworkIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
-import { AgentStatusDashboard } from "@/components/features/agent-monitoring/dashboard/agent-status-dashboard-lazy";
-import { ConnectionStatus } from "@/components/features/shared/connection-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAgentStatusWebSocket } from "@/hooks/chat/use-agent-status-websocket";
+import { AgentStatusDashboard } from "@/features/agent-monitoring/components/dashboard/agent-status-dashboard-lazy";
+import { useAgentStatusStore } from "@/features/agent-monitoring/store/agent-status-store";
+import { useAgentStatusWebSocket } from "@/features/chat/hooks/chat/use-agent-status-websocket";
+import { ConnectionStatus } from "@/features/shared/components/connection-status";
 import { cn } from "@/lib/utils";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
 
 /**
  * Agent dashboard colors aligned with statusVariants.

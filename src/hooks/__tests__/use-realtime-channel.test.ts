@@ -16,7 +16,7 @@ const supabaseState = vi.hoisted(() => ({
   channel: vi.fn(),
 }));
 
-vi.mock("@/stores/realtime-connection-store", () => ({
+vi.mock("@/features/realtime/store/realtime-connection-store", () => ({
   useRealtimeConnectionStore: {
     getState: () => storeState,
   },

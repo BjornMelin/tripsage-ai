@@ -18,10 +18,6 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BudgetForm } from "@/components/features/budget/budget-form";
-import { BudgetTracker } from "@/components/features/trips/budget-tracker";
-import { ItineraryBuilder } from "@/components/features/trips/itinerary-builder";
-import { TripTimeline } from "@/components/features/trips/trip-timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +37,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { BudgetForm } from "@/features/budget/components/budget-form";
+import { useBudgetStore } from "@/features/budget/store/budget-store";
+import { BudgetTracker } from "@/features/trips/components/budget-tracker";
+import { ItineraryBuilder } from "@/features/trips/components/itinerary-builder";
+import { TripTimeline } from "@/features/trips/components/trip-timeline";
+import { useTripItineraryStore } from "@/features/trips/store/trip-itinerary-store";
 import { useTrip } from "@/hooks/use-trips";
 import { handleApiError } from "@/lib/api/error-types";
 import { exportTripToIcs } from "@/lib/calendar/trip-export";
@@ -50,8 +52,6 @@ import { nowIso, secureUuid } from "@/lib/security/random";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { parseTripDate } from "@/lib/trips/parse-trip-date";
 import { statusVariants } from "@/lib/variants/status";
-import { useBudgetStore } from "@/stores/budget-store";
-import { useTripItineraryStore } from "@/stores/trip-itinerary-store";
 
 const MAX_FILENAME_LENGTH = 80;
 

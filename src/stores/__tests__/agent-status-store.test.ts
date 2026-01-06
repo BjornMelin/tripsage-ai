@@ -12,7 +12,7 @@ vi.mock("@/lib/telemetry/store-logger", () => ({
   createStoreLogger: () => storeLogger,
 }));
 
-let useAgentStatusStore: typeof import("../agent-status-store").useAgentStatusStore;
+let useAgentStatusStore: typeof import("@/features/agent-monitoring/store/agent-status-store").useAgentStatusStore;
 
 const mockAgent = (overrides: Partial<Agent> = {}): Agent => ({
   createdAt: "2025-01-01T00:00:00.000Z",
@@ -30,7 +30,9 @@ const mockAgent = (overrides: Partial<Agent> = {}): Agent => ({
 
 describe("useAgentStatusStore", () => {
   beforeAll(async () => {
-    ({ useAgentStatusStore } = await import("../agent-status-store"));
+    ({ useAgentStatusStore } = await import(
+      "@/features/agent-monitoring/store/agent-status-store"
+    ));
   });
 
   beforeEach(() => {

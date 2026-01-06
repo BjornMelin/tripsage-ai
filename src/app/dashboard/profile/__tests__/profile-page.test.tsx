@@ -3,7 +3,7 @@
 import type { AuthUser as User } from "@schemas/stores";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAuthCore } from "@/stores/auth/auth-core";
+import { useAuthCore } from "@/features/auth/store/auth/auth-core";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const { mockReplace } = vi.hoisted(() => ({
@@ -105,7 +105,7 @@ const MOCK_USER: Partial<User> = {
 };
 
 // Mock the stores and profile components
-vi.mock("@/stores/auth/auth-core");
+vi.mock("@/features/auth/store/auth/auth-core");
 
 // Define mock components in a hoisted block so they are available to vi.mock
 // factories, which are hoisted by Vitest.
@@ -127,15 +127,15 @@ const { PERSONAL_INFO_SECTION, ACCOUNT_SETTINGS_SECTION, PREFERENCES_SECTION } =
     } as const;
   });
 
-vi.mock("@/components/features/profile/personal-info-section", () => ({
+vi.mock("@/features/profile/components/personal-info-section", () => ({
   PersonalInfoSection: PERSONAL_INFO_SECTION,
 }));
 
-vi.mock("@/components/features/profile/account-settings-section", () => ({
+vi.mock("@/features/profile/components/account-settings-section", () => ({
   AccountSettingsSection: ACCOUNT_SETTINGS_SECTION,
 }));
 
-vi.mock("@/components/features/profile/preferences-section", () => ({
+vi.mock("@/features/profile/components/preferences-section", () => ({
   PreferencesSection: PREFERENCES_SECTION,
 }));
 

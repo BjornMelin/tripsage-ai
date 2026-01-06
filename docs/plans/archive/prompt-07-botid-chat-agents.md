@@ -1,4 +1,4 @@
-# Prompt 7 – BotID Integration for Chat & Agents (ADR-0059, SPEC-0037)
+# Prompt 7 – BotID Integration for Chat & Agents (ADR-0059, SPEC-0038)
 
 ## Persona
 
@@ -148,7 +148,7 @@ Create or refine:
 - **References**:
   - URLs above.
 
-### SPEC – `docs/specs/active/0037-spec-botid-integration-chat-agents.md`
+### SPEC – `docs/specs/archive/0038-spec-botid-integration-chat-agents.md`
 
 Define:
 
@@ -243,4 +243,4 @@ For each protected route:
   - 403 responses.
   - Logs for security monitoring.
 - Upstash rate limiting still functions as before.
-- ADR-0059 and SPEC-0037 exist, with clear references and examples.
+- ADR-0059 and SPEC-0038 exist, with clear references and examples.

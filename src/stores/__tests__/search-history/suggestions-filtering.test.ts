@@ -3,7 +3,7 @@
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useSearchHistoryStore } from "@/stores/search-history";
+import { useSearchHistoryStore } from "@/features/search/store/search-history";
 
 describe("Search History Store - Suggestions and Filtering", () => {
   beforeEach(() => {

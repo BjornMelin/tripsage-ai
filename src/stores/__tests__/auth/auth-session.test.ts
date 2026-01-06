@@ -3,8 +3,11 @@
 import type { AuthSession } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { useAuthSession, useSessionTimeRemaining } from "@/stores/auth/auth-session";
-import { resetAuthState } from "@/stores/auth/reset-auth";
+import {
+  useAuthSession,
+  useSessionTimeRemaining,
+} from "@/features/auth/store/auth/auth-session";
+import { resetAuthState } from "@/features/auth/store/auth/reset-auth";
 import { setupTimeoutMock } from "@/test/helpers/store";
 
 describe("AuthSession", () => {

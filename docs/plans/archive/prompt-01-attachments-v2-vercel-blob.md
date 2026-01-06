@@ -6,8 +6,8 @@
 >
 > **Current Documentation:**
 >
-> - Architecture Decision: [ADR-0059](../../architecture/decisions/adr-0059-supabase-storage-attachments.md)
-> - Specification: [SPEC-0037](../../specs/active/0037-spec-attachments-v2-supabase-storage.md)
+> - Architecture Decision: [ADR-0060](../../architecture/decisions/adr-0060-supabase-storage-attachments.md)
+> - Specification: [SPEC-0037](../../specs/archive/0037-spec-attachments-v2-supabase-storage.md)
 > - Implementation: `src/app/api/chat/attachments/route.ts`, `src/app/api/attachments/files/route.ts`
 
 ## Persona
@@ -47,7 +47,7 @@ Current state:
 
 - Chat attachments are uploaded and listed via API routes that proxy to a legacy
   backend (`getBackendApiUrl()`).
-- SPEC-0017 (`docs/specs/active/0017-spec-attachments-migration-next.md`) states
+- SPEC-0017 (`docs/specs/archive/0017-spec-attachments-migration-next.md`) states
   that the migration to Next.js-based attachments is **Partial (Proxy Implementation)**.
 - The long-term goal is:
   - “Frontend-only” Next.js 16 deployment on Vercel.
@@ -110,7 +110,7 @@ Use MCP tools to fetch and read the following before coding:
 1. **Local docs & code**
 
    - `AGENTS.md`
-   - `docs/specs/active/0017-spec-attachments-migration-next.md`
+   - `docs/specs/archive/0017-spec-attachments-migration-next.md`
    - `docs/specs/archive/0009-spec-attachments-ssr-listing-and-cache-tags.md`
    - `docs/architecture/decisions/adr-0040-consolidate-supabase-edge-to-vercel-webhooks.md`
    - `docs/architecture/decisions/adr-0041-webhook-notifications-qstash-and-resend.md`
@@ -293,7 +293,7 @@ Include a `References` section with all relevant URLs.
 
 ### Step 4 – SPEC-0017 status update
 
-1. In `docs/specs/active/0017-spec-attachments-migration-next.md`:
+1. In `docs/specs/archive/0017-spec-attachments-migration-next.md`:
    - Update the status from “Partial (Proxy Implementation)” to “Implemented”
      (or “Implemented (Phase 1)”).
    - Note that further phases (e.g., client uploads, additional resource types)

@@ -5,8 +5,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
-import { useWebSocketChat } from "../chat/use-websocket-chat";
+import { useWebSocketChat } from "@/features/chat/hooks/chat/use-websocket-chat";
+import { useRealtimeConnectionStore } from "@/features/realtime/store/realtime-connection-store";
 import { useRealtimeChannel } from "./use-realtime-channel";
 export interface RealtimeConnectionStatus {
   trips?: "connected" | "disconnected" | "error";

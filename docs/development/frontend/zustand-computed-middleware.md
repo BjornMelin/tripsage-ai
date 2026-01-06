@@ -317,7 +317,7 @@ const compute = createComputeFn<MyState>({
 - [Zustand Store Patterns](./standards.md#zustand-stores) - General store organization
 - [Testing Guide](./testing.md) - Store testing patterns
 - [Performance Best Practices](./standards.md#performance) - App-wide performance guidelines
-- [ADR-0057](../adrs/0057-search-filter-panel-architecture.md) - Filter panel architecture using computed middleware
+- [ADR-0057](../../architecture/decisions/adr-0057-search-filter-panel-system.md) - Filter panel architecture using computed middleware
 
 ---
 

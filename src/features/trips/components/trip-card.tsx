@@ -1,0 +1,191 @@
+/**
+ * @fileoverview Trip card component for displaying trip information.
+ */
+
+"use client";
+
+import type { UiTrip } from "@schemas/trips";
+import { CalendarIcon, DollarSignIcon, MapPinIcon } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useBudgetStore } from "@/features/budget/store/budget-store";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { cn } from "@/lib/utils";
+import { statusVariants } from "@/lib/variants/status";
+
+type Trip = UiTrip;
+
+/**
+ * Props for the TripCard component.
+ *
+ * @interface TripCardProps
+ */
+interface TripCardProps {
+  /** The trip data to display. */
+  trip: Trip;
+  /** Optional callback for edit action. */
+  onEdit?: (trip: Trip) => void;
+  /** Optional callback for delete action. */
+  onDelete?: (tripId: string) => void;
+  /** Optional additional CSS classes. */
+  className?: string;
+}
+
+/**
+ * Renders a trip summary card with metadata, actions, and derived values.
+ *
+ * @param props - Component inputs including callbacks and trip data.
+ * @returns Styled card with trip details and actions.
+ */
+export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
+  const { budgetsByTrip } = useBudgetStore();
+  const tripBudgets = budgetsByTrip[trip.id] || [];
+
+  const startDate = trip.startDate ? DateUtils.parse(trip.startDate) : null;
+  const endDate = trip.endDate ? DateUtils.parse(trip.endDate) : null;
+  const duration =
+    startDate && endDate ? DateUtils.difference(endDate, startDate, "days") + 1 : null;
+
+  /**
+   * Formats a date string for display.
+   *
+   * @param dateString - The date string to format.
+   * @returns Formatted date string or "Not set" placeholder.
+   */
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Not set";
+    return DateUtils.format(DateUtils.parse(dateString), "MMM dd, yyyy");
+  };
+
+  /**
+   * Determines the current status of the trip.
+   *
+   * @returns The trip status: "draft", "upcoming", "active", or "completed".
+   */
+  const getTripStatus = () => {
+    if (!startDate || !endDate) return "draft";
+    const now = new Date();
+    if (DateUtils.isBefore(now, startDate)) return "upcoming";
+    if (DateUtils.isAfter(now, endDate)) return "completed";
+    return "active";
+  };
+
+  const status = getTripStatus();
+
+  /**
+   * Maps trip status to statusVariants.
+   * All statuses use statusVariants for consistent styling.
+   */
+  const getStatusClassName = (status: string) => {
+    switch (status) {
+      case "active":
+        return cn(statusVariants({ status: "active" }));
+      case "upcoming":
+        return cn(statusVariants({ status: "info" }));
+      case "completed":
+        return cn(statusVariants({ status: "success" }));
+      default:
+        return cn(statusVariants({ tone: "unknown" }));
+    }
+  };
+
+  return (
+    <Card
+      className={`group hover:shadow-lg transition-shadow duration-200 ${className || ""}`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <Badge className={getStatusClassName(status)}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </Badge>
+          {trip.visibility === "shared" ? (
+            <Badge
+              variant="outline"
+              className="border-sky-500/40 text-sky-700 dark:text-sky-300"
+            >
+              Shared
+            </Badge>
+          ) : trip.visibility === "public" ? (
+            <Badge variant="outline">Public</Badge>
+          ) : null}
+        </div>
+        <CardTitle className="line-clamp-1">{trip.title}</CardTitle>
+        {trip.description && (
+          <CardDescription className="line-clamp-2">{trip.description}</CardDescription>
+        )}
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CalendarIcon className="h-4 w-4" />
+          <span>
+            {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+            {duration && <span className="ml-1">({duration} days)</span>}
+          </span>
+        </div>
+
+        {trip.destinations.length > 0 && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPinIcon className="h-4 w-4" />
+            <span className="line-clamp-1">
+              {trip.destinations.length === 1
+                ? trip.destinations[0].name
+                : `${trip.destinations[0].name} + ${trip.destinations.length - 1} more`}
+            </span>
+          </div>
+        )}
+
+        {trip.budget !== undefined && trip.budget > 0 && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <DollarSignIcon className="h-4 w-4" />
+            <span>
+              Budget:{" "}
+              {new Intl.NumberFormat("en-US", {
+                currency: trip.currency || "USD",
+                style: "currency",
+              }).format(trip.budget)}
+            </span>
+          </div>
+        )}
+
+        {tripBudgets.length > 0 && (
+          <div className="text-xs text-muted-foreground">
+            {tripBudgets.length} budget{tripBudgets.length !== 1 ? "s" : ""} tracked
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="pt-2 gap-2">
+        <Button asChild variant="default" size="sm" className="flex-1">
+          <Link href={`/dashboard/trips/${trip.id}`}>View Details</Link>
+        </Button>
+
+        {onEdit && (
+          <Button variant="outline" size="sm" onClick={() => onEdit(trip)}>
+            Edit
+          </Button>
+        )}
+
+        {onDelete && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDelete(trip.id)}
+            className="text-destructive hover:text-destructive"
+          >
+            Delete
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}

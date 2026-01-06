@@ -1,6 +1,6 @@
-# ADR: BotID Integration for Chat and Agent Endpoints
+# ADR-0059: BotID Integration for Chat and Agent Endpoints
 
-Status: Accepted
+**Status**: Accepted
 
 ## Context
 

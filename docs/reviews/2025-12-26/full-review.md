@@ -36,7 +36,7 @@ Justification: core quality gates pass, but the architecture boundaries and typi
 - **Backend/infra:** Supabase SSR (`src/lib/supabase/**`), Upstash (`src/lib/redis`, `src/lib/ratelimit`, `src/lib/cache`), OpenTelemetry helpers (`src/lib/telemetry/**`).
 - **AI:** AI SDK v6 (`ai`), agent/tool infrastructure in `src/ai/**`; agent routes consolidated via `src/lib/api/factory.ts#createAgentRoute`.
 - **Domain:** `src/domain/**` holds domain services and provider adapters; **in practice** these range from pure mapping/service functions (flights) to infra-heavy orchestrators (accommodations, activities).
-- **State/UI:** Zustand stores in `src/stores/**`; large feature components in `src/components/features/**` and `src/app/dashboard/**`.
+- **State/UI:** Zustand stores in `src/stores/**`; large feature components in `src/features/**/components/**` and `src/app/dashboard/**`.
 - **Testing:** Vitest multi-project config (`vitest.config.ts`) with `api`, `component (jsdom)`, `unit`, `schemas`, `integration`.
 
 ### 2.2 Key Strengths
@@ -136,7 +136,7 @@ Top large files (by LOC; generated files excluded from “smell” severity):
 - Stores/components at 650–850+ LOC:
   - `src/app/dashboard/search/hotels/hotels-search-client.tsx` (~677)
   - `src/app/dashboard/search/activities/activities-search-client.tsx` (~759)
-  - `src/components/features/search/forms/destination-search-form.tsx` (~849)
+  - `src/features/search/components/forms/destination-search-form.tsx` (~849)
   - `src/stores/budget-store.ts` (~725)
   - `src/stores/search-results-store.ts` (~678)
   - `src/stores/search-filters-store.ts` (~722)
@@ -252,7 +252,7 @@ Recommendation:
       - Supabase JS SDK source shows the relevant overload constraints and event handling: `https://github.com/supabase/supabase-js/blob/master/packages/core/realtime-js/src/RealtimeChannel.ts`
 
 - **TD-6** – Production `any` usage / Biome ignores for complex structures  
-  - **Files:** `src/ai/tools/server/planning.ts` (combine results), `src/hooks/use-zod-form.ts`, `src/components/features/search/common/use-search-form.ts`, `src/ai/lib/tool-factory.ts`, `src/lib/supabase/typed-helpers.ts`  
+  - **Files:** `src/ai/tools/server/planning.ts` (combine results), `src/hooks/use-zod-form.ts`, `src/features/search/components/common/use-search-form.ts`, `src/ai/lib/tool-factory.ts`, `src/lib/supabase/typed-helpers.ts`  
   - **Problem:** “escape hatches” reduce type safety and make refactors riskier.  
   - **Risk/impact:** **Medium**.  
   - **Resolution:** remove `any` where feasible via Zod-inferred types and better generics; if not feasible, isolate and document as deliberate debt.
@@ -594,7 +594,7 @@ Plan:
   - [x] Refactor targets:
     - [x] `src/app/dashboard/search/hotels/hotels-search-client.tsx`
     - [x] `src/app/dashboard/search/activities/activities-search-client.tsx`
-    - [x] `src/components/features/search/forms/destination-search-form.tsx`
+    - [x] `src/features/search/components/forms/destination-search-form.tsx`
   - [x] Extract pure helpers (mapping/formatting) to adjacent modules and add unit tests where logic is non-trivial
   - **Done when:** UI modules are smaller, responsibilities are clearer, and tests cover extracted logic.
 
@@ -653,7 +653,7 @@ Plan:
 
 - [x] Fix React Hook Form + Zod resolver typing in shared hooks (Typing) — refs: TD-6, D4 — Priority: Medium
   - [x] Update `src/hooks/use-zod-form.ts` to remove `schema as any` by making the hook schema-generic and setting RHF generics appropriately
-  - [x] Update `src/components/features/search/common/use-search-form.ts` similarly, so feature forms no longer need local casting
+  - [x] Update `src/features/search/components/common/use-search-form.ts` similarly, so feature forms no longer need local casting
   - [x] `rg "zodResolver\\(schema as any\\)" src` returns 0 matches
   - **Done when:** both hooks compile without suppressions and call sites remain ergonomic (no repeated generics everywhere).
 

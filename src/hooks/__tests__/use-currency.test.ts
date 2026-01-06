@@ -3,7 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StateCreator, StoreMutatorIdentifier } from "zustand";
-import { useCurrencyStore } from "@/stores/currency-store";
+import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import {
   useCurrency,
   useCurrencyActions,

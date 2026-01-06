@@ -3,7 +3,7 @@
 import type { Currency } from "@schemas/currency";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useCurrencyStore } from "../currency-store";
+import { useCurrencyStore } from "@/features/shared/store/currency-store";
 
 // Mock the store to avoid persistence/devtools issues in tests
 vi.mock("zustand/middleware", () => ({

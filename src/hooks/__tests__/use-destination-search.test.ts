@@ -3,10 +3,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useSearchResultsStore } from "@/stores/search-results-store";
+import { useDestinationSearch } from "@/features/search/hooks/search/use-destination-search";
+import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { server } from "@/test/msw/server";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
-import { useDestinationSearch } from "../search/use-destination-search";
 
 interface Place {
   id: string;

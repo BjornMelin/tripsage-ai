@@ -176,7 +176,7 @@ Implement a **Supabase-backed agent configuration service** with:
 ## References
 
 - `src/domain/schemas/configuration.ts` (agent configuration schemas).
-- `src/components/features/agents/configuration-manager.tsx`
+- `src/components/admin/configuration-manager.tsx`
   (current admin UI).
 - `src/lib/supabase/server.ts`, `src/lib/supabase/factory.ts` (SSR
   Supabase client).

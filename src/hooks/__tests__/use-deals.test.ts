@@ -157,7 +157,7 @@ const CREATE_MOCK_STORE = () => {
 
 // Mock the deals store
 const MOCK_STORE = CREATE_MOCK_STORE();
-vi.mock("@/stores/deals-store", () => ({
+vi.mock("@/features/search/store/deals-store", () => ({
   useDealsStore: vi.fn(() => MOCK_STORE),
 }));
 

@@ -160,8 +160,8 @@ Checklist:
 - `src/domain/schemas/accommodations.ts`
 - `src/ai/tools/server/accommodations.ts`
 - `src/lib/agents/accommodation-agent.ts`
-- `src/components/features/search/cards/accommodation-card.tsx`
-- `src/components/features/search/results/hotel-results.tsx`
+- `src/features/search/components/cards/accommodation-card.tsx`
+- `src/features/search/components/results/hotel-results.tsx`
 - `src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
 - `src/app/(marketing)/stays/page.tsx`
 
@@ -514,8 +514,8 @@ components.([shadcn/ui](https://ui.shadcn.com))
 
 Files:
 
-- `src/components/features/search/cards/accommodation-card.tsx`
-- `src/components/features/search/results/hotel-results.tsx`
+- `src/features/search/components/cards/accommodation-card.tsx`
+- `src/features/search/components/results/hotel-results.tsx`
 - `src/app/(dashboard)/trips/[tripId]/stay/page.tsx`
 - `src/app/(marketing)/stays/page.tsx`
 

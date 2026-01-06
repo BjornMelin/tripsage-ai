@@ -32,7 +32,7 @@ Current design intent:
 - ADR-0041 and ADR-0048 describe:
   - Use of Upstash QStash for notifications and retries.
   - Idempotency strategies with Redis.
-- SPEC-0021 (`docs/specs/active/0021-spec-supabase-webhooks-vercel-consolidation.md`)
+- SPEC-0021 (`docs/specs/archive/0021-spec-supabase-webhooks-vercel-consolidation.md`)
   tracks this migration, but its status is only **partially implemented**.
 
 Supabase docs:
@@ -107,7 +107,7 @@ Use MCP tools for:
 
 1. **Local**:
 
-   - `docs/specs/active/0021-spec-supabase-webhooks-vercel-consolidation.md`
+   - `docs/specs/archive/0021-spec-supabase-webhooks-vercel-consolidation.md`
    - `docs/architecture/decisions/adr-0040-consolidate-supabase-edge-to-vercel-webhooks.md`
    - `docs/architecture/decisions/adr-0041-webhook-notifications-qstash-and-resend.md`
    - `docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md`

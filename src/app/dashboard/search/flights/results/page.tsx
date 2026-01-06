@@ -17,8 +17,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { cn } from "@/lib/utils";
-import { useSearchResultsStore } from "@/stores/search-results-store";
 
 /**
  * Flight results page semantic colors.

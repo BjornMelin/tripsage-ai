@@ -5,9 +5,9 @@
  * with sensible defaults. Avoids duplication and hidden coupling across suites.
  */
 
-import type { AgentStatusState } from "@/stores/agent-status-store";
-import type { ChatMessagesState } from "@/stores/chat/chat-messages";
-import type { ChatRealtimeState } from "@/stores/chat/chat-realtime";
+import type { AgentStatusState } from "@/features/agent-monitoring/store/agent-status-store";
+import type { ChatMessagesState } from "@/features/chat/store/chat/chat-messages";
+import type { ChatRealtimeState } from "@/features/chat/store/chat/chat-realtime";
 
 /**
  * Create a mock ChatMessagesState with minimal defaults and optional overrides.

@@ -13,10 +13,6 @@ import {
   SortAscIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildHotelApiPayload } from "@/components/features/search/filters/api-payload";
-import { FilterPanel } from "@/components/features/search/filters/filter-panel";
-import { HotelSearchForm } from "@/components/features/search/forms/hotel-search-form";
-import { HotelResults } from "@/components/features/search/results/hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -42,11 +38,15 @@ import {
 } from "@/components/ui/tooltip";
 import { HotelSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
-import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { buildHotelApiPayload } from "@/features/search/components/filters/api-payload";
+import { FilterPanel } from "@/features/search/components/filters/filter-panel";
+import { HotelSearchForm } from "@/features/search/components/forms/hotel-search-form";
+import { HotelResults } from "@/features/search/components/results/hotel-results";
+import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
+import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
+import { useSearchResultsStore } from "@/features/search/store/search-results-store";
+import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { getErrorMessage } from "@/lib/api/error-types";
-import { useCurrencyStore } from "@/stores/currency-store";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
-import { useSearchResultsStore } from "@/stores/search-results-store";
 import { mapAccommodationToHotelResult } from "./hotel-mapping";
 import { HotelsEmptyState } from "./hotels-empty-state";
 import {

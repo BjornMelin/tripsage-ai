@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DestinationCard } from "@/components/features/search/cards/destination-card";
-import { DestinationSearchForm } from "@/components/features/search/forms/destination-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +27,11 @@ import {
 } from "@/components/ui/tooltip";
 import { DestinationSkeleton } from "@/components/ui/travel-skeletons";
 import { useToast } from "@/components/ui/use-toast";
-import type { DestinationResult } from "@/hooks/search/use-destination-search";
-import { useDestinationSearch } from "@/hooks/search/use-destination-search";
-import { useSearchOrchestration } from "@/hooks/search/use-search-orchestration";
+import { DestinationCard } from "@/features/search/components/cards/destination-card";
+import { DestinationSearchForm } from "@/features/search/components/forms/destination-search-form";
+import type { DestinationResult } from "@/features/search/hooks/search/use-destination-search";
+import { useDestinationSearch } from "@/features/search/hooks/search/use-destination-search";
+import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { DestinationComparisonModal } from "./destination-comparison-modal";

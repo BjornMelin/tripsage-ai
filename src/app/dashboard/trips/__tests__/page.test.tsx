@@ -77,11 +77,11 @@ vi.mock("@/components/ui/use-toast", () => ({
 }));
 
 // Mock child components
-vi.mock("@/components/features/realtime/connection-status-monitor", () => ({
+vi.mock("@/features/realtime/components/connection-status-monitor", () => ({
   ConnectionStatusIndicator: () => <div data-testid="connection-status" />,
 }));
 
-vi.mock("@/components/features/trips/trip-card", () => ({
+vi.mock("@/features/trips/components/trip-card", () => ({
   TripCard: ({ trip, onDelete }: { trip: UiTrip; onDelete?: (id: string) => void }) => (
     <div data-testid={`trip-card-${trip.id}`}>
       <span>{trip.title}</span>
