@@ -21,7 +21,7 @@ import { handleChatStream } from "./_handler";
 // Allow streaming responses for up to 60 seconds
 export const maxDuration = 60;
 
-const chatStreamRequestSchema = z.looseObject({
+const chatStreamRequestSchema = z.strictObject({
   desiredMaxTokens: z.coerce.number().int().min(1).max(16_384).optional(),
   messages: z.unknown().optional(),
   model: z.string().trim().min(1).max(200).optional(),
@@ -80,20 +80,10 @@ export const POST = withApiGuards({
       ? { data: [], success: true as const }
       : await safeValidateUIMessages({ messages: rawMessagesArray });
   if (!safeMessagesResult.success) {
-    const errorMessage =
-      typeof safeMessagesResult.error === "object" &&
-      safeMessagesResult.error !== null &&
-      "message" in safeMessagesResult.error &&
-      typeof (safeMessagesResult.error as { message?: unknown }).message === "string"
-        ? (safeMessagesResult.error as { message: string }).message
-        : null;
     const normalizedError =
       safeMessagesResult.error instanceof Error
         ? safeMessagesResult.error
-        : new Error(
-            errorMessage ??
-              String(safeMessagesResult.error ?? "Invalid messages payload")
-          );
+        : new Error(String(safeMessagesResult.error ?? "Invalid messages payload"));
     return errorResponse({
       err: normalizedError,
       error: "invalid_request",

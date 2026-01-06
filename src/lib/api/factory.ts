@@ -57,8 +57,11 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
     const cookieStore = await cookies();
     if (cookieStore.get("sb-access-token")?.value) return true;
     if (cookieStore.get("sb-refresh-token")?.value) return true;
-  } catch {
+  } catch (error) {
     // If cookies() is unavailable (unexpected in Route Handlers), fall back to header checks.
+    apiFactoryLogger.warn("cookies_unavailable_in_route_handler", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return false;
