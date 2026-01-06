@@ -3,6 +3,7 @@
 import type { ProviderId } from "@schemas/providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import type { ChatDeps, ProviderResolver } from "../_handler";
 
@@ -397,10 +398,10 @@ describe("handleChatStream", () => {
         })
       );
 
-      const calls = mockInsertSingle.mock.calls as unknown[][];
-      const lastPayload = calls[calls.length - 1]?.[2] as
-        | Record<string, unknown>
-        | undefined;
+      const calls = unsafeCast<unknown[][]>(mockInsertSingle.mock.calls);
+      const lastPayload = unsafeCast<Record<string, unknown> | undefined>(
+        calls[calls.length - 1]?.[2]
+      );
       expect(lastPayload).toBeDefined();
       expect(lastPayload).not.toHaveProperty("request_id");
     }

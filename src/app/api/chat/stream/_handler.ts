@@ -216,10 +216,9 @@ export async function handleChatStream(
             userId,
           });
 
-          const chatMessagePayload: TablesInsert<"chat_messages"> & {
-            // request_id is persisted in metadata; do not send as a top-level column unless
-            // the database schema explicitly supports it.
-          } = {
+          // request_id is persisted in metadata; do not send as a top-level column unless
+          // the database schema explicitly supports it.
+          const chatMessagePayload: TablesInsert<"chat_messages"> = {
             content: "(streamed)",
             metadata: meta,
             role: "assistant",
