@@ -2,7 +2,6 @@
  * @fileoverview Authenticated app layout wrapper for client-side providers.
  */
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -16,10 +15,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const headersList = await headers();
-    const pathname = headersList.get("x-pathname") || "/dashboard";
-    const nextPath = pathname.startsWith("/") ? pathname : "/dashboard";
-    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+    redirect("/login");
   }
 
   return <Providers>{children}</Providers>;
