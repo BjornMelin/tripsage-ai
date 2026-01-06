@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { keys } from "@/lib/keys";
 
 // Mock Next.js navigation
 vi.mock("next/navigation", () => ({
@@ -77,29 +78,26 @@ describe("FlightsSearchClient", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    queryClient.setQueryData(
-      ["flights", "popular-routes"],
-      [
-        {
-          date: `May 28, ${nextYear}`,
-          destination: "London",
-          origin: "New York",
-          price: 456,
-        },
-        {
-          date: `Jun 15, ${nextYear}`,
-          destination: "Tokyo",
-          origin: "Los Angeles",
-          price: 789,
-        },
-        {
-          date: `Jun 8, ${nextYear}`,
-          destination: "Paris",
-          origin: "Chicago",
-          price: 567,
-        },
-      ]
-    );
+    queryClient.setQueryData(keys.flights.popularRoutes(), [
+      {
+        date: `May 28, ${nextYear}`,
+        destination: "London",
+        origin: "New York",
+        price: 456,
+      },
+      {
+        date: `Jun 15, ${nextYear}`,
+        destination: "Tokyo",
+        origin: "Los Angeles",
+        price: 789,
+      },
+      {
+        date: `Jun 8, ${nextYear}`,
+        destination: "Paris",
+        origin: "Chicago",
+        price: 567,
+      },
+    ]);
     return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
   };
 

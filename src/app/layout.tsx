@@ -7,7 +7,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
-import { TanStackQueryProvider } from "@/components/providers/query-provider";
 import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
 import { TelemetryProvider } from "@/components/providers/telemetry-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -80,19 +79,17 @@ export default function RootLayout({
         <TelemetryProvider />
         {SHOULD_ENABLE_BOT_ID && <BotIdClient protect={BOTID_PROTECT} />}
         <PerformanceMonitor>
-          <TanStackQueryProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {/* Keep Supabase Realtime authorized with the current access token */}
-              <RealtimeAuthProvider />
-              <div className="flex flex-col min-h-screen">{children}</div>
-              <Toaster />
-            </ThemeProvider>
-          </TanStackQueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {/* Keep Supabase Realtime authorized with the current access token */}
+            <RealtimeAuthProvider />
+            <div className="flex flex-col min-h-screen">{children}</div>
+            <Toaster />
+          </ThemeProvider>
         </PerformanceMonitor>
       </body>
     </html>

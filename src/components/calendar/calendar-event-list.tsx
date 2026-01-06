@@ -15,7 +15,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { keys } from "@/lib/keys";
 
 const CalendarEventListItemSchema = z.looseObject({
   description: z.string().max(8192).optional(),
@@ -79,6 +81,7 @@ export function CalendarEventList({
   timeMax,
   className,
 }: CalendarEventListProps) {
+  const userId = useCurrentUserId();
   const timeMinIso = timeMin?.toISOString() ?? null;
   const timeMaxIso = timeMax?.toISOString() ?? null;
 
@@ -88,6 +91,7 @@ export function CalendarEventList({
     isError,
     isPending,
   } = useQuery<CalendarEventListItem[]>({
+    enabled: !!userId,
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       params.set("calendarId", calendarId);
@@ -115,7 +119,9 @@ export function CalendarEventList({
 
       return parsed.data.items;
     },
-    queryKey: ["calendar", "events", { calendarId, timeMaxIso, timeMinIso }],
+    queryKey: userId
+      ? keys.calendar.events(userId, { calendarId, timeMaxIso, timeMinIso })
+      : keys.calendar.eventsDisabled(),
   });
 
   if (isPending) {

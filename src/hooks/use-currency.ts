@@ -15,8 +15,8 @@ import { useCallback, useEffect } from "react";
 import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { keys } from "@/lib/keys";
 import { staleTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 const MAX_CURRENCY_QUERY_RETRIES = 2;
@@ -162,7 +162,7 @@ export function useFetchExchangeRates() {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.currency.rates(),
+    queryKey: keys.currency.rates(),
     refetchInterval: 60 * 60 * 1000, // Refresh rates every hour
     retry: shouldRetryCurrencyQuery,
     staleTime: staleTimes.currency,
@@ -207,7 +207,7 @@ export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.currency.rate(targetCurrency),
+    queryKey: keys.currency.rate(targetCurrency),
     retry: shouldRetryCurrencyQuery,
     staleTime: staleTimes.currency,
     throwOnError: false,

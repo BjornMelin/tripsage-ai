@@ -1,12 +1,16 @@
 /** @vitest-environment jsdom */
 
 import { delay, HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CalendarEventList } from "@/components/calendar/calendar-event-list";
 import { server } from "@/test/msw/server";
 import { render, screen, within } from "@/test/test-utils";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+vi.mock("@/hooks/use-current-user-id", () => ({
+  useCurrentUserId: () => "user-123",
+}));
 
 describe("CalendarEventList", () => {
   const useEventsHandlers = (handler: Parameters<typeof http.get>[1]) => {

@@ -44,9 +44,6 @@ const mockCreateIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 const mockDeleteIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockToast = vi.hoisted(() => vi.fn());
-const mockCurrentUserId = vi.hoisted(() =>
-  vi.fn(() => "11111111-1111-4111-8aaa-111111111111")
-);
 
 const DEFAULT_USER_ID = "11111111-1111-4111-8aaa-111111111111";
 
@@ -66,10 +63,6 @@ vi.mock("@/hooks/use-trips", () => ({
     isLoading: mockIsLoading(),
     realtimeStatus: mockRealtimeStatus(),
   }),
-}));
-
-vi.mock("@/hooks/use-current-user-id", () => ({
-  useCurrentUserId: () => mockCurrentUserId(),
 }));
 
 vi.mock("@/components/ui/use-toast", () => ({
@@ -95,7 +88,11 @@ vi.mock("@/features/trips/components/trip-card", () => ({
 }));
 
 // Import after mocks so Vitest applies them before module evaluation.
-import TripsPage from "../page";
+import TripsClient from "../trips-client";
+
+function TripsPage() {
+  return <TripsClient userId={DEFAULT_USER_ID} />;
+}
 
 const DEFAULT_CURRENCY: UiTrip["currency"] = "USD";
 const destination = (
@@ -119,7 +116,6 @@ describe("TripsPage", () => {
     mockDeleteTrip.mockReset();
     mockDeleteIsPending.mockReset();
     mockToast.mockReset();
-    mockCurrentUserId.mockReset();
     mockTrips.mockReturnValue([]);
     mockIsLoading.mockReturnValue(false);
     mockError.mockReturnValue(null);
@@ -127,7 +123,6 @@ describe("TripsPage", () => {
     mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: true });
     mockCreateIsPending.mockReturnValue(false);
     mockDeleteIsPending.mockReturnValue(false);
-    mockCurrentUserId.mockReturnValue(DEFAULT_USER_ID);
   });
 
   describe("Loading state", () => {

@@ -18,9 +18,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useBudgetStore } from "@/features/budget/store/budget-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { keys } from "@/lib/keys";
 import { staleTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Hook for accessing budget store state.
@@ -110,8 +111,10 @@ export function useAlerts(budgetId?: string) {
 export function useFetchBudgets() {
   const { setBudgets } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
 
   const query = useQuery<{ budgets: Budget[] }, AppError>({
+    enabled: !!userId,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<{ budgets: Budget[] }>("/api/budgets");
@@ -119,7 +122,7 @@ export function useFetchBudgets() {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.budget.categories(),
+    queryKey: userId ? keys.budget.list(userId) : keys.budget.all(),
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -150,9 +153,10 @@ export function useFetchBudgets() {
 export function useFetchBudget(id: string) {
   const { addBudget } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
 
   const query = useQuery<Budget, AppError>({
-    enabled: !!id,
+    enabled: !!id && !!userId,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<Budget>(`/api/budgets/${id}`);
@@ -160,7 +164,7 @@ export function useFetchBudget(id: string) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.budget.trips(Number.parseInt(id, 10)),
+    queryKey: userId ? keys.budget.detail(userId, id) : keys.budget.all(),
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -181,6 +185,7 @@ export function useCreateBudget() {
   const { addBudget } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<Budget, AppError, CreateBudgetRequest>({
     mutationFn: async (variables) => {
@@ -195,7 +200,11 @@ export function useCreateBudget() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: keys.budget.list(userId) });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.budget.all() });
+      }
     },
     throwOnError: false,
   });
@@ -216,6 +225,7 @@ export function useUpdateBudget() {
   const { updateBudget } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<Budget, AppError, UpdateBudgetRequest>({
     mutationFn: async (variables) => {
@@ -230,10 +240,15 @@ export function useUpdateBudget() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.budget.trips(Number.parseInt(data.id, 10)),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.detail(userId, data.id),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.budget.list(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.budget.all() });
     },
     throwOnError: false,
   });
@@ -254,6 +269,7 @@ export function useDeleteBudget() {
   const { removeBudget } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<{ success: boolean; id: string }, AppError, string>({
     mutationFn: async (id) => {
@@ -269,10 +285,15 @@ export function useDeleteBudget() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.budget.trips(Number.parseInt(data.id, 10)),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.budget.categories() });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.detail(userId, data.id),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.budget.list(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.budget.all() });
     },
     throwOnError: false,
   });
@@ -294,9 +315,10 @@ export function useDeleteBudget() {
 export function useFetchExpenses(budgetId: string) {
   const { setExpenses } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
 
   const query = useQuery<{ expenses: Expense[] }, AppError>({
-    enabled: !!budgetId,
+    enabled: !!budgetId && !!userId,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<{ expenses: Expense[] }>(
@@ -306,7 +328,7 @@ export function useFetchExpenses(budgetId: string) {
         throw handleApiError(error);
       }
     },
-    queryKey: ["budget", "expenses", budgetId],
+    queryKey: userId ? keys.budget.expenses(userId, budgetId) : keys.budget.all(),
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -327,6 +349,7 @@ export function useAddExpense() {
   const { addExpense } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<Expense, AppError, AddExpenseRequest>({
     mutationFn: async (variables) => {
@@ -341,9 +364,13 @@ export function useAddExpense() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: ["budget", "expenses", data.budgetId],
-      });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.expenses(userId, data.budgetId),
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.budget.all() });
+      }
     },
     throwOnError: false,
   });
@@ -364,6 +391,7 @@ export function useUpdateExpense() {
   const { updateExpense } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<Expense, AppError, UpdateExpenseRequest>({
     mutationFn: async (variables) => {
@@ -378,9 +406,13 @@ export function useUpdateExpense() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: ["budget", "expenses", data.budgetId],
-      });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.expenses(userId, data.budgetId),
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.budget.all() });
+      }
     },
     throwOnError: false,
   });
@@ -401,6 +433,7 @@ export function useDeleteExpense() {
   const { removeExpense } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<
     { success: boolean; id: string; budgetId: string },
@@ -421,9 +454,13 @@ export function useDeleteExpense() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: ["budget", "expenses", data.budgetId],
-      });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.expenses(userId, data.budgetId),
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.budget.all() });
+      }
     },
     throwOnError: false,
   });
@@ -445,9 +482,10 @@ export function useDeleteExpense() {
 export function useFetchAlerts(budgetId: string) {
   const { setAlerts } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
 
   const query = useQuery<{ alerts: BudgetAlert[] }, AppError>({
-    enabled: !!budgetId,
+    enabled: !!budgetId && !!userId,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<{ alerts: BudgetAlert[] }>(
@@ -457,7 +495,7 @@ export function useFetchAlerts(budgetId: string) {
         throw handleApiError(error);
       }
     },
-    queryKey: ["budget", "alerts", budgetId],
+    queryKey: userId ? keys.budget.alerts(userId, budgetId) : keys.budget.all(),
     staleTime: staleTimes.categories,
     throwOnError: false,
   });
@@ -478,6 +516,7 @@ export function useCreateAlert() {
   const { addAlert } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<BudgetAlert, AppError, CreateBudgetAlertRequest>({
     mutationFn: async (variables) => {
@@ -492,7 +531,13 @@ export function useCreateAlert() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["budget", "alerts", data.budgetId] });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.alerts(userId, data.budgetId),
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.budget.all() });
+      }
     },
     throwOnError: false,
   });
@@ -513,6 +558,7 @@ export function useMarkAlertAsRead() {
   const { markAlertAsRead } = useBudgetStore();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const mutation = useMutation<
     { id: string; budgetId: string; isRead: boolean },
@@ -535,7 +581,13 @@ export function useMarkAlertAsRead() {
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["budget", "alerts", data.budgetId] });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.budget.alerts(userId, data.budgetId),
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.budget.all() });
+      }
     },
     throwOnError: false,
   });
@@ -566,7 +618,7 @@ export function useFetchCurrencyRates() {
         throw handleApiError(error);
       }
     },
-    queryKey: ["currency", "rates"],
+    queryKey: keys.currency.rates(),
     refetchInterval: 60 * 60 * 1000, // Refresh currency rates every hour
     staleTime: staleTimes.currency,
     throwOnError: false,

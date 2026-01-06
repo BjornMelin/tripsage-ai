@@ -5,8 +5,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { keys } from "@/lib/keys";
 import { cacheTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 import { useSupabaseRequired } from "@/lib/supabase";
 
 export function useCurrentUserId(): string | null {
@@ -18,7 +18,7 @@ export function useCurrentUserId(): string | null {
       const { data: authData } = await supabase.auth.getUser();
       return authData.user?.id ?? null;
     },
-    queryKey: [...queryKeys.auth.user(), "id"],
+    queryKey: keys.auth.userId(),
     staleTime: Infinity,
     throwOnError: false,
   });

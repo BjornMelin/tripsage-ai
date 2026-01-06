@@ -5,7 +5,7 @@ import type { TripSuggestion, UiTrip } from "@schemas/trips";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { queryKeys } from "@/lib/query-keys";
+import { keys } from "@/lib/keys";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { getTestQueryClient, render } from "@/test/test-utils";
 
@@ -81,6 +81,10 @@ vi.mock("@/hooks/use-authenticated-api", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-current-user-id", () => ({
+  useCurrentUserId: () => "user-123",
+}));
+
 const mockIsPending = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("@/hooks/use-trips", () => ({
@@ -135,7 +139,7 @@ describe("CreateTripPage", () => {
     );
     const queryClient = getTestQueryClient();
     queryClient.setQueryData(
-      queryKeys.trips.suggestions({ budget_max: 2500, limit: 6 }),
+      keys.trips.suggestion("user-123", { budget_max: 2500, limit: 6 }),
       [apiSuggestion()]
     );
 

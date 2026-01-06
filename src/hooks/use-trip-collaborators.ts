@@ -12,9 +12,10 @@ import type {
 } from "@schemas/trips";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 
 export type TripCollaboratorsResponse = {
   readonly tripId: number;
@@ -34,9 +35,11 @@ export type UpdateTripCollaboratorRoleResponse = {
 
 export function useTripCollaborators(tripId: number | null) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
+  const enabled = tripId !== null && !!userId;
 
   return useQuery<TripCollaboratorsResponse, AppError>({
-    enabled: tripId !== null,
+    enabled,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       // Invariant: queryFn should only run when `enabled` is true
@@ -52,9 +55,9 @@ export function useTripCollaborators(tripId: number | null) {
       }
     },
     queryKey:
-      tripId === null
-        ? queryKeys.trips.collaboratorsDisabled()
-        : queryKeys.trips.collaborators(tripId),
+      tripId === null || !userId
+        ? keys.trips.collaboratorsDisabled()
+        : keys.trips.collaborators(userId, tripId),
     staleTime: staleTimes.realtime,
     throwOnError: false,
   });
@@ -63,6 +66,7 @@ export function useTripCollaborators(tripId: number | null) {
 export function useInviteTripCollaborator(tripId: number) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   return useMutation<
     InviteTripCollaboratorResponse,
@@ -84,10 +88,15 @@ export function useInviteTripCollaborator(tripId: number) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.trips.collaborators(tripId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.trips.collaborators(userId, tripId),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.trips.all() });
     },
     throwOnError: false,
   });
@@ -96,6 +105,7 @@ export function useInviteTripCollaborator(tripId: number) {
 export function useUpdateTripCollaboratorRole(tripId: number) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   return useMutation<
     UpdateTripCollaboratorRoleResponse,
@@ -117,10 +127,15 @@ export function useUpdateTripCollaboratorRole(tripId: number) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.trips.collaborators(tripId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.trips.collaborators(userId, tripId),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.trips.all() });
     },
     throwOnError: false,
   });
@@ -129,6 +144,7 @@ export function useUpdateTripCollaboratorRole(tripId: number) {
 export function useRemoveTripCollaborator(tripId: number) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   return useMutation<void, AppError, { collaboratorUserId: string }>({
     mutationFn: async ({ collaboratorUserId }) => {
@@ -144,10 +160,15 @@ export function useRemoveTripCollaborator(tripId: number) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.trips.collaborators(tripId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.trips.collaborators(userId, tripId),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.trips.all() });
     },
     throwOnError: false,
   });

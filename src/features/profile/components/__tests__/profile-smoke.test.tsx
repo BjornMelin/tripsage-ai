@@ -2,7 +2,7 @@
 
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import ProfilePage from "@/app/dashboard/profile/page";
+import ProfilePage from "@/app/(app)/dashboard/profile/page";
 import { render } from "@/test/test-utils";
 import { AccountSettingsSection } from "../account-settings-section";
 import { PersonalInfoSection } from "../personal-info-section";

@@ -21,8 +21,8 @@ import {
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 import type { UpdateTables } from "@/lib/supabase/database.types";
 
 /** Trip type alias using canonical schema from @schemas/trips. */
@@ -49,6 +49,7 @@ interface TripSuggestionsParams {
  */
 export function useTripSuggestions(params?: TripSuggestionsParams) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
 
   const normalizedParams: Record<string, string | number | boolean> = {
     limit: params?.limit ?? 4,
@@ -63,6 +64,7 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
   }
 
   return useQuery<TripSuggestion[], AppError>({
+    enabled: !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
@@ -74,7 +76,9 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.trips.suggestions(normalizedParams),
+    queryKey: userId
+      ? keys.trips.suggestion(userId, normalizedParams)
+      : keys.trips.listDisabled(),
     staleTime: staleTimes.suggestions,
     throwOnError: false,
   });
@@ -88,6 +92,7 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
 export function useCreateTrip() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   return useMutation<UiTrip, AppError, TripCreateInput>({
     mutationFn: async (tripData: TripCreateInput) => {
@@ -102,11 +107,13 @@ export function useCreateTrip() {
       }
     },
     onSuccess: () => {
-      // Invalidate and refetch trips lists
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
+        queryClient.invalidateQueries({ queryKey: keys.trips.suggestions(userId) });
+        return;
+      }
 
-      // Optionally invalidate suggestions if they might be affected
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
+      queryClient.invalidateQueries({ queryKey: keys.trips.all() });
     },
     throwOnError: false,
   });
@@ -125,6 +132,7 @@ export type UpdateTripData = TripUpdateInput & TripTableUpdate;
 export function useUpdateTrip() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   return useMutation<
     UiTrip,
@@ -149,11 +157,16 @@ export function useUpdateTrip() {
         typeof variables.tripId === "string"
           ? Number.parseInt(variables.tripId, 10)
           : variables.tripId;
-      // Invalidate specific trip and trips list
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.trips.detail(numericTripId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.trips.detail(userId, numericTripId),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.trips.lists(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.trips.all() });
     },
     throwOnError: false,
   });
@@ -167,6 +180,7 @@ export function useUpdateTrip() {
 export function useDeleteTrip() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   return useMutation<void, AppError, string | number>({
     mutationFn: async (tripId: string | number) => {
@@ -183,11 +197,16 @@ export function useDeleteTrip() {
     onSuccess: (_data, tripId) => {
       const numericTripId =
         typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
-      // Invalidate specific trip and trips list
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.trips.detail(numericTripId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+
+      if (userId) {
+        queryClient.invalidateQueries({
+          queryKey: keys.trips.detail(userId, numericTripId),
+        });
+        queryClient.invalidateQueries({ queryKey: keys.trips.lists(userId) });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: keys.trips.all() });
     },
     throwOnError: false,
   });
@@ -241,23 +260,26 @@ interface TripRealtimeStatus {
  * @returns Query object containing trips data, loading state, error state,
  * and real-time connection status.
  */
-export function useTrips(filters?: TripFilters) {
+export function useTrips(filters?: TripFilters, options?: { userId?: string | null }) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
-  const userId = useCurrentUserId();
+  const inferredUserId = useCurrentUserId();
+  const userId = options?.userId ?? inferredUserId;
+  const apiParams = convertToApiParams(filters);
 
   const query = useQuery<Trip[], AppError>({
+    enabled: !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<Trip[]>("/api/trips", {
-          params: convertToApiParams(filters),
+          params: apiParams,
         });
       } catch (error) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.trips.list(filters),
+    queryKey: userId ? keys.trips.list(userId, apiParams) : keys.trips.listDisabled(),
     staleTime: staleTimes.trips,
     throwOnError: false,
   });
@@ -298,7 +320,11 @@ export function useTrips(filters?: TripFilters) {
 
   const handleTripsChange = useCallback(
     (payload: RealtimePostgresChangesPayload<TripsRealtimeRow>) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
+      } else {
+        queryClient.invalidateQueries({ queryKey: keys.trips.all() });
+      }
 
       const rawTripId =
         payload.table === "trip_collaborators"
@@ -313,12 +339,14 @@ export function useTrips(filters?: TripFilters) {
         typeof rawTripId === "string" ? Number.parseInt(rawTripId, 10) : rawTripId;
 
       if (Number.isFinite(numericId)) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.trips.detail(numericId),
-        });
+        if (userId) {
+          queryClient.invalidateQueries({
+            queryKey: keys.trips.detail(userId, numericId),
+          });
+        }
       }
     },
-    [getRealtimeNumberishField, queryClient]
+    [getRealtimeNumberishField, queryClient, userId]
   );
 
   const realtime = usePostgresChangesChannel<TripsRealtimeRow>(realtimeTopic, {
@@ -349,10 +377,14 @@ export function useTrips(filters?: TripFilters) {
  * @returns Query object containing trip data, loading state, error state,
  * and real-time connection status.
  */
-export function useTrip(tripId: string | number | null | undefined) {
+export function useTrip(
+  tripId: string | number | null | undefined,
+  options?: { userId?: string | null }
+) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
-  const userId = useCurrentUserId();
+  const inferredUserId = useCurrentUserId();
+  const userId = options?.userId ?? inferredUserId;
 
   const numericTripId =
     tripId === null || tripId === undefined
@@ -362,7 +394,7 @@ export function useTrip(tripId: string | number | null | undefined) {
         : tripId;
 
   const query = useQuery<Trip | null, AppError>({
-    enabled: numericTripId !== null,
+    enabled: numericTripId !== null && !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       if (numericTripId === null) return null;
@@ -372,7 +404,10 @@ export function useTrip(tripId: string | number | null | undefined) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.trips.detail(numericTripId ?? 0),
+    queryKey:
+      numericTripId !== null && userId
+        ? keys.trips.detail(userId, numericTripId)
+        : keys.trips.detailDisabled(),
     staleTime: staleTimes.trips,
     throwOnError: false,
   });
@@ -396,9 +431,12 @@ export function useTrip(tripId: string | number | null | undefined) {
 
   const handleTripChange = useCallback(() => {
     if (numericTripId === null) return;
-    queryClient.invalidateQueries({ queryKey: queryKeys.trips.detail(numericTripId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
-  }, [numericTripId, queryClient]);
+    if (!userId) return;
+    queryClient.invalidateQueries({
+      queryKey: keys.trips.detail(userId, numericTripId),
+    });
+    queryClient.invalidateQueries({ queryKey: keys.trips.lists(userId) });
+  }, [numericTripId, queryClient, userId]);
 
   const realtime = usePostgresChangesChannel(realtimeTopic, {
     changes,
@@ -494,7 +532,7 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.external.upcomingFlights(normalizedParams),
+    queryKey: keys.external.upcomingFlights(normalizedParams),
     refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for fresh flight data
     refetchIntervalInBackground: false, // Only when page is visible
     staleTime: staleTimes.realtime, // 30 seconds for real-time flight data
