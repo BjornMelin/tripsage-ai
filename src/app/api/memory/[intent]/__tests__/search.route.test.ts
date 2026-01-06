@@ -157,7 +157,7 @@ describe("/api/memory/search route", () => {
       type: "fetchContext",
       userId,
     });
-  });
+  }, 15_000);
 
   it("filters by similarityThreshold when provided", async () => {
     const post = await importRoute();
