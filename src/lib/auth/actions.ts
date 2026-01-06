@@ -59,15 +59,18 @@ type MfaFactorCandidate = {
   status: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function parseMfaFactorCandidate(value: unknown): MfaFactorCandidate | null {
-  if (!value || typeof value !== "object") {
+  if (!isRecord(value)) {
     return null;
   }
 
-  const record = value as Record<string, unknown>;
-  const id = record.id;
-  const status = record.status;
-  const factorType = record.factor_type;
+  const id = value.id;
+  const status = value.status;
+  const factorType = value.factor_type;
 
   if (
     typeof id !== "string" ||
@@ -92,10 +95,9 @@ function pickTotpFactorId(listFactorsData: unknown): string {
 
   if (Array.isArray(listFactorsData)) {
     listFactorsData.forEach(pushCandidate);
-  } else if (listFactorsData && typeof listFactorsData === "object") {
-    const record = listFactorsData as Record<string, unknown>;
+  } else if (isRecord(listFactorsData)) {
     for (const key of ["totp", "webauthn", "phone"] as const) {
-      const value = record[key];
+      const value = listFactorsData[key];
       if (Array.isArray(value)) {
         value.forEach(pushCandidate);
       }
@@ -319,11 +321,11 @@ export async function registerWithPasswordAction(
   const userMetadata: Record<string, string | boolean> = {
     email: parsed.data.email,
   };
-  userMetadata["first_name"] = parsed.data.firstName;
-  userMetadata["full_name"] = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
-  userMetadata["last_name"] = parsed.data.lastName;
-  userMetadata["marketing_opt_in"] = Boolean(parsed.data.marketingOptIn);
-  userMetadata["terms_accepted"] = true;
+  userMetadata.first_name = parsed.data.firstName;
+  userMetadata.full_name = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+  userMetadata.last_name = parsed.data.lastName;
+  userMetadata.marketing_opt_in = Boolean(parsed.data.marketingOptIn);
+  userMetadata.terms_accepted = true;
 
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,

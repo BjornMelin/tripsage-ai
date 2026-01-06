@@ -6,12 +6,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RegisterForm } from "@/components/auth/register-form";
 
+const REGISTER_ERROR_MESSAGES = new Map<string, string>([
+  ["auth_failed", "Authentication failed. Please try again."],
+  ["email_taken", "This email is already registered."],
+  ["invalid_credentials", "Invalid email or password."],
+]);
+
 /** The metadata for the register page. */
 export const metadata: Metadata = {
   description:
     "Join TripSage to start planning your perfect trips with AI-powered assistance",
   title: "Create Account - TripSage",
 };
+
+function getRegisterErrorMessage(errorCode: string | undefined): string | null {
+  if (!errorCode) return null;
+  return REGISTER_ERROR_MESSAGES.get(errorCode) ?? null;
+}
 
 /** The register page component. */
 export default async function RegisterPage({
@@ -27,7 +38,7 @@ export default async function RegisterPage({
   const params = await searchParams;
   const redirectTo = params.from || params.next || "/dashboard";
   const shouldCheckEmail = params.status === "check_email";
-  const errorMessage = params.error ? params.error : null;
+  const errorMessage = getRegisterErrorMessage(params.error);
 
   return (
     <div className="min-h-screen flex">

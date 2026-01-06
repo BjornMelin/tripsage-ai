@@ -18,7 +18,7 @@
 
 After `pnpm supabase:start`, get local URLs/keys via:
 
-- `pnpm dlx supabase@2.70.5 status`
+- `pnpm supabase:status`
 
 Populate `.env.local` with at least:
 
@@ -40,4 +40,3 @@ This writes `src/lib/supabase/database.types.ts` from the local database (schema
 2) `pnpm supabase:db:reset`
 3) `pnpm supabase:typegen`
 4) Commit both the migration(s) and updated `src/lib/supabase/database.types.ts`
-

@@ -36,6 +36,7 @@
     "test:e2e:chromium": "playwright test --project=chromium",
     "supabase:start": "pnpm dlx supabase@2.70.5 start",
     "supabase:stop": "pnpm dlx supabase@2.70.5 stop",
+    "supabase:status": "pnpm dlx supabase@2.70.5 status",
     "supabase:db:reset": "pnpm dlx supabase@2.70.5 db reset",
     "supabase:typegen": "pnpm dlx supabase@2.70.5 gen types typescript --local --schema auth,public,memories,storage > src/lib/supabase/database.types.ts",
     "ops": "tsx scripts/ops.ts",

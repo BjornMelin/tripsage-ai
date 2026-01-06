@@ -78,7 +78,7 @@ async function handleSemanticFetchContext(
       .schema("memories")
       .rpc("match_turn_embeddings", {
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
-        filter_session_id: intent.sessionId ?? undefined,
+        filter_session_id: intent.sessionId || undefined,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
         filter_user_id: intent.userId,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name

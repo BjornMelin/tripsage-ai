@@ -46,18 +46,20 @@ CREATE POLICY file_attachments_insert_owner
     )
     AND (
       chat_id IS NULL
-      OR chat_id IN (
-        SELECT id
-        FROM public.chat_sessions
-        WHERE user_id = (select auth.uid())
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_sessions cs
+        WHERE cs.id = chat_id
+          AND cs.user_id = (select auth.uid())
       )
     )
     AND (
       chat_message_id IS NULL
-      OR chat_message_id IN (
-        SELECT id
-        FROM public.chat_messages
-        WHERE user_id = (select auth.uid())
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_messages cm
+        WHERE cm.id = chat_message_id
+          AND cm.user_id = (select auth.uid())
       )
     )
   );
@@ -76,18 +78,20 @@ CREATE POLICY file_attachments_update_owner
     )
     AND (
       chat_id IS NULL
-      OR chat_id IN (
-        SELECT id
-        FROM public.chat_sessions
-        WHERE user_id = (select auth.uid())
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_sessions cs
+        WHERE cs.id = chat_id
+          AND cs.user_id = (select auth.uid())
       )
     )
     AND (
       chat_message_id IS NULL
-      OR chat_message_id IN (
-        SELECT id
-        FROM public.chat_messages
-        WHERE user_id = (select auth.uid())
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_messages cm
+        WHERE cm.id = chat_message_id
+          AND cm.user_id = (select auth.uid())
       )
     )
   );

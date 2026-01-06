@@ -83,6 +83,22 @@ CREATE POLICY itinerary_delete_trip_edit
   TO authenticated
   USING (public.user_has_trip_edit_access(auth.uid(), trip_id));
 
+-- Prevent collaborators from reassigning ownership by mutating user_id.
+CREATE OR REPLACE FUNCTION public.prevent_itinerary_user_id_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+    RAISE EXCEPTION 'user_id cannot be modified';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS itinerary_items_prevent_user_id_change ON public.itinerary_items;
+CREATE TRIGGER itinerary_items_prevent_user_id_change
+  BEFORE UPDATE ON public.itinerary_items
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_itinerary_user_id_change();
+
 -- ===========================
 -- STORAGE: ATTACHMENTS BUCKET
 -- ===========================
@@ -99,4 +115,3 @@ WITH CHECK (
     OR name LIKE 'chat/' || auth.uid()::TEXT || '/%'
   )
 );
-

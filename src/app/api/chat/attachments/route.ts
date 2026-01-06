@@ -151,15 +151,21 @@ interface UploadResult {
 
 function buildAttachmentStoragePath(options: {
   attachmentId: string;
-  chatId: string;
+  chatId?: string;
   fileName: string;
   tripId?: number;
   userId: string;
 }): string {
   const { attachmentId, chatId, fileName, tripId, userId } = options;
-  return tripId !== undefined
-    ? `${userId}/${tripId}/${chatId}/${attachmentId}/${fileName}`
-    : `${userId}/${chatId}/${attachmentId}/${fileName}`;
+  if (tripId !== undefined) {
+    return chatId !== undefined
+      ? `${userId}/${tripId}/${chatId}/${attachmentId}/${fileName}`
+      : `${userId}/${tripId}/${attachmentId}/${fileName}`;
+  }
+
+  return chatId !== undefined
+    ? `${userId}/${chatId}/${attachmentId}/${fileName}`
+    : `${userId}/${attachmentId}/${fileName}`;
 }
 
 /**
@@ -171,7 +177,7 @@ function buildAttachmentStoragePath(options: {
  * @returns Upload result with path or error.
  */
 async function uploadToSupabaseStorage(options: {
-  chatId: string;
+  chatId?: string;
   chatMessageId?: number;
   file: File;
   supabase: TypedServerSupabase;
@@ -179,6 +185,21 @@ async function uploadToSupabaseStorage(options: {
   userId: string;
 }): Promise<UploadResult> {
   const { chatId, chatMessageId, file, supabase, tripId, userId } = options;
+
+  if (chatId === undefined && tripId === undefined) {
+    const attachmentId = secureUuid();
+    return {
+      detectedType: undefined,
+      error: new Error("Either chatId or tripId is required."),
+      errorKind: "validation",
+      file,
+      id: attachmentId,
+      insertedMetadata: false,
+      path: "",
+      signedUrl: null,
+      uploaded: false,
+    };
+  }
 
   const attachmentId = secureUuid();
   const sanitizedName = sanitizeFilename(file.name);
@@ -215,7 +236,7 @@ async function uploadToSupabaseStorage(options: {
   // Create metadata record first so Storage RLS can validate the upload.
   const { error: insertError } = await supabase.from("file_attachments").insert({
     bucket_name: STORAGE_BUCKET,
-    chat_id: chatId,
+    chat_id: chatId ?? null,
     chat_message_id: chatMessageId ?? null,
     file_path: storagePath,
     file_size: file.size,

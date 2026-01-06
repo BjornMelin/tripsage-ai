@@ -185,6 +185,54 @@ describe("/api/chat/attachments", () => {
     expect(body.urls).toHaveLength(1);
   });
 
+  it("should allow trip-scoped upload without chatId", async () => {
+    const tripId = 42;
+    mockUpload.mockResolvedValueOnce({
+      data: { path: `user-1/${tripId}/test-uuid-1/test.jpg` },
+      error: null,
+    });
+    mockCreateSignedUrl.mockResolvedValueOnce({
+      data: {
+        signedUrl: `https://supabase.storage/signed/user-1/${tripId}/test-uuid-1/test.jpg`,
+      },
+      error: null,
+    });
+
+    const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
+
+    const mod = await import("../route");
+    const validFile = new File(["test content"], "test.jpg", { type: "image/jpeg" });
+    const formData = new FormData();
+    formData.append("file", validFile);
+    formData.append("tripId", String(tripId));
+
+    const req = new NextRequest("http://localhost/api/chat/attachments", {
+      body: formData,
+      method: "POST",
+    });
+
+    const res = await mod.POST(req, createRouteParamsContext());
+    expect(res.status).toBe(200);
+
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+    expect(mockUpload).toHaveBeenCalledWith(
+      expect.stringContaining(`user-1/${tripId}/`),
+      expect.any(Uint8Array),
+      expect.any(Object)
+    );
+
+    const inserts = state.insertByTable.get("file_attachments") ?? [];
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toEqual(
+      expect.objectContaining({
+        chat_id: null,
+        trip_id: tripId,
+        user_id: "user-1",
+      })
+    );
+  });
+
   it("should upload multiple files to Supabase Storage", async () => {
     // Reset counter for predictable UUIDs
     uuidCounter = 0;
