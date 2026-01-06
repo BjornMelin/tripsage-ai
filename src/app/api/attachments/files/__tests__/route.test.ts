@@ -213,7 +213,6 @@ describe("/api/attachments/files", () => {
         (r) =>
           r.method === "GET" &&
           r.url.startsWith("/rest/v1/file_attachments") &&
-          r.url.includes("user_id=eq.user-1") &&
           r.url.includes("trip_id=eq.123")
       )
     ).toBe(true);

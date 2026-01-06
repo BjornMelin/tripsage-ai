@@ -98,9 +98,14 @@ export const GET = withApiGuards({
   let query = supabase
     .from("file_attachments")
     .select("*", { count: "exact" })
-    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
+
+  // When listing trip-scoped attachments, rely on RLS to allow collaborators to read.
+  // Default behavior (no tripId) remains owner-scoped for efficiency.
+  if (tripId === undefined) {
+    query = query.eq("user_id", userId);
+  }
 
   // Filter by tripId if provided (Zod coercion ensures it's a number)
   if (tripId !== undefined) {
