@@ -1,10 +1,10 @@
 /**
  * @fileoverview Canonical TanStack Query key factory.
- *
- * Private query keys MUST be scoped by `userId` to prevent cross-user cache leakage,
- * especially once server-side prefetch + dehydration is used (ADR-0061/ADR-0064).
  */
 
+/**
+ * Private query keys must be scoped by `userId` to prevent cross-user cache leakage.
+ */
 import type { TimeWindow } from "@schemas/dashboard";
 
 type SearchSuggestionsType =

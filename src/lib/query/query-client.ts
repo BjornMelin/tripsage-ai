@@ -1,8 +1,5 @@
 /**
  * @fileoverview Canonical TanStack Query client configuration (server + client).
- *
- * - Server: create a new QueryClient per request for prefetch/dehydration.
- * - Client: reuse a singleton QueryClient to preserve cache across navigations.
  */
 
 import {
