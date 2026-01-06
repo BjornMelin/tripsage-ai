@@ -22,10 +22,11 @@ function isRangeValue(value: unknown): value is RangeValue {
 export const computeFilterState = createComputeFn<SearchFiltersState>({
   appliedFilterSummary: (state) => {
     const currentFilters = selectCurrentFilters(state);
+    const filterMap = new Map(currentFilters.map((filter) => [filter.id, filter]));
     const summaries: string[] = [];
 
     Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
-      const filter = currentFilters.find((f) => f.id === filterId);
+      const filter = filterMap.get(filterId);
       if (!filter) return;
 
       const valueStr = Array.isArray(activeFilter.value)
