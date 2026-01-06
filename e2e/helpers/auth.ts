@@ -63,7 +63,10 @@ export async function authenticateAsTestUser(page: Page): Promise<void> {
 
   await page.context().addCookies([
     {
-      httpOnly: true,
+      // Allow the browser client (createBrowserClient from @supabase/ssr) to read the
+      // auth cookie during E2E runs so client hooks (useCurrentUserId) can enable
+      // private React Query keys without relying on a real auth flow.
+      httpOnly: false,
       name: getSupabaseAuthCookieName(),
       sameSite: "Lax",
       secure: false,
