@@ -171,15 +171,16 @@ revalidateTag(nextCacheTags.publicConfig);
 
 **Files:**
 
-- `src/components/providers/query-provider.tsx` – QueryClient defaults + devtools
+- `src/app/(app)/providers.tsx` – QueryClientProvider wiring + devtools
+- `src/lib/query/query-client.ts` – canonical QueryClient defaults
 - `src/lib/query/config.ts` – canonical `staleTimes` / `cacheTimes`
-- `src/lib/query-keys.ts` – Query key factory
+- `src/lib/keys.ts` – Query key factory
 
 **Pattern:**
 
 ```typescript
 const { data } = useQuery({
-  queryKey: queryKeys.trips.all(),
+  queryKey: keys.trips.list(userId),
   queryFn: () => fetch("/api/trips").then(r => r.json()),
   staleTime: staleTimes.trips, // 2 min
 });
@@ -188,7 +189,7 @@ const { data } = useQuery({
 useMutation({
   mutationFn: createTrip,
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
+    queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
   },
 });
 ```

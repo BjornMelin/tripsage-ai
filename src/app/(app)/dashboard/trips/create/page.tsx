@@ -39,10 +39,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { useCreateTrip } from "@/hooks/use-trips";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { ApiError, getErrorMessage } from "@/lib/api/error-types";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { keys } from "@/lib/keys";
 import {
   computeDefaultTripDates,
   computeDefaultTripTitle,
@@ -57,6 +59,7 @@ export default function CreateTripPage() {
   const searchParams = useSearchParams();
   const suggestionId = searchParams.get("suggestion") ?? undefined;
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
 
   const { authenticatedApi, cancelRequests } = useAuthenticatedApi();
   const { toast } = useToast();
@@ -95,15 +98,17 @@ export default function CreateTripPage() {
     let isActive = true;
     setSuggestionState({ id: suggestionId, kind: "loading" });
 
-    const cachedSuggestions = queryClient.getQueriesData<TripSuggestion[]>({
-      queryKey: ["trips", "suggestions"],
-    });
+    if (userId) {
+      const cachedSuggestions = queryClient.getQueriesData<TripSuggestion[]>({
+        queryKey: keys.trips.suggestions(userId),
+      });
 
-    for (const [, suggestions] of cachedSuggestions) {
-      const match = suggestions?.find((item) => item.id === suggestionId);
-      if (match) {
-        setSuggestionState({ id: suggestionId, kind: "loaded", suggestion: match });
-        return;
+      for (const [, suggestions] of cachedSuggestions) {
+        const match = suggestions?.find((item) => item.id === suggestionId);
+        if (match) {
+          setSuggestionState({ id: suggestionId, kind: "loaded", suggestion: match });
+          return;
+        }
       }
     }
 
@@ -149,7 +154,14 @@ export default function CreateTripPage() {
       isActive = false;
       cancelRequests();
     };
-  }, [authenticatedApi, cancelRequests, queryClient, searchParams, suggestionId]);
+  }, [
+    authenticatedApi,
+    cancelRequests,
+    queryClient,
+    searchParams,
+    suggestionId,
+    userId,
+  ]);
 
   useEffect(() => {
     if (!suggestion) return;

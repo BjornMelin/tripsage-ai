@@ -1,83 +1,89 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
+import { keys } from "../keys";
 import { cacheTimes, staleTimes } from "../query/config";
-import { queryKeys } from "../query-keys";
 
-describe("queryKeys", () => {
+describe("keys", () => {
   describe("memory", () => {
     it("returns base key for all()", () => {
-      expect(queryKeys.memory.all()).toEqual(["memory"]);
+      expect(keys.memory.all()).toEqual(["memory"]);
     });
 
     it("returns context key with userId", () => {
       const userId = "user-123";
-      expect(queryKeys.memory.context(userId)).toEqual(["memory", "context", userId]);
+      expect(keys.memory.context(userId)).toEqual(["memory", userId, "context"]);
     });
 
     it("returns insights key with userId", () => {
       const userId = "user-456";
-      expect(queryKeys.memory.insights(userId)).toEqual(["memory", "insights", userId]);
+      expect(keys.memory.insights(userId)).toEqual(["memory", userId, "insights"]);
     });
 
     it("returns search key scoped by user and params", () => {
       const params = { query: "paris" };
-      expect(queryKeys.memory.search("user-123", params)).toEqual([
+      expect(keys.memory.search("user-123", params)).toEqual([
         "memory",
-        "search",
         "user-123",
+        "search",
         params,
       ]);
     });
 
     it("returns search key scoped by user and query string", () => {
-      expect(queryKeys.memory.search("user-123", "rome")).toEqual([
+      expect(keys.memory.search("user-123", "rome")).toEqual([
         "memory",
-        "search",
         "user-123",
+        "search",
         "rome",
       ]);
     });
 
     it("uses null marker when params are omitted", () => {
-      expect(queryKeys.memory.search("user-123")).toEqual([
+      expect(keys.memory.search("user-123")).toEqual([
         "memory",
-        "search",
         "user-123",
+        "search",
         null,
       ]);
     });
 
     it("returns stats key with userId", () => {
       const userId = "user-789";
-      expect(queryKeys.memory.stats(userId)).toEqual(["memory", "stats", userId]);
+      expect(keys.memory.stats(userId)).toEqual(["memory", userId, "stats"]);
     });
 
     it("context key extends from all()", () => {
-      const baseKey = queryKeys.memory.all();
-      const contextKey = queryKeys.memory.context("user-123");
+      const baseKey = keys.memory.all();
+      const contextKey = keys.memory.context("user-123");
       expect(contextKey.slice(0, baseKey.length)).toEqual(baseKey);
     });
   });
 
   describe("trips", () => {
     it("returns base key for all()", () => {
-      expect(queryKeys.trips.all()).toEqual(["trips"]);
+      expect(keys.trips.all()).toEqual(["trips"]);
     });
 
     it("returns lists key", () => {
-      expect(queryKeys.trips.lists()).toEqual(["trips", "list"]);
+      expect(keys.trips.lists("user-123")).toEqual(["trips", "user-123", "list"]);
     });
 
     it("returns detail key with tripId", () => {
       const tripId = 42;
-      expect(queryKeys.trips.detail(tripId)).toEqual(["trips", "detail", tripId]);
+      expect(keys.trips.detail("user-123", tripId)).toEqual([
+        "trips",
+        "user-123",
+        "detail",
+        tripId,
+      ]);
     });
 
     it("returns collaborators key with tripId", () => {
       const tripId = 99;
-      expect(queryKeys.trips.collaborators(tripId)).toEqual([
+      expect(keys.trips.collaborators("user-123", tripId)).toEqual([
         "trips",
+        "user-123",
         "detail",
         tripId,
         "collaborators",
@@ -85,32 +91,40 @@ describe("queryKeys", () => {
     });
 
     it("returns collaboratorsDisabled key", () => {
-      expect(queryKeys.trips.collaboratorsDisabled()).toEqual([
+      expect(keys.trips.collaboratorsDisabled()).toEqual([
         "trips",
         "collaborators",
-        null,
+        "disabled",
       ]);
     });
   });
 
   describe("chat", () => {
     it("returns base key for all()", () => {
-      expect(queryKeys.chat.all()).toEqual(["chat"]);
+      expect(keys.chat.all()).toEqual(["chat"]);
     });
 
     it("returns sessions key", () => {
-      expect(queryKeys.chat.sessions()).toEqual(["chat", "sessions"]);
+      expect(keys.chat.sessions("user-123")).toEqual(["chat", "user-123", "sessions"]);
     });
 
     it("returns session key with sessionId", () => {
       const sessionId = "sess-abc";
-      expect(queryKeys.chat.session(sessionId)).toEqual(["chat", "session", sessionId]);
+      expect(keys.chat.session("user-123", sessionId)).toEqual([
+        "chat",
+        "user-123",
+        "sessions",
+        "session",
+        sessionId,
+      ]);
     });
 
     it("returns messages key with sessionId", () => {
       const sessionId = "sess-xyz";
-      expect(queryKeys.chat.messages(sessionId)).toEqual([
+      expect(keys.chat.messages("user-123", sessionId)).toEqual([
         "chat",
+        "user-123",
+        "sessions",
         "session",
         sessionId,
         "messages",
@@ -120,15 +134,15 @@ describe("queryKeys", () => {
 
   describe("auth", () => {
     it("returns user key", () => {
-      expect(queryKeys.auth.user()).toEqual(["auth", "user"]);
+      expect(keys.auth.user()).toEqual(["auth", "user"]);
     });
 
     it("returns apiKeys key", () => {
-      expect(queryKeys.auth.apiKeys()).toEqual(["auth", "api-keys"]);
+      expect(keys.auth.apiKeys("user-123")).toEqual(["auth", "api-keys", "user-123"]);
     });
 
     it("returns permissions key with userId", () => {
-      expect(queryKeys.auth.permissions("user-123")).toEqual([
+      expect(keys.auth.permissions("user-123")).toEqual([
         "auth",
         "permissions",
         "user-123",

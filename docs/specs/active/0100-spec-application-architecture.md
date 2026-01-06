@@ -55,6 +55,27 @@
 
 - `useQuery` uses server-prefetched dehydrated state or fetches via a small Route Handler only when needed (cache misses, refocus, manual retry; see [ADR-0064](../../architecture/decisions/adr-0064-caching-use-cache-and-consistency-rules.md)).
 
+## TanStack Query foundation (canonical paths)
+
+### Query keys
+
+- Canonical factory: `src/lib/keys.ts`
+- Conventions:
+  - Keys are stable arrays (no ad-hoc strings).
+  - Keys are grouped by feature (e.g. `keys.trips.*`, `keys.chat.*`).
+  - **Private data is always scoped by `userId`** (e.g. `keys.trips.list(userId)`, `keys.trips.detail(userId, tripId)`).
+
+### Query client + SSR hydration
+
+- Query client configuration (server + client): `src/lib/query/query-client.ts`
+- Server prefetch + dehydration helper: `src/lib/query/prefetch.ts`
+- Hydration wrapper: `src/lib/query/hydration-boundary.tsx`
+
+### Provider integration (authenticated routes)
+
+- App providers: `src/app/(app)/providers.tsx`
+- Provider wiring layout: `src/app/(app)/layout.tsx`
+
 ## Performance requirements
 
 - Avoid client waterfalls (RSC prefetch + hydration boundary).

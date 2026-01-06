@@ -36,6 +36,10 @@ vi.mock("@/hooks/use-authenticated-api", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-current-user-id", () => ({
+  useCurrentUserId: () => "user-123",
+}));
+
 // Mock the budget store
 vi.mock("@/features/budget/store/budget-store", () => ({
   useBudgetStore: vi.fn().mockImplementation(() => ({

@@ -42,7 +42,6 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { ConnectionStatusIndicator } from "@/features/realtime/components/connection-status-monitor";
 import { TripCard } from "@/features/trips/components/trip-card";
-import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type Trip, useCreateTrip, useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { nowIso } from "@/lib/security/random";
@@ -122,11 +121,17 @@ const getTripStatus = (trip: Trip, nowTs: number): TripStatus => {
  *
  * @returns Trips management layout with grid/list modes.
  */
-export default function TripsPage() {
+export default function TripsClient({ userId }: { userId: string }) {
   const createTripMutation = useCreateTrip();
   const deleteTripMutation = useDeleteTrip();
-  const { data: trips, isLoading, error, isConnected, realtimeStatus } = useTrips();
-  const currentUserId = useCurrentUserId();
+  const {
+    data: trips,
+    isLoading,
+    error,
+    isConnected,
+    realtimeStatus,
+  } = useTrips(undefined, { userId });
+  const currentUserId = userId;
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");

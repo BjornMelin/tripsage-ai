@@ -5,9 +5,8 @@ import { screen } from "@testing-library/react";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@/test/test-utils";
-
+import DashboardError from "../(app)/dashboard/error";
 import AuthError from "../(auth)/error";
-import DashboardError from "../dashboard/error";
 // Import the error boundary components
 import ErrorComponent from "../error";
 import GlobalError from "../global-error";

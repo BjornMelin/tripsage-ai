@@ -28,8 +28,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type UpdateTripData, useTrip, useUpdateTrip } from "@/hooks/use-trips";
-import { queryKeys } from "@/lib/query-keys";
+import { keys } from "@/lib/keys";
 import type { UpdateTables } from "@/lib/supabase/database.types";
 import { statusVariants } from "@/lib/variants/status";
 
@@ -109,6 +110,7 @@ export function OptimisticTripUpdates({
 }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const userId = useCurrentUserId();
   const updateTrip = useUpdateTrip();
   const {
     data: fetchedTrip,
@@ -277,9 +279,9 @@ export function OptimisticTripUpdates({
       });
     } catch (_error) {
       // Revert optimistic update on error using cache or snapshots
-      const currentTrip = queryClient.getQueryData<UiTrip | null>(
-        queryKeys.trips.detail(tripId)
-      );
+      const currentTrip = userId
+        ? queryClient.getQueryData<UiTrip | null>(keys.trips.detail(userId, tripId))
+        : null;
       if (currentTrip) {
         setTrip(currentTrip);
         setFormData({

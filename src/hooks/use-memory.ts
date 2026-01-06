@@ -18,8 +18,8 @@ import type {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Hook for fetching user memory context.
@@ -42,7 +42,7 @@ export function useMemoryContext(userId: string, enabled = true) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.memory.context(userId),
+    queryKey: keys.memory.context(userId),
     staleTime: staleTimes.user,
     throwOnError: false,
   });
@@ -121,7 +121,7 @@ export function useMemoryInsights(userId: string, enabled = true) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.memory.insights(userId),
+    queryKey: keys.memory.insights(userId),
     staleTime: staleTimes.stats,
     throwOnError: false,
   });
@@ -213,7 +213,7 @@ export function useMemoryStats(userId: string, enabled = true) {
         throw handleApiError(error);
       }
     },
-    queryKey: queryKeys.memory.stats(userId),
+    queryKey: keys.memory.stats(userId),
     staleTime: staleTimes.stats,
     throwOnError: false,
   });

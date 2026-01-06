@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useSearchHistoryStore } from "@/features/search/store/search-history";
+import { keys } from "@/lib/keys";
 import { cn } from "@/lib/utils";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
@@ -71,8 +72,6 @@ const PopularDestinationSchema = z.looseObject({
 const PopularDestinationsSchema = z.array(PopularDestinationSchema);
 
 type PopularDestination = z.infer<typeof PopularDestinationSchema>;
-
-const POPULAR_DESTINATIONS_QUERY_KEY = ["flights", "popular-destinations"] as const;
 
 const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
   { code: "NYC", name: "New York", savings: "$127" },
@@ -140,7 +139,7 @@ export function FlightSearchForm({
         }
         return parsed.data;
       },
-      queryKey: POPULAR_DESTINATIONS_QUERY_KEY,
+      queryKey: keys.flights.popularDestinations(),
       staleTime: 60 * 60 * 1000, // 1 hour
     });
 

@@ -8,8 +8,9 @@ import type { DashboardMetrics, TimeWindow } from "@schemas/dashboard";
 import { dashboardMetricsSchema } from "@schemas/dashboard";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
+import { keys } from "@/lib/keys";
 import { staleTimes } from "@/lib/query/config";
-import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Options for the useDashboardMetrics hook.
@@ -45,9 +46,11 @@ export function useDashboardMetrics(options: UseDashboardMetricsOptions = {}) {
   } = options;
 
   const { authenticatedApi } = useAuthenticatedApi();
+  const userId = useCurrentUserId();
+  const isEnabled = enabled && !!userId;
 
   return useQuery({
-    enabled,
+    enabled: isEnabled,
     queryFn: async (): Promise<DashboardMetrics> => {
       const response = await authenticatedApi.get<DashboardMetrics>(
         `/dashboard?window=${window}`
@@ -55,7 +58,9 @@ export function useDashboardMetrics(options: UseDashboardMetricsOptions = {}) {
       // Validate response against schema for runtime type safety
       return dashboardMetricsSchema.parse(response);
     },
-    queryKey: queryKeys.dashboard.metrics(window),
+    queryKey: userId
+      ? keys.dashboard.metrics(userId, window)
+      : keys.dashboard.metricsDisabled(),
     refetchInterval: polling ? refetchInterval : false,
     refetchIntervalInBackground: false,
     staleTime: staleTimes.dashboard,

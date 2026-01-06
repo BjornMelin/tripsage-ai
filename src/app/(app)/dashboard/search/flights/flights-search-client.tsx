@@ -41,6 +41,7 @@ import { FlightSearchForm } from "@/features/search/components/forms/flight-sear
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { keys } from "@/lib/keys";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -113,7 +114,7 @@ export default function FlightsSearchClient({
       const json: unknown = await response.json();
       return POPULAR_ROUTES_SCHEMA.parse(json);
     },
-    queryKey: ["flights", "popular-routes"],
+    queryKey: keys.flights.popularRoutes(),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
