@@ -20,9 +20,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock toast
+const mockToast = vi.hoisted(() => vi.fn());
+
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({
-    toast: vi.fn(),
+    toast: mockToast,
   }),
 }));
 
@@ -110,6 +112,7 @@ describe("FlightsSearchClient", () => {
     mockExecuteSearch.mockReset();
     mockExecuteSearch.mockResolvedValue("search-123");
     mockOnSubmitServer.mockClear();
+    mockToast.mockClear();
   });
 
   it("renders search layout wrapper", () => {
@@ -149,6 +152,33 @@ describe("FlightsSearchClient", () => {
 
     await waitFor(() => {
       expect(mockOnSubmitServer).toHaveBeenCalled();
+    });
+  });
+
+  it("toasts when onSubmitServer returns an error Result", async () => {
+    const mockOnSubmitServerError = vi.fn(
+      async (_params: FlightSearchParams) =>
+        ({
+          error: { error: "invalid_request", reason: "Invalid params" },
+          ok: false,
+        }) as const
+    );
+
+    renderWithQueryClient(
+      <FlightsSearchClient onSubmitServer={mockOnSubmitServerError} />
+    );
+
+    const form = screen.getByTestId("flight-search-form");
+    fireEvent.click(within(form).getByRole("button", { name: "Search Flights" }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Invalid params",
+          title: "Search Failed",
+          variant: "destructive",
+        })
+      );
     });
   });
 

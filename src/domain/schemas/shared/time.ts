@@ -46,12 +46,12 @@ const getTodayLocalMidnight = (): Date => {
 export const FUTURE_DATE_SCHEMA = ISO_DATE_STRING.superRefine((value, ctx) => {
   const parsed = parseIsoDateToLocalMidnight(value);
   if (!parsed) {
-    ctx.addIssue({ code: "custom", error: "Please enter a valid date" });
+    ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
     return;
   }
 
   if (parsed <= getTodayLocalMidnight()) {
-    ctx.addIssue({ code: "custom", error: "Date must be in the future" });
+    ctx.addIssue({ code: "custom", message: "Date must be in the future" });
   }
 });
 
@@ -72,7 +72,7 @@ export const DATE_RANGE_SCHEMA = z
     if (!start) {
       ctx.addIssue({
         code: "custom",
-        error: "Please enter a valid date",
+        message: "Please enter a valid date",
         path: ["start"],
       });
     }
@@ -80,7 +80,7 @@ export const DATE_RANGE_SCHEMA = z
     if (!end) {
       ctx.addIssue({
         code: "custom",
-        error: "Please enter a valid date",
+        message: "Please enter a valid date",
         path: ["end"],
       });
     }
@@ -90,7 +90,7 @@ export const DATE_RANGE_SCHEMA = z
     if (end <= start) {
       ctx.addIssue({
         code: "custom",
-        error: "End date must be after start date",
+        message: "End date must be after start date",
         path: ["end"],
       });
     }

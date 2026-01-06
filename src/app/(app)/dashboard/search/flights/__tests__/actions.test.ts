@@ -90,6 +90,16 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(unsafeCast<FlightSearchParams>(params));
     expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.error).toBe("invalid_request");
+      expect(result.error.reason).toBe("Invalid flight search parameters");
+      expect(result.error.issues).toBeDefined();
+
+      const issues = result.error.issues ?? [];
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some((issue) => issue.path.join(".") === "cabinClass")).toBe(true);
+      expect(result.error.fieldErrors?.cabinClass).toBeDefined();
+    }
   });
 
   it("validates passengers with nested structure", async () => {

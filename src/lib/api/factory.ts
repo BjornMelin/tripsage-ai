@@ -538,7 +538,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         }
       }
 
-      // Handle rate limiting if configured (BEFORE body parsing to avoid unmetered invalid payload spam)
+      // Handle rate limiting early so invalid payloads can't bypass throttling.
       if (rateLimit) {
         let identifier: string;
         if (user?.id) {

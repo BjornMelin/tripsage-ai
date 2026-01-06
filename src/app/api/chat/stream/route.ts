@@ -76,12 +76,26 @@ export const POST = withApiGuards({
 
   const rawMessagesArray = Array.isArray(rawMessages) ? rawMessages : [];
   const safeMessagesResult =
-    rawMessagesArray.length > 0
-      ? await safeValidateUIMessages({ messages: rawMessagesArray })
-      : { data: [], success: true as const };
+    rawMessagesArray.length === 0
+      ? { data: [], success: true as const }
+      : await safeValidateUIMessages({ messages: rawMessagesArray });
   if (!safeMessagesResult.success) {
+    const errorMessage =
+      typeof safeMessagesResult.error === "object" &&
+      safeMessagesResult.error !== null &&
+      "message" in safeMessagesResult.error &&
+      typeof (safeMessagesResult.error as { message?: unknown }).message === "string"
+        ? (safeMessagesResult.error as { message: string }).message
+        : null;
+    const normalizedError =
+      safeMessagesResult.error instanceof Error
+        ? safeMessagesResult.error
+        : new Error(
+            errorMessage ??
+              String(safeMessagesResult.error ?? "Invalid messages payload")
+          );
     return errorResponse({
-      err: safeMessagesResult.error,
+      err: normalizedError,
       error: "invalid_request",
       reason: "Invalid messages payload",
       status: 400,

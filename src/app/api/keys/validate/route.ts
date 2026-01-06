@@ -191,7 +191,7 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "keys:validate",
   // Custom telemetry handled below
-})(async (req: NextRequest, { user: _user }) => {
+})(async (req: NextRequest) => {
   const parsed = await parseJsonBody(req);
   if (!parsed.ok) {
     recordTelemetryEvent("api.keys.validate.parse_error", {

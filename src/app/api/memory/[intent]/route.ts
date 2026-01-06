@@ -28,12 +28,9 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 const INTENT_SCHEMA = z.enum(["conversations", "search"]);
 const insightsCacheKey = (userId: string) => `memory:insights:${userId}`;
-const STRICT_MEMORY_SEARCH_REQUEST_SCHEMA = z.strictObject(
-  memorySearchRequestSchema.shape
-);
 const SEARCH_REQUEST_SCHEMA = z.union([
   SEARCH_MEMORIES_REQUEST_SCHEMA,
-  STRICT_MEMORY_SEARCH_REQUEST_SCHEMA,
+  memorySearchRequestSchema,
 ]);
 
 const postSearch = withApiGuards({

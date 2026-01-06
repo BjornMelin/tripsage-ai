@@ -323,7 +323,7 @@ export type DeleteUserMemoriesResponse = z.infer<
  * Zod schema for POST /api/memory/search request body.
  * Validates memory search request parameters for route handlers.
  */
-export const memorySearchRequestSchema = z.object({
+export const memorySearchRequestSchema = z.strictObject({
   filters: z
     .object({
       category: z.string().optional(),
