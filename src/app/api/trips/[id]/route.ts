@@ -124,14 +124,10 @@ async function updateTripById(
   tripId: number
 ) {
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
+  if (!parsed.ok) return parsed.error;
 
-  const validation = validateSchema(tripUpdateSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  const validation = validateSchema(tripUpdateSchema, parsed.data);
+  if (!validation.ok) return validation.error;
 
   const updates = mapUpdatePayloadToDb(validation.data);
 
@@ -290,13 +286,13 @@ export const GET = withApiGuards({
   telemetry: "trips.detail",
 })(async (_req, { supabase, user }, _data, routeContext) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
 
-  return getTripById(supabase, userId, idResult.id);
+  return getTripById(supabase, userId, idResult.data);
 });
 
 /**
@@ -308,13 +304,13 @@ export const PUT = withApiGuards({
   telemetry: "trips.update",
 })(async (req, { supabase, user }, _data, routeContext) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
 
-  return updateTripById(req, supabase, userId, idResult.id);
+  return updateTripById(req, supabase, userId, idResult.data);
 });
 
 /**
@@ -326,11 +322,11 @@ export const DELETE = withApiGuards({
   telemetry: "trips.delete",
 })(async (_req, { supabase, user }, _data, routeContext) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
 
-  return deleteTripById(supabase, userId, idResult.id);
+  return deleteTripById(supabase, userId, idResult.data);
 });

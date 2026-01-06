@@ -88,9 +88,7 @@ export const GET = withApiGuards({
   }
 
   const validation = validateSchema(eventsListRequestSchema, params);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  if (!validation.ok) return validation.error;
 
   const result = await listEvents(validation.data);
   return NextResponse.json(result);
@@ -110,17 +108,16 @@ export const POST = withApiGuards({
   telemetry: "calendar.events.create",
 })(async (req: NextRequest) => {
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
+  if (!parsed.ok) return parsed.error;
 
-  const typedBody = parsed.body as Record<string, unknown>;
+  const typedBody =
+    typeof parsed.data === "object" && parsed.data !== null
+      ? (parsed.data as Record<string, unknown>)
+      : {};
   const calendarId = getCalendarId(typedBody);
 
-  const validation = validateSchema(createEventRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  const validation = validateSchema(createEventRequestSchema, parsed.data);
+  if (!validation.ok) return validation.error;
 
   const result = await createEvent(validation.data, calendarId);
   return NextResponse.json(result, { status: 201 });
@@ -152,14 +149,10 @@ export const PATCH = withApiGuards({
   }
 
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
+  if (!parsed.ok) return parsed.error;
 
-  const validation = validateSchema(updateEventRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  const validation = validateSchema(updateEventRequestSchema, parsed.data);
+  if (!validation.ok) return validation.error;
 
   const result = await updateEvent(eventId, validation.data, calendarId);
   return NextResponse.json(result);

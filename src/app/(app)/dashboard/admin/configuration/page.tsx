@@ -27,13 +27,11 @@ export default async function ConfigurationPage() {
   await connection();
 
   const logger = createServerLogger("admin.configuration.page");
-  let initial: Awaited<ReturnType<typeof fetchAgentBundle>>;
-  try {
-    initial = await fetchAgentBundle(DEFAULT_AGENT);
-  } catch (error) {
+  const initial = await fetchAgentBundle(DEFAULT_AGENT);
+  if (!initial.ok) {
     logger.error("failed to fetch default agent bundle", {
       agentType: DEFAULT_AGENT,
-      error,
+      error: initial.error.reason,
     });
 
     return (
@@ -59,9 +57,9 @@ export default async function ConfigurationPage() {
       >
         <ConfigurationManager
           initialAgent={DEFAULT_AGENT}
-          initialConfig={initial.config}
-          initialMetrics={initial.metrics}
-          initialVersions={initial.versions}
+          initialConfig={initial.data.config}
+          initialMetrics={initial.data.metrics}
+          initialVersions={initial.data.versions}
         />
       </Suspense>
     </div>

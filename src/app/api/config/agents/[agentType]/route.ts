@@ -30,7 +30,7 @@ import { nowIso, secureId } from "@/lib/security/random";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
-const configUpdateBodySchema = agentConfigRequestSchema.strict();
+const configUpdateBodySchema = agentConfigRequestSchema;
 
 const parseScopeParam = (raw: string | null) =>
   validateSchema(scopeSchema, raw ?? undefined);
@@ -77,14 +77,12 @@ export const GET = withApiGuards({
     try {
       ensureAdmin(user);
       const agentTypeResult = await parseStringId(routeContext, "agentType");
-      if ("error" in agentTypeResult) return agentTypeResult.error;
-      const { id: agentType } = agentTypeResult;
+      if (!agentTypeResult.ok) return agentTypeResult.error;
+      const agentType = agentTypeResult.data;
       const agentValidation = validateSchema(agentTypeSchema, agentType);
-      if ("error" in agentValidation) {
-        return agentValidation.error;
-      }
+      if (!agentValidation.ok) return agentValidation.error;
       const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
-      if ("error" in scopeResult) return scopeResult.error;
+      if (!scopeResult.ok) return scopeResult.error;
       const scope = scopeResult.data;
       const result = await resolveAgentConfig(agentValidation.data, {
         scope,
@@ -132,23 +130,21 @@ export const PUT = withApiGuards({
     try {
       ensureAdmin(user);
       const userResult = requireUserId(user);
-      if ("error" in userResult) return userResult.error;
-      const { userId } = userResult;
+      if (!userResult.ok) return userResult.error;
+      const userId = userResult.data;
       const agentTypeResult = await parseStringId(routeContext, "agentType");
-      if ("error" in agentTypeResult) return agentTypeResult.error;
-      const { id: agentType } = agentTypeResult;
+      if (!agentTypeResult.ok) return agentTypeResult.error;
+      const agentType = agentTypeResult.data;
       const agentValidation = validateSchema(agentTypeSchema, agentType);
-      if ("error" in agentValidation) {
-        return agentValidation.error;
-      }
+      if (!agentValidation.ok) return agentValidation.error;
 
       const parsedBody = await parseJsonBody(req);
-      if ("error" in parsedBody) return parsedBody.error;
-      const validation = validateSchema(configUpdateBodySchema, parsedBody.body);
-      if ("error" in validation) return validation.error;
+      if (!parsedBody.ok) return parsedBody.error;
+      const validation = validateSchema(configUpdateBodySchema, parsedBody.data);
+      if (!validation.ok) return validation.error;
 
       const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
-      if ("error" in scopeResult) return scopeResult.error;
+      if (!scopeResult.ok) return scopeResult.error;
       const scope = scopeResult.data;
 
       const existing = await withTelemetrySpan(

@@ -19,7 +19,7 @@ const logger = createServerLogger("auth.password.reset");
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
-  if ("error" in parsedBody) {
+  if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
       return NextResponse.json(
         { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const payload = passwordResetPayloadSchema.safeParse(parsedBody.body);
+  const payload = passwordResetPayloadSchema.safeParse(parsedBody.data);
   if (!payload.success) {
     // Sanitize validation errors for auth endpoints - expose only field names, not internal codes
     const fieldErrors = payload.error.issues.map(({ message, path }) => ({

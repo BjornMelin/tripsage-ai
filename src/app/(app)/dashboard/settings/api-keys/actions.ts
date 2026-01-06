@@ -7,9 +7,20 @@
 import "server-only";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { z } from "zod";
+import {
+  err,
+  ok,
+  type Result,
+  type ResultError,
+  zodErrorToFieldErrors,
+} from "@/lib/result";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
+
+const gatewayFallbackPreferenceSchema = z.boolean({
+  error: "allowGatewayFallback must be a boolean",
+});
 
 /**
  * Updates the user's gateway fallback preference setting.
@@ -18,11 +29,25 @@ import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
  */
 export async function updateGatewayFallbackPreference(
   allowGatewayFallback: boolean
-): Promise<void> {
+): Promise<Result<null, ResultError>> {
+  const preferenceParse =
+    gatewayFallbackPreferenceSchema.safeParse(allowGatewayFallback);
+  if (!preferenceParse.success) {
+    return err({
+      error: "invalid_request",
+      fieldErrors: zodErrorToFieldErrors(preferenceParse.error),
+      issues: preferenceParse.error.issues,
+      reason: "Invalid gateway fallback preference",
+    });
+  }
+
   const supabase = await createServerSupabase();
   const { user } = await getCurrentUser(supabase);
   if (!user) {
-    redirect("/login");
+    return err({
+      error: "unauthorized",
+      reason: "Unauthorized",
+    });
   }
 
   // Upsert row with owner RLS via SSR client
@@ -40,9 +65,14 @@ export async function updateGatewayFallbackPreference(
   });
 
   if (upsertError) {
-    throw new Error(`Failed to update user settings: ${upsertError.message}`);
+    return err({
+      error: "internal",
+      reason: "Failed to update user settings",
+    });
   }
 
   // Revalidate the settings page to reflect the change
   revalidatePath("/dashboard/settings/api-keys");
+
+  return ok(null);
 }

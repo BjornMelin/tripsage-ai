@@ -68,9 +68,7 @@ export async function handleCreateItineraryItem(
   params: { userId: string; body: unknown }
 ): Promise<Response> {
   const validation = validateSchema(itineraryItemCreateSchema, params.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  if (!validation.ok) return validation.error;
 
   const payload = validation.data;
   const userIdHash = hashTelemetryIdentifier(params.userId);

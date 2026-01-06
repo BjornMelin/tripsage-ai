@@ -47,9 +47,9 @@ const getContext = withApiGuards({
   rateLimit: "memory:context",
   telemetry: "memory.context",
 })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  const authUserIdResult = requireUserId(user);
+  if (!authUserIdResult.ok) return authUserIdResult.error;
+  const userId = authUserIdResult.data;
 
   const parsedUserId = z.uuid().safeParse(userId);
   if (!parsedUserId.success) {
@@ -61,8 +61,8 @@ const getContext = withApiGuards({
   }
 
   const userIdResult = await parseStringId(routeContext, "userId");
-  if ("error" in userIdResult) return userIdResult.error;
-  if (userIdResult.id !== userId) {
+  if (!userIdResult.ok) return userIdResult.error;
+  if (userIdResult.data !== userId) {
     return forbiddenResponse("Cannot request memory context for another user");
   }
 
@@ -92,9 +92,9 @@ const getStats = withApiGuards({
   rateLimit: "memory:stats",
   telemetry: "memory.stats",
 })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  const authUserIdResult = requireUserId(user);
+  if (!authUserIdResult.ok) return authUserIdResult.error;
+  const userId = authUserIdResult.data;
 
   const parsedUserId = z.uuid().safeParse(userId);
   if (!parsedUserId.success) {
@@ -106,8 +106,8 @@ const getStats = withApiGuards({
   }
 
   const userIdResult = await parseStringId(routeContext, "userId");
-  if ("error" in userIdResult) return userIdResult.error;
-  if (userIdResult.id !== userId) {
+  if (!userIdResult.ok) return userIdResult.error;
+  if (userIdResult.data !== userId) {
     return forbiddenResponse("Cannot request memory stats for another user");
   }
 
@@ -158,9 +158,9 @@ const postPreferences = withApiGuards({
     validated: MemoryUpdatePreferencesRequest,
     routeContext: RouteParamsContext
   ) => {
-    const userResult = requireUserId(user);
-    if ("error" in userResult) return userResult.error;
-    const { userId } = userResult;
+    const authUserIdResult = requireUserId(user);
+    if (!authUserIdResult.ok) return authUserIdResult.error;
+    const userId = authUserIdResult.data;
 
     const parsedUserId = z.uuid().safeParse(userId);
     if (!parsedUserId.success) {
@@ -172,8 +172,8 @@ const postPreferences = withApiGuards({
     }
 
     const userIdResult = await parseStringId(routeContext, "userId");
-    if ("error" in userIdResult) return userIdResult.error;
-    if (userIdResult.id !== userId) {
+    if (!userIdResult.ok) return userIdResult.error;
+    if (userIdResult.data !== userId) {
       return forbiddenResponse("Cannot update preferences for another user");
     }
 
@@ -266,8 +266,8 @@ const getInsights = withApiGuards({
   telemetry: "memory.insights",
 })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
 
   const parsedUserId = z.uuid().safeParse(userId);
   if (!parsedUserId.success) {
@@ -279,8 +279,8 @@ const getInsights = withApiGuards({
   }
 
   const userIdResult = await parseStringId(routeContext, "userId");
-  if ("error" in userIdResult) return userIdResult.error;
-  const requestedUserId = userIdResult.id;
+  if (!userIdResult.ok) return userIdResult.error;
+  const requestedUserId = userIdResult.data;
 
   if (requestedUserId !== userId) {
     return errorResponse({
@@ -458,8 +458,8 @@ const deleteUserMemories = withApiGuards({
   telemetry: "memory.delete",
 })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId: authenticatedUserId } = result;
+  if (!result.ok) return result.error;
+  const authenticatedUserId = result.data;
 
   const parsedAuthenticatedUserId = z.uuid().safeParse(authenticatedUserId);
   if (!parsedAuthenticatedUserId.success) {
@@ -471,8 +471,8 @@ const deleteUserMemories = withApiGuards({
   }
 
   const userIdResult = await parseStringId(routeContext, "userId");
-  if ("error" in userIdResult) return userIdResult.error;
-  const targetUserId = userIdResult.id;
+  if (!userIdResult.ok) return userIdResult.error;
+  const targetUserId = userIdResult.data;
 
   const parsedTargetUserId = z.uuid().safeParse(targetUserId);
   if (!parsedTargetUserId.success) {
@@ -527,12 +527,12 @@ const deleteUserMemories = withApiGuards({
 
 export async function GET(req: NextRequest, routeContext: RouteParamsContext) {
   const intentResult = await parseStringId(routeContext, "intent");
-  if ("error" in intentResult) return intentResult.error;
-  const parsedIntent = GET_INTENT_SCHEMA.safeParse(intentResult.id);
+  if (!intentResult.ok) return intentResult.error;
+  const parsedIntent = GET_INTENT_SCHEMA.safeParse(intentResult.data);
   if (!parsedIntent.success) {
     return errorResponse({
       error: "not_found",
-      reason: `Unknown memory intent "${intentResult.id}"`,
+      reason: `Unknown memory intent "${intentResult.data}"`,
       status: 404,
     });
   }
@@ -550,12 +550,12 @@ export async function GET(req: NextRequest, routeContext: RouteParamsContext) {
 
 export async function POST(req: NextRequest, routeContext: RouteParamsContext) {
   const intentResult = await parseStringId(routeContext, "intent");
-  if ("error" in intentResult) return intentResult.error;
-  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.id);
+  if (!intentResult.ok) return intentResult.error;
+  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.data);
   if (!parsedIntent.success) {
     return errorResponse({
       error: "not_found",
-      reason: `Unknown memory intent "${intentResult.id}"`,
+      reason: `Unknown memory intent "${intentResult.data}"`,
       status: 404,
     });
   }
@@ -579,12 +579,12 @@ export async function POST(req: NextRequest, routeContext: RouteParamsContext) {
 
 export async function DELETE(req: NextRequest, routeContext: RouteParamsContext) {
   const intentResult = await parseStringId(routeContext, "intent");
-  if ("error" in intentResult) return intentResult.error;
-  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.id);
+  if (!intentResult.ok) return intentResult.error;
+  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.data);
   if (!parsedIntent.success) {
     return errorResponse({
       error: "not_found",
-      reason: `Unknown memory intent "${intentResult.id}"`,
+      reason: `Unknown memory intent "${intentResult.data}"`,
       status: 404,
     });
   }

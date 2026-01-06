@@ -58,8 +58,8 @@ export const GET = withApiGuards({
   telemetry: "activities.details",
 })(async (req, { supabase }, _body, routeContext: RouteParamsContext) => {
   const placeIdResult = await parseStringId(routeContext, "id");
-  if ("error" in placeIdResult) return placeIdResult.error;
-  const { id: validatedPlaceId } = placeIdResult;
+  if (!placeIdResult.ok) return placeIdResult.error;
+  const validatedPlaceId = placeIdResult.data;
 
   // Only call getCurrentUser if auth cookies are present to avoid unnecessary Supabase calls
   let userId: string | undefined;

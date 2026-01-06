@@ -120,13 +120,9 @@ export const POST = withApiGuards({
   }
 
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
-  const validation = validateSchema(embeddingsRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  if (!parsed.ok) return parsed.error;
+  const validation = validateSchema(embeddingsRequestSchema, parsed.data);
+  if (!validation.ok) return validation.error;
   const body = validation.data;
   const text =
     body.text ??

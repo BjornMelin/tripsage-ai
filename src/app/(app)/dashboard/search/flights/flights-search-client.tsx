@@ -42,12 +42,15 @@ import { useSearchOrchestration } from "@/features/search/hooks/search/use-searc
 import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
+import type { Result, ResultError } from "@/lib/result";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 /** Flight search client component props. */
 interface FlightsSearchClientProps {
-  onSubmitServer: (params: FlightSearchParams) => Promise<FlightSearchParams>;
+  onSubmitServer: (
+    params: FlightSearchParams
+  ) => Promise<Result<FlightSearchParams, ResultError>>;
 }
 
 const FLIGHT_URL_CABIN_SCHEMA = z.enum([
@@ -156,7 +159,16 @@ export default function FlightsSearchClient({
       onSubmitServer(initialParams)
         .then(async (validatedParams) => {
           if (controller.signal.aborted) return;
-          await executeSearch(validatedParams, controller.signal);
+          if (!validatedParams.ok) {
+            toast({
+              description: validatedParams.error.reason,
+              title: "Search Failed",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          await executeSearch(validatedParams.data, controller.signal);
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
@@ -185,7 +197,16 @@ export default function FlightsSearchClient({
       };
       const validatedParams = await onSubmitServer(searchWithFilters); // server-side telemetry and validation
       if (controller.signal.aborted) return;
-      const searchId = await executeSearch(validatedParams, controller.signal);
+      if (!validatedParams.ok) {
+        toast({
+          description: validatedParams.error.reason,
+          title: "Search Failed",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const searchId = await executeSearch(validatedParams.data, controller.signal);
       if (controller.signal.aborted) return;
       if (searchId) {
         toast({

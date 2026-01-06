@@ -89,9 +89,7 @@ export async function POST(req: Request) {
         const json = JSON.parse(verified.body) as unknown;
         jobPayload = json; // Store parsed form for DLQ/validation
         const validation = validateSchema(notifyJobSchema, json);
-        if ("error" in validation) {
-          return validation.error;
-        }
+        if (!validation.ok) return validation.error;
         const { eventKey, payload } = validation.data;
         span.setAttribute("event.key", eventKey);
         span.setAttribute("table", payload.table);

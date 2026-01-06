@@ -15,6 +15,13 @@ import {
 } from "@schemas/trips";
 import { z } from "zod";
 import { bumpTag } from "@/lib/cache/tags";
+import {
+  err,
+  ok,
+  type Result,
+  type ResultError,
+  zodErrorToFieldErrors,
+} from "@/lib/result";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -31,7 +38,7 @@ const tripIdSchema = z.coerce.number().int().positive();
 // biome-ignore lint/suspicious/useAwait: withTelemetrySpan returns a Promise synchronously
 export async function submitActivitySearch(
   params: ActivitySearchParams
-): Promise<ActivitySearchParams> {
+): Promise<Result<ActivitySearchParams, ResultError>> {
   return withTelemetrySpan(
     "search.activity.server.submit",
     {
@@ -43,9 +50,14 @@ export async function submitActivitySearch(
     () => {
       const validation = activitySearchParamsSchema.safeParse(params);
       if (!validation.success) {
-        throw new Error(`Invalid activity search params: ${validation.error.message}`);
+        return err({
+          error: "invalid_request",
+          fieldErrors: zodErrorToFieldErrors(validation.error),
+          issues: validation.error.issues,
+          reason: "Invalid activity search parameters",
+        });
       }
-      return validation.data;
+      return ok(validation.data);
     }
   );
 }
@@ -59,14 +71,17 @@ export async function submitActivitySearch(
  * @returns A list of UI-formatted trips.
  * @throws Error if unauthorized or fetch fails.
  */
-export async function getPlanningTrips(): Promise<UiTrip[]> {
+export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>> {
   const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("Unauthorized");
+    return err({
+      error: "unauthorized",
+      reason: "Unauthorized",
+    });
   }
 
   const { data, error } = await supabase
@@ -83,7 +98,10 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
       error,
       message: error.message,
     });
-    throw new Error("Failed to fetch trips");
+    return err({
+      error: "internal",
+      reason: "Failed to fetch trips",
+    });
   }
 
   const rows: TripsRow[] = (data ?? []).flatMap((row) => {
@@ -92,12 +110,12 @@ export async function getPlanningTrips(): Promise<UiTrip[]> {
       return [parsed.data];
     }
     logger.warn("Invalid trip row skipped", {
-      error: parsed.error.format(),
+      issues: parsed.error.issues,
       tripId: (row as { id?: unknown })?.id,
     });
     return [];
   });
-  return rows.map((row) => mapDbTripToUi(row, { currentUserId: user.id }));
+  return ok(rows.map((row) => mapDbTripToUi(row, { currentUserId: user.id })));
 }
 
 /**
@@ -123,10 +141,15 @@ export async function addActivityToTrip(
     externalId?: string;
     metadata?: Record<string, unknown>;
   }
-): Promise<void> {
+): Promise<Result<{ success: true }, ResultError>> {
   const tripIdValidation = tripIdSchema.safeParse(tripId);
   if (!tripIdValidation.success) {
-    throw new Error(`Invalid trip id: ${tripIdValidation.error.message}`);
+    return err({
+      error: "invalid_request",
+      fieldErrors: zodErrorToFieldErrors(tripIdValidation.error),
+      issues: tripIdValidation.error.issues,
+      reason: "Invalid trip id",
+    });
   }
   const validatedTripId = tripIdValidation.data;
 
@@ -136,7 +159,10 @@ export async function addActivityToTrip(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("Unauthorized");
+    return err({
+      error: "unauthorized",
+      reason: "Unauthorized",
+    });
   }
 
   // Validate trip ownership
@@ -148,7 +174,10 @@ export async function addActivityToTrip(
     .single();
 
   if (tripError) {
-    throw new Error("Trip not found or access denied");
+    return err({
+      error: "forbidden",
+      reason: "Trip not found or access denied",
+    });
   }
 
   const payload: ItineraryItemCreateInput = {
@@ -169,8 +198,13 @@ export async function addActivityToTrip(
   const validation = itineraryItemCreateSchema.safeParse(payload);
 
   if (!validation.success) {
-    logger.warn("Invalid activity data", { issues: validation.error.format() });
-    throw new Error(`Invalid activity data: ${validation.error.message}`);
+    logger.warn("Invalid activity data", { issues: validation.error.issues });
+    return err({
+      error: "invalid_request",
+      fieldErrors: zodErrorToFieldErrors(validation.error),
+      issues: validation.error.issues,
+      reason: "Invalid activity data",
+    });
   }
 
   const insertPayload = mapItineraryItemCreateToDbInsert(validation.data, user.id);
@@ -185,7 +219,10 @@ export async function addActivityToTrip(
       details: insertError.details,
       message: insertError.message,
     });
-    throw new Error(`Failed to add activity to trip: ${insertError.message}`);
+    return err({
+      error: "internal",
+      reason: "Failed to add activity to trip",
+    });
   }
 
   try {
@@ -195,4 +232,6 @@ export async function addActivityToTrip(
       error: cacheError instanceof Error ? cacheError.message : "unknown",
     });
   }
+
+  return ok({ success: true });
 }

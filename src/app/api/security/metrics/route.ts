@@ -21,8 +21,8 @@ export const GET = withApiGuards({
   telemetry: "security.metrics",
 })(async (_req: NextRequest, { user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
 
   try {
     const adminSupabase = createAdminSupabase();

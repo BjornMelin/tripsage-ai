@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import type { FlightSearchParams } from "@schemas/search";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type React from "react";
@@ -70,7 +71,9 @@ vi.mock("@/components/layouts/search-layout", () => ({
 import FlightsSearchClient from "../flights-search-client";
 
 describe("FlightsSearchClient", () => {
-  const mockOnSubmitServer = vi.fn().mockResolvedValue({});
+  const mockOnSubmitServer = vi.fn(
+    async (params: FlightSearchParams) => ({ data: params, ok: true }) as const
+  );
   // Calculate next year dynamically to match the component
   const nextYear = new Date().getUTCFullYear() + 1;
 

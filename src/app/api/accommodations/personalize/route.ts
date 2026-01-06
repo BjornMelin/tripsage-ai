@@ -37,8 +37,8 @@ export const POST = withApiGuards({
   telemetry: "accommodations.personalize",
 })(async (_req: NextRequest, { user }, validated: HotelPersonalizeRequest) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
   const logger = createServerLogger("api.accommodations.personalize");
 
   // Convert request hotels to service format

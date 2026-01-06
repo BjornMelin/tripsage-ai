@@ -58,6 +58,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  type AgentBundle,
   type AgentMetrics,
   type AgentVersion,
   fetchAgentBundle,
@@ -106,7 +107,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
   const [loading, startLoading] = useTransition();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const applyAgentData = (bundle: Awaited<ReturnType<typeof fetchAgentBundle>>) => {
+  const applyAgentData = (bundle: AgentBundle) => {
     setConfig(bundle.config);
     setEdited({ ...bundle.config.parameters });
     setVersions(bundle.versions);
@@ -118,8 +119,16 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
     startLoading(async () => {
       try {
         const bundle = await fetchAgentBundle(value);
+        if (!bundle.ok) {
+          toast({
+            description: bundle.error.reason || "Failed to load agent",
+            title: "Load failed",
+            variant: "destructive",
+          });
+          return;
+        }
         setSelectedAgent(value);
-        applyAgentData(bundle);
+        applyAgentData(bundle.data);
       } catch (error) {
         toast({
           description: error instanceof Error ? error.message : "Failed to load agent",
@@ -137,10 +146,28 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
           ...edited,
         };
         const res = await updateAgentConfigAction(selectedAgent, payload);
+        if (!res.ok) {
+          toast({
+            description: res.error.reason || "Failed to save",
+            title: "Save failed",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const bundle = await fetchAgentBundle(selectedAgent);
-        applyAgentData(bundle);
+        if (!bundle.ok) {
+          toast({
+            description: bundle.error.reason || "Failed to load agent",
+            title: "Load failed",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        applyAgentData(bundle.data);
         toast({
-          description: `Saved configuration (version ${res.versionId})`,
+          description: `Saved configuration (version ${res.data.versionId})`,
           title: "Configuration saved",
         });
       } catch (error) {
@@ -156,9 +183,27 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
   const handleRollback = (versionId: string) => {
     startSaving(async () => {
       try {
-        await rollbackAgentConfigAction(selectedAgent, versionId);
+        const rollback = await rollbackAgentConfigAction(selectedAgent, versionId);
+        if (!rollback.ok) {
+          toast({
+            description: rollback.error.reason || "Failed to rollback",
+            title: "Rollback failed",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const bundle = await fetchAgentBundle(selectedAgent);
-        applyAgentData(bundle);
+        if (!bundle.ok) {
+          toast({
+            description: bundle.error.reason || "Failed to load agent",
+            title: "Load failed",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        applyAgentData(bundle.data);
         toast({
           description: `Rolled back to version ${versionId}`,
           title: "Rollback successful",

@@ -39,9 +39,7 @@ export const GET = withApiGuards({
   };
 
   const validation = validateSchema(placesPhotoRequestSchema, params);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  if (!validation.ok) return validation.error;
   const validated = validation.data;
 
   const apiKey = getGoogleMapsServerKey();

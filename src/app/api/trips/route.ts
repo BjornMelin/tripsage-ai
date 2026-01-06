@@ -25,9 +25,9 @@ export const GET = withApiGuards({
   rateLimit: "trips:list",
   telemetry: "trips.list",
 })(async (req, { supabase, user }) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  const userIdResult = requireUserId(user);
+  if (!userIdResult.ok) return userIdResult.error;
+  const userId = userIdResult.data;
 
   const url = new URL(req.url);
   const filtersParse = tripFiltersSchema.safeParse({
@@ -61,14 +61,14 @@ export const POST = withApiGuards({
   rateLimit: "trips:create",
   telemetry: "trips.create",
 })(async (req, { supabase, user }) => {
-  const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  const userIdResult = requireUserId(user);
+  if (!userIdResult.ok) return userIdResult.error;
+  const userId = userIdResult.data;
 
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) return parsed.error;
+  if (!parsed.ok) return parsed.error;
 
-  const validated = tripCreateSchema.safeParse(parsed.body);
+  const validated = tripCreateSchema.safeParse(parsed.data);
   if (!validated.success) {
     return errorResponse({
       err: validated.error,

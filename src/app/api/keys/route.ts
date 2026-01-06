@@ -30,8 +30,8 @@ export const POST = withApiGuards({
   // Custom telemetry handled below, factory telemetry disabled
 })(async (_req: NextRequest, { user, supabase }, validated: PostKeyBody) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
   const identifierType: IdentifierType = "user";
   // Rate limit metadata not available from factory, using undefined for custom telemetry
   const rateLimitMeta: RateLimitResult | undefined = undefined;
@@ -109,7 +109,7 @@ export const GET = withApiGuards({
   // Custom telemetry handled in handler
 })((_req: NextRequest, { supabase, user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
   return getKeys({ supabase, userId });
 });

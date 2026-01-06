@@ -82,10 +82,11 @@ export const POST = withApiGuards({
   // Validate upstream response (array of matrix entries)
   const parseResult = upstreamRouteMatrixResponseSchema.safeParse(rawData);
   if (!parseResult.success) {
-    const zodError = parseResult.error.format();
     return errorResponse({
+      err: parseResult.error,
       error: "upstream_validation_error",
-      reason: `Invalid response from Routes API: ${JSON.stringify(zodError)}`,
+      issues: parseResult.error.issues,
+      reason: "Invalid response from Routes API",
       status: 502,
     });
   }

@@ -87,9 +87,11 @@ async function fetchPoisFromPlacesApi(
   const parseResult = upstreamPlacesSearchResponseSchema.safeParse(rawData);
 
   if (!parseResult.success) {
-    const zodError = parseResult.error.format();
     throw new Error(
-      `Invalid response from Google Places API: ${JSON.stringify(zodError)}`
+      `Invalid response from Google Places API: ${parseResult.error.issues
+        .slice(0, 5)
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join("; ")}`
     );
   }
 

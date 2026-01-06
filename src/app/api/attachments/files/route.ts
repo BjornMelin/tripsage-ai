@@ -61,10 +61,8 @@ export const GET = withApiGuards({
   telemetry: "attachments.files.read",
 })(async (req: NextRequest, { user, supabase }) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) {
-    return userResult.error;
-  }
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   // Parse and validate query parameters
   const { searchParams } = req.nextUrl;
@@ -77,7 +75,9 @@ export const GET = withApiGuards({
 
   if (!queryResult.success) {
     return errorResponse({
+      err: queryResult.error,
       error: "invalid_request",
+      issues: queryResult.error.issues,
       reason: "Invalid query parameters",
       status: 400,
     });

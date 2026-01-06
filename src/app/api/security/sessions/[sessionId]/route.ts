@@ -17,14 +17,12 @@ export const DELETE = withApiGuards({
   telemetry: "security.sessions.terminate",
 })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
 
   const sessionIdResult = await parseStringId(routeContext, "sessionId");
-  if ("error" in sessionIdResult) {
-    return sessionIdResult.error;
-  }
-  const sessionId = sessionIdResult.id;
+  if (!sessionIdResult.ok) return sessionIdResult.error;
+  const sessionId = sessionIdResult.data;
 
   const adminSupabase = createAdminSupabase();
   return terminateSessionHandler({

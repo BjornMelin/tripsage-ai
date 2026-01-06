@@ -22,7 +22,7 @@ const logger = createServerLogger("auth.email.verify");
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsed = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
-  if ("error" in parsed) {
+  if (!parsed.ok) {
     if (parsed.error.status === 413) {
       return NextResponse.json(
         { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const payload: VerifyPayload = isPlainObject(parsed.body) ? parsed.body : {};
+  const payload: VerifyPayload = isPlainObject(parsed.data) ? parsed.data : {};
 
   const token = typeof payload.token === "string" ? payload.token : "";
   if (!token) {

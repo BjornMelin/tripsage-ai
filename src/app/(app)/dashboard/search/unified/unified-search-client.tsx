@@ -45,6 +45,7 @@ import { HotelSearchForm } from "@/features/search/components/forms/hotel-search
 import { FlightResults } from "@/features/search/components/results/flight-results";
 import { HotelResults } from "@/features/search/components/results/hotel-results";
 import { getErrorMessage } from "@/lib/api/error-types";
+import type { Result, ResultError } from "@/lib/result";
 import { ROUTES } from "@/lib/routes";
 import { statusVariants } from "@/lib/variants/status";
 
@@ -56,7 +57,7 @@ interface UnifiedSearchClientProps {
   onSearchHotels: (
     params: HotelSearchFormData,
     signal?: AbortSignal
-  ) => Promise<HotelResult[]>;
+  ) => Promise<Result<HotelResult[], ResultError>>;
 }
 
 export default function UnifiedSearchClient({
@@ -157,7 +158,21 @@ export default function UnifiedSearchClient({
     setErrorMessage(null);
     try {
       const results = await onSearchHotels(params, controller.signal);
-      setHotelResults(results);
+      if (!results.ok) {
+        setHotelResults([]);
+        setLastUpdated(null);
+        setShowResults(false);
+        const message = results.error.reason || "Search failed, please try again.";
+        setErrorMessage(message);
+        toast({
+          description: message,
+          title: "Search Failed",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setHotelResults(results.data);
       setLastUpdated(new Date());
       setShowResults(true);
     } catch (error) {
