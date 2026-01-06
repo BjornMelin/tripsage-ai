@@ -63,6 +63,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function getErrorDetails(err: unknown): { code?: string; status?: number } {
+  if (!isRecord(err)) {
+    return {};
+  }
+
+  const code = err.code;
+  const status = err.status;
+
+  return {
+    code: typeof code === "string" ? code : undefined,
+    status: typeof status === "number" ? status : undefined,
+  };
+}
+
 function parseMfaFactorCandidate(value: unknown): MfaFactorCandidate | null {
   if (!isRecord(value)) {
     return null;
@@ -160,10 +174,11 @@ export async function loginWithPasswordAction(
     try {
       const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aal.error) {
+        const errorDetails = getErrorDetails(aal.error);
         logger.warn("AAL check failed during login", {
           error: aal.error.message,
-          errorCode: (aal.error as { code?: string } | null)?.code,
-          status: (aal.error as { status?: number } | null)?.status,
+          errorCode: errorDetails.code,
+          status: errorDetails.status,
         });
       } else {
         aalData = aal.data;
