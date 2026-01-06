@@ -21,6 +21,13 @@ BEGIN
     WHERE conname = 'rag_documents_trip_requires_user_check'
       AND conrelid = to_regclass('public.rag_documents')
   ) THEN
+    -- NOTE: Added NOT VALID to avoid validating existing rows during deploy (rag_documents can
+    -- grow large). A follow-up maintenance migration should backfill any existing trip-scoped
+    -- rows missing user_id (e.g. from chat_sessions via chat_id, or legacy metadata), then
+    -- validate:
+    --
+    --   ALTER TABLE public.rag_documents
+    --     VALIDATE CONSTRAINT rag_documents_trip_requires_user_check;
     ALTER TABLE public.rag_documents
       ADD CONSTRAINT rag_documents_trip_requires_user_check
       CHECK (trip_id IS NULL OR user_id IS NOT NULL)
@@ -32,6 +39,13 @@ $do$;
 CREATE INDEX IF NOT EXISTS rag_documents_user_id_idx ON public.rag_documents(user_id);
 CREATE INDEX IF NOT EXISTS rag_documents_trip_id_idx ON public.rag_documents(trip_id);
 CREATE INDEX IF NOT EXISTS rag_documents_chat_id_idx ON public.rag_documents(chat_id);
+
+-- Trip access helpers (`user_has_trip_access`, `user_has_trip_edit_access`) frequently filter by
+-- (trip_id, user_id); a composite index avoids row filtering/bitmap intersections.
+-- Note: the trips lookup in these helpers is keyed by the primary key (trips.id) and does not
+-- require an additional composite index.
+CREATE INDEX IF NOT EXISTS trip_collaborators_trip_user_idx
+  ON public.trip_collaborators(trip_id, user_id);
 
 ALTER TABLE public.rag_documents ENABLE ROW LEVEL SECURITY;
 
