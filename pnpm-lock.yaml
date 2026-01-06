@@ -18,25 +18,25 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: 3.0.7
-        version: 3.0.7(zod@4.2.1)
+        version: 3.0.7(zod@4.3.5)
       '@ai-sdk/openai':
         specifier: 3.0.7
-        version: 3.0.7(zod@4.2.1)
+        version: 3.0.7(zod@4.3.5)
       '@ai-sdk/react':
         specifier: 3.0.14
-        version: 3.0.14(react@19.2.3)(zod@4.2.1)
+        version: 3.0.14(react@19.2.3)(zod@4.3.5)
       '@ai-sdk/togetherai':
         specifier: 2.0.4
-        version: 2.0.4(zod@4.2.1)
+        version: 2.0.4(zod@4.3.5)
       '@ai-sdk/xai':
         specifier: 3.0.10
-        version: 3.0.10(zod@4.2.1)
+        version: 3.0.10(zod@4.3.5)
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@hookform/resolvers':
         specifier: ^5.2.2
-        version: 5.2.2(react-hook-form@7.69.0(react@19.2.3))
+        version: 5.2.2(react-hook-form@7.70.0(react@19.2.3))
       '@icons-pack/react-simple-icons':
         specifier: ^13.8.0
         version: 13.8.0(react@19.2.3)
@@ -147,7 +147,7 @@ importers:
         version: 2.1.0(@opentelemetry/api-logs@0.208.0)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.2.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))
       ai:
         specifier: 6.0.14
-        version: 6.0.14(zod@4.2.1)
+        version: 6.0.14(zod@4.3.5)
       amadeus:
         specifier: ^11.0.0
         version: 11.0.0
@@ -164,8 +164,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       file-type:
-        specifier: ^21.2.0
-        version: 21.2.0
+        specifier: ^21.3.0
+        version: 21.3.0
       html-to-text:
         specifier: ^9.0.5
         version: 9.0.5
@@ -188,8 +188,8 @@ importers:
         specifier: ^0.562.0
         version: 0.562.0(react@19.2.3)
       motion:
-        specifier: ^12.23.26
-        version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        specifier: ^12.24.7
+        version: 12.24.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next:
         specifier: ^16.1.1
         version: 16.1.1(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -203,11 +203,11 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(react@19.2.3)
       react-error-boundary:
-        specifier: ^6.0.1
-        version: 6.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        specifier: ^6.0.2
+        version: 6.0.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-hook-form:
-        specifier: ^7.69.0
-        version: 7.69.0(react@19.2.3)
+        specifier: ^7.70.0
+        version: 7.70.0(react@19.2.3)
       recharts:
         specifier: ^3.6.0
         version: 3.6.0(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(redux@5.0.1)
@@ -224,11 +224,11 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       streamdown:
-        specifier: ^1.6.10
-        version: 1.6.10(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.3)
+        specifier: ^1.6.11
+        version: 1.6.11(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.3)
       stripe:
-        specifier: ^20.1.0
-        version: 20.1.0(@types/node@25.0.3)
+        specifier: ^20.1.1
+        version: 20.1.1(@types/node@25.0.3)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -239,8 +239,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       zod:
-        specifier: ^4.2.1
-        version: 4.2.1
+        specifier: ^4.3.5
+        version: 4.3.5
       zustand:
         specifier: ^5.0.9
         version: 5.0.9(@types/react@19.2.7)(immer@11.1.3)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
@@ -3546,8 +3546,8 @@ packages:
     resolution: {integrity: sha512-d+l3qxjSesT4V7v2fh+QnmFnUWv9lSpjarhShNTgBOfA0ttejbQUAlHLitbjkoRiDulW0OPoQPYIGhIC8ohejg==}
     engines: {node: '>=18'}
 
-  file-type@21.2.0:
-    resolution: {integrity: sha512-vCYBgFOrJQLoTzDyAXAL/RFfKnXXpUYt4+tipVy26nJJhT7ftgGETf2tAQF59EEL61i3MrorV/PG6tf7LJK7eg==}
+  file-type@21.3.0:
+    resolution: {integrity: sha512-8kPJMIGz1Yt/aPEwOsrR97ZyZaD1Iqm8PClb1nYFclUCkBi0Ma5IsYNQzvSFS9ib51lWyIw5mIT9rWzI/xjpzA==}
     engines: {node: '>=20'}
 
   filing-cabinet@5.0.3:
@@ -3579,8 +3579,8 @@ packages:
     engines: {node: '>=18.3.0'}
     hasBin: true
 
-  framer-motion@12.23.26:
-    resolution: {integrity: sha512-cPcIhgR42xBn1Uj+PzOyheMtZ73H927+uWPDVhUMqxy8UHt6Okavb6xIz9J/phFUHUj0OncR6UvMfJTXoc/LKA==}
+  framer-motion@12.24.7:
+    resolution: {integrity: sha512-EolFLm7NdEMhWO/VTMZ0LlR4fLHGDiJItTx3i8dlyQooOOBoYAaysK4paGD4PrwqnoDdeDOS+TxnSBIAnNHs3w==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -3744,6 +3744,9 @@ packages:
 
   hast-util-raw@9.1.0:
     resolution: {integrity: sha512-Y8/SBAHkZGoNkpzqqfCldijcuUKh7/su31kEBp67cFY09Wy0mTRgtsLYsiIxMJxlu0f6AA5SUTbDR8K0rxnbUw==}
+
+  hast-util-sanitize@5.0.2:
+    resolution: {integrity: sha512-3yTWghByc50aGS7JlGhk61SPenfE/p1oaFeNwkOOyrscaOkMGrcW9+Cy/QAIOBpZxP1yqDIzFMR0+Np0i0+usg==}
 
   hast-util-to-html@9.0.5:
     resolution: {integrity: sha512-OguPdidb+fbHQSU4Q4ZiLKnzWo8Wwsf5bZfbvu7//a9oTYoqD/fWpe96NuHkoS9h0ccGOTe0C4NGXdtS0iObOw==}
@@ -4543,14 +4546,14 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  motion-dom@12.23.23:
-    resolution: {integrity: sha512-n5yolOs0TQQBRUFImrRfs/+6X4p3Q4n1dUEqt/H58Vx7OW6RF+foWEgmTVDhIWJIMXOuNNL0apKH2S16en9eiA==}
+  motion-dom@12.24.3:
+    resolution: {integrity: sha512-ZjMZCwhTglim0LM64kC1iFdm4o+2P9IKk3rl/Nb4RKsb5p4O9HJ1C2LWZXOFdsRtp6twpqWRXaFKOduF30ntow==}
 
-  motion-utils@12.23.6:
-    resolution: {integrity: sha512-eAWoPgr4eFEOFfg2WjIsMoqJTW6Z8MTUCgn/GZ3VRpClWBdnbjryiA3ZSNLyxCTmCQx4RmYX6jX1iWHbenUPNQ==}
+  motion-utils@12.23.28:
+    resolution: {integrity: sha512-0W6cWd5Okoyf8jmessVK3spOmbyE0yTdNKujHctHH9XdAE4QDuZ1/LjSXC68rrhsJU+TkzXURC5OdSWh9ibOwQ==}
 
-  motion@12.23.26:
-    resolution: {integrity: sha512-Ll8XhVxY8LXMVYTCfme27WH2GjBrCIzY4+ndr5QKxsK+YwCtOi2B/oBi5jcIbik5doXuWT/4KKDOVAZJkeY5VQ==}
+  motion@12.24.7:
+    resolution: {integrity: sha512-0jOoqFlQ7JBvAcRhRv28pwUgZ1xw9WS4+tCU6aqYjxgiNVZCVi34ED2cihW3EgjIIWPBoZJis5og1mx/LmQWVQ==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -5016,14 +5019,14 @@ packages:
     peerDependencies:
       react: ^19.2.3
 
-  react-error-boundary@6.0.1:
-    resolution: {integrity: sha512-zArgQpjJUN1ZLMEKWtifxQweW3yfvwL5j2nh3Pesze1qG6r5oCDMy/TA97bUF01wy4xCeeL4/pd8GHmvEsP3Bg==}
+  react-error-boundary@6.0.2:
+    resolution: {integrity: sha512-yvWErn55ag/ywZEFqYpXYX9rxIDPIabXIX25F184KY3F5Szk2x/cVieOflw5R47ltN3KzWOw82Lmlb4vNjyn9A==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
 
-  react-hook-form@7.69.0:
-    resolution: {integrity: sha512-yt6ZGME9f4F6WHwevrvpAjh42HMvocuSnSIHUGycBqXIJdhqGSPQzTpGF+1NLREk/58IdPxEMfPcFCjlMhclGw==}
+  react-hook-form@7.70.0:
+    resolution: {integrity: sha512-COOMajS4FI3Wuwrs3GPpi/Jeef/5W1DRR84Yl5/ShlT3dKVFUfoGiEZ/QE6Uw8P4T2/CLJdcTVYKvWBMQTEpvw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -5145,6 +5148,9 @@ packages:
 
   rehype-raw@7.0.0:
     resolution: {integrity: sha512-/aE8hCfKlQeA8LmyeyQvQF3eBiLRGNlfBJEvWH7ivp9sBqs7TNqBL5X3v157rM4IFETqDnIOO+z5M/biZbo9Ww==}
+
+  rehype-sanitize@6.0.0:
+    resolution: {integrity: sha512-CsnhKNsyI8Tub6L4sm5ZFsme4puGfc6pYylvXo1AeqaGbjOYyzNv3qZPwvs0oMJ39eryyeOdmxwUIo94IpEhqg==}
 
   remark-cjk-friendly-gfm-strikethrough@1.2.3:
     resolution: {integrity: sha512-bXfMZtsaomK6ysNN/UGRIcasQAYkC10NtPmP0oOHOV8YOhA2TXmwRXCku4qOzjIFxAPfish5+XS0eIug2PzNZA==}
@@ -5427,8 +5433,8 @@ packages:
   stream-to-array@2.3.0:
     resolution: {integrity: sha512-UsZtOYEn4tWU2RGLOXr/o/xjRBftZRlG3dEWoaHr8j4GuypJ3isitGbVyjQKAuMu+xbiop8q224TjiZWc4XTZA==}
 
-  streamdown@1.6.10:
-    resolution: {integrity: sha512-B4Y3Z/qiXl1Dc+LzAB5c52Cd1QGRiFjaDwP+ERoj1JtCykdRDM8X6HwQnn3YkpkSk0x3R7S/6LrGe1nQiElHQQ==}
+  streamdown@1.6.11:
+    resolution: {integrity: sha512-Y38fwRx5kCKTluwM+Gf27jbbi9q6Qy+WC9YrC1YbCpMkktT3PsRBJHMWiqYeF8y/JzLpB1IzDoeaB6qkQEDnAA==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
@@ -5492,8 +5498,8 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
-  stripe@20.1.0:
-    resolution: {integrity: sha512-o1VNRuMkY76ZCq92U3EH3/XHm/WHp7AerpzDs4Zyo8uE5mFL4QUcv/2SudWsSnhBSp4moO2+ZoGCZ7mT8crPmQ==}
+  stripe@20.1.1:
+    resolution: {integrity: sha512-yD2jgS2QfqQOXxF3ByB/BcRTGChor/OxhK1211AvQPkzkTV7qCg7z/whOdhNCX0AZkNjBpicoViqC5TMvaxM9w==}
     engines: {node: '>=16'}
     peerDependencies:
       '@types/node': '>=16'
@@ -6078,8 +6084,8 @@ packages:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
 
-  zod@4.2.1:
-    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
+  zod@4.3.5:
+    resolution: {integrity: sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g==}
 
   zustand@5.0.9:
     resolution: {integrity: sha512-ALBtUj0AfjJt3uNRQoL1tL2tMvj6Gp/6e39dnfT6uzpelGru8v1tPOGBzayOWbPJvujM8JojDk3E1LxeFisBNg==}
@@ -6124,65 +6130,65 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/anthropic@3.0.7(zod@4.2.1)':
+  '@ai-sdk/anthropic@3.0.7(zod@4.3.5)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
-      zod: 4.2.1
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
+      zod: 4.3.5
 
-  '@ai-sdk/gateway@3.0.9(zod@4.2.1)':
+  '@ai-sdk/gateway@3.0.9(zod@4.3.5)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
       '@vercel/oidc': 3.1.0
-      zod: 4.2.1
+      zod: 4.3.5
 
-  '@ai-sdk/openai-compatible@2.0.4(zod@4.2.1)':
+  '@ai-sdk/openai-compatible@2.0.4(zod@4.3.5)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
-      zod: 4.2.1
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
+      zod: 4.3.5
 
-  '@ai-sdk/openai@3.0.7(zod@4.2.1)':
+  '@ai-sdk/openai@3.0.7(zod@4.3.5)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
-      zod: 4.2.1
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
+      zod: 4.3.5
 
-  '@ai-sdk/provider-utils@4.0.4(zod@4.2.1)':
+  '@ai-sdk/provider-utils@4.0.4(zod@4.3.5)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
-      zod: 4.2.1
+      zod: 4.3.5
 
   '@ai-sdk/provider@3.0.2':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@3.0.14(react@19.2.3)(zod@4.2.1)':
+  '@ai-sdk/react@3.0.14(react@19.2.3)(zod@4.3.5)':
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
-      ai: 6.0.14(zod@4.2.1)
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
+      ai: 6.0.14(zod@4.3.5)
       react: 19.2.3
       swr: 2.3.8(react@19.2.3)
       throttleit: 2.1.0
     transitivePeerDependencies:
       - zod
 
-  '@ai-sdk/togetherai@2.0.4(zod@4.2.1)':
+  '@ai-sdk/togetherai@2.0.4(zod@4.3.5)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.4(zod@4.2.1)
+      '@ai-sdk/openai-compatible': 2.0.4(zod@4.3.5)
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
-      zod: 4.2.1
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
+      zod: 4.3.5
 
-  '@ai-sdk/xai@3.0.10(zod@4.2.1)':
+  '@ai-sdk/xai@3.0.10(zod@4.3.5)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.4(zod@4.2.1)
+      '@ai-sdk/openai-compatible': 2.0.4(zod@4.3.5)
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
-      zod: 4.2.1
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
+      zod: 4.3.5
 
   '@alloc/quick-lru@5.2.0': {}
 
@@ -6538,11 +6544,11 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@hookform/resolvers@5.2.2(react-hook-form@7.69.0(react@19.2.3))':
+  '@hookform/resolvers@5.2.2(react-hook-form@7.70.0(react@19.2.3))':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.69.0(react@19.2.3)
-      zod: 4.2.1
+      react-hook-form: 7.70.0(react@19.2.3)
+      zod: 4.3.5
 
   '@iconify/types@2.0.0': {}
 
@@ -8446,13 +8452,13 @@ snapshots:
       clean-stack: 5.3.0
       indent-string: 5.0.0
 
-  ai@6.0.14(zod@4.2.1):
+  ai@6.0.14(zod@4.3.5):
     dependencies:
-      '@ai-sdk/gateway': 3.0.9(zod@4.2.1)
+      '@ai-sdk/gateway': 3.0.9(zod@4.3.5)
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.4(zod@4.2.1)
+      '@ai-sdk/provider-utils': 4.0.4(zod@4.3.5)
       '@opentelemetry/api': 1.9.0
-      zod: 4.2.1
+      zod: 4.3.5
 
   amadeus@11.0.0:
     dependencies:
@@ -9305,7 +9311,7 @@ snapshots:
     dependencies:
       is-unicode-supported: 2.1.0
 
-  file-type@21.2.0:
+  file-type@21.3.0:
     dependencies:
       '@tokenizer/inflate': 0.4.1
       strtok3: 10.3.4
@@ -9349,10 +9355,10 @@ snapshots:
     dependencies:
       fd-package-json: 2.0.0
 
-  framer-motion@12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  framer-motion@12.24.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
-      motion-dom: 12.23.23
-      motion-utils: 12.23.6
+      motion-dom: 12.24.3
+      motion-utils: 12.23.28
       tslib: 2.8.1
     optionalDependencies:
       react: 19.2.3
@@ -9540,6 +9546,12 @@ snapshots:
       vfile: 6.0.3
       web-namespaces: 2.0.1
       zwitch: 2.0.4
+
+  hast-util-sanitize@5.0.2:
+    dependencies:
+      '@types/hast': 3.0.4
+      '@ungap/structured-clone': 1.3.0
+      unist-util-position: 5.0.0
 
   hast-util-to-html@9.0.5:
     dependencies:
@@ -9909,7 +9921,7 @@ snapshots:
       smol-toml: 1.6.0
       strip-json-comments: 5.0.3
       typescript: 5.9.3
-      zod: 4.2.1
+      zod: 4.3.5
 
   langium@3.3.1:
     dependencies:
@@ -10562,15 +10574,15 @@ snapshots:
       requirejs: 2.3.8
       requirejs-config-file: 4.0.0
 
-  motion-dom@12.23.23:
+  motion-dom@12.24.3:
     dependencies:
-      motion-utils: 12.23.6
+      motion-utils: 12.23.28
 
-  motion-utils@12.23.6: {}
+  motion-utils@12.23.28: {}
 
-  motion@12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  motion@12.24.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
-      framer-motion: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      framer-motion: 12.24.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tslib: 2.8.1
     optionalDependencies:
       react: 19.2.3
@@ -11003,12 +11015,12 @@ snapshots:
       react: 19.2.3
       scheduler: 0.27.0
 
-  react-error-boundary@6.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  react-error-boundary@6.0.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  react-hook-form@7.69.0(react@19.2.3):
+  react-hook-form@7.70.0(react@19.2.3):
     dependencies:
       react: 19.2.3
 
@@ -11162,6 +11174,11 @@ snapshots:
       '@types/hast': 3.0.4
       hast-util-raw: 9.1.0
       vfile: 6.0.3
+
+  rehype-sanitize@6.0.0:
+    dependencies:
+      '@types/hast': 3.0.4
+      hast-util-sanitize: 5.0.2
 
   remark-cjk-friendly-gfm-strikethrough@1.2.3(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(unified@11.0.5):
     dependencies:
@@ -11535,7 +11552,7 @@ snapshots:
     dependencies:
       any-promise: 1.3.0
 
-  streamdown@1.6.10(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.3):
+  streamdown@1.6.11(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.3):
     dependencies:
       clsx: 2.1.1
       hast: 1.0.0
@@ -11549,6 +11566,7 @@ snapshots:
       rehype-harden: 1.1.7
       rehype-katex: 7.0.1
       rehype-raw: 7.0.0
+      rehype-sanitize: 6.0.0
       remark-cjk-friendly: 1.2.3(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(unified@11.0.5)
       remark-cjk-friendly-gfm-strikethrough: 1.2.3(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(unified@11.0.5)
       remark-gfm: 4.0.1
@@ -11623,7 +11641,7 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stripe@20.1.0(@types/node@25.0.3):
+  stripe@20.1.1(@types/node@25.0.3):
     dependencies:
       qs: 6.14.1
     optionalDependencies:
@@ -12153,7 +12171,7 @@ snapshots:
 
   yoctocolors@2.1.2: {}
 
-  zod@4.2.1: {}
+  zod@4.3.5: {}
 
   zustand@5.0.9(@types/react@19.2.7)(immer@11.1.3)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)):
     optionalDependencies:
