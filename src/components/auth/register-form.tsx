@@ -7,7 +7,7 @@
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Loader2Icon, MailIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,8 +19,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  type RegisterActionState,
+  registerWithPasswordAction,
+} from "@/lib/auth/actions";
 import { resolveRedirectUrl } from "@/lib/auth/redirect";
-import { nowIso } from "@/lib/security/random";
 import { useSupabaseRequired } from "@/lib/supabase/client";
 
 /** The register form props. */
@@ -36,117 +39,44 @@ type RegisterFormProps = {
  */
 export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const supabase = useSupabaseRequired();
+  const [registerState, registerAction, registerPending] = useActionState<
+    RegisterActionState,
+    FormData
+  >(registerWithPasswordAction, { status: "idle" });
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const targetPath = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const nextPath = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
   const targetUrl = useMemo(
     () => resolveRedirectUrl(redirectTo, { absolute: true }),
     [redirectTo]
   );
 
-  /** Handles the signup. */
-  const handleSignup = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError(null);
-
-    // Validate required fields
-    if (!firstName.trim()) {
-      setError("First name is required");
-      return;
-    }
-    if (!lastName.trim()) {
-      setError("Last name is required");
-      return;
-    }
-    if (!acceptTerms) {
-      setError("You must accept the terms and conditions");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    setLoading(true);
-    const termsAcceptedAt = nowIso();
-    // Build emailRedirectTo with next parameter for post-confirmation redirect
-    const emailRedirectTo =
-      typeof window === "undefined"
-        ? undefined
-        : new URL("/auth/confirm", window.location.origin).toString() +
-          `?type=email&next=${encodeURIComponent(targetPath)}`;
-
-    try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        options: {
-          data: {
-            email,
-            first_name: firstName.trim(),
-            full_name: `${firstName.trim()} ${lastName.trim()}`,
-            last_name: lastName.trim(),
-            terms_accepted: true,
-            terms_accepted_at: termsAcceptedAt,
-          },
-          emailRedirectTo,
-        },
-        password,
-      });
-
-      if (signUpError) {
-        setError(signUpError.message);
-        return;
-      }
-      // When email confirmation is required, data.session is null
-      // Redirect to check_email page instead of dashboard
-      if (!data?.session) {
-        const checkEmailUrl =
-          typeof window === "undefined"
-            ? "/register?status=check_email"
-            : new URL(
-                "/register?status=check_email",
-                window.location.origin
-              ).toString();
-        window.location.assign(checkEmailUrl);
-        return;
-      }
-      // Only redirect to targetUrl if session exists (email confirmation disabled)
-      window.location.assign(targetUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   /** Handles the OAuth login. */
   const handleOAuth = async (provider: "github" | "google") => {
-    setError(null);
-    setLoading(true);
+    setOauthError(null);
+    setOauthLoading(true);
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         options: { redirectTo: targetUrl },
         provider,
       });
       if (oauthError) {
-        setError(oauthError.message);
+        setOauthError(oauthError.message);
       }
     } catch {
-      setError("OAuth failed. Please try again.");
+      setOauthError("OAuth failed. Please try again.");
     } finally {
-      setLoading(false);
+      setOauthLoading(false);
     }
   };
+
+  const registerError = registerState.status === "error" ? registerState.error : null;
 
   return (
     <Card className="w-full">
@@ -155,12 +85,15 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
         <CardDescription>Join TripSage to start planning</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form className="space-y-4" onSubmit={handleSignup}>
+        <form className="space-y-4" action={registerAction}>
+          <input type="hidden" name="next" value={nextPath} />
+          <input type="hidden" name="acceptTerms" value={acceptTerms ? "on" : ""} />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First name</Label>
               <Input
                 id="firstName"
+                name="firstName"
                 type="text"
                 autoComplete="given-name"
                 required
@@ -172,6 +105,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               <Label htmlFor="lastName">Last name</Label>
               <Input
                 id="lastName"
+                name="lastName"
                 type="text"
                 autoComplete="family-name"
                 required
@@ -184,6 +118,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               autoComplete="email"
               required
@@ -195,6 +130,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              name="password"
               type="password"
               autoComplete="new-password"
               required
@@ -206,6 +142,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             <Label htmlFor="confirm-password">Confirm password</Label>
             <Input
               id="confirm-password"
+              name="confirmPassword"
               type="password"
               autoComplete="new-password"
               required
@@ -233,14 +170,17 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               </Link>
             </Label>
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {registerError ? (
+            <p className="text-sm text-destructive">{registerError}</p>
+          ) : null}
+          {oauthError ? <p className="text-sm text-destructive">{oauthError}</p> : null}
           <Button
             type="submit"
             className="w-full"
-            disabled={loading}
+            disabled={oauthLoading || registerPending}
             data-testid="password-signup"
           >
-            {loading ? (
+            {registerPending ? (
               <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <MailIcon className="mr-2 h-4 w-4" />
@@ -253,7 +193,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             variant="outline"
             className="w-full"
             onClick={() => handleOAuth("github")}
-            disabled={loading}
+            disabled={oauthLoading || registerPending}
             data-testid="oauth-github"
           >
             <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
@@ -262,7 +202,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             variant="outline"
             className="w-full"
             onClick={() => handleOAuth("google")}
-            disabled={loading}
+            disabled={oauthLoading || registerPending}
             data-testid="oauth-google"
           >
             <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google

@@ -26,12 +26,24 @@ export default async function RegisterPage({
 }) {
   const params = await searchParams;
   const redirectTo = params.from || params.next || "/dashboard";
+  const shouldCheckEmail = params.status === "check_email";
+  const errorMessage = params.error ? params.error : null;
 
   return (
     <div className="min-h-screen flex">
       {/* Left side - Register form (on mobile, this is the only visible part) */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
+          {shouldCheckEmail ? (
+            <div className="mb-4 rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+              Check your email to confirm your account before signing in.
+            </div>
+          ) : null}
+          {errorMessage ? (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          ) : null}
           <RegisterForm redirectTo={redirectTo} />
         </div>
       </div>
