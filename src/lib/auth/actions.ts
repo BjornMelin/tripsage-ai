@@ -360,7 +360,9 @@ export async function logoutAction(): Promise<never> {
   try {
     await supabase.auth.signOut();
   } catch (error) {
-    logger.error("Logout error", { error });
+    logger.error("Logout error", {
+      error: error instanceof Error ? error.message : String(error ?? "unknown_error"),
+    });
   }
   revalidatePath("/");
   redirect("/login");

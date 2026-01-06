@@ -41,6 +41,15 @@ CREATE POLICY file_attachments_insert_owner
   TO authenticated
   WITH CHECK (
     user_id = (select auth.uid())
+    -- Enforce canonical path prefix to prevent path-based auth confusion in Storage RLS policies.
+    -- Supports legacy `chat/{userId}/...` paths while enforcing a stable user-owned prefix.
+    AND (
+      split_part(file_path, '/', 1) = (select auth.uid())::text
+      OR (
+        split_part(file_path, '/', 1) = 'chat'
+        AND split_part(file_path, '/', 2) = (select auth.uid())::text
+      )
+    )
     AND (
       trip_id IS NULL
       OR public.user_has_trip_edit_access((select auth.uid()), trip_id)
@@ -73,6 +82,14 @@ CREATE POLICY file_attachments_update_owner
   USING (user_id = (select auth.uid()))
   WITH CHECK (
     user_id = (select auth.uid())
+    -- Keep file_path anchored to the authenticated user's prefix (defense-in-depth).
+    AND (
+      split_part(file_path, '/', 1) = (select auth.uid())::text
+      OR (
+        split_part(file_path, '/', 1) = 'chat'
+        AND split_part(file_path, '/', 2) = (select auth.uid())::text
+      )
+    )
     AND (
       trip_id IS NULL
       OR public.user_has_trip_edit_access((select auth.uid()), trip_id)
@@ -103,6 +120,53 @@ CREATE POLICY file_attachments_delete_owner
   FOR DELETE
   TO authenticated
   USING (user_id = (select auth.uid()));
+
+-- =======================================
+-- METADATA INVARIANTS (DEFENSE IN DEPTH)
+-- =======================================
+--
+-- Storage RLS policies authorize object UPDATE/DELETE by checking for a matching
+-- metadata record (file_path = storage.objects.name). If a user could mutate
+-- file_path on an existing metadata row, they could repoint it to another
+-- object path and gain authorization. Prevent this by making file_path (and
+-- other identity fields) immutable for normal requests.
+--
+-- Notes:
+-- - Allow postgres (migrations) and service_role (admin maintenance) to update.
+-- - Do not block updating upload_status or attaching chat_message_id; only block
+--   changing identifying fields.
+CREATE OR REPLACE FUNCTION public.prevent_file_attachments_identity_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  -- Allow migrations and admin maintenance.
+  -- PostgREST requests commonly use SET ROLE; session_user remains the connection user.
+  -- Use session_user for migrations and auth.role() for service-role maintenance.
+  IF session_user IN ('postgres', 'supabase_admin') OR auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.file_path IS DISTINCT FROM OLD.file_path THEN
+    RAISE EXCEPTION 'file_path cannot be modified';
+  END IF;
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+    RAISE EXCEPTION 'user_id cannot be modified';
+  END IF;
+  IF NEW.bucket_name IS DISTINCT FROM OLD.bucket_name THEN
+    RAISE EXCEPTION 'bucket_name cannot be modified';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS file_attachments_prevent_identity_change ON public.file_attachments;
+CREATE TRIGGER file_attachments_prevent_identity_change
+  BEFORE UPDATE ON public.file_attachments
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_file_attachments_identity_change();
 
 -- Ensure service role policy exists (base schema installs this).
 DROP POLICY IF EXISTS file_attachments_service ON public.file_attachments;

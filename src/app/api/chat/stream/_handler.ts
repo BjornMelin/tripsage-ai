@@ -217,9 +217,8 @@ export async function handleChatStream(
           });
 
           const chatMessagePayload: TablesInsert<"chat_messages"> & {
-            // Some deployments may expose request_id; keep optional to avoid schema breakage
-            // biome-ignore lint/style/useNamingConvention: Database field name
-            request_id?: string | null;
+            // request_id is persisted in metadata; do not send as a top-level column unless
+            // the database schema explicitly supports it.
           } = {
             content: "(streamed)",
             metadata: meta,
@@ -229,9 +228,6 @@ export async function handleChatStream(
             // biome-ignore lint/style/useNamingConvention: Database field name
             user_id: userId,
           };
-
-          // Store requestId at top-level when column exists; otherwise remains in metadata
-          chatMessagePayload.request_id = requestId ?? null;
 
           await insertSingle(deps.supabase, "chat_messages", chatMessagePayload);
         } catch (error) {

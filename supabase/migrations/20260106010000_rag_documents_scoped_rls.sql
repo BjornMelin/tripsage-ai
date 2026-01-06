@@ -23,7 +23,8 @@ BEGIN
   ) THEN
     ALTER TABLE public.rag_documents
       ADD CONSTRAINT rag_documents_trip_requires_user_check
-      CHECK (trip_id IS NULL OR user_id IS NOT NULL);
+      CHECK (trip_id IS NULL OR user_id IS NOT NULL)
+      NOT VALID;
   END IF;
 END;
 $do$;
@@ -49,7 +50,14 @@ CREATE POLICY rag_documents_select_authenticated
   FOR SELECT
   TO authenticated
   USING (
-    user_id IS NULL
+    -- Only treat NULL user_id rows as global for explicitly-known public namespaces.
+    -- This prevents legacy user_content rows (created before user_id existed) from becoming
+    -- readable to any authenticated user, and avoids future namespace additions becoming
+    -- globally readable by accident.
+    (
+      user_id IS NULL
+      AND namespace IN ('default', 'accommodations', 'destinations', 'activities', 'travel_tips')
+    )
     OR user_id = (select auth.uid())
     OR (
       trip_id IS NOT NULL
@@ -60,6 +68,7 @@ CREATE POLICY rag_documents_select_authenticated
 -- Write (authenticated):
 -- - Only the owner can write.
 -- - If trip-scoped, require trip edit access.
+-- - If chat-scoped, require the chat session is owned by the caller.
 DROP POLICY IF EXISTS rag_documents_insert_authenticated ON public.rag_documents;
 CREATE POLICY rag_documents_insert_authenticated
   ON public.rag_documents
@@ -70,6 +79,15 @@ CREATE POLICY rag_documents_insert_authenticated
     AND (
       trip_id IS NULL
       OR public.user_has_trip_edit_access((select auth.uid()), trip_id)
+    )
+    AND (
+      chat_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_sessions cs
+        WHERE cs.id = chat_id
+          AND cs.user_id = (select auth.uid())
+      )
     )
   );
 
@@ -84,12 +102,30 @@ CREATE POLICY rag_documents_update_authenticated
       trip_id IS NULL
       OR public.user_has_trip_edit_access((select auth.uid()), trip_id)
     )
+    AND (
+      chat_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_sessions cs
+        WHERE cs.id = chat_id
+          AND cs.user_id = (select auth.uid())
+      )
+    )
   )
   WITH CHECK (
     user_id = (select auth.uid())
     AND (
       trip_id IS NULL
       OR public.user_has_trip_edit_access((select auth.uid()), trip_id)
+    )
+    AND (
+      chat_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.chat_sessions cs
+        WHERE cs.id = chat_id
+          AND cs.user_id = (select auth.uid())
+      )
     )
   );
 

@@ -51,6 +51,17 @@ vi.mock("@/lib/security/random", () => ({
   secureUuid: () => "test-uuid-123",
 }));
 
+const mockInsertSingle = vi.hoisted(() =>
+  vi.fn(async (_client: unknown, _table: string, _values: unknown) => ({
+    data: null,
+    error: null,
+  }))
+);
+
+vi.mock("@/lib/supabase/typed-helpers", () => ({
+  insertSingle: mockInsertSingle,
+}));
+
 import { validateChatMessages } from "@ai/agents";
 import { persistMemoryTurn } from "@/lib/memory/turn-utils";
 import { handleChatStream } from "../_handler";
@@ -375,6 +386,23 @@ describe("handleChatStream", () => {
           userId: "u9",
         })
       );
+
+      expect(mockInsertSingle).toHaveBeenCalledWith(
+        expect.anything(),
+        "chat_messages",
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            requestId: "test-uuid-123",
+          }),
+        })
+      );
+
+      const calls = mockInsertSingle.mock.calls as unknown[][];
+      const lastPayload = calls[calls.length - 1]?.[2] as
+        | Record<string, unknown>
+        | undefined;
+      expect(lastPayload).toBeDefined();
+      expect(lastPayload).not.toHaveProperty("request_id");
     }
   });
 });

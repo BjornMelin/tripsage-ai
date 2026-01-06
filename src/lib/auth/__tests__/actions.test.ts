@@ -64,7 +64,7 @@ describe("logoutAction", () => {
     await logoutAction();
 
     expect(loggerErrorMock).toHaveBeenCalledWith("Logout error", {
-      error: signOutError,
+      error: "sign-out-failed",
     });
     expect(revalidatePath).toHaveBeenCalledWith("/");
     expect(redirect).toHaveBeenCalledWith("/login");
