@@ -194,6 +194,14 @@ where user_id = '00000000-0000-4000-8000-000000000001';
 rollback;
 ```
 
+### Upload metadata authorization window
+
+The attachments upload is authorized by the corresponding `public.file_attachments` row.
+Only rows with `upload_status = 'uploading'` created within the last 15 minutes authorize an upload
+(`created_at > now() - interval '15 minutes'`). Stale `uploading` rows older than 15 minutes may
+still exist in the database (especially in local dev) but will no longer authorize uploads; cleanup
+is handled out-of-band (this runbook does not require `pg_cron`).
+
 ### Service role key rotation
 
 - Treat `SUPABASE_SERVICE_ROLE_KEY` as a production secret; keep it server-only.
