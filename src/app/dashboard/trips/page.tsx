@@ -13,8 +13,6 @@ import {
   SearchIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
-import { TripCard } from "@/components/features/trips/trip-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { ConnectionStatusIndicator } from "@/features/realtime/components/connection-status-monitor";
+import { TripCard } from "@/features/trips/components/trip-card";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type Trip, useCreateTrip, useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";

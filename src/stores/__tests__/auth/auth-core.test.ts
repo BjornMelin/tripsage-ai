@@ -3,10 +3,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useAuthCore } from "@/stores/auth/auth-core";
-import { useAuthSession } from "@/stores/auth/auth-session";
-import { useAuthValidation } from "@/stores/auth/auth-validation";
-import { resetAuthState } from "@/stores/auth/reset-auth";
+import { useAuthCore } from "@/features/auth/store/auth/auth-core";
+import { useAuthSession } from "@/features/auth/store/auth/auth-session";
+import { useAuthValidation } from "@/features/auth/store/auth/auth-validation";
+import { resetAuthState } from "@/features/auth/store/auth/reset-auth";
 import { createAuthUser } from "@/test/factories/auth-user-factory";
 import { setupTimeoutMock } from "@/test/helpers/store";
 import { server } from "@/test/msw/server";

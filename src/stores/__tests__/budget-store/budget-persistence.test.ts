@@ -3,7 +3,7 @@
 import type { Budget, BudgetCategory, Expense } from "@schemas/budget";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useBudgetStore } from "@/stores/budget-store";
+import { useBudgetStore } from "@/features/budget/store/budget-store";
 
 // Mock the store to avoid persistence/devtools issues in tests
 vi.mock("zustand/middleware", () => ({

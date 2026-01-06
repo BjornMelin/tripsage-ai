@@ -7,8 +7,8 @@ import type {
 } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { selectCurrentFilters } from "@/stores/search-filters/selectors";
-import { useSearchFiltersStore } from "@/stores/search-filters-store";
+import { selectCurrentFilters } from "@/features/search/store/search-filters/selectors";
+import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
 
 describe("Search Filters Store - Filter Operations", () => {
   beforeEach(() => {

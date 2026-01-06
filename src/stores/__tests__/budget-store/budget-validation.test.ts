@@ -2,7 +2,7 @@
 
 import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useBudgetStore } from "@/stores/budget-store";
+import { useBudgetStore } from "@/features/budget/store/budget-store";
 
 describe("Budget Store - Budget Validation", () => {
   beforeEach(() => {

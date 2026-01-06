@@ -1,0 +1,70 @@
+# SPEC-0100: Application architecture (Next.js RSC + TanStack Query)
+
+**Version**: 1.0.0  
+**Status**: Final  
+**Date**: 2026-01-05
+
+## Goals
+
+- Fast initial render via RSC with minimal client bundle.
+- Interactive “session” UX via TanStack Query, including optimistic updates.
+- Strict validation at all boundaries via Zod v4.
+- Clean separation between:
+  - server reads (cached)
+  - server writes (actions)
+  - streaming/webhook APIs (route handlers)
+
+## Non-goals
+
+- Building a public REST API surface for all internal operations.
+- Supporting legacy/deprecated Next.js APIs or patterns.
+
+## Architecture overview
+
+### Outer shell (RSC)
+
+- Each page fetches the initial data server-side:
+  - authenticated user
+  - trip summary, chat session metadata, etc.
+- Pages prefetch TanStack Query where interactive follow-up reads occur.
+
+### Inner filling (Client)
+
+- TanStack Query drives interactive reads and mutations.
+- Server Actions are used as mutation functions.
+
+### Directory ownership
+
+- `src/app/*`: routing + layouts + server entrypoints
+- `src/features/*`: feature-specific code
+- `src/server/*`: server-only code
+- `src/components/ui`: shadcn/ui
+
+## Data flow contract
+
+1) Ingress (UI -> Action)
+
+- Form submits to server action.
+- Action validates with Zod, performs DB mutation, returns typed result.
+
+1) Read (RSC)
+
+- RSC calls `src/server/queries/*` which use `use cache` when safe.
+
+1) Read (Client)
+
+- `useQuery` uses server-prefetched dehydrated state or fetches via a small Route Handler only when needed.
+
+## Performance requirements
+
+- Avoid client waterfalls (RSC prefetch + hydration boundary).
+- Prefer server-only components by default.
+- No manual `useMemo` or `useCallback` (React compiler).
+
+## References
+
+```text
+TanStack Query Advanced SSR: https://tanstack.com/query/v5/docs/react/guides/advanced-ssr
+Next.js caching and `use cache`: https://nextjs.org/docs/app/getting-started/caching
+Next.js `use cache` directive: https://nextjs.org/docs/app/api-reference/directives/use-cache
+```

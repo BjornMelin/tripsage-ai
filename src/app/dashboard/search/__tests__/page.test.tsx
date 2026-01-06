@@ -25,18 +25,18 @@ interface MockSearch {
   timestamp: string;
 }
 const mockRecentSearches = vi.hoisted(() => vi.fn((): MockSearch[] => []));
-vi.mock("@/stores/search-history/index", () => ({
+vi.mock("@/features/search/store/search-history/index", () => ({
   useSearchHistoryStore: () => ({
     recentSearches: mockRecentSearches(),
   }),
 }));
 
 // Mock child components to isolate page tests
-vi.mock("@/components/features/search/search-analytics", () => ({
+vi.mock("@/features/search/components/search-analytics", () => ({
   SearchAnalytics: () => <div data-testid="search-analytics">Analytics</div>,
 }));
 
-vi.mock("@/components/features/search/search-collections", () => ({
+vi.mock("@/features/search/components/search-collections", () => ({
   SearchCollections: () => <div data-testid="search-collections">Collections</div>,
 }));
 

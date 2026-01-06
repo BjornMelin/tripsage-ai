@@ -1,7 +1,7 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useRealtimeConnectionStore } from "@/features/realtime/store/realtime-connection-store";
 import { DEFAULT_BACKOFF_CONFIG } from "@/lib/realtime/backoff";
-import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 

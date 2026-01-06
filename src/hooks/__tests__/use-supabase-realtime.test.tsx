@@ -14,7 +14,7 @@ vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   useRealtimeChannel: (...args: unknown[]) => useRealtimeChannelMock(...args),
 }));
 
-vi.mock("@/hooks/chat/use-websocket-chat", () => ({
+vi.mock("@/features/chat/hooks/chat/use-websocket-chat", () => ({
   useWebSocketChat: (...args: unknown[]) => useWebSocketChatMock(...args),
 }));
 

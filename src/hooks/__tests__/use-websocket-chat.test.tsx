@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useWebSocketChat } from "@/hooks/chat/use-websocket-chat";
+import { useWebSocketChat } from "@/features/chat/hooks/chat/use-websocket-chat";
 import type { RealtimeConnectionStatus } from "@/hooks/supabase/use-realtime-channel";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
@@ -47,11 +47,11 @@ vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
   }),
 }));
 
-vi.mock("@/stores/auth/auth-core", () => ({
+vi.mock("@/features/auth/store/auth/auth-core", () => ({
   useAuthCore: () => ({ user: { id: "u1", name: "You" } }),
 }));
 
-vi.mock("@/stores/chat/chat-realtime", () => ({
+vi.mock("@/features/chat/store/chat/chat-realtime", () => ({
   useChatRealtime: () => ({
     connectionStatus: "connecting",
     handleRealtimeMessage: mockHandleRealtimeMessage,

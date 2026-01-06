@@ -8,10 +8,10 @@ import type { AgentStatusType } from "@schemas/agent-status";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
+import { useAgentStatusStore } from "@/features/agent-monitoring/store/agent-status-store";
+import { useChatMessages, useSessions } from "@/features/chat/store/chat/chat-messages";
 import { clampProgress, cn } from "@/lib/utils";
 import { statusVariants, type ToneVariant } from "@/lib/variants/status";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
 
 /** Maps agent status types to tone variants for consistent styling. */
 // biome-ignore lint/style/useNamingConvention: Review requested camelCase naming

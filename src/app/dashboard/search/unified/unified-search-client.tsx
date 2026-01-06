@@ -25,10 +25,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { FlightSearchForm } from "@/components/features/search/forms/flight-search-form";
-import { HotelSearchForm } from "@/components/features/search/forms/hotel-search-form";
-import { FlightResults } from "@/components/features/search/results/flight-results";
-import { HotelResults } from "@/components/features/search/results/hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +40,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { FlightSearchForm } from "@/features/search/components/forms/flight-search-form";
+import { HotelSearchForm } from "@/features/search/components/forms/hotel-search-form";
+import { FlightResults } from "@/features/search/components/results/flight-results";
+import { HotelResults } from "@/features/search/components/results/hotel-results";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { ROUTES } from "@/lib/routes";
 import { statusVariants } from "@/lib/variants/status";

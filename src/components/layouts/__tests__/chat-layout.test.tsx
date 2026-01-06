@@ -2,10 +2,10 @@
 
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentStatusState } from "@/stores/agent-status-store";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useChatMessages, useSessions } from "@/stores/chat/chat-messages";
-import { useChatRealtime } from "@/stores/chat/chat-realtime";
+import type { AgentStatusState } from "@/features/agent-monitoring/store/agent-status-store";
+import { useAgentStatusStore } from "@/features/agent-monitoring/store/agent-status-store";
+import { useChatMessages, useSessions } from "@/features/chat/store/chat/chat-messages";
+import { useChatRealtime } from "@/features/chat/store/chat/chat-realtime";
 import {
   createMockAgentStatusState,
   createMockChatMessagesState,
@@ -15,29 +15,37 @@ import { render } from "@/test/test-utils";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
 // Store mocks (partial to preserve non-mocked exports)
-vi.mock("@/stores/chat/chat-messages", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/stores/chat/chat-messages")>();
+vi.mock("@/features/chat/store/chat/chat-messages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/features/chat/store/chat/chat-messages")>();
   return {
     ...actual,
     useChatMessages: vi.fn(),
     useSessions: vi.fn(),
   };
 });
-vi.mock("@/stores/chat/chat-realtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/stores/chat/chat-realtime")>();
+vi.mock("@/features/chat/store/chat/chat-realtime", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/features/chat/store/chat/chat-realtime")>();
   return {
     ...actual,
     useChatRealtime: vi.fn(),
   };
 });
 // chat-memory store removed - memory sync handled server-side
-vi.mock("@/stores/agent-status-store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/stores/agent-status-store")>();
-  return {
-    ...actual,
-    useAgentStatusStore: vi.fn(),
-  };
-});
+vi.mock(
+  "@/features/agent-monitoring/store/agent-status-store",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/features/agent-monitoring/store/agent-status-store")
+      >();
+    return {
+      ...actual,
+      useAgentStatusStore: vi.fn(),
+    };
+  }
+);
 
 // Next.js router mock
 vi.mock("next/navigation", () => ({

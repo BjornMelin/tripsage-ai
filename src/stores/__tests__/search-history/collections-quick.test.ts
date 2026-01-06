@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useSearchHistoryStore } from "@/stores/search-history";
+import { useSearchHistoryStore } from "@/features/search/store/search-history";
 
 describe("Search History Store - Collections and Quick Searches", () => {
   beforeEach(() => {

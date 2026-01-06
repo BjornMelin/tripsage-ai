@@ -16,11 +16,11 @@ import type {
 } from "@schemas/budget";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useBudgetStore } from "@/features/budget/store/budget-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
 import { staleTimes } from "@/lib/query/config";
 import { queryKeys } from "@/lib/query-keys";
-import { useBudgetStore } from "@/stores/budget-store";
 
 /**
  * Hook for accessing budget store state.

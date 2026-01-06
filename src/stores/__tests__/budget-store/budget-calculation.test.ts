@@ -9,7 +9,7 @@ import {
   selectBudgetsByTripFrom,
   selectRecentExpensesFrom,
   useBudgetStore,
-} from "@/stores/budget-store";
+} from "@/features/budget/store/budget-store";
 
 // Note: persist middleware is mocked in src/test/setup-jsdom.ts
 

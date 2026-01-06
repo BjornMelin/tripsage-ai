@@ -9,9 +9,9 @@ import type {
   RealtimePostgresChangesPayload,
 } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRealtimeConnectionStore } from "@/features/realtime/store/realtime-connection-store";
 import { type BackoffConfig, computeBackoffDelay } from "@/lib/realtime/backoff";
 import { getBrowserClient, type TypedSupabaseClient } from "@/lib/supabase";
-import { useRealtimeConnectionStore } from "@/stores/realtime-connection-store";
 
 /** Supabase broadcast event payload structure. */
 interface BroadcastPayload<T extends Record<string, unknown>> {

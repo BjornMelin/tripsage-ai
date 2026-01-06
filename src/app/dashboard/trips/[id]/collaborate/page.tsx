@@ -6,13 +6,6 @@
 
 import { ClockIcon, EditIcon, Loader2Icon, Share2Icon, UsersIcon } from "lucide-react";
 import { useParams } from "next/navigation";
-import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
-import {
-  CollaborationIndicator,
-  OptimisticTripUpdates,
-} from "@/components/features/realtime/optimistic-trip-updates";
-import { TripActivityFeed } from "@/components/features/trips/trip-activity-feed";
-import { TripCollaboratorsPanel } from "@/components/features/trips/trip-collaborators-panel";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -22,6 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { ConnectionStatusMonitor } from "@/features/realtime/components/connection-status-monitor";
+import {
+  CollaborationIndicator,
+  OptimisticTripUpdates,
+} from "@/features/realtime/components/optimistic-trip-updates";
+import { TripActivityFeed } from "@/features/trips/components/trip-activity-feed";
+import { TripCollaboratorsPanel } from "@/features/trips/components/trip-collaborators-panel";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { useTripActivityFeed } from "@/hooks/use-trip-activity-feed";
 import {

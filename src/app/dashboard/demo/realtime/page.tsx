@@ -15,11 +15,6 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
-import {
-  CollaborationIndicator,
-  OptimisticTripUpdates,
-} from "@/components/features/realtime/optimistic-trip-updates";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -29,6 +24,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConnectionStatusMonitor } from "@/features/realtime/components/connection-status-monitor";
+import {
+  CollaborationIndicator,
+  OptimisticTripUpdates,
+} from "@/features/realtime/components/optimistic-trip-updates";
 import { useTrips } from "@/hooks/use-trips";
 import { statusVariants } from "@/lib/variants/status";
 

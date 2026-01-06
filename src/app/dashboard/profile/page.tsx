@@ -8,9 +8,6 @@ import { SettingsIcon, ShieldIcon, SlidersIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
-import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
-import { PreferencesSection } from "@/components/features/profile/preferences-section";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,8 +18,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthCore } from "@/features/auth/store/auth/auth-core";
+import { AccountSettingsSection } from "@/features/profile/components/account-settings-section";
+import { PersonalInfoSection } from "@/features/profile/components/personal-info-section";
+import { PreferencesSection } from "@/features/profile/components/preferences-section";
 import { ROUTES } from "@/lib/routes";
-import { useAuthCore } from "@/stores/auth/auth-core";
 
 export default function ProfilePage() {
   const router = useRouter();

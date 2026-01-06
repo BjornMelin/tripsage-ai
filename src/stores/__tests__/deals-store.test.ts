@@ -3,13 +3,13 @@
 import type { DealType } from "@schemas/deals";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useDealsStore } from "@/features/search/store/deals-store";
 import {
   createDealAlertFixture,
   createDealFixture,
   createInvalidDealAlertFixture,
   createInvalidDealFixture,
 } from "@/test/fixtures/deals";
-import { useDealsStore } from "../deals-store";
 
 // Mock current timestamp for consistent testing
 /** Mock timestamp for consistent date-based testing */

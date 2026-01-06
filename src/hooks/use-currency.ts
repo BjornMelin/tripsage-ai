@@ -12,12 +12,12 @@ import type {
 import { UPDATE_EXCHANGE_RATES_RESPONSE_SCHEMA } from "@schemas/currency";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
+import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { staleTimes } from "@/lib/query/config";
 import { queryKeys } from "@/lib/query-keys";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
-import { useCurrencyStore } from "@/stores/currency-store";
 
 const MAX_CURRENCY_QUERY_RETRIES = 2;
 
