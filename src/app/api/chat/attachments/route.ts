@@ -488,7 +488,7 @@ export const POST = withApiGuards({
     if (insertedMetadata && !isMetadataStatusUpdateFailure) {
       insertedAttachmentIds.push(id);
     }
-    if (uploaded && !uploadError && !isMetadataStatusUpdateFailure) {
+    if (uploaded && !uploadError) {
       uploadedPaths.push(path);
     }
 

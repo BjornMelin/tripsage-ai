@@ -110,5 +110,5 @@ CREATE POLICY "Users can upload attachments to their trips"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
   bucket_id = 'attachments'
-  AND split_part(name, '/', 1) = auth.uid()::text
+  AND split_part(name, '/', 1) = (select auth.uid())::text
 );
