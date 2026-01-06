@@ -92,7 +92,7 @@ YOU MUST USE the following skills explicitly in your workflow:
 
 1. Local:
 
-   - `docs/specs/active/0032-spec-upstash-testing-harness.md`
+   - `docs/specs/archive/0032-spec-upstash-testing-harness.md`
    - `docs/architecture/decisions/adr-0054-upstash-testing-harness.md`
    - `src/lib/redis.ts`
    - `src/lib/idempotency/redis.ts`
@@ -207,7 +207,7 @@ Create Vitest suites to verify that the harness works:
 
 ### Step 4 – SPEC-0032 update
 
-In `docs/specs/active/0032-spec-upstash-testing-harness.md`:
+In `docs/specs/archive/0032-spec-upstash-testing-harness.md`:
 
 - Update Status → `Implemented`.
 - Add sections describing:

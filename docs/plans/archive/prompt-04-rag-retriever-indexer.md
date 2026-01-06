@@ -24,7 +24,7 @@ You specialize in:
 Current state:
 
 - There is an embeddings endpoint and some embedding generation logic.
-- SPEC-0018 (`docs/specs/active/0018-spec-rag-retriever-indexer.md`) is marked
+- SPEC-0018 (`docs/specs/archive/0018-spec-rag-retriever-indexer.md`) is marked
   “Partial (Embeddings Only)”.
 - There is no complete RAG flow that:
   - Indexes domain-specific content (accommodations, trips, docs).
@@ -101,7 +101,7 @@ YOU MUST USE the following skills explicitly in your workflow:
 
 1. Local:
 
-   - `docs/specs/active/0018-spec-rag-retriever-indexer.md`
+   - `docs/specs/archive/0018-spec-rag-retriever-indexer.md`
    - `docs/architecture/decisions/adr-0033-rag-advanced-v6.md`
    - `docs/architecture/decisions/adr-0042-supabase-memory-orchestrator.md`
    - `docs/architecture/database.md` or equivalent.
