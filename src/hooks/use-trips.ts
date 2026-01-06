@@ -394,7 +394,7 @@ export function useTrip(
         : tripId;
 
   const query = useQuery<Trip | null, AppError>({
-    enabled: numericTripId !== null && !!userId,
+    enabled: numericTripId !== null,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
       if (numericTripId === null) return null;
@@ -405,8 +405,8 @@ export function useTrip(
       }
     },
     queryKey:
-      numericTripId !== null && userId
-        ? keys.trips.detail(userId, numericTripId)
+      numericTripId !== null
+        ? keys.trips.detail(userId ?? "no-user", numericTripId)
         : keys.trips.detailDisabled(),
     staleTime: staleTimes.trips,
     throwOnError: false,
