@@ -33,6 +33,7 @@ CREATE POLICY file_attachments_select_access
 -- Write: owner only. If trip-scoped, require trip edit access.
 -- If chat_id is set, require the chat session is owned by the caller.
 -- If chat_message_id is set, require the message is owned by the caller.
+-- NOTE: The `chat_sessions.id` and `chat_messages.id` lookups are backed by their PRIMARY KEY indexes.
 DROP POLICY IF EXISTS file_attachments_insert_owner ON public.file_attachments;
 CREATE POLICY file_attachments_insert_owner
   ON public.file_attachments
@@ -136,6 +137,8 @@ CREATE POLICY attachments_insert_by_record
       WHERE fa.file_path = name
         AND fa.user_id = (select auth.uid())
         AND fa.upload_status = 'uploading'
+        -- NOTE: Stale `uploading` records are blocked from authorizing uploads after 15 minutes;
+        -- cleanup is intentionally handled out-of-band (e.g. scheduled maintenance) to avoid requiring pg_cron.
         AND fa.created_at > (now() - interval '15 minutes')
     )
   );

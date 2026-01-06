@@ -103,15 +103,12 @@ CREATE TRIGGER itinerary_items_prevent_user_id_change
 -- STORAGE: ATTACHMENTS BUCKET
 -- ===========================
 
--- Allow uploads for the existing attachment path used by /api/chat/attachments:
--- `chat/{userId}/{uuid}-{filename}`
+-- Allow uploads for the current attachment path used by /api/chat/attachments:
+-- `{userId}/{...}`
 DROP POLICY IF EXISTS "Users can upload attachments to their trips" ON storage.objects;
 CREATE POLICY "Users can upload attachments to their trips"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
-  bucket_id = 'attachments' AND (
-    public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
-    OR name LIKE 'user_' || auth.uid()::TEXT || '/%'
-    OR name LIKE 'chat/' || auth.uid()::TEXT || '/%'
-  )
+  bucket_id = 'attachments'
+  AND split_part(name, '/', 1) = auth.uid()::text
 );

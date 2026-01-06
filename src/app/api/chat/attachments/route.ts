@@ -193,13 +193,12 @@ async function uploadToSupabaseStorage(options: {
   const { chatId, chatMessageId, file, supabase, tripId, userId } = options;
 
   if (chatId === undefined && tripId === undefined) {
-    const attachmentId = secureUuid();
     return {
       detectedType: undefined,
       error: new Error("Either chatId or tripId is required."),
       errorKind: "validation",
       file,
-      id: attachmentId,
+      id: "",
       insertedMetadata: false,
       path: "",
       signedUrl: null,
