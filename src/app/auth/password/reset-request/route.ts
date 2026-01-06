@@ -78,7 +78,7 @@ const guardedPOST = withApiGuards({
   const telemetryMeta = { ipHash, userAgentHash };
 
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
-  if ("error" in parsedBody) {
+  if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
       return NextResponse.json(
         { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
@@ -91,8 +91,8 @@ const guardedPOST = withApiGuards({
     );
   }
 
-  const payload: ResetRequestPayload = isPlainObject(parsedBody.body)
-    ? parsedBody.body
+  const payload: ResetRequestPayload = isPlainObject(parsedBody.data)
+    ? parsedBody.data
     : {};
 
   const parsed = resetPasswordFormSchema.safeParse({

@@ -250,10 +250,8 @@ export const POST = withApiGuards({
 
   // Extract and validate user ID
   const userResult = requireUserId(user);
-  if ("error" in userResult) {
-    return userResult.error;
-  }
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   // Parse form data with hard size limit before buffering full payload
   let formData: FormData;

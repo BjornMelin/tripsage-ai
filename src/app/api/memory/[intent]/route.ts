@@ -28,10 +28,9 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 const INTENT_SCHEMA = z.enum(["conversations", "search"]);
 const insightsCacheKey = (userId: string) => `memory:insights:${userId}`;
-const STRICT_MEMORY_SEARCH_REQUEST_SCHEMA = memorySearchRequestSchema.strict();
 const SEARCH_REQUEST_SCHEMA = z.union([
   SEARCH_MEMORIES_REQUEST_SCHEMA,
-  STRICT_MEMORY_SEARCH_REQUEST_SCHEMA,
+  memorySearchRequestSchema,
 ]);
 
 const postSearch = withApiGuards({
@@ -46,8 +45,8 @@ const postSearch = withApiGuards({
     validated: MemorySearchRequest | SearchMemoriesRequest
   ) => {
     const result = requireUserId(user);
-    if ("error" in result) return result.error;
-    const { userId } = result;
+    if (!result.ok) return result.error;
+    const userId = result.data;
 
     const parsedUserId = z.uuid().safeParse(userId);
     if (!parsedUserId.success) {
@@ -195,8 +194,8 @@ const postConversations = withApiGuards({
   telemetry: "memory.conversations",
 })(async (_req: NextRequest, { user }, validated: MemoryAddConversationRequest) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
   const { category, content } = validated;
 
   const parsedUserId = z.uuid().safeParse(userId);
@@ -249,12 +248,12 @@ const postConversations = withApiGuards({
 
 export async function GET(_req: NextRequest, routeContext: RouteParamsContext) {
   const intentResult = await parseStringId(routeContext, "intent");
-  if ("error" in intentResult) return intentResult.error;
-  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.id);
+  if (!intentResult.ok) return intentResult.error;
+  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.data);
   if (!parsedIntent.success) {
     return errorResponse({
       error: "not_found",
-      reason: `Unknown memory intent "${intentResult.id}"`,
+      reason: `Unknown memory intent "${intentResult.data}"`,
       status: 404,
     });
   }
@@ -269,12 +268,12 @@ export async function GET(_req: NextRequest, routeContext: RouteParamsContext) {
 
 export async function POST(req: NextRequest, routeContext: RouteParamsContext) {
   const intentResult = await parseStringId(routeContext, "intent");
-  if ("error" in intentResult) return intentResult.error;
-  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.id);
+  if (!intentResult.ok) return intentResult.error;
+  const parsedIntent = INTENT_SCHEMA.safeParse(intentResult.data);
   if (!parsedIntent.success) {
     return errorResponse({
       error: "not_found",
-      reason: `Unknown memory intent "${intentResult.id}"`,
+      reason: `Unknown memory intent "${intentResult.data}"`,
       status: 404,
     });
   }

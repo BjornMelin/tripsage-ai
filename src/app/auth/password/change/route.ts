@@ -32,7 +32,7 @@ const logger = createServerLogger("auth.password.change");
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
-  if ("error" in parsedBody) {
+  if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
       return NextResponse.json(
         { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const payload: ChangePasswordPayload = isPlainObject(parsedBody.body)
-    ? parsedBody.body
+  const payload: ChangePasswordPayload = isPlainObject(parsedBody.data)
+    ? parsedBody.data
     : {};
 
   const parsed = changePasswordFormSchema.safeParse({

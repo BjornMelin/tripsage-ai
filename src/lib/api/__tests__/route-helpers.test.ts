@@ -125,8 +125,8 @@ describe("route-helpers", () => {
       });
 
       const parsed = await parseJsonBody(req, { maxBytes: 10 });
-      expect("error" in parsed).toBe(true);
-      if ("error" in parsed) {
+      expect(parsed.ok).toBe(false);
+      if (!parsed.ok) {
         expect(parsed.error.status).toBe(413);
         const body = await parsed.error.json();
         expect(body).toMatchObject({ error: "payload_too_large" });
@@ -154,11 +154,11 @@ describe("route-helpers", () => {
       });
 
       const first = await parseJsonBody(req);
-      expect("body" in first).toBe(true);
+      expect(first.ok).toBe(true);
 
       const second = await parseJsonBody(req);
-      expect("error" in second).toBe(true);
-      if ("error" in second) {
+      expect(second.ok).toBe(false);
+      if (!second.ok) {
         expect(second.error.status).toBe(400);
         const body = await second.error.json();
         expect(body).toMatchObject({
@@ -175,10 +175,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "42" }),
       };
       const result = await parseNumericId(routeContext);
-      expect("id" in result).toBe(true);
-      if ("id" in result) {
-        expect(result.id).toBe(42);
-      }
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.data).toBe(42);
     });
 
     it("returns error for non-numeric id", async () => {
@@ -186,8 +184,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "abc" }),
       };
       const result = await parseNumericId(routeContext);
-      expect("error" in result).toBe(true);
-      if ("error" in result) {
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
         expect(result.error.status).toBe(400);
         const body = await result.error.json();
         expect(body.error).toBe("invalid_request");
@@ -200,7 +198,7 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "0" }),
       };
       const result = await parseNumericId(routeContext);
-      expect("error" in result).toBe(true);
+      expect(result.ok).toBe(false);
     });
 
     it("returns error for negative number", async () => {
@@ -208,7 +206,7 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "-5" }),
       };
       const result = await parseNumericId(routeContext);
-      expect("error" in result).toBe(true);
+      expect(result.ok).toBe(false);
     });
 
     it("handles custom param name", async () => {
@@ -216,10 +214,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ tripId: "123" }),
       };
       const result = await parseNumericId(routeContext, "tripId");
-      expect("id" in result).toBe(true);
-      if ("id" in result) {
-        expect(result.id).toBe(123);
-      }
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.data).toBe(123);
     });
   });
 
@@ -229,10 +225,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "abc-123" }),
       };
       const result = await parseStringId(routeContext);
-      expect("id" in result).toBe(true);
-      if ("id" in result) {
-        expect(result.id).toBe("abc-123");
-      }
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.data).toBe("abc-123");
     });
 
     it("trims whitespace", async () => {
@@ -240,10 +234,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "  session-id  " }),
       };
       const result = await parseStringId(routeContext);
-      expect("id" in result).toBe(true);
-      if ("id" in result) {
-        expect(result.id).toBe("session-id");
-      }
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.data).toBe("session-id");
     });
 
     it("returns error for empty string", async () => {
@@ -251,8 +243,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "" }),
       };
       const result = await parseStringId(routeContext);
-      expect("error" in result).toBe(true);
-      if ("error" in result) {
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
         expect(result.error.status).toBe(400);
         const body = await result.error.json();
         expect(body.error).toBe("invalid_request");
@@ -265,7 +257,7 @@ describe("route-helpers", () => {
         params: Promise.resolve({ id: "   " }),
       };
       const result = await parseStringId(routeContext);
-      expect("error" in result).toBe(true);
+      expect(result.ok).toBe(false);
     });
 
     it("handles custom param name", async () => {
@@ -273,10 +265,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ sessionId: "sess-456" }),
       };
       const result = await parseStringId(routeContext, "sessionId");
-      expect("id" in result).toBe(true);
-      if ("id" in result) {
-        expect(result.id).toBe("sess-456");
-      }
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.data).toBe("sess-456");
     });
 
     it("includes param name in error message", async () => {
@@ -284,8 +274,8 @@ describe("route-helpers", () => {
         params: Promise.resolve({ sessionId: "" }),
       };
       const result = await parseStringId(routeContext, "sessionId");
-      expect("error" in result).toBe(true);
-      if ("error" in result) {
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
         const body = await result.error.json();
         expect(body.reason).toContain("sessionId");
       }

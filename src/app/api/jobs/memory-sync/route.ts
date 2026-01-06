@@ -64,9 +64,7 @@ export async function POST(req: Request) {
         }
 
         const validation = validateSchema(memorySyncJobSchema, json);
-        if ("error" in validation) {
-          return validation.error;
-        }
+        if (!validation.ok) return validation.error;
         const { idempotencyKey, payload } = validation.data;
         span.setAttribute("idempotency.key", idempotencyKey);
         span.setAttribute("sync.type", payload.syncType);

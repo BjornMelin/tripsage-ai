@@ -72,11 +72,16 @@ describe("POST /api/telemetry/activities", () => {
     });
 
     const response = await POST(request, createRouteParamsContext());
-    const body = (await response.json()) as { ok: boolean; reason: string };
+    const body = (await response.json()) as {
+      error?: string;
+      issues?: Array<{ message: string; path: Array<string | number> }>;
+      reason?: string;
+    };
 
     expect(response.status).toBe(400);
-    expect(body.ok).toBe(false);
-    expect(body.reason).toContain("pattern");
+    expect(body.error).toBe("invalid_request");
+    expect(body.reason ?? "").toContain("validation");
+    expect(body.issues?.some((issue) => issue.path[0] === "eventName")).toBe(true);
     expect(recordTelemetryEvent).not.toHaveBeenCalled();
   });
 
@@ -90,11 +95,16 @@ describe("POST /api/telemetry/activities", () => {
     });
 
     const response = await POST(request, createRouteParamsContext());
-    const body = (await response.json()) as { ok: boolean; reason: string };
+    const body = (await response.json()) as {
+      error?: string;
+      issues?: Array<{ message: string; path: Array<string | number> }>;
+      reason?: string;
+    };
 
     expect(response.status).toBe(400);
-    expect(body.ok).toBe(false);
-    expect(body.reason).toContain("attributes");
+    expect(body.error).toBe("invalid_request");
+    expect(body.reason ?? "").toContain("validation");
+    expect(body.issues?.some((issue) => issue.path[0] === "attributes")).toBe(true);
     expect(recordTelemetryEvent).not.toHaveBeenCalled();
   });
 
@@ -111,11 +121,16 @@ describe("POST /api/telemetry/activities", () => {
     });
 
     const response = await POST(request, createRouteParamsContext());
-    const body = (await response.json()) as { ok: boolean; reason: string };
+    const body = (await response.json()) as {
+      error?: string;
+      issues?: Array<{ message: string; path: Array<string | number> }>;
+      reason?: string;
+    };
 
     expect(response.status).toBe(400);
-    expect(body.ok).toBe(false);
-    expect(body.reason).toContain("attributes");
+    expect(body.error).toBe("invalid_request");
+    expect(body.reason ?? "").toContain("validation");
+    expect(body.issues?.some((issue) => issue.path[0] === "attributes")).toBe(true);
     expect(recordTelemetryEvent).not.toHaveBeenCalled();
   });
 });

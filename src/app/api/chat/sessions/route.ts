@@ -9,9 +9,21 @@ import "server-only";
 // making it dynamic and preventing caching of user-specific data.
 
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
 import { createSession, listSessions } from "./_handlers";
+
+const createSessionBodySchema = z.looseObject({
+  title: z
+    .string()
+    .trim()
+    .min(1, { error: "Title cannot be empty" })
+    .max(200, {
+      error: "Title too long",
+    })
+    .optional(),
+});
 
 /**
  * Creates a new chat session for the authenticated user.
@@ -27,12 +39,30 @@ export const POST = withApiGuards({
   telemetry: "chat.sessions.create",
 })(async (req: NextRequest, { supabase, user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
   // Title is optional, so gracefully handle parsing errors
   const parsed = await parseJsonBody(req);
-  const title =
-    "error" in parsed ? undefined : (parsed.body as { title?: string })?.title;
+  if (!parsed.ok) {
+    // Preserve backwards-compat for "no body" requests, but fail hard on oversized payloads.
+    if (parsed.error.status === 413) {
+      return parsed.error;
+    }
+    return createSession({ supabase, userId }, undefined);
+  }
+
+  const validation = createSessionBodySchema.safeParse(parsed.data);
+  if (!validation.success) {
+    return errorResponse({
+      err: validation.error,
+      error: "invalid_request",
+      issues: validation.error.issues,
+      reason: "Invalid request body",
+      status: 400,
+    });
+  }
+
+  const title = validation.data.title;
   return createSession({ supabase, userId }, title);
 });
 
@@ -47,7 +77,7 @@ export const GET = withApiGuards({
   telemetry: "chat.sessions.list",
 })((_req, { supabase, user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
   return listSessions({ supabase, userId });
 });

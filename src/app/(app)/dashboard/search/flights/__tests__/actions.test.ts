@@ -51,10 +51,13 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
-    expect(result).toEqual({
-      ...params,
-      passengers: { adults: 2, children: 0, infants: 0 },
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({
+        ...params,
+        passengers: { adults: 2, children: 0, infants: 0 },
+      });
+    }
     expectTelemetrySpanCalled("JFK", "LHR");
   });
 
@@ -67,24 +70,36 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
-    expect(result).toEqual({
-      ...params,
-      cabinClass: "economy", // schema default
-      passengers: { adults: 1, children: 0, infants: 0 }, // normalized defaults
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({
+        ...params,
+        cabinClass: "economy", // schema default
+        passengers: { adults: 1, children: 0, infants: 0 }, // normalized defaults
+      });
+    }
     expectTelemetrySpanCalled("NYC", "LAX");
   });
 
-  it("throws error for invalid cabin class", async () => {
+  it("returns error for invalid cabin class", async () => {
     const params = {
       cabinClass: "invalid-class",
       destination: "LHR",
       origin: "JFK",
     };
 
-    await expect(
-      submitFlightSearch(unsafeCast<FlightSearchParams>(params))
-    ).rejects.toThrow(/Invalid flight search parameters/);
+    const result = await submitFlightSearch(unsafeCast<FlightSearchParams>(params));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.error).toBe("invalid_request");
+      expect(result.error.reason).toBe("Invalid flight search parameters");
+      expect(result.error.issues).toBeDefined();
+
+      const issues = result.error.issues ?? [];
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some((issue) => issue.path.join(".") === "cabinClass")).toBe(true);
+      expect(result.error.fieldErrors?.cabinClass).toBeDefined();
+    }
   });
 
   it("validates passengers with nested structure", async () => {
@@ -100,9 +115,12 @@ describe("submitFlightSearch server action", () => {
 
     const result = await submitFlightSearch(params);
 
-    expect(result.passengers?.adults).toBe(2);
-    expect(result.passengers?.children).toBe(1);
-    expect(result.passengers?.infants).toBe(0);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.passengers?.adults).toBe(2);
+      expect(result.data.passengers?.children).toBe(1);
+      expect(result.data.passengers?.infants).toBe(0);
+    }
     expectTelemetrySpanCalled("LAX", "CDG");
   });
 });

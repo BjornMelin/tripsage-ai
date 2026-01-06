@@ -30,14 +30,10 @@ export const POST = withApiGuards({
   telemetry: "calendar.freebusy",
 })(async (req: NextRequest) => {
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
+  if (!parsed.ok) return parsed.error;
 
-  const validation = validateSchema(freeBusyRequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  const validation = validateSchema(freeBusyRequestSchema, parsed.data);
+  if (!validation.ok) return validation.error;
   const result = await queryFreeBusy(validation.data);
 
   return NextResponse.json(result);

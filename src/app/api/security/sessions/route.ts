@@ -18,8 +18,8 @@ export const GET = withApiGuards({
   telemetry: "security.sessions.list",
 })(async (_req: NextRequest, { supabase, user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
 
   const [adminSupabase, currentSessionId] = await Promise.all([
     Promise.resolve(createAdminSupabase()),

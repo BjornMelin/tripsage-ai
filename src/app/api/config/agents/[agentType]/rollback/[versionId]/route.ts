@@ -26,7 +26,7 @@ import { nowIso, secureId } from "@/lib/security/random";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.uuid();
 
 /**
  * Builds a rollback configuration for an agent.
@@ -66,33 +66,27 @@ export const POST = withApiGuards({
     try {
       ensureAdmin(user);
       const userResult = requireUserId(user);
-      if ("error" in userResult) return userResult.error;
-      const { userId } = userResult;
+      if (!userResult.ok) return userResult.error;
+      const userId = userResult.data;
       const url = new URL(req.url);
       const scopeValidation = validateSchema(
         scopeSchema,
         url.searchParams.get("scope") ?? undefined
       );
-      if ("error" in scopeValidation) {
-        return scopeValidation.error;
-      }
+      if (!scopeValidation.ok) return scopeValidation.error;
       const scope = scopeValidation.data;
       // Extract and validate agentType from route params and catch any errors
       const agentTypeResult = await parseStringId(routeContext, "agentType");
-      if ("error" in agentTypeResult) return agentTypeResult.error;
-      const { id: agentType } = agentTypeResult;
+      if (!agentTypeResult.ok) return agentTypeResult.error;
+      const agentType = agentTypeResult.data;
       const versionIdResult = await parseStringId(routeContext, "versionId");
-      if ("error" in versionIdResult) return versionIdResult.error;
-      const { id: versionId } = versionIdResult;
+      if (!versionIdResult.ok) return versionIdResult.error;
+      const versionId = versionIdResult.data;
 
       const agentValidation = validateSchema(agentTypeSchema, agentType);
       const versionValidation = validateSchema(uuidSchema, versionId);
-      if ("error" in agentValidation) {
-        return agentValidation.error;
-      }
-      if ("error" in versionValidation) {
-        return versionValidation.error;
-      }
+      if (!agentValidation.ok) return agentValidation.error;
+      if (!versionValidation.ok) return versionValidation.error;
 
       const { data: versionRow, error: versionError } = await supabase
         .from("agent_config_versions")

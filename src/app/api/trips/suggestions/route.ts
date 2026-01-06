@@ -29,42 +29,40 @@ const logger = createServerLogger("api.trips.suggestions", {
   redactKeys: ["cacheKey"],
 });
 
-const tripSuggestionsQuerySchema = z
-  .object({
-    budget_max: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return undefined;
-        const normalized = val.normalize("NFKC").trim();
-        const parsed = Number.parseFloat(normalized);
-        return Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_BUDGET_LIMIT
-          ? parsed
-          : undefined;
-      }),
-    category: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return undefined;
-        const normalized = val.normalize("NFKC").trim();
-        return normalized.length > 0 ? normalized : undefined;
-      })
-      .refine((val) => !val || val.length <= 50, {
-        message: "Category must be 50 characters or less",
-      }),
-    limit: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return undefined;
-        const normalized = val.normalize("NFKC").trim();
-        const parsed = Number.parseInt(normalized, 10);
-        if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
-        return Math.min(parsed, 10);
-      }),
-  })
-  .strip();
+const tripSuggestionsQuerySchema = z.object({
+  budget_max: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const normalized = val.normalize("NFKC").trim();
+      const parsed = Number.parseFloat(normalized);
+      return Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_BUDGET_LIMIT
+        ? parsed
+        : undefined;
+    }),
+  category: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const normalized = val.normalize("NFKC").trim();
+      return normalized.length > 0 ? normalized : undefined;
+    })
+    .refine((val) => !val || val.length <= 50, {
+      error: "Category must be 50 characters or less",
+    }),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const normalized = val.normalize("NFKC").trim();
+      const parsed = Number.parseInt(normalized, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+      return Math.min(parsed, 10);
+    }),
+});
 
 /**
  * Request query parameters for trip suggestion generation.
@@ -217,8 +215,8 @@ export const GET = withApiGuards({
 })(async (req, { user }) => {
   try {
     const result = requireUserId(user);
-    if ("error" in result) return result.error;
-    const { userId } = result;
+    if (!result.ok) return result.error;
+    const userId = result.data;
     const params = parseSuggestionQueryParams(req);
     const suggestions = await generateSuggestionsWithCache(userId, params);
     return NextResponse.json(suggestions);

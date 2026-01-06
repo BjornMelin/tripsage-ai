@@ -14,6 +14,7 @@ import {
   getTrustedRateLimitIdentifierFromHeaders,
   hashIdentifier as hashRateLimitIdentifier,
 } from "@/lib/ratelimit/identifier";
+import { type Result, err as resultErr, ok as resultOk } from "@/lib/result";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("route-helpers");
@@ -262,7 +263,6 @@ export function errorResponse({
  * Parses JSON request body with error handling.
  *
  * Canonical helper for route handlers to safely parse JSON request bodies.
- * Returns a discriminated union to enable type-safe error handling.
  *
  * @param req Next.js request object.
  * @returns Parsed body or error response.
@@ -270,49 +270,49 @@ export function errorResponse({
  * @example
  * ```typescript
  * const parsed = await parseJsonBody(req);
- * if ("error" in parsed) {
+ * if (!parsed.ok) {
  *   return parsed.error;
  * }
- * const body = parsed.body;
+ * const body = parsed.data;
  * ```
  */
 export async function parseJsonBody(
   req: NextRequest,
   options: { maxBytes?: number } = {}
-): Promise<{ body: unknown } | { error: NextResponse }> {
+): Promise<Result<unknown, NextResponse>> {
   const { maxBytes = API_CONSTANTS.maxBodySizeBytes } = options;
   try {
     const bytes = await readRequestBodyBytesWithLimit(req, maxBytes);
     const raw = new TextDecoder().decode(bytes);
     const body = JSON.parse(raw) as unknown;
-    return { body };
+    return resultOk(body);
   } catch (error) {
     if (error instanceof PayloadTooLargeError) {
-      return {
-        error: errorResponse({
+      return resultErr(
+        errorResponse({
           error: "payload_too_large",
           reason: "Request body exceeds limit",
           status: 413,
-        }),
-      };
+        })
+      );
     }
     if (error instanceof RequestBodyAlreadyReadError) {
-      return {
-        error: errorResponse({
+      return resultErr(
+        errorResponse({
           err: error,
           error: "invalid_request",
           reason: "Request body has already been read",
           status: 400,
-        }),
-      };
+        })
+      );
     }
-    return {
-      error: errorResponse({
+    return resultErr(
+      errorResponse({
         error: "invalid_request",
         reason: "Malformed JSON in request body",
         status: 400,
-      }),
-    };
+      })
+    );
   }
 }
 
@@ -329,7 +329,7 @@ export async function parseJsonBody(
  * @example
  * ```typescript
  * const validation = validateSchema(createEventRequestSchema, body);
- * if ("error" in validation) {
+ * if (!validation.ok) {
  *   return validation.error;
  * }
  * const validated = validation.data;
@@ -338,20 +338,20 @@ export async function parseJsonBody(
 export function validateSchema<T extends z.ZodType>(
   schema: T,
   data: unknown
-): { data: z.infer<T> } | { error: NextResponse } {
+): Result<z.infer<T>, NextResponse> {
   const parseResult = schema.safeParse(data);
   if (!parseResult.success) {
-    return {
-      error: errorResponse({
+    return resultErr(
+      errorResponse({
         err: parseResult.error,
         error: "invalid_request",
         issues: parseResult.error.issues,
         reason: "Request validation failed",
         status: 400,
-      }),
-    };
+      })
+    );
   }
-  return { data: parseResult.data };
+  return resultOk(parseResult.data);
 }
 
 /**
@@ -389,29 +389,29 @@ export function notFoundResponse(entity: string): NextResponse {
  * @example
  * ```typescript
  * const result = await parseNumericId(routeContext);
- * if ("error" in result) return result.error;
- * const tripId = result.id;
+ * if (!result.ok) return result.error;
+ * const tripId = result.data;
  * ```
  */
 export async function parseNumericId(
   routeContext: { params: Promise<Record<string, string>> },
   paramName = "id"
-): Promise<{ id: number } | { error: NextResponse }> {
+): Promise<Result<number, NextResponse>> {
   const params = await routeContext.params;
   const raw = params[paramName];
   const id = Number.parseInt(raw, 10);
 
   if (!Number.isFinite(id) || id <= 0) {
-    return {
-      error: errorResponse({
+    return resultErr(
+      errorResponse({
         error: "invalid_request",
         reason: `${paramName} must be a positive integer`,
         status: 400,
-      }),
-    };
+      })
+    );
   }
 
-  return { id };
+  return resultOk(id);
 }
 
 /**
@@ -467,28 +467,28 @@ export function forbiddenResponse(reason: string): NextResponse {
  * @example
  * ```typescript
  * const result = await parseStringId(routeContext, "sessionId");
- * if ("error" in result) return result.error;
- * const sessionId = result.id;
+ * if (!result.ok) return result.error;
+ * const sessionId = result.data;
  * ```
  */
 export async function parseStringId(
   routeContext: { params: Promise<Record<string, string>> },
   paramName = "id"
-): Promise<{ id: string } | { error: NextResponse }> {
+): Promise<Result<string, NextResponse>> {
   const params = await routeContext.params;
   const raw = params[paramName];
 
   if (!raw || typeof raw !== "string" || raw.trim() === "") {
-    return {
-      error: errorResponse({
+    return resultErr(
+      errorResponse({
         error: "invalid_request",
         reason: `${paramName} must be a non-empty string`,
         status: 400,
-      }),
-    };
+      })
+    );
   }
 
-  return { id: raw.trim() };
+  return resultOk(raw.trim());
 }
 
 /**
@@ -504,15 +504,15 @@ export async function parseStringId(
  * @example
  * ```typescript
  * const result = requireUserId(user);
- * if ("error" in result) return result.error;
- * const { userId } = result;
+ * if (!result.ok) return result.error;
+ * const userId = result.data;
  * ```
  */
 export function requireUserId(
   user: { id: string } | null | undefined
-): { userId: string } | { error: NextResponse } {
+): Result<string, NextResponse> {
   if (!user?.id) {
-    return { error: unauthorizedResponse() };
+    return resultErr(unauthorizedResponse());
   }
-  return { userId: user.id };
+  return resultOk(user.id);
 }

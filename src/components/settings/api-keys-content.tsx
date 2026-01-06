@@ -235,7 +235,20 @@ export function ApiKeysContent() {
     async (_prevState, action) => {
       const { next, previous } = action;
       try {
-        await updateGatewayFallbackPreference(next);
+        const result = await updateGatewayFallbackPreference(next);
+        if (!result.ok) {
+          setAllowGatewayFallback(previous);
+          recordClientErrorOnActiveSpan(new Error(result.error.reason), {
+            action: "updateGatewayFallbackPreference",
+            context: "ApiKeysContent",
+          });
+          toast({
+            description: "Failed to update gateway fallback. Please try again.",
+            title: "Update failed",
+            variant: "destructive",
+          });
+          return { success: false };
+        }
         return { success: true };
       } catch (error) {
         setAllowGatewayFallback(previous);

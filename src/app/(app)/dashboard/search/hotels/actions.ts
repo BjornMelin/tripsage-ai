@@ -11,6 +11,13 @@ import {
   searchAccommodationParamsSchema,
 } from "@schemas/search";
 import { normalizePlacesTextQuery } from "@/lib/google/places-utils";
+import {
+  err,
+  ok,
+  type Result,
+  type ResultError,
+  zodErrorToFieldErrors,
+} from "@/lib/result";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const MAX_TELEMETRY_DESTINATION_LENGTH = 256;
@@ -20,14 +27,18 @@ const MAX_TELEMETRY_DESTINATION_LENGTH = 256;
  *
  * @param params - Accommodation search parameters from the client.
  * @returns Validated accommodation search parameters.
- * @throws Error if validation fails.
  */
 export async function submitHotelSearch(
   params: SearchAccommodationParams
-): Promise<SearchAccommodationParams> {
+): Promise<Result<SearchAccommodationParams, ResultError>> {
   const validation = searchAccommodationParamsSchema.safeParse(params);
   if (!validation.success) {
-    throw new Error(`Invalid accommodation search params: ${validation.error.message}`);
+    return err({
+      error: "invalid_request",
+      fieldErrors: zodErrorToFieldErrors(validation.error),
+      issues: validation.error.issues,
+      reason: "Invalid accommodation search parameters",
+    });
   }
   const validatedDestination = validation.data.destination
     ? normalizePlacesTextQuery(validation.data.destination).slice(
@@ -43,8 +54,6 @@ export async function submitHotelSearch(
         searchType: "accommodation",
       },
     },
-    () => {
-      return validation.data;
-    }
+    () => ok(validation.data)
   );
 }

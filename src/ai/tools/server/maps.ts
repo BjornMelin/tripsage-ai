@@ -60,9 +60,11 @@ export const geocode = createAiTool({
     const parseResult = upstreamGeocodeResponseSchema.safeParse(rawData);
 
     if (!parseResult.success) {
-      const zodError = parseResult.error.format();
       throw new Error(
-        `Invalid response from Geocoding API: ${JSON.stringify(zodError).slice(0, 200)}`
+        `Invalid response from Geocoding API: ${parseResult.error.issues
+          .slice(0, 5)
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join("; ")}`
       );
     }
 
@@ -267,8 +269,12 @@ export const distanceMatrix = createAiTool({
     const parseResult = upstreamRouteMatrixResponseSchema.safeParse(rawData);
 
     if (!parseResult.success) {
-      const zodError = parseResult.error.format();
-      throw new Error(`Invalid response from Routes API: ${JSON.stringify(zodError)}`);
+      throw new Error(
+        `Invalid response from Routes API: ${parseResult.error.issues
+          .slice(0, 5)
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join("; ")}`
+      );
     }
 
     const entries = parseResult.data;

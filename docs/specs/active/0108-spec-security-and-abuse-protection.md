@@ -18,6 +18,26 @@
 - Zod boundary validation
 - RLS-first DB security
 
+## Canonical Result and error shapes
+
+This repo standardizes error handling to keep validation, logging, and client UX consistent.
+
+### Server Actions
+
+- Server Actions return `Result<T, ResultError>` (no thrown errors for expected failures).
+- `ResultError` shape (serializable):
+  - `error: string` (stable machine code)
+  - `reason: string` (human-readable summary)
+  - `issues?: z.core.$ZodIssue[]` (Zod v4 issues for debugging and form mapping)
+  - `fieldErrors?: Record<string, string[]>` (dot-path keys, `"_form"` for root issues)
+
+### Route Handlers
+
+- Route Handlers validate all untrusted inputs (JSON bodies, params, search params) before use.
+- Error responses must use the standardized JSON envelope:
+  - `{ error: string, reason: string, issues?: z.core.$ZodIssue[] }`
+- Prefer helper functions in `src/lib/api/route-helpers.ts` and `src/server/security/validate.ts` to enforce bounded reads and consistent responses.
+
 ## References
 
 ```text

@@ -15,7 +15,7 @@ const apiKeySchema = (name: string, minLength = 20) =>
   z
     .string()
     .refine((val) => val === "" || val.length >= minLength, {
-      message: `${name} must be at least ${minLength} characters when configured`,
+      error: `${name} must be at least ${minLength} characters when configured`,
     })
     .optional();
 
@@ -27,7 +27,7 @@ const secretSchema = (name: string, minLength = 32) =>
   z
     .string()
     .refine((val) => val === "" || val.length >= minLength, {
-      message: `${name} must be at least ${minLength} characters for security when configured`,
+      error: `${name} must be at least ${minLength} characters for security when configured`,
     })
     .optional();
 
@@ -38,7 +38,7 @@ const secretSchema = (name: string, minLength = 32) =>
 const resendApiKeySchema = z
   .string()
   .refine((val) => val === "" || val.startsWith("re_"), {
-    message: "RESEND_API_KEY must start with 're_' when configured",
+    error: "RESEND_API_KEY must start with 're_' when configured",
   })
   .optional();
 
@@ -51,7 +51,7 @@ const stripeSecretKeySchema = z
   .refine(
     (val) => val === "" || val.startsWith("sk_test_") || val.startsWith("sk_live_"),
     {
-      message:
+      error:
         "STRIPE_SECRET_KEY must start with 'sk_test_' or 'sk_live_' when configured",
     }
   )
@@ -66,7 +66,7 @@ const stripePublishableKeySchema = z
   .refine(
     (val) => val === "" || val.startsWith("pk_test_") || val.startsWith("pk_live_"),
     {
-      message:
+      error:
         "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must start with 'pk_test_' or 'pk_live_' when configured",
     }
   )
@@ -79,7 +79,7 @@ const stripePublishableKeySchema = z
 const openaiApiKeySchema = z
   .string()
   .refine((val) => val === "" || val.startsWith("sk-"), {
-    message: "OPENAI_API_KEY must start with 'sk-' when configured",
+    error: "OPENAI_API_KEY must start with 'sk-' when configured",
   })
   .optional();
 
@@ -90,7 +90,7 @@ const openaiApiKeySchema = z
 const anthropicApiKeySchema = z
   .string()
   .refine((val) => val === "" || val.startsWith("sk-ant-"), {
-    message: "ANTHROPIC_API_KEY must start with 'sk-ant-' when configured",
+    error: "ANTHROPIC_API_KEY must start with 'sk-ant-' when configured",
   })
   .optional();
 
@@ -101,7 +101,7 @@ const anthropicApiKeySchema = z
 const supabaseJwtSecretSchema = z
   .string()
   .refine((val) => val === "" || val.length >= 32, {
-    message:
+    error:
       "SUPABASE_JWT_SECRET must be at least 32 characters for HS256 signing when configured",
   })
   .optional();
@@ -113,7 +113,7 @@ const supabaseJwtSecretSchema = z
 const hmacSecretSchema = z
   .string()
   .refine((val) => val === "" || val.length >= 32, {
-    message:
+    error:
       "HMAC_SECRET must be at least 32 characters for secure signing when configured",
   })
   .optional();
@@ -139,8 +139,8 @@ const nextEnvSchema = z.object({
 const supabaseEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z
     .string()
-    .min(1, "Supabase anonymous key is required"),
-  NEXT_PUBLIC_SUPABASE_URL: z.url("Invalid Supabase URL"),
+    .min(1, { error: "Supabase anonymous key is required" }),
+  NEXT_PUBLIC_SUPABASE_URL: z.url({ error: "Invalid Supabase URL" }),
   SUPABASE_JWT_SECRET: supabaseJwtSecretSchema,
   SUPABASE_SERVICE_ROLE_KEY: apiKeySchema("SUPABASE_SERVICE_ROLE_KEY", 30),
 });

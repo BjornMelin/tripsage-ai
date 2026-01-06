@@ -38,6 +38,7 @@ import { useComparisonStore } from "@/features/search/store/comparison-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { getErrorMessage } from "@/lib/api/error-types";
+import type { Result, ResultError } from "@/lib/result";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 import { ActivitiesSelectionDialog } from "./activities-selection-dialog";
 import { isActivity, partitionActivitiesByFallback } from "./activity-results";
@@ -58,7 +59,9 @@ const ACTIVITY_COLORS = {
 
 /** Activity search client component props. */
 interface ActivitiesSearchClientProps {
-  onSubmitServer: (params: ActivitySearchParams) => Promise<ActivitySearchParams>;
+  onSubmitServer: (
+    params: ActivitySearchParams
+  ) => Promise<Result<ActivitySearchParams, ResultError>>;
 }
 
 /** Activity search client component. */
@@ -122,8 +125,16 @@ export default function ActivitiesSearchClient({
       (async () => {
         try {
           const normalizedParams = await onSubmitServer(initialParams);
+          if (!normalizedParams.ok) {
+            toast({
+              description: normalizedParams.error.reason,
+              title: "Search failed",
+              variant: "destructive",
+            });
+            return;
+          }
           if (controller.signal.aborted) return;
-          await executeSearch(normalizedParams ?? initialParams, controller.signal);
+          await executeSearch(normalizedParams.data, controller.signal);
           if (controller.signal.aborted) return;
           setHasSearched(true);
         } catch (error) {
@@ -153,8 +164,16 @@ export default function ActivitiesSearchClient({
         manualSearchController.current = controller;
         try {
           const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
+          if (!normalizedParams.ok) {
+            toast({
+              description: normalizedParams.error.reason,
+              title: "Search failed",
+              variant: "destructive",
+            });
+            return;
+          }
           if (controller.signal.aborted) return;
-          await executeSearch(normalizedParams ?? params, controller.signal); // client fetch/store update
+          await executeSearch(normalizedParams.data, controller.signal); // client fetch/store update
           if (controller.signal.aborted) return;
           setHasSearched(true);
         } catch (error) {
@@ -184,7 +203,16 @@ export default function ActivitiesSearchClient({
     setIsPending(true);
     try {
       const fetchedTrips = await getPlanningTrips();
-      setTrips(fetchedTrips);
+      if (!fetchedTrips.ok) {
+        toast({
+          description: fetchedTrips.error.reason || "Failed to load trips.",
+          title: "Error",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setTrips(fetchedTrips.data);
       setIsTripModalOpen(true);
     } catch (error) {
       const message =
@@ -216,7 +244,7 @@ export default function ActivitiesSearchClient({
 
       setIsPending(true);
       try {
-        await addActivityToTrip(tripId, {
+        const result = await addActivityToTrip(tripId, {
           currency,
           description: selectedActivity.description,
           externalId: selectedActivity.id,
@@ -229,6 +257,15 @@ export default function ActivitiesSearchClient({
           price: selectedActivity.price,
           title: selectedActivity.name,
         });
+
+        if (!result.ok) {
+          toast({
+            description: result.error.reason,
+            title: "Error",
+            variant: "destructive",
+          });
+          return;
+        }
 
         toast({
           description: `Added "${selectedActivity.name}" to your trip`,

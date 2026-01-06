@@ -25,6 +25,13 @@ import { getGoogleMapsBrowserKey } from "@/lib/env/server";
 import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
 import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 import { retryWithBackoff } from "@/lib/http/retry";
+import {
+  err,
+  ok,
+  type Result,
+  type ResultError,
+  zodErrorToFieldErrors,
+} from "@/lib/result";
 import { secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -50,11 +57,10 @@ function buildPhotoUrl(photoName?: string): string | undefined {
  *
  * @param params - Hotel search parameters from component.
  * @returns Array of hotel results.
- * @throws Error if validation fails.
  */
 export async function searchHotelsAction(
   params: HotelSearchFormData
-): Promise<HotelResult[]> {
+): Promise<Result<HotelResult[], ResultError>> {
   // Map component params to schema format
   const schemaParams: SearchAccommodationParams = {
     adults: params.adults,
@@ -79,7 +85,12 @@ export async function searchHotelsAction(
       },
       () => undefined
     );
-    throw new Error("Invalid hotel search parameters");
+    return err({
+      error: "invalid_request",
+      fieldErrors: zodErrorToFieldErrors(validation.error),
+      issues: validation.error.issues,
+      reason: "Invalid hotel search parameters",
+    });
   }
 
   const validatedParams = validation.data;
@@ -104,25 +115,37 @@ export async function searchHotelsAction(
   const tomorrowIso = format(tomorrow, "yyyy-MM-dd");
   const effectiveCheckIn = validatedParams.checkIn ?? todayIso;
   const effectiveCheckOut = validatedParams.checkOut ?? tomorrowIso;
-  const searchResult = await withTelemetrySpan(
-    "ui.unified.searchHotels",
-    { attributes: { location: validatedParams.destination ?? "" } },
-    async () =>
-      await service.search(
-        {
-          checkin: effectiveCheckIn,
-          checkout: effectiveCheckOut,
-          guests: (validatedParams.adults ?? 1) + (validatedParams.children ?? 0),
-          location: validatedParams.destination ?? "",
-          priceMax: validatedParams.priceRange?.max,
-          priceMin: validatedParams.priceRange?.min,
-          semanticQuery: validatedParams.destination ?? "",
-        },
-        {
-          sessionId: secureUuid(),
-        }
-      )
-  );
+  let searchResult: Awaited<ReturnType<typeof service.search>>;
+  try {
+    searchResult = await withTelemetrySpan(
+      "ui.unified.searchHotels",
+      { attributes: { location: validatedParams.destination ?? "" } },
+      async () =>
+        await service.search(
+          {
+            checkin: effectiveCheckIn,
+            checkout: effectiveCheckOut,
+            guests: (validatedParams.adults ?? 1) + (validatedParams.children ?? 0),
+            location: validatedParams.destination ?? "",
+            priceMax: validatedParams.priceRange?.max,
+            priceMin: validatedParams.priceRange?.min,
+            semanticQuery: validatedParams.destination ?? "",
+          },
+          {
+            sessionId: secureUuid(),
+          }
+        )
+    );
+  } catch (error) {
+    logger.error("hotel search failed", {
+      error: error instanceof Error ? error.message : String(error),
+      location: validatedParams.destination ?? "",
+    });
+    return err({
+      error: "external_api_error",
+      reason: "Hotel search failed",
+    });
+  }
 
   /** Compute nights for the effective check-in/check-out window. */
   const calculateNights = (): number => {
@@ -136,7 +159,7 @@ export async function searchHotelsAction(
   const nights = calculateNights();
 
   /** Map search results to unified hotel results. */
-  return (searchResult.listings ?? [])
+  const results = (searchResult.listings ?? [])
     .slice(0, MAX_SEARCH_RESULTS)
     .map((listing, index) => {
       // Parse listing with Zod schema for type safety
@@ -145,7 +168,7 @@ export async function searchHotelsAction(
         logger.warn("accommodation listing parse failed", {
           currency: validatedParams.currency ?? "USD",
           index,
-          issues: parseResult.error.format(),
+          issues: parseResult.error.issues,
         });
         // Fallback to minimal hotel result if parsing fails
         return {
@@ -270,4 +293,6 @@ export async function searchHotelsAction(
         userRating: hotel.place?.rating ?? 0,
       } satisfies HotelResult;
     });
+
+  return ok(results);
 }

@@ -26,16 +26,43 @@ TypeScript alone cannot protect these boundaries.
   - coming from external systems (webhooks, third-party APIs)
   - or used as tool inputs to agents
 
+Canonical boundary helpers:
+
+- **Canonical Result type**: `src/lib/result.ts`
+  - `Result<T, E>`, `ok()`, `err()`
+  - `ResultError` (serializable, client-safe) for Server Actions and shared boundaries
+  - `zodErrorToFieldErrors()` for form-safe errors
+- **Server entry boundary parsing** (Zod + bounded reads): `src/server/security/validate.ts`
+  - `parseJson(request, schema)`
+  - `parseFormData(formData, schema)`
+  - `parseSearchParams(urlOrSearchParams, schema)`
+  - `parseParams(params, schema)`
+- **Route Handler helpers** (Next.js `NextRequest` adapters): `src/lib/api/route-helpers.ts`
+  - `parseJsonBody(req)` (bounded read)
+  - `validateSchema(schema, data)`
+  - `parseNumericId(routeContext)`, `parseStringId(routeContext)`
+  - `requireUserId(user)`
+  - `errorResponse()`, `unauthorizedResponse()`, `forbiddenResponse()`, `notFoundResponse()`
+- **Webhook signature + payload validation** (bounded raw reads): `src/lib/webhooks/payload.ts`
+  - `parseAndVerify(req)` (single-pass body read → HMAC verify on bytes → JSON parse → Zod validation)
+  - Used by `src/lib/webhooks/handler.ts` (`createWebhookHandler`)
+
 Schema organization:
 
-- Feature-local schemas live in `src/features/<feature>/schemas.ts`.
-- Shared primitives (ids, pagination, money, geo, date ranges) live in `src/domain/schemas/*`.
+- Domain schemas live in `src/domain/schemas/*` and are imported via `@schemas/*`.
+- Domain schema files group related schemas together (core + form + tool inputs) with section markers.
 - “Strict by default”: use strict objects unless there is an explicit reason to accept unknown keys.
 
 Zod v4 constraints:
 
 - No `deepPartial` (use shallow `partial()` or explicit nested partials).
 - Use the `error` param (not deprecated message patterns) for custom messages where applicable (example: `z.string().min(5, { error: "Value must be at least 5 characters" })`).
+- Do not use deprecated Zod error helpers (`error.format()`, `error.flatten()`). Prefer `z.treeifyError(error)`, `z.flattenError(error)`, `z.prettifyError(error)`, or `error.issues` depending on the boundary.
+
+Environment variables:
+
+- Server-side env is validated once per process and accessed via the canonical server-only entrypoint `src/lib/env.ts`.
+- Client-safe env access must use `src/lib/env/client.ts` to prevent accidental bundling of server secrets.
 
 ## Consequences
 

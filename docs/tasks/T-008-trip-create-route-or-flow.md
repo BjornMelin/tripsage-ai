@@ -72,6 +72,29 @@ Impact:
 - Supabase docs:
   - `supabase.search_docs` ✅ (SSR client + advanced SSR guide)
 
+### Addendum — 2026-01-06 (Zod v4 boundary refactor session)
+
+- Next DevTools MCP:
+  - `next-devtools.init` ✅
+  - `next-devtools.nextjs_index` ✅ (server on port `3000`)
+  - `nextjs_call:get_routes` ✅
+  - `nextjs_call:get_errors` ✅ (after browser session: “No errors detected in 1 browser session(s).”)
+  - `nextjs_call:get_logs` ✅ (log path: `.next/dev/logs/next-development.log`)
+  - `browser_eval` ✅
+    - `http://localhost:3000/dashboard` redirects to `http://localhost:3000/login?next=%2Fdashboard`
+- shadcn:
+  - `shadcn.get_project_registries` ✅ (`@shadcn`)
+- Supabase docs:
+  - `supabase.search_docs` ✅ (e.g. “Creating a Supabase client for SSR”)
+- Context7:
+  - `context7.resolve-library-id` ✅ (Zod ids include `/colinhacks/zod` and `/websites/zod_dev_v4`)
+- Exa:
+  - `exa.web_search_exa` ✅ (Next.js env vars docs discovered)
+- GitHub Grep:
+  - `gh_grep.searchGitHub` ⚠️ FAILED (rate limited: “Too Many Requests”)
+- Zen:
+  - `zen.version` ✅ (v9.8.2; default model `gemini3-flash`)
+
 ## Runtime Evidence (Next DevTools)
 
 - Before: `nextjs_call:get_routes` did **not** include `/dashboard/trips/create`.

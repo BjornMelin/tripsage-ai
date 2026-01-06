@@ -23,8 +23,8 @@ export const GET = withApiGuards({
   telemetry: "security.events",
 })(async (_req: NextRequest, { user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
 
   const adminSupabase = createAdminSupabase();
   const events = await getUserSecurityEvents(adminSupabase, userId);

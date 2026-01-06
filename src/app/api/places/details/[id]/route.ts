@@ -34,8 +34,8 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     telemetry: "places.details",
   })(async (req: NextRequest, _context, _data, routeContext: RouteParamsContext) => {
     const idResult = await parseStringId(routeContext, "id");
-    if ("error" in idResult) return idResult.error;
-    const { id } = idResult;
+    if (!idResult.ok) return idResult.error;
+    const id = idResult.data;
     const { searchParams } = new URL(req.url);
     const sessionToken = searchParams.get("sessionToken");
 
@@ -44,9 +44,7 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     };
 
     const validation = validateSchema(placesDetailsRequestSchema, params);
-    if ("error" in validation) {
-      return validation.error;
-    }
+    if (!validation.ok) return validation.error;
     const validated = validation.data;
 
     const apiKey = getGoogleMapsServerKey();

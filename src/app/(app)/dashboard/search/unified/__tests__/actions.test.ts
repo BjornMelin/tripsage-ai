@@ -54,23 +54,23 @@ describe("searchHotelsAction", () => {
     mockSearch.mockResolvedValue({ listings: [] });
   });
 
-  it("throws on invalid params", async () => {
+  it("returns error on invalid params", async () => {
     const invalidParams = {
       ...validParams,
       priceRange: { max: 100, min: 200 },
     };
 
-    await expect(searchHotelsAction(invalidParams)).rejects.toThrow(
-      /Invalid hotel search parameters/i
-    );
+    const result = await searchHotelsAction(invalidParams);
+    expect(result.ok).toBe(false);
     expect(mockSearch).not.toHaveBeenCalled();
   });
 
-  it("propagates errors from the accommodations service", async () => {
+  it("returns error when the accommodations service fails", async () => {
     const error = new Error("search failed");
     mockSearch.mockRejectedValue(error);
 
-    await expect(searchHotelsAction(validParams)).rejects.toThrow("search failed");
+    const result = await searchHotelsAction(validParams);
+    expect(result.ok).toBe(false);
   });
 
   it("returns empty array when no listings found", async () => {
@@ -78,7 +78,10 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result).toEqual([]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual([]);
+    }
   });
 
   it("calls accommodations service with correct parameters", async () => {
@@ -117,7 +120,10 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result).toHaveLength(10);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toHaveLength(10);
+    }
   });
 
   it("transforms valid listing to HotelResult", async () => {
@@ -154,8 +160,13 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
       amenities: expect.objectContaining({
         essential: ["wifi", "pool", "spa"],
       }),
@@ -186,8 +197,13 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].pricing.totalPrice).toBe(0);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].pricing.totalPrice).toBe(0);
   });
 
   it("calculates nights correctly", async () => {
@@ -212,7 +228,12 @@ describe("searchHotelsAction", () => {
     // 4 nights: June 1-5
     const result = await searchHotelsAction(validParams);
 
-    expect(result[0].pricing.pricePerNight).toBe(100); // 400 / 4 nights
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data[0].pricing.pricePerNight).toBe(100); // 400 / 4 nights
   });
 
   it("handles same-day check-in/check-out as 1 night minimum", async () => {
@@ -244,7 +265,12 @@ describe("searchHotelsAction", () => {
     const result = await searchHotelsAction(paramsWithSameDay);
 
     // Math.ceil(0) = 0, but Math.max(1, 0) = 1 night minimum
-    expect(result[0].pricing.pricePerNight).toBe(100);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data[0].pricing.pricePerNight).toBe(100);
   });
 
   it("returns a fallback result when listing validation fails", async () => {
@@ -255,8 +281,13 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
       ai: expect.objectContaining({
         personalizedTags: ["hybrid-amadeus", "google-places"],
         recommendation: 8,
@@ -296,7 +327,12 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result[0].pricing.currency).toBe("EUR");
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data[0].pricing.currency).toBe("EUR");
   });
 
   it("prefers listing currency over default", async () => {
@@ -320,7 +356,12 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result[0].pricing.currency).toBe("JPY");
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data[0].pricing.currency).toBe("JPY");
   });
 
   it("includes AI recommendation metadata", async () => {
@@ -332,7 +373,12 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(validParams);
 
-    expect(result[0].ai).toMatchObject({
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data[0].ai).toMatchObject({
       personalizedTags: expect.arrayContaining(["hybrid-amadeus", "google-places"]),
       reason: expect.any(String),
       recommendation: 8,

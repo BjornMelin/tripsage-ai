@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import type { FlightSearchParams } from "@schemas/search";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type React from "react";
@@ -19,9 +20,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock toast
+const mockToast = vi.hoisted(() => vi.fn());
+
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({
-    toast: vi.fn(),
+    toast: mockToast,
   }),
 }));
 
@@ -70,7 +73,9 @@ vi.mock("@/components/layouts/search-layout", () => ({
 import FlightsSearchClient from "../flights-search-client";
 
 describe("FlightsSearchClient", () => {
-  const mockOnSubmitServer = vi.fn().mockResolvedValue({});
+  const mockOnSubmitServer = vi.fn(
+    async (params: FlightSearchParams) => ({ data: params, ok: true }) as const
+  );
   // Calculate next year dynamically to match the component
   const nextYear = new Date().getUTCFullYear() + 1;
 
@@ -107,6 +112,7 @@ describe("FlightsSearchClient", () => {
     mockExecuteSearch.mockReset();
     mockExecuteSearch.mockResolvedValue("search-123");
     mockOnSubmitServer.mockClear();
+    mockToast.mockClear();
   });
 
   it("renders search layout wrapper", () => {
@@ -146,6 +152,33 @@ describe("FlightsSearchClient", () => {
 
     await waitFor(() => {
       expect(mockOnSubmitServer).toHaveBeenCalled();
+    });
+  });
+
+  it("toasts when onSubmitServer returns an error Result", async () => {
+    const mockOnSubmitServerError = vi.fn(
+      async (_params: FlightSearchParams) =>
+        ({
+          error: { error: "invalid_request", reason: "Invalid params" },
+          ok: false,
+        }) as const
+    );
+
+    renderWithQueryClient(
+      <FlightsSearchClient onSubmitServer={mockOnSubmitServerError} />
+    );
+
+    const form = screen.getByTestId("flight-search-form");
+    fireEvent.click(within(form).getByRole("button", { name: "Search Flights" }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Invalid params",
+          title: "Search Failed",
+          variant: "destructive",
+        })
+      );
     });
   });
 

@@ -77,10 +77,11 @@ function createValidTripRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Activity actions - getPlanningTrips", () => {
-  it("throws Unauthorized when user is not authenticated", async () => {
+  it("returns Unauthorized when user is not authenticated", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } });
 
-    await expect(getPlanningTrips()).rejects.toThrow("Unauthorized");
+    const result = await getPlanningTrips();
+    expect(result.ok).toBe(false);
   });
 
   it("returns empty array when no trips exist", async () => {
@@ -97,11 +98,14 @@ describe("Activity actions - getPlanningTrips", () => {
 
     const result = await getPlanningTrips();
 
-    expect(Array.isArray(result)).toBe(true);
-    expect(result).toEqual([]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data).toEqual([]);
+    }
   });
 
-  it("throws error when database query fails", async () => {
+  it("returns error when database query fails", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
@@ -116,7 +120,8 @@ describe("Activity actions - getPlanningTrips", () => {
       }),
     });
 
-    await expect(getPlanningTrips()).rejects.toThrow("Failed to fetch trips");
+    const result = await getPlanningTrips();
+    expect(result.ok).toBe(false);
   });
 
   it("returns mapped trips when query succeeds", async () => {
@@ -135,34 +140,37 @@ describe("Activity actions - getPlanningTrips", () => {
 
     const result = await getPlanningTrips();
 
-    expect(result).toHaveLength(1);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected ok result");
+    }
+
+    expect(result.data).toHaveLength(1);
     // .map() calls with (element, index, array), so verify first argument only
     expect(mapDbTripToUi).toHaveBeenCalled();
     expect(mapDbTripToUi.mock.calls[0][0]).toEqual(validRow);
-    expect(result[0]).toMatchObject({ mapped: true });
+    expect(result.data[0]).toMatchObject({ mapped: true });
   });
 });
 
 describe("Activity actions - addActivityToTrip", () => {
-  it("throws error for non-numeric trip id string", async () => {
-    await expect(
-      addActivityToTrip("invalid-id", {
-        title: "Test Activity",
-      })
-    ).rejects.toThrow("Invalid trip id");
+  it("returns error for non-numeric trip id string", async () => {
+    const result = await addActivityToTrip("invalid-id", {
+      title: "Test Activity",
+    });
+    expect(result.ok).toBe(false);
   });
 
-  it("throws Unauthorized when user is not authenticated", async () => {
+  it("returns Unauthorized when user is not authenticated", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } });
 
-    await expect(
-      addActivityToTrip(123, {
-        title: "Beach Tour",
-      })
-    ).rejects.toThrow("Unauthorized");
+    const result = await addActivityToTrip(123, {
+      title: "Beach Tour",
+    });
+    expect(result.ok).toBe(false);
   });
 
-  it("throws error when trip not found or access denied", async () => {
+  it("returns error when trip not found or access denied", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
@@ -177,11 +185,10 @@ describe("Activity actions - addActivityToTrip", () => {
       }),
     });
 
-    await expect(
-      addActivityToTrip(123, {
-        title: "Beach Tour",
-      })
-    ).rejects.toThrow("Trip not found or access denied");
+    const result = await addActivityToTrip(123, {
+      title: "Beach Tour",
+    });
+    expect(result.ok).toBe(false);
   });
 
   it("inserts activity successfully", async () => {
@@ -198,14 +205,13 @@ describe("Activity actions - addActivityToTrip", () => {
       }),
     });
 
-    await expect(
-      addActivityToTrip(123, {
-        currency: "USD",
-        description: "A fun beach tour",
-        price: 99.99,
-        title: "Beach Tour",
-      })
-    ).resolves.toBeUndefined();
+    const result = await addActivityToTrip(123, {
+      currency: "USD",
+      description: "A fun beach tour",
+      price: 99.99,
+      title: "Beach Tour",
+    });
+    expect(result.ok).toBe(true);
 
     expect(mockInsert).toHaveBeenCalledTimes(1);
     expect(mockInsert).toHaveBeenCalledWith(
@@ -242,9 +248,8 @@ describe("Activity actions - addActivityToTrip", () => {
       return {};
     });
 
-    await expect(
-      addActivityToTrip("1", { title: "Beach Tour" })
-    ).resolves.toBeUndefined();
+    const result = await addActivityToTrip("1", { title: "Beach Tour" });
+    expect(result.ok).toBe(true);
 
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -253,7 +258,7 @@ describe("Activity actions - addActivityToTrip", () => {
     );
   });
 
-  it("throws when activity data fails validation", async () => {
+  it("returns error when activity data fails validation", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
     const mockInsert = vi.fn();
     const single = vi.fn().mockResolvedValue({ data: { id: 123 }, error: null });
@@ -266,11 +271,10 @@ describe("Activity actions - addActivityToTrip", () => {
       }),
     });
 
-    await expect(
-      addActivityToTrip(123, {
-        title: "", // invalid per schema
-      })
-    ).rejects.toThrow("Invalid activity data");
+    const result = await addActivityToTrip(123, {
+      title: "", // invalid per schema
+    });
+    expect(result.ok).toBe(false);
 
     expect(mockInsert).not.toHaveBeenCalled();
   });
@@ -297,19 +301,18 @@ describe("Activity actions - addActivityToTrip", () => {
       return {};
     });
 
-    await expect(
-      addActivityToTrip(123, {
-        currency: "EUR",
-        description: "City tour",
-        endTime: "2023-06-01T12:00:00Z",
-        externalId: "ext-123",
-        location: "Downtown",
-        metadata: { provider: "TourCo" },
-        price: 50,
-        startTime: "2023-06-01T10:00:00Z",
-        title: "Tour",
-      })
-    ).resolves.toBeUndefined();
+    const result = await addActivityToTrip(123, {
+      currency: "EUR",
+      description: "City tour",
+      endTime: "2023-06-01T12:00:00Z",
+      externalId: "ext-123",
+      location: "Downtown",
+      metadata: { provider: "TourCo" },
+      price: 50,
+      startTime: "2023-06-01T10:00:00Z",
+      title: "Tour",
+    });
+    expect(result.ok).toBe(true);
 
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -349,13 +352,12 @@ describe("Activity actions - addActivityToTrip", () => {
       return {};
     });
 
-    await expect(
-      addActivityToTrip(123, { title: "Beach Tour" })
-    ).resolves.toBeUndefined();
+    const result = await addActivityToTrip(123, { title: "Beach Tour" });
+    expect(result.ok).toBe(true);
     expect(mockInsert).toHaveBeenCalledTimes(1);
   });
 
-  it("throws when insert fails and does not bump cache tag", async () => {
+  it("returns error when insert fails and does not bump cache tag", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
     const mockInsert = vi.fn().mockResolvedValue({
       error: { code: "500", details: "insert failed", message: "insert failed" },
@@ -378,9 +380,8 @@ describe("Activity actions - addActivityToTrip", () => {
       return {};
     });
 
-    await expect(addActivityToTrip(123, { title: "Beach Tour" })).rejects.toThrow(
-      "Failed to add activity to trip"
-    );
+    const result = await addActivityToTrip(123, { title: "Beach Tour" });
+    expect(result.ok).toBe(false);
     expect(vi.mocked(bumpTag)).not.toHaveBeenCalled();
   });
 });

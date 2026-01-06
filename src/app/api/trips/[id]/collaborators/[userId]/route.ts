@@ -39,11 +39,12 @@ export const PATCH = withApiGuards({
   telemetry: "trips.collaborators.update",
 })(async (req, { supabase, user }, _data, routeContext) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
+  const tripId = idResult.data;
 
   const collaboratorUserId = await parseCollaboratorUserId(routeContext);
   if (!collaboratorUserId) {
@@ -57,7 +58,7 @@ export const PATCH = withApiGuards({
   const { data: trip, error: tripError } = await supabase
     .from("trips")
     .select("id,user_id")
-    .eq("id", idResult.id)
+    .eq("id", tripId)
     .maybeSingle();
 
   if (tripError) {
@@ -82,15 +83,15 @@ export const PATCH = withApiGuards({
   }
 
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) return parsed.error;
+  if (!parsed.ok) return parsed.error;
 
-  const validation = validateSchema(tripCollaboratorRoleUpdateSchema, parsed.body);
-  if ("error" in validation) return validation.error;
+  const validation = validateSchema(tripCollaboratorRoleUpdateSchema, parsed.data);
+  if (!validation.ok) return validation.error;
 
   const { data, error } = await supabase
     .from("trip_collaborators")
     .update({ role: validation.data.role })
-    .eq("trip_id", idResult.id)
+    .eq("trip_id", tripId)
     .eq("user_id", collaboratorUserId)
     .select("id,trip_id,user_id,role,created_at")
     .maybeSingle();
@@ -136,11 +137,12 @@ export const DELETE = withApiGuards({
   telemetry: "trips.collaborators.remove",
 })(async (_req, { supabase, user }, _data, routeContext) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
+  const tripId = idResult.data;
 
   const collaboratorUserId = await parseCollaboratorUserId(routeContext);
   if (!collaboratorUserId) {
@@ -154,7 +156,7 @@ export const DELETE = withApiGuards({
   const { data: trip, error: tripError } = await supabase
     .from("trips")
     .select("id,user_id")
-    .eq("id", idResult.id)
+    .eq("id", tripId)
     .maybeSingle();
 
   if (tripError) {
@@ -183,7 +185,7 @@ export const DELETE = withApiGuards({
   const { count, error } = await supabase
     .from("trip_collaborators")
     .delete({ count: "exact" })
-    .eq("trip_id", idResult.id)
+    .eq("trip_id", tripId)
     .eq("user_id", collaboratorUserId);
 
   if (error) {

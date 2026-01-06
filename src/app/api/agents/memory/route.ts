@@ -28,18 +28,14 @@ export const POST = withApiGuards({
   telemetry: "agent.memoryUpdate",
 })(async (req: NextRequest, { user }) => {
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
-  }
+  if (!parsed.ok) return parsed.error;
 
-  const validation = validateSchema(RequestSchema, parsed.body);
-  if ("error" in validation) {
-    return validation.error;
-  }
+  const validation = validateSchema(RequestSchema, parsed.data);
+  if (!validation.ok) return validation.error;
   const body = validation.data;
 
   const config = await resolveAgentConfig("memoryAgent");

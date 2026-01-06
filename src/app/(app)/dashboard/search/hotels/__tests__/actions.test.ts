@@ -28,7 +28,10 @@ describe("submitHotelSearch server action", () => {
 
     const result = await submitHotelSearch(params);
 
-    expect(result).toEqual(params);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual(params);
+    }
   });
 
   it("validates params with price range", async () => {
@@ -45,8 +48,11 @@ describe("submitHotelSearch server action", () => {
 
     const result = await submitHotelSearch(params);
 
-    expect(result.priceRange?.min).toBe(100);
-    expect(result.priceRange?.max).toBe(500);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.priceRange?.min).toBe(100);
+      expect(result.data.priceRange?.max).toBe(500);
+    }
   });
 
   it("validates params with amenities filter", async () => {
@@ -57,7 +63,10 @@ describe("submitHotelSearch server action", () => {
 
     const result = await submitHotelSearch(params);
 
-    expect(result.amenities).toEqual(["wifi", "pool", "gym"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.amenities).toEqual(["wifi", "pool", "gym"]);
+    }
   });
 
   it("validates params with min rating", async () => {
@@ -68,10 +77,13 @@ describe("submitHotelSearch server action", () => {
 
     const result = await submitHotelSearch(params);
 
-    expect(result.minRating).toBe(4.5);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.minRating).toBe(4.5);
+    }
   });
 
-  it("throws error for invalid price range", async () => {
+  it("returns error for invalid price range", async () => {
     const params = {
       destination: "Berlin",
       priceRange: {
@@ -80,19 +92,17 @@ describe("submitHotelSearch server action", () => {
       },
     };
 
-    await expect(submitHotelSearch(params)).rejects.toThrow(
-      /Invalid accommodation search params/
-    );
+    const result = await submitHotelSearch(params);
+    expect(result.ok).toBe(false);
   });
 
-  it("throws error for invalid min rating", async () => {
+  it("returns error for invalid min rating", async () => {
     const params = {
       destination: "Sydney",
       minRating: 6, // max is 5
     };
 
-    await expect(submitHotelSearch(params)).rejects.toThrow(
-      /Invalid accommodation search params/
-    );
+    const result = await submitHotelSearch(params);
+    expect(result.ok).toBe(false);
   });
 });

@@ -33,12 +33,15 @@ import type { DestinationResult } from "@/features/search/hooks/search/use-desti
 import { useDestinationSearch } from "@/features/search/hooks/search/use-destination-search";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
+import type { Result, ResultError } from "@/lib/result";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { DestinationComparisonModal } from "./destination-comparison-modal";
 
 /** The destinations search client component props. */
 interface DestinationsSearchClientProps {
-  onSubmitServer: (params: DestinationSearchParams) => Promise<DestinationSearchParams>;
+  onSubmitServer: (
+    params: DestinationSearchParams
+  ) => Promise<Result<DestinationSearchParams, ResultError>>;
 }
 
 /** Maximum number of items allowed in comparison views. */
@@ -76,9 +79,20 @@ export default function DestinationsSearchClient({
       const controller = new AbortController();
       currentSearchController.current = controller;
       try {
-        await onSubmitServer(params); // server-side telemetry and validation
+        const normalized = await onSubmitServer(params); // server-side telemetry and validation
+        if (!normalized.ok) {
+          toast({
+            description:
+              normalized.error.reason ||
+              "Unable to complete your search. Please try again or contact support.",
+            title: "Search failed",
+            variant: "destructive",
+          });
+          return;
+        }
+
         if (controller.signal.aborted) return;
-        await searchDestinations(params, controller.signal); // client fetch/store update
+        await searchDestinations(normalized.data, controller.signal); // client fetch/store update
         if (controller.signal.aborted) return;
       } catch (error) {
         if (

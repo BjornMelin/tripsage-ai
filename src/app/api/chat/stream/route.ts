@@ -5,10 +5,12 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
-import type { UIMessage } from "ai";
+import { safeValidateUIMessages } from "ai";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import {
+  errorResponse,
   getClientIpFromHeaders,
   parseJsonBody,
   requireUserId,
@@ -19,15 +21,12 @@ import { handleChatStream } from "./_handler";
 // Allow streaming responses for up to 60 seconds
 export const maxDuration = 60;
 
-/**
- * Type definition for the incoming request body structure.
- */
-type IncomingBody = {
-  messages?: UIMessage[];
-  sessionId?: string;
-  model?: string;
-  desiredMaxTokens?: number;
-};
+const chatStreamRequestSchema = z.strictObject({
+  desiredMaxTokens: z.coerce.number().int().min(1).max(16_384).optional(),
+  messages: z.unknown().optional(),
+  model: z.string().trim().min(1).max(200).optional(),
+  sessionId: z.string().trim().min(1).max(200).optional(),
+});
 
 /**
  * Handles POST requests for streaming chat responses with AI SDK.
@@ -47,14 +46,52 @@ export const POST = withApiGuards({
   telemetry: "chat.stream",
 })(async (req: NextRequest, { supabase, user }): Promise<Response> => {
   const auth = requireUserId(user);
-  if ("error" in auth) {
-    return auth.error;
+  if (!auth.ok) return auth.error;
+  const userId = auth.data;
+
+  const parsed = await parseJsonBody(req);
+  if (!parsed.ok) return parsed.error;
+
+  const requestValidation = chatStreamRequestSchema.safeParse(parsed.data);
+  if (!requestValidation.success) {
+    return errorResponse({
+      err: requestValidation.error,
+      error: "invalid_request",
+      issues: requestValidation.error.issues,
+      reason: "Request validation failed",
+      status: 400,
+    });
   }
 
-  // Parse with fallback to empty messages
-  const parsed = await parseJsonBody(req);
-  const body: IncomingBody =
-    "error" in parsed ? { messages: [] } : (parsed.body as IncomingBody);
+  const body = requestValidation.data;
+
+  const rawMessages = body.messages;
+  if (rawMessages !== undefined && !Array.isArray(rawMessages)) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "messages must be an array",
+      status: 400,
+    });
+  }
+
+  const rawMessagesArray = Array.isArray(rawMessages) ? rawMessages : [];
+  const safeMessagesResult =
+    rawMessagesArray.length === 0
+      ? { data: [], success: true as const }
+      : await safeValidateUIMessages({ messages: rawMessagesArray });
+  if (!safeMessagesResult.success) {
+    const normalizedError =
+      safeMessagesResult.error instanceof Error
+        ? safeMessagesResult.error
+        : new Error(String(safeMessagesResult.error ?? "Invalid messages payload"));
+    return errorResponse({
+      err: normalizedError,
+      error: "invalid_request",
+      reason: "Invalid messages payload",
+      status: 400,
+    });
+  }
+
   const ip = getClientIpFromHeaders(req);
   const logger = createServerLogger("chat.stream");
   return handleChatStream(
@@ -65,6 +102,14 @@ export const POST = withApiGuards({
       resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
       supabase,
     },
-    { ...body, abortSignal: req.signal, ip, userId: auth.userId }
+    {
+      abortSignal: req.signal,
+      desiredMaxTokens: body.desiredMaxTokens,
+      ip,
+      messages: safeMessagesResult.data,
+      model: body.model,
+      sessionId: body.sessionId,
+      userId,
+    }
   );
 });

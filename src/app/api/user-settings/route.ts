@@ -11,10 +11,22 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  parseJsonBody,
+  requireUserId,
+  validateSchema,
+} from "@/lib/api/route-helpers";
 import type { InsertTables } from "@/lib/supabase/database.types";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
+
+const updateUserSettingsSchema = z.strictObject({
+  allowGatewayFallback: z.boolean({
+    error: "allowGatewayFallback must be a boolean",
+  }),
+});
 
 /**
  * Retrieves the user's gateway fallback preference setting.
@@ -29,8 +41,8 @@ export const GET = withApiGuards({
   telemetry: "user-settings.get",
 })(async (_req, { user }) => {
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
   const allowGatewayFallback = await getUserAllowGatewayFallback(userId);
   return NextResponse.json({ allowGatewayFallback });
 });
@@ -48,27 +60,16 @@ export const POST = withApiGuards({
   rateLimit: "user-settings:update",
   telemetry: "user-settings.update",
 })(async (req: NextRequest, { user, supabase }) => {
-  const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return errorResponse({
-      error: "bad_request",
-      reason: "Malformed JSON",
-      status: 400,
-    });
-  }
-  const body = parsed.body as { allowGatewayFallback?: unknown };
-  const allowGatewayFallback = body?.allowGatewayFallback;
-  if (typeof allowGatewayFallback !== "boolean") {
-    return errorResponse({
-      error: "bad_request",
-      reason: "allowGatewayFallback must be boolean",
-      status: 400,
-    });
-  }
-
   const result = requireUserId(user);
-  if ("error" in result) return result.error;
-  const { userId } = result;
+  if (!result.ok) return result.error;
+  const userId = result.data;
+
+  const parsed = await parseJsonBody(req);
+  if (!parsed.ok) return parsed.error;
+
+  const validation = validateSchema(updateUserSettingsSchema, parsed.data);
+  if (!validation.ok) return validation.error;
+  const { allowGatewayFallback } = validation.data;
 
   // Upsert row with owner RLS via SSR client
   type UserSettingsInsert = InsertTables<"user_settings">;
@@ -82,7 +83,12 @@ export const POST = withApiGuards({
     onConflict: "user_id",
   });
   if (upsertError) {
-    throw upsertError;
+    return errorResponse({
+      err: upsertError,
+      error: "internal",
+      reason: "Failed to update user settings",
+      status: 500,
+    });
   }
   return NextResponse.json({ ok: true });
 });

@@ -47,6 +47,7 @@ import { useSearchFiltersStore } from "@/features/search/store/search-filters-st
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { getErrorMessage } from "@/lib/api/error-types";
+import type { Result, ResultError } from "@/lib/result";
 import { mapAccommodationToHotelResult } from "./hotel-mapping";
 import { HotelsEmptyState } from "./hotels-empty-state";
 import {
@@ -61,7 +62,7 @@ import {
 interface HotelsSearchClientProps {
   onSubmitServer: (
     params: SearchAccommodationParams
-  ) => Promise<SearchAccommodationParams>;
+  ) => Promise<Result<SearchAccommodationParams, ResultError>>;
 }
 
 /** Hotel search client component. */
@@ -244,7 +245,16 @@ export default function HotelsSearchClient({
       };
       const validatedParams = await onSubmitServer(searchWithFilters); // server-side telemetry and validation
       if (controller.signal.aborted) return;
-      await executeSearch(validatedParams, controller.signal); // client fetch/store update via orchestration
+      if (!validatedParams.ok) {
+        toast({
+          description: validatedParams.error.reason,
+          title: "Search Error",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await executeSearch(validatedParams.data, controller.signal); // client fetch/store update via orchestration
       if (controller.signal.aborted) return;
       setHasSearched(true);
     } catch (error) {

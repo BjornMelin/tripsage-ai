@@ -8,6 +8,13 @@ import "server-only";
 
 import { type FlightSearchParams, flightSearchParamsSchema } from "@schemas/search";
 import { normalizePlacesTextQuery } from "@/lib/google/places-utils";
+import {
+  err,
+  ok,
+  type Result,
+  type ResultError,
+  zodErrorToFieldErrors,
+} from "@/lib/result";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -19,17 +26,21 @@ const logger = createServerLogger("search.flights.actions");
  *
  * @param params - Flight search parameters from the client.
  * @returns Validated flight search parameters.
- * @throws Error if validation fails.
  */
 export async function submitFlightSearch(
   params: FlightSearchParams
-): Promise<FlightSearchParams> {
+): Promise<Result<FlightSearchParams, ResultError>> {
   const validation = flightSearchParamsSchema.safeParse(params);
   if (!validation.success) {
     logger.warn("Invalid flight search params", {
-      issues: validation.error.format(),
+      issues: validation.error.issues,
     });
-    throw new Error("Invalid flight search parameters");
+    return err({
+      error: "invalid_request",
+      fieldErrors: zodErrorToFieldErrors(validation.error),
+      issues: validation.error.issues,
+      reason: "Invalid flight search parameters",
+    });
   }
   const parsed = validation.data;
   const safeOrigin = parsed.origin
@@ -68,11 +79,11 @@ export async function submitFlightSearch(
         normalizedPassengers = undefined;
       }
 
-      return {
+      return ok({
         ...parsed,
         cabinClass: parsed.cabinClass ?? "economy",
         passengers: normalizedPassengers,
-      };
+      });
     }
   );
 }

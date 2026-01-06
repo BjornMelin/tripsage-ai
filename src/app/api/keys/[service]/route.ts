@@ -50,15 +50,15 @@ export function DELETE(
     let serviceForLog: string | undefined;
     try {
       const result = requireUserId(user);
-      if ("error" in result) return result.error;
-      const { userId } = result;
+      if (!result.ok) return result.error;
+      const userId = result.data;
       const identifierType: IdentifierType = "user";
       // Rate limit metadata not available from factory, using undefined for custom telemetry
       const rateLimitMeta: RateLimitResult | undefined = undefined;
 
       const serviceResult = await parseStringId(routeContext, "service");
-      if ("error" in serviceResult) return serviceResult.error;
-      const { id: service } = serviceResult;
+      if (!serviceResult.ok) return serviceResult.error;
+      const service = serviceResult.data;
       serviceForLog = service;
       const normalizedService = service.trim().toLowerCase();
       if (!ALLOWED_SERVICES.has(normalizedService)) {

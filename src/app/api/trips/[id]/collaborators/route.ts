@@ -142,13 +142,14 @@ export const GET = withApiGuards({
   const admin = createAdminSupabase();
   const logger = createServerLogger("trips.collaborators.list");
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
+  const tripId = idResult.data;
 
-  const tripResult = await getTripOrNotFound(supabase, idResult.id);
+  const tripResult = await getTripOrNotFound(supabase, tripId);
   if ("error" in tripResult) return tripResult.error;
   const { trip } = tripResult;
 
@@ -160,7 +161,7 @@ export const GET = withApiGuards({
   const { data, error } = await supabase
     .from("trip_collaborators")
     .select("id,trip_id,user_id,role,created_at")
-    .eq("trip_id", idResult.id)
+    .eq("trip_id", tripId)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -228,13 +229,14 @@ export const POST = withApiGuards({
   const logger = createServerLogger("trips.collaborators.invite");
   const admin = createAdminSupabase();
   const userResult = requireUserId(user);
-  if ("error" in userResult) return userResult.error;
-  const { userId } = userResult;
+  if (!userResult.ok) return userResult.error;
+  const userId = userResult.data;
 
   const idResult = await parseNumericId(routeContext);
-  if ("error" in idResult) return idResult.error;
+  if (!idResult.ok) return idResult.error;
+  const tripId = idResult.data;
 
-  const tripResult = await getTripOrNotFound(supabase, idResult.id);
+  const tripResult = await getTripOrNotFound(supabase, tripId);
   if ("error" in tripResult) return tripResult.error;
   const { trip } = tripResult;
 
@@ -247,10 +249,10 @@ export const POST = withApiGuards({
   }
 
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) return parsed.error;
+  if (!parsed.ok) return parsed.error;
 
-  const validation = validateSchema(tripCollaboratorInviteSchema, parsed.body);
-  if ("error" in validation) return validation.error;
+  const validation = validateSchema(tripCollaboratorInviteSchema, parsed.data);
+  if (!validation.ok) return validation.error;
 
   const normalizedEmail = validation.data.email.trim().toLowerCase();
   const role = validation.data.role;
@@ -267,7 +269,7 @@ export const POST = withApiGuards({
         admin,
         normalizedEmail,
         `${getOriginFromRequest(req)}/auth/confirm?next=${encodeURIComponent(
-          `/dashboard/trips/${idResult.id}/collaborate`
+          `/dashboard/trips/${tripId}/collaborate`
         )}`
       );
 
@@ -285,7 +287,7 @@ export const POST = withApiGuards({
     .from("trip_collaborators")
     .insert({
       role,
-      trip_id: idResult.id,
+      trip_id: tripId,
       user_id: targetUserIdResult.userId,
     })
     .select("id,trip_id,user_id,role,created_at")

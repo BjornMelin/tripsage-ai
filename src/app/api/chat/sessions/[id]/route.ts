@@ -31,12 +31,11 @@ export function GET(
     telemetry: "chat.sessions.get",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
     const result = requireUserId(user);
-    if ("error" in result) return result.error;
-    const { userId } = result;
+    if (!result.ok) return result.error;
+    const userId = result.data;
     const idResult = await parseStringId(routeContext, "id");
-    if ("error" in idResult) return idResult.error;
-    const { id } = idResult;
-    return getSession({ supabase, userId }, id);
+    if (!idResult.ok) return idResult.error;
+    return getSession({ supabase, userId }, idResult.data);
   })(req, context);
 }
 
@@ -57,11 +56,10 @@ export function DELETE(
     telemetry: "chat.sessions.delete",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
     const result = requireUserId(user);
-    if ("error" in result) return result.error;
-    const { userId } = result;
+    if (!result.ok) return result.error;
+    const userId = result.data;
     const idResult = await parseStringId(routeContext, "id");
-    if ("error" in idResult) return idResult.error;
-    const { id } = idResult;
-    return deleteSession({ supabase, userId }, id);
+    if (!idResult.ok) return idResult.error;
+    return deleteSession({ supabase, userId }, idResult.data);
   })(req, context);
 }

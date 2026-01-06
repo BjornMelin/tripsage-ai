@@ -6,38 +6,28 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
-
-/** Shape of activity booking telemetry payloads accepted by this route. */
-type ActivityTelemetryPayload = {
-  attributes?: Record<string, string | number | boolean>;
-  eventName: string;
-  level?: "info" | "warning" | "error";
-};
 
 /** Constants for telemetry validation. */
 const MAX_ATTRIBUTE_ENTRIES = 25;
 const EVENT_NAME_PATTERN = /^[a-z][a-z0-9._]{0,99}$/i;
 
-/**
- * Validates the attributes object to ensure it only contains primitive values.
- *
- * @param attributes - The attributes object to validate.
- * @returns True if the attributes are valid, false otherwise.
- */
-function validateAttributes(
-  attributes?: Record<string, unknown>
-): attributes is Record<string, string | number | boolean> {
-  if (!attributes) return true;
-  const entries = Object.entries(attributes);
-  if (entries.length > MAX_ATTRIBUTE_ENTRIES) return false;
-  return entries.every(([, value]) => {
-    const valueType = typeof value;
-    return valueType === "string" || valueType === "number" || valueType === "boolean";
+const telemetryAttributesSchema = z
+  .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+  .refine((attributes) => Object.keys(attributes).length <= MAX_ATTRIBUTE_ENTRIES, {
+    error: `attributes must be primitives and <=${MAX_ATTRIBUTE_ENTRIES} entries`,
   });
-}
+
+const activityTelemetryPayloadSchema = z.strictObject({
+  attributes: telemetryAttributesSchema.optional(),
+  eventName: z
+    .string()
+    .regex(EVENT_NAME_PATTERN, { error: "eventName required and must match pattern" }),
+  level: z.enum(["info", "warning", "error"]).optional(),
+});
 
 /**
  * Record booking-related telemetry events from client interactions.
@@ -50,33 +40,21 @@ export const POST = withApiGuards({
   telemetry: "telemetry.activities",
 })(async (req: NextRequest) => {
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
-    return parsed.error;
+  if (!parsed.ok) return parsed.error;
+
+  const validation = activityTelemetryPayloadSchema.safeParse(parsed.data);
+  if (!validation.success) {
+    return errorResponse({
+      error: "invalid_request",
+      issues: validation.error.issues,
+      reason: "Telemetry payload validation failed",
+      status: 400,
+    });
   }
 
-  const payload = parsed.body as Partial<ActivityTelemetryPayload>;
-  const { attributes, eventName, level } = payload;
-  if (
-    !eventName ||
-    typeof eventName !== "string" ||
-    !EVENT_NAME_PATTERN.test(eventName)
-  ) {
-    return NextResponse.json(
-      { ok: false, reason: "eventName required and must match pattern" },
-      { status: 400 }
-    );
-  }
-
-  if (!validateAttributes(attributes)) {
-    return NextResponse.json(
-      { ok: false, reason: "attributes must be primitives and <=25 entries" },
-      { status: 400 }
-    );
-  }
-
-  recordTelemetryEvent(eventName, {
-    attributes,
-    level: level ?? "info",
+  recordTelemetryEvent(validation.data.eventName, {
+    attributes: validation.data.attributes,
+    level: validation.data.level ?? "info",
   });
 
   return NextResponse.json({ ok: true });

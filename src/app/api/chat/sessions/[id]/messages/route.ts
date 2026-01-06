@@ -34,11 +34,11 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     telemetry: "chat.sessions.messages.list",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
     const result = requireUserId(user);
-    if ("error" in result) return result.error;
-    const { userId } = result;
+    if (!result.ok) return result.error;
+    const userId = result.data;
     const idResult = await parseStringId(routeContext, "id");
-    if ("error" in idResult) return idResult.error;
-    const { id: sessionId } = idResult;
+    if (!idResult.ok) return idResult.error;
+    const sessionId = idResult.data;
     return listMessages({ supabase, userId }, sessionId);
   })(req, context);
 }
@@ -59,15 +59,15 @@ export function POST(req: NextRequest, context: { params: Promise<{ id: string }
     telemetry: "chat.sessions.messages.create",
   })(async (request, { supabase, user }, _data, routeContext: RouteParamsContext) => {
     const result = requireUserId(user);
-    if ("error" in result) return result.error;
-    const { userId } = result;
+    if (!result.ok) return result.error;
+    const userId = result.data;
     const idResult = await parseStringId(routeContext, "id");
-    if ("error" in idResult) return idResult.error;
-    const { id: sessionId } = idResult;
+    if (!idResult.ok) return idResult.error;
+    const sessionId = idResult.data;
     const bodyResult = await parseJsonBody(request);
-    if ("error" in bodyResult) return bodyResult.error;
-    const validation = validateSchema(createMessageRequestSchema, bodyResult.body);
-    if ("error" in validation) return validation.error;
+    if (!bodyResult.ok) return bodyResult.error;
+    const validation = validateSchema(createMessageRequestSchema, bodyResult.data);
+    if (!validation.ok) return validation.error;
     const validatedBody = validation.data;
     // Transform validated content to parts format expected by handler
     return createMessage({ supabase, userId }, sessionId, {

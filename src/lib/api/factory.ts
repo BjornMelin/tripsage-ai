@@ -15,6 +15,7 @@ import type {
   LanguageModelUsage,
   ToolSet,
 } from "ai";
+import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
@@ -47,6 +48,24 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 const apiFactoryLogger = createServerLogger("api.factory");
 
 export type DegradedMode = "fail_closed" | "fail_open";
+
+async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
+  const authorization = req.headers.get("authorization");
+  if (authorization?.trim()) return true;
+
+  try {
+    const cookieStore = await cookies();
+    if (cookieStore.get("sb-access-token")?.value) return true;
+    if (cookieStore.get("sb-refresh-token")?.value) return true;
+  } catch (error) {
+    // If cookies() is unavailable (unexpected in Route Handlers), fall back to header checks.
+    apiFactoryLogger.warn("cookies_unavailable_in_route_handler", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return false;
+}
 
 /**
  * Configuration for route handler guards.
@@ -484,6 +503,10 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       let supabase: TypedServerSupabase | null = null;
       let user: User | null = null;
       if (auth) {
+        // Fast-fail without hitting Supabase when no auth credentials are present.
+        if (!(await hasAuthCredentials(req))) {
+          return unauthorizedResponse();
+        }
         supabase = await supabaseFactory();
         const authResult = await checkAuthentication(supabase);
         if (!authResult.isAuthenticated) {
@@ -518,36 +541,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         }
       }
 
-      // SECURITY: Parse and validate request body BEFORE rate limiting
-      // This prevents attackers from exhausting rate limit quotas with invalid payloads.
-      // Invalid requests should be rejected without consuming rate limit quota.
-      let validatedData: SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown;
-      if (schema) {
-        const parsed = await parseJsonBody(req, { maxBytes: config.maxBodyBytes });
-        if ("error" in parsed) {
-          return parsed.error;
-        }
-
-        const parseResult = schema.safeParse(parsed.body);
-        if (!parseResult.success) {
-          return errorResponse({
-            err: parseResult.error,
-            error: "invalid_request",
-            issues: parseResult.error.issues,
-            reason: "Request validation failed",
-            status: 400,
-          });
-        }
-        validatedData = parseResult.data as SchemaType extends z.ZodType
-          ? z.infer<SchemaType>
-          : unknown;
-      } else {
-        validatedData = undefined as SchemaType extends z.ZodType
-          ? z.infer<SchemaType>
-          : unknown;
-      }
-
-      // Handle rate limiting if configured (AFTER validation to prevent quota exhaustion)
+      // Handle rate limiting early so invalid payloads can't bypass throttling.
       if (rateLimit) {
         let identifier: string;
         if (user?.id) {
@@ -564,6 +558,28 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         if (rateLimitError) {
           return rateLimitError;
         }
+      }
+
+      // Parse and validate request body (bounded) when a schema is configured.
+      let validatedData: SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown =
+        undefined as SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown;
+      if (schema) {
+        const parsed = await parseJsonBody(req, { maxBytes: config.maxBodyBytes });
+        if (!parsed.ok) return parsed.error;
+
+        const parseResult = schema.safeParse(parsed.data);
+        if (!parseResult.success) {
+          return errorResponse({
+            err: parseResult.error,
+            error: "invalid_request",
+            issues: parseResult.error.issues,
+            reason: "Request validation failed",
+            status: 400,
+          });
+        }
+        validatedData = parseResult.data as SchemaType extends z.ZodType
+          ? z.infer<SchemaType>
+          : unknown;
       }
 
       const routeKey = getSafeRouteKeyForTelemetry({
@@ -717,8 +733,8 @@ export function createAgentRoute<
     telemetry: options.telemetry,
   })(async (req, { user }, input) => {
     const userResult = requireUserId(user);
-    if ("error" in userResult) return userResult.error;
-    const { userId } = userResult;
+    if (!userResult.ok) return userResult.error;
+    const userId = userResult.data;
 
     return await withTelemetrySpan(
       "agent.route",

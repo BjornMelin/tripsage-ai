@@ -36,26 +36,20 @@ export const GET = withApiGuards({
     try {
       ensureAdmin(user);
       const agentTypeResult = await parseStringId(routeContext, "agentType");
-      if ("error" in agentTypeResult) return agentTypeResult.error;
-      const { id: agentType } = agentTypeResult;
+      if (!agentTypeResult.ok) return agentTypeResult.error;
+      const agentType = agentTypeResult.data;
       const agentValidation = validateSchema(agentTypeSchema, agentType);
-      if ("error" in agentValidation) {
-        return agentValidation.error;
-      }
+      if (!agentValidation.ok) return agentValidation.error;
 
       const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
-      if ("error" in scopeResult) {
-        return scopeResult.error;
-      }
+      if (!scopeResult.ok) return scopeResult.error;
       const scope = scopeResult.data;
 
       const paginationValidation = validateSchema(paginationSchema, {
         cursor: req.nextUrl.searchParams.get("cursor") ?? undefined,
         limit: req.nextUrl.searchParams.get("limit") ?? undefined,
       });
-      if ("error" in paginationValidation) {
-        return paginationValidation.error;
-      }
+      if (!paginationValidation.ok) return paginationValidation.error;
       const pagination = paginationValidation.data;
 
       const result = await withTelemetrySpan(

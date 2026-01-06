@@ -44,9 +44,7 @@ export const GET = withApiGuards({
     const queryObject = Object.fromEntries(searchParams.entries());
     const validation = validateSchema(dashboardQuerySchema, queryObject);
 
-    if ("error" in validation) {
-      return validation.error;
-    }
+    if (!validation.ok) return validation.error;
 
     const { window } = validation.data;
     const hours = windowToHours(window);

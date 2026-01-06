@@ -11,11 +11,12 @@ import "server-only";
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { postKeyBodySchema } from "@schemas/api";
 import { createGateway } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
+import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 import { mapProviderExceptionToCode, mapProviderStatusToCode } from "../_error-mapping";
@@ -56,6 +57,11 @@ const OPENAI_BASE_URL = "https://api.openai.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 const XAI_BASE_URL = "https://api.x.ai/v1";
+
+const validateKeyRequestSchema = postKeyBodySchema.pick({
+  apiKey: true,
+  service: true,
+});
 
 type BuildSDKRequestOptions = {
   apiKey: string;
@@ -185,37 +191,22 @@ export const POST = withApiGuards({
   auth: true,
   rateLimit: "keys:validate",
   // Custom telemetry handled below
-})(async (req: NextRequest, { user: _user }) => {
+})(async (req: NextRequest) => {
   const parsed = await parseJsonBody(req);
-  if ("error" in parsed) {
+  if (!parsed.ok) {
     recordTelemetryEvent("api.keys.validate.parse_error", {
-      attributes: { message: "JSON parse failed" },
+      attributes: { message: "JSON parse failed", status: parsed.error.status },
       level: "error",
     });
-    return errorResponse({
-      error: "bad_request",
-      reason: "Malformed JSON in request body",
-      status: 400,
-    });
+    return parsed.error;
   }
 
-  const body = parsed.body as { service?: unknown; apiKey?: unknown };
-  const service = body.service;
-  const apiKey = body.apiKey;
+  const validation = validateSchema(validateKeyRequestSchema, parsed.data);
+  if (!validation.ok) return validation.error;
 
-  if (
-    !service ||
-    !apiKey ||
-    typeof service !== "string" ||
-    typeof apiKey !== "string"
-  ) {
-    return errorResponse({
-      error: "bad_request",
-      reason: "Invalid request body",
-      status: 400,
-    });
-  }
-
-  const result = await validateProviderKey(service, apiKey);
+  const result = await validateProviderKey(
+    validation.data.service,
+    validation.data.apiKey
+  );
   return NextResponse.json(result, { status: 200 });
 });
