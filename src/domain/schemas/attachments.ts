@@ -41,6 +41,7 @@ export const ATTACHMENT_MAX_TOTAL_SIZE = 50 * 1024 * 1024;
 
 /** Schema for validating upload options (trip/message context). */
 export const attachmentUploadOptionsSchema = z.strictObject({
+  chatId: z.uuid(),
   chatMessageId: z.coerce.number().int().nonnegative().optional(),
   tripId: z.coerce.number().int().nonnegative().optional(),
 });
@@ -51,6 +52,7 @@ export type AttachmentUploadOptions = z.infer<typeof attachmentUploadOptionsSche
 
 /** Schema for attachment listing query parameters. */
 export const attachmentListQuerySchema = OFFSET_PAGINATION_QUERY_SCHEMA.extend({
+  chatId: z.uuid().optional(),
   chatMessageId: z.coerce.number().int().nonnegative().optional(),
   tripId: z.coerce.number().int().nonnegative().optional(),
 });
@@ -81,6 +83,7 @@ export type UploadResponse = z.infer<typeof uploadResponseSchema>;
 
 /** Schema for an attachment file in listings. */
 export const attachmentFileSchema = z.strictObject({
+  chatId: z.uuid().nullable(),
   chatMessageId: z.number().int().nonnegative().nullable(),
   createdAt: z.string().datetime(),
   id: z.uuid(),

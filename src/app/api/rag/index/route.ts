@@ -7,6 +7,7 @@ import "server-only";
 import { ragIndexRequestSchema } from "@schemas/rag";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { requireUserId } from "@/lib/api/route-helpers";
 import { handleRagIndex } from "./_handler";
 
 /**
@@ -34,4 +35,9 @@ export const POST = withApiGuards({
   rateLimit: "rag:index",
   schema: ragIndexRequestSchema,
   telemetry: "rag.index",
-})(async (_req: NextRequest, { supabase }, body) => handleRagIndex({ supabase }, body));
+})((_req: NextRequest, { supabase, user }, body) => {
+  const userResult = requireUserId(user);
+  if (!userResult.ok) return userResult.error;
+
+  return handleRagIndex({ supabase, userId: userResult.data }, body);
+});

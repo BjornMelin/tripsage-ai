@@ -38,6 +38,7 @@ const logger = createServerLogger("attachments.files");
 function buildCacheKey(userId: string, params: AttachmentListQuery): string {
   const normalized =
     `limit=${params.limit}&offset=${params.offset}` +
+    (params.chatId !== undefined ? `&chatId=${params.chatId}` : "") +
     (params.tripId !== undefined ? `&tripId=${params.tripId}` : "") +
     (params.chatMessageId !== undefined
       ? `&chatMessageId=${params.chatMessageId}`
@@ -67,6 +68,7 @@ export const GET = withApiGuards({
   // Parse and validate query parameters
   const { searchParams } = req.nextUrl;
   const queryResult = attachmentListQuerySchema.safeParse({
+    chatId: searchParams.get("chatId") ?? undefined,
     chatMessageId: searchParams.get("chatMessageId") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
@@ -83,7 +85,7 @@ export const GET = withApiGuards({
     });
   }
 
-  const { tripId, chatMessageId, limit, offset } = queryResult.data;
+  const { chatId, tripId, chatMessageId, limit, offset } = queryResult.data;
 
   // Check cache first (with normalized key)
   const cacheKey = buildCacheKey(userId, queryResult.data);
@@ -103,6 +105,11 @@ export const GET = withApiGuards({
   // Filter by tripId if provided (Zod coercion ensures it's a number)
   if (tripId !== undefined) {
     query = query.eq("trip_id", tripId);
+  }
+
+  // Filter by chatId if provided
+  if (chatId !== undefined) {
+    query = query.eq("chat_id", chatId);
   }
 
   // Filter by chatMessageId if provided (Zod coercion ensures it's a number)
@@ -205,6 +212,7 @@ export const GET = withApiGuards({
       }
 
       return {
+        chatId: att.chat_id ?? null,
         chatMessageId: att.chat_message_id ?? null,
         createdAt: att.created_at,
         id: att.id,

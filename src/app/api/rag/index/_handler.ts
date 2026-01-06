@@ -11,6 +11,7 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 
 export interface RagIndexDeps {
   supabase: TypedServerSupabase;
+  userId: string;
 }
 
 export async function handleRagIndex(
@@ -25,6 +26,7 @@ export async function handleRagIndex(
     },
     documents: body.documents,
     supabase: deps.supabase,
+    userId: deps.userId,
   });
 
   return NextResponse.json(result, { status: 200 });

@@ -110,6 +110,8 @@ export interface IndexDocumentsParams {
   documents: RagDocument[];
   /** Supabase client instance. */
   supabase: SupabaseClient<Database>;
+  /** Authenticated user id (used for RLS-scoped writes). */
+  userId: string;
   /** Indexer configuration. */
   config?: Partial<IndexerConfig>;
 }
@@ -139,7 +141,7 @@ export interface IndexDocumentsParams {
 export async function indexDocuments(
   params: IndexDocumentsParams
 ): Promise<RagIndexResponse> {
-  const { documents, supabase } = params;
+  const { documents, supabase, userId } = params;
   const config = indexerConfigSchema.parse(params.config ?? {});
 
   return withTelemetrySpan(
@@ -168,6 +170,7 @@ export async function indexDocuments(
             batchStartIndex: i,
             config,
             supabase,
+            userId,
           });
 
           indexedCount += batchResult.indexed;
@@ -219,6 +222,7 @@ interface IndexBatchParams {
   batchStartIndex: number;
   config: IndexerConfig;
   supabase: SupabaseClient<Database>;
+  userId: string;
 }
 
 /**
@@ -236,7 +240,7 @@ interface IndexBatchResult {
  * @internal
  */
 async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
-  const { batch, batchStartIndex, config, supabase } = params;
+  const { batch, batchStartIndex, config, supabase, userId } = params;
 
   const failed: RagIndexFailedDoc[] = [];
   let indexed = 0;
@@ -302,6 +306,8 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       namespace: config.namespace,
       // biome-ignore lint/style/useNamingConvention: Database field name
       source_id: item.document.sourceId ?? null,
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      user_id: userId,
     })
   );
 

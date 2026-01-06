@@ -51,6 +51,8 @@ vi.mock("@/lib/telemetry/span", async (importOriginal) => {
 });
 
 describe("/api/chat/attachments", () => {
+  const chatId = "11111111-1111-4111-8111-111111111111";
+
   // Storage mock functions
   const mockUpload = vi.fn();
   const mockRemove = vi.fn();
@@ -71,13 +73,13 @@ describe("/api/chat/attachments", () => {
 
     // Default mock for successful storage upload
     mockUpload.mockResolvedValue({
-      data: { path: "chat/user-1/test-uuid-1-test.jpg" },
+      data: { path: `user-1/${chatId}/test-uuid-1/test.jpg` },
       error: null,
     });
     mockRemove.mockResolvedValue({ error: null });
     mockCreateSignedUrl.mockResolvedValue({
       data: {
-        signedUrl: "https://supabase.storage/signed/chat/user-1/test-uuid-1-test.jpg",
+        signedUrl: `https://supabase.storage/signed/user-1/${chatId}/test-uuid-1/test.jpg`,
       },
       error: null,
     });
@@ -131,6 +133,7 @@ describe("/api/chat/attachments", () => {
     const validFile = new File(["test content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", validFile);
+    formData.append("chatId", chatId);
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
@@ -144,7 +147,7 @@ describe("/api/chat/attachments", () => {
     expect(supabase.storage.from).toHaveBeenCalledWith("attachments");
     expect(mockUpload).toHaveBeenCalledTimes(1);
     expect(mockUpload).toHaveBeenCalledWith(
-      expect.stringContaining("chat/user-1/"),
+      expect.stringContaining(`user-1/${chatId}/`),
       expect.any(Uint8Array),
       expect.objectContaining({
         contentType: "image/jpeg",
@@ -152,20 +155,24 @@ describe("/api/chat/attachments", () => {
       })
     );
 
-    // Verify Supabase metadata insert was called
+    // Verify Supabase metadata insert was called (uploading -> completed)
     expect(supabase.from).toHaveBeenCalledWith("file_attachments");
     const inserts = state.insertByTable.get("file_attachments") ?? [];
     expect(inserts).toHaveLength(1);
     expect(inserts[0]).toEqual(
       expect.objectContaining({
         bucket_name: "attachments",
+        chat_id: chatId,
         file_size: validFile.size,
         mime_type: "image/jpeg",
         original_filename: "test.jpg",
-        upload_status: "completed",
+        upload_status: "uploading",
         user_id: "user-1",
       })
     );
+
+    const updates = state.updateByTable.get("file_attachments") ?? [];
+    expect(updates).toEqual([expect.objectContaining({ upload_status: "completed" })]);
 
     const body = await res.json();
     expect(body.files).toHaveLength(1);
@@ -227,6 +234,7 @@ describe("/api/chat/attachments", () => {
     const formData = new FormData();
     formData.append("file", file1);
     formData.append("file", file2);
+    formData.append("chatId", chatId);
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
@@ -334,6 +342,7 @@ describe("/api/chat/attachments", () => {
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", validFile);
+    formData.append("chatId", chatId);
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
@@ -346,7 +355,15 @@ describe("/api/chat/attachments", () => {
     expect(body.reason).toBe("File upload failed");
     expect(body.error).toBe("internal");
 
-    expect(state.insertByTable.get("file_attachments") ?? []).toHaveLength(0);
+    expect(state.insertByTable.get("file_attachments") ?? []).toHaveLength(1);
+    expect(
+      state.requests.some(
+        (r) =>
+          r.method === "DELETE" &&
+          r.url.startsWith("/rest/v1/file_attachments") &&
+          r.url.includes("id=eq.test-uuid-1")
+      )
+    ).toBe(true);
   });
 
   it("should handle Supabase metadata insert errors gracefully", async () => {
@@ -358,6 +375,7 @@ describe("/api/chat/attachments", () => {
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", validFile);
+    formData.append("chatId", chatId);
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
@@ -373,8 +391,8 @@ describe("/api/chat/attachments", () => {
     expect(body.files[0].status).toBe("failed");
     expect(body.files[0].url).toBeNull();
 
-    // Verify cleanup was attempted
-    expect(mockRemove).toHaveBeenCalled();
+    // Storage is never touched when metadata insert fails
+    expect(mockUpload).not.toHaveBeenCalled();
   });
 
   it("rejects payloads exceeding total size budget via content-length", async () => {
@@ -425,6 +443,7 @@ describe("/api/chat/attachments", () => {
     const disguisedFile = new File(["MZ"], "malware.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", disguisedFile);
+    formData.append("chatId", chatId);
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
@@ -470,6 +489,7 @@ describe("/api/chat/attachments", () => {
     const formData = new FormData();
     formData.append("file", file1);
     formData.append("file", file2);
+    formData.append("chatId", chatId);
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: formData,
@@ -481,17 +501,28 @@ describe("/api/chat/attachments", () => {
     const body = await res.json();
     expect(body.reason).toBe("File upload failed");
 
-    // Confirm metadata insert happened for first file
+    // Confirm metadata insert happened for both files (metadata-first flow)
     const inserts = state.insertByTable.get("file_attachments") ?? [];
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]).toEqual(
-      expect.objectContaining({
-        bucket_name: "attachments",
-        filename: "test-uuid-3",
-        id: "test-uuid-3",
-        original_filename: "file1.png",
-        upload_status: "completed",
-      })
+    expect(inserts).toHaveLength(2);
+    expect(inserts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          bucket_name: "attachments",
+          chat_id: chatId,
+          filename: "test-uuid-1",
+          id: "test-uuid-1",
+          original_filename: "file1.png",
+          upload_status: "uploading",
+        }),
+        expect.objectContaining({
+          bucket_name: "attachments",
+          chat_id: chatId,
+          filename: "test-uuid-2",
+          id: "test-uuid-2",
+          original_filename: "file2.png",
+          upload_status: "uploading",
+        }),
+      ])
     );
 
     // Metadata rows for successful uploads are deleted on failure
@@ -500,11 +531,11 @@ describe("/api/chat/attachments", () => {
         (r) =>
           r.method === "DELETE" &&
           r.url.startsWith("/rest/v1/file_attachments") &&
-          r.url.includes("id=eq.test-uuid-3")
+          (r.url.includes("id=eq.test-uuid-1") || r.url.includes("id=eq.test-uuid-2"))
       )
     ).toBe(true);
 
     // Uploaded storage object is cleaned up
-    expect(mockRemove).toHaveBeenCalledWith(["chat/user-1/test-uuid-1-file1.png"]);
+    expect(mockRemove).toHaveBeenCalledWith([`user-1/${chatId}/test-uuid-1/file1.png`]);
   });
 });
