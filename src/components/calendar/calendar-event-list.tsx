@@ -119,9 +119,11 @@ export function CalendarEventList({
 
       return parsed.data.items;
     },
-    queryKey: userId
-      ? keys.calendar.events(userId, { calendarId, timeMaxIso, timeMinIso })
-      : keys.calendar.eventsDisabled(),
+    queryKey: keys.calendar.events(userId ?? "no-user", {
+      calendarId,
+      timeMaxIso,
+      timeMinIso,
+    }),
   });
 
   if (isPending) {

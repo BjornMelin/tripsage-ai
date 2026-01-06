@@ -10,14 +10,25 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { createQueryClient } from "@/lib/query/query-client";
+import { createServerLogger } from "@/lib/telemetry/logger";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
 
-export async function prefetchDehydratedState(
+export function prefetchDehydratedState(
   prefetch: (queryClient: QueryClient) => Promise<void>
 ): Promise<DehydratedState> {
-  const queryClient = createQueryClient();
-  await prefetch(queryClient);
+  const logger = createServerLogger("query.prefetch");
 
-  const state = dehydrate(queryClient);
-  queryClient.clear();
-  return state;
+  return withTelemetrySpan("query.prefetch.dehydrate", {}, async (span) => {
+    try {
+      const queryClient = createQueryClient();
+      await prefetch(queryClient);
+
+      const state = dehydrate(queryClient);
+      span.setAttribute("query.prefetch.queries_count", state.queries.length);
+      return state;
+    } catch (error) {
+      logger.error("Prefetch dehydration failed", { error });
+      throw error;
+    }
+  });
 }
