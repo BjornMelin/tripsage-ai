@@ -97,6 +97,23 @@ function parseMfaFactorCandidate(value: unknown): MfaFactorCandidate | null {
   return { factorType, id, status };
 }
 
+function describeListFactorsData(value: unknown): Record<string, unknown> {
+  if (Array.isArray(value)) {
+    return { kind: "array", length: value.length };
+  }
+
+  if (isRecord(value)) {
+    const keys = Object.keys(value);
+    return {
+      keys: keys.length > 0 ? keys.sort() : [],
+      kind: "object",
+      totpLength: Array.isArray(value.totp) ? value.totp.length : undefined,
+    };
+  }
+
+  return { kind: typeof value };
+}
+
 function pickTotpFactorId(listFactorsData: unknown): string {
   const factorCandidates: MfaFactorCandidate[] = [];
 
@@ -118,6 +135,18 @@ function pickTotpFactorId(listFactorsData: unknown): string {
   );
 
   if (!factor) {
+    logger.warn("pickTotpFactorId: no verified totp factor found", {
+      factorCandidates: factorCandidates.map((candidate) => ({
+        factorType: candidate.factorType,
+        status: candidate.status,
+      })),
+      listFactorsData: describeListFactorsData(listFactorsData),
+    });
+
+    if (factorCandidates.length === 0) {
+      throw new Error("No MFA factors configured for this account");
+    }
+
     throw new Error("No verified TOTP MFA factor found for this account");
   }
 
