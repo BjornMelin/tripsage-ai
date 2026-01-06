@@ -169,9 +169,11 @@ function buildAttachmentStoragePath(options: {
       : `${userId}/${tripId}/${attachmentId}/${fileName}`;
   }
 
-  return chatId !== undefined
-    ? `${userId}/${chatId}/${attachmentId}/${fileName}`
-    : `${userId}/${attachmentId}/${fileName}`;
+  if (chatId !== undefined) {
+    return `${userId}/${chatId}/${attachmentId}/${fileName}`;
+  }
+
+  throw new Error("Invariant violation: either chatId or tripId is required.");
 }
 
 /**
@@ -480,10 +482,13 @@ export const POST = withApiGuards({
       signedUrl,
     } = result.value;
 
-    if (insertedMetadata) {
+    const isMetadataStatusUpdateFailure =
+      errorKind === "metadata" && insertedMetadata && uploaded && uploadError;
+
+    if (insertedMetadata && !isMetadataStatusUpdateFailure) {
       insertedAttachmentIds.push(id);
     }
-    if (uploaded) {
+    if (uploaded && !uploadError && !isMetadataStatusUpdateFailure) {
       uploadedPaths.push(path);
     }
 

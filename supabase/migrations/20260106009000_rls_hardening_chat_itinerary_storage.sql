@@ -59,29 +59,29 @@ CREATE POLICY itinerary_select_trip_access
   ON public.itinerary_items
   FOR SELECT
   TO authenticated
-  USING (public.user_has_trip_access(auth.uid(), trip_id));
+  USING (public.user_has_trip_access((select auth.uid()), trip_id));
 
 CREATE POLICY itinerary_insert_trip_edit
   ON public.itinerary_items
   FOR INSERT
   TO authenticated
   WITH CHECK (
-    user_id = auth.uid()
-    AND public.user_has_trip_edit_access(auth.uid(), trip_id)
+    user_id = (select auth.uid())
+    AND public.user_has_trip_edit_access((select auth.uid()), trip_id)
   );
 
 CREATE POLICY itinerary_update_trip_edit
   ON public.itinerary_items
   FOR UPDATE
   TO authenticated
-  USING (public.user_has_trip_edit_access(auth.uid(), trip_id))
-  WITH CHECK (public.user_has_trip_edit_access(auth.uid(), trip_id));
+  USING (public.user_has_trip_edit_access((select auth.uid()), trip_id))
+  WITH CHECK (public.user_has_trip_edit_access((select auth.uid()), trip_id));
 
 CREATE POLICY itinerary_delete_trip_edit
   ON public.itinerary_items
   FOR DELETE
   TO authenticated
-  USING (public.user_has_trip_edit_access(auth.uid(), trip_id));
+  USING (public.user_has_trip_edit_access((select auth.uid()), trip_id));
 
 -- Prevent collaborators from reassigning ownership by mutating user_id.
 CREATE OR REPLACE FUNCTION public.prevent_itinerary_user_id_change()

@@ -238,13 +238,6 @@ export async function loginWithPasswordAction(
     };
   }
 
-  if (signInError) {
-    return {
-      error: signInError.message || "Login failed",
-      status: "error",
-    };
-  }
-
   redirect(nextPath);
 }
 
