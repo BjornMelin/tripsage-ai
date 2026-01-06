@@ -23,7 +23,7 @@ CREATE POLICY chat_sessions_insert
     user_id = auth.uid()
     AND (
       trip_id IS NULL
-      OR public.user_has_trip_access(auth.uid(), trip_id)
+      OR public.user_has_trip_access((select auth.uid()), trip_id)
     )
   );
 

@@ -95,26 +95,16 @@ function pickTotpFactorId(listFactorsData: unknown): string {
 
   if (Array.isArray(listFactorsData)) {
     listFactorsData.forEach(pushCandidate);
-  } else if (isRecord(listFactorsData)) {
-    for (const key of ["totp", "webauthn", "phone"] as const) {
-      const value = listFactorsData[key];
-      if (Array.isArray(value)) {
-        value.forEach(pushCandidate);
-      }
-    }
+  } else if (isRecord(listFactorsData) && Array.isArray(listFactorsData.totp)) {
+    listFactorsData.totp.forEach(pushCandidate);
   }
 
-  const factor =
-    factorCandidates.find(
-      (entry) => entry.status === "verified" && entry.factorType === "totp"
-    ) ?? factorCandidates.find((entry) => entry.status === "verified");
+  const factor = factorCandidates.find(
+    (entry) => entry.status === "verified" && entry.factorType === "totp"
+  );
 
   if (!factor) {
-    throw new Error("No verified MFA factor found for this account");
-  }
-
-  if (factor.factorType !== "totp") {
-    throw new Error("Only TOTP-based MFA is currently supported");
+    throw new Error("No verified TOTP MFA factor found for this account");
   }
 
   return factor.id;
@@ -321,9 +311,13 @@ export async function registerWithPasswordAction(
   const userMetadata: Record<string, string | boolean> = {
     email: parsed.data.email,
   };
-  userMetadata.first_name = parsed.data.firstName;
-  userMetadata.full_name = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
-  userMetadata.last_name = parsed.data.lastName;
+  const firstName = parsed.data.firstName.trim();
+  const lastName = parsed.data.lastName.trim();
+  userMetadata.first_name = firstName;
+  userMetadata.full_name = [firstName, lastName]
+    .filter((part) => part.length > 0)
+    .join(" ");
+  userMetadata.last_name = lastName;
   userMetadata.marketing_opt_in = Boolean(parsed.data.marketingOptIn);
   userMetadata.terms_accepted = true;
 

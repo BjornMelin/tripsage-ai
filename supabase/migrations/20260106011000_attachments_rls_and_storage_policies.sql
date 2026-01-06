@@ -136,6 +136,7 @@ CREATE POLICY attachments_insert_by_record
       WHERE fa.file_path = name
         AND fa.user_id = (select auth.uid())
         AND fa.upload_status = 'uploading'
+        AND fa.created_at > (now() - interval '15 minutes')
     )
   );
 

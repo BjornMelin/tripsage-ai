@@ -19,7 +19,7 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conname = 'rag_documents_trip_requires_user_check'
-      AND conrelid = 'public.rag_documents'::regclass
+      AND conrelid = to_regclass('public.rag_documents')
   ) THEN
     ALTER TABLE public.rag_documents
       ADD CONSTRAINT rag_documents_trip_requires_user_check

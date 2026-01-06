@@ -149,6 +149,12 @@ interface UploadResult {
   signedUrl: string | null;
 }
 
+/**
+ * Storage object path conventions:
+ * - Chat-scoped: `{userId}/{chatId}/{attachmentId}/{fileName}`
+ * - Trip-scoped: `{userId}/{tripId}/{attachmentId}/{fileName}`
+ * - Trip + chat: `{userId}/{tripId}/{chatId}/{attachmentId}/{fileName}`
+ */
 function buildAttachmentStoragePath(options: {
   attachmentId: string;
   chatId?: string;
@@ -276,8 +282,14 @@ async function uploadToSupabaseStorage(options: {
         .from("file_attachments")
         .update({ upload_status: "failed" })
         .eq("id", attachmentId);
-    } catch {
-      // Best effort; keep original upload error as source of truth.
+    } catch (updateFailedError) {
+      logger.warn("failed_to_mark_attachment_failed", {
+        attachmentId,
+        error:
+          updateFailedError instanceof Error
+            ? updateFailedError.message
+            : String(updateFailedError),
+      });
     }
     return {
       detectedType: mimeVerification.detectedType,
