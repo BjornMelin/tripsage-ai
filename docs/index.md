@@ -19,6 +19,14 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 ### Application Developers
 
+- **Final baseline (2026-01-05)**:
+  - **[Architecture Overview](architecture/overview.md)** - RSC-first system overview and principles
+  - **[Repo Structure](architecture/repo-structure.md)** - Feature-first layout and server-only boundaries
+  - **[Architecture Decisions (ADRs)](architecture/decisions/index.md)** - Canonical ADR index
+  - **[Technical Specs](specs/README.md)** - Canonical specs index
+  - **[Deployment Runbook (Vercel)](runbooks/deployment-vercel.md)** - Vercel + Supabase + Upstash
+  - **[PRD](product/prd.md)** and **[Wireframes](product/wireframes.md)**
+
 - **[Quick Start](development/quick-start.md)** - Get development environment
   running
 - **[Development Guide](development/development-guide.md)** - Architecture

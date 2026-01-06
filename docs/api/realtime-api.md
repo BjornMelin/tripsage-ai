@@ -82,7 +82,7 @@ This activity feed looks like “audit” data but is **ephemeral** (not persist
 - UI components should consume the store instead of mocking statuses:
 
 ```tsx
-import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
+import { ConnectionStatusIndicator } from "@/features/realtime/components/connection-status-monitor";
 
 export function HeaderRealtimeBadge() {
   return <ConnectionStatusIndicator />;
