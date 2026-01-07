@@ -35,6 +35,11 @@ import type { ServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
+import {
+  ensureNonEmptyParts,
+  parsePersistedUiParts,
+  rehydrateToolInvocations,
+} from "./_ui-message-parts";
 
 /**
  * Function type for resolving AI provider configurations.
@@ -396,32 +401,6 @@ function isSupersededMessage(metadata: unknown): boolean {
   return status === "superseded";
 }
 
-function toStoredParts(options: {
-  content: unknown;
-  logger?: ServerLogger;
-  sessionId: string;
-  messageDbId: number;
-}): unknown[] {
-  const { content, logger, messageDbId, sessionId } = options;
-  if (typeof content !== "string") return [];
-  const trimmed = content.trim();
-  if (!trimmed) return [];
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (Array.isArray(parsed)) return parsed;
-    return [{ text: trimmed, type: "text" }];
-  } catch (error) {
-    logger?.warn?.("chat:stored_parts_parse_failed", {
-      contentLength: trimmed.length,
-      error: error instanceof Error ? error.message : String(error),
-      messageDbId,
-      sessionId,
-    });
-    return [{ text: trimmed, type: "text" }];
-  }
-}
-
 async function loadChatHistory(options: {
   limit?: number;
   logger?: ServerLogger;
@@ -491,7 +470,7 @@ async function loadChatHistory(options: {
   }
 
   const rawUiMessages = ordered.map((row) => {
-    const baseParts = toStoredParts({
+    const baseParts = parsePersistedUiParts({
       content: row.content,
       logger: options.logger,
       messageDbId: row.id,
@@ -515,41 +494,13 @@ async function loadChatHistory(options: {
     const toolRows = toolCallsByMessageId.get(row.id) ?? [];
 
     if (toolRows.length > 0 && role === "assistant") {
-      for (const toolRow of toolRows) {
-        const toolName = toolRow.tool_name;
-        const toolCallId = toolRow.tool_id;
-        if (typeof toolName !== "string" || toolName.trim().length === 0) continue;
-        if (typeof toolCallId !== "string" || toolCallId.trim().length === 0) continue;
-
-        const baseToolPart = {
-          input: toolRow.arguments ?? {},
-          toolCallId,
-          type: `tool-${toolName}`,
-        } as const;
-
-        if (toolRow.status === "failed") {
-          const errorText =
-            toolRow.error_message ??
-            (typeof toolRow.result === "string" ? toolRow.result : "Tool failed");
-          enrichedParts.push({
-            ...baseToolPart,
-            errorText,
-            state: "output-error",
-          });
-        } else {
-          enrichedParts.push({
-            ...baseToolPart,
-            output: toolRow.result ?? null,
-            state: "output-available",
-          });
-        }
-      }
+      enrichedParts.push(...rehydrateToolInvocations(toolRows));
     }
 
     return {
       id: uiMessageId,
       metadata,
-      parts: enrichedParts,
+      parts: ensureNonEmptyParts(enrichedParts),
       role,
     };
   });

@@ -9,6 +9,11 @@ import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import {
+  ensureNonEmptyParts,
+  parsePersistedUiParts,
+  rehydrateToolInvocations,
+} from "../_ui-message-parts";
 
 /**
  * Dependencies interface for sessions handlers.
@@ -194,23 +199,6 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
     toolCallsByMessageId.set(messageId, existing);
   }
 
-  const toParts = (content: unknown): unknown[] => {
-    if (typeof content !== "string") return [];
-    const trimmed = content.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return parsed;
-      return [{ text: trimmed, type: "text" }];
-    } catch (error) {
-      logger.warn("Failed to parse stored message parts JSON; falling back to text", {
-        contentLength: trimmed.length,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return [{ text: trimmed, type: "text" }];
-    }
-  };
-
   const isMetaWithUiMessageId = (value: unknown): value is { uiMessageId: string } => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return false;
     if (!("uiMessageId" in value)) return false;
@@ -228,7 +216,12 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
   };
 
   const rawUiMessages = visibleMessages.map((row) => {
-    const baseParts = toParts(row.content);
+    const baseParts = parsePersistedUiParts({
+      content: row.content,
+      logger,
+      messageDbId: row.id,
+      sessionId: id,
+    });
     const uiMessageId = toUiMessageId({ id: row.id, metadata: row.metadata });
 
     let role: "assistant" | "system" | "user";
@@ -247,50 +240,16 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
     const toolRows = toolCallsByMessageId.get(row.id) ?? [];
 
     if (toolRows.length > 0 && role === "assistant") {
-      for (const toolRow of toolRows) {
-        const toolName = toolRow.tool_name;
-        const toolCallId = toolRow.tool_id;
-        if (typeof toolName !== "string" || toolName.trim().length === 0) {
-          logger.warn("Skipping tool call with missing tool_name", {
-            messageId: row.id,
-            sessionId: id,
-            toolCallId,
-          });
-          continue;
-        }
-        if (typeof toolCallId !== "string" || toolCallId.trim().length === 0) {
-          logger.warn("Skipping tool call with missing tool_id", {
-            messageId: row.id,
-            sessionId: id,
-            toolName,
-          });
-          continue;
-        }
-
-        const baseToolPart = {
-          input: toolRow.arguments ?? {},
-          toolCallId,
-          type: `tool-${toolName}`,
-        } as const;
-
-        if (toolRow.status === "failed") {
-          const errorText =
-            toolRow.error_message ??
-            (typeof toolRow.result === "string" ? toolRow.result : "Tool failed");
-
-          enrichedParts.push({
-            ...baseToolPart,
-            errorText,
-            state: "output-error",
-          });
-        } else {
-          enrichedParts.push({
-            ...baseToolPart,
-            output: toolRow.result ?? null,
-            state: "output-available",
-          });
-        }
+      const toolParts = rehydrateToolInvocations(toolRows);
+      if (toolParts.length !== toolRows.length) {
+        logger.warn("Some tool calls were skipped due to missing identifiers", {
+          hydratedToolCalls: toolParts.length,
+          messageId: row.id,
+          sessionId: id,
+          totalToolCalls: toolRows.length,
+        });
       }
+      enrichedParts.push(...toolParts);
     }
 
     const metadata =
@@ -301,7 +260,7 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
     return {
       id: uiMessageId,
       metadata,
-      parts: enrichedParts,
+      parts: ensureNonEmptyParts(enrichedParts),
       role,
     };
   });

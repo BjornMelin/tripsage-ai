@@ -95,7 +95,70 @@ describe("sessions _handlers", () => {
 
     const assistant = body.find((m) => m.role === "assistant");
     expect(assistant).toBeTruthy();
-    expect(assistant?.parts.some((p) => p.type.startsWith("tool-"))).toBe(true);
+    expect(
+      assistant?.parts.some(
+        (p) => p.type === "dynamic-tool" || p.type.startsWith("tool-")
+      )
+    ).toBe(true);
+  });
+
+  it("tolerates legacy model tool-call parts in stored content", async () => {
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u6" } });
+    const created = await createSession({ supabase: s, userId: "u6" }, "Trip");
+    const { id: sessionId } = (await created.json()) as { id: string };
+
+    await unsafeCast<UntypedSupabaseInsert>(s)
+      .from("chat_messages")
+      .insert([
+        {
+          content: JSON.stringify([{ text: "hi", type: "text" }]),
+          id: 1,
+          metadata: {},
+          role: "user",
+          session_id: sessionId,
+          user_id: "u6",
+        },
+        {
+          // Stored by older implementations as model message parts (invalid for UIMessage parts).
+          content: JSON.stringify([
+            {
+              args: { query: "london" },
+              toolCallId: "call-legacy-1",
+              toolName: "webSearch",
+              type: "tool-call",
+            },
+          ]),
+          id: 2,
+          metadata: {},
+          role: "assistant",
+          session_id: sessionId,
+          user_id: "u6",
+        },
+      ]);
+
+    await s.from("chat_tool_calls").insert({
+      arguments: { query: "london" },
+      message_id: 2,
+      result: { ok: true },
+      status: "completed",
+      tool_id: "call-legacy-1",
+      tool_name: "webSearch",
+    });
+
+    const res = await listMessages({ supabase: s, userId: "u6" }, sessionId);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Array<{
+      role: string;
+      parts: Array<{ type: string; state?: string; toolCallId?: string }>;
+    }>;
+
+    const assistant = body.find((m) => m.role === "assistant");
+    expect(assistant).toBeTruthy();
+    expect(
+      assistant?.parts.some(
+        (p) => p.type === "dynamic-tool" && p.toolCallId === "call-legacy-1"
+      )
+    ).toBe(true);
   });
 
   it("filters superseded assistant messages", async () => {

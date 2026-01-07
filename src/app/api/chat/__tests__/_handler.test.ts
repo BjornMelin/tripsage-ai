@@ -139,4 +139,93 @@ describe("handleChat", () => {
       expect.objectContaining({ isAborted: true, status: "aborted" })
     );
   });
+
+  it("does not 500 when history contains legacy model tool-call parts", async () => {
+    const { handleChat } = await import("../_handler");
+
+    const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const sessionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const supabase = createMockSupabaseClient({
+      selectResults: {
+        chat_messages: {
+          data: [
+            {
+              content: JSON.stringify([
+                {
+                  args: { query: "london" },
+                  toolCallId: "call-legacy-1",
+                  toolName: "webSearch",
+                  type: "tool-call",
+                },
+              ]),
+              id: 1,
+              metadata: {},
+              role: "assistant",
+              session_id: sessionId,
+              user_id: userId,
+            },
+          ],
+          error: null,
+        },
+        chat_sessions: {
+          data: { id: sessionId, user_id: userId },
+          error: null,
+        },
+        chat_tool_calls: {
+          data: [
+            {
+              arguments: { query: "london" },
+              error_message: null,
+              id: 1,
+              message_id: 1,
+              result: { fromCache: false, results: [], tookMs: 1 },
+              status: "completed",
+              tool_id: "call-legacy-1",
+              tool_name: "webSearch",
+            },
+          ],
+          error: null,
+        },
+      },
+      user: { id: userId },
+    });
+
+    let messageInsertId = 100;
+    insertSingleMock.mockImplementation((_client, table: string) => {
+      if (table === "chat_messages") {
+        messageInsertId += 1;
+        return { data: { id: messageInsertId }, error: null };
+      }
+      return { data: null, error: null };
+    });
+
+    updateSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const res = await handleChat(
+      {
+        resolveProvider: async () => ({
+          model: createMockModel(),
+          modelId: "gpt-4o",
+          provider: "openai",
+        }),
+        supabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
+      },
+      {
+        messages: [
+          {
+            id: "msg-1",
+            parts: [{ text: "Hello", type: "text" }],
+            role: "user",
+          },
+        ],
+        sessionId,
+        userId,
+      }
+    );
+
+    expect(res.status).toBe(200);
+    expect(toUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+  });
 });
