@@ -34,7 +34,7 @@ export function formatItineraryTimestamp(value: string | undefined): string {
   if (!value) return "—";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "—";
-  return parsed.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return DateUtils.format(parsed, "MMM dd, yyyy h:mm a");
 }
 
 export function buildPayload(entries: Record<string, string>): Record<string, unknown> {
