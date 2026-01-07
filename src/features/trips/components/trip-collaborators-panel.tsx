@@ -89,7 +89,7 @@ function GetInitialsFromEmail(email: string | undefined) {
 
 export function TripCollaboratorsPanel(props: {
   tripId: number;
-  ownerId: string;
+  ownerId?: string;
   currentUserId: string | null;
   collaborators: TripCollaborator[];
   isOwner: boolean;
@@ -102,6 +102,10 @@ export function TripCollaboratorsPanel(props: {
   const removeMutation = useRemoveTripCollaborator(props.tripId);
 
   const canManage = props.isOwner;
+  const isCurrentUserOwner =
+    props.currentUserId !== null &&
+    typeof props.ownerId === "string" &&
+    props.currentUserId === props.ownerId;
 
   const form = useZodForm({
     defaultValues: { email: "", role: "viewer" as const },
@@ -295,13 +299,11 @@ export function TripCollaboratorsPanel(props: {
           <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8 ring-1 ring-border">
-                <AvatarFallback>
-                  {props.currentUserId === props.ownerId ? "ME" : "OW"}
-                </AvatarFallback>
+                <AvatarFallback>{isCurrentUserOwner ? "ME" : "OW"}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">
-                  {props.currentUserId === props.ownerId ? "You" : "Trip Owner"}
+                  {isCurrentUserOwner ? "You" : "Trip Owner"}
                 </div>
                 <div className="text-xs text-muted-foreground">Owner</div>
               </div>
