@@ -223,6 +223,7 @@ export function createChatAgent(
       "saveTravelPlan",
       "deleteTravelPlan",
       "bookAccommodation",
+      "trips.savePlace",
     ],
   } = config;
 

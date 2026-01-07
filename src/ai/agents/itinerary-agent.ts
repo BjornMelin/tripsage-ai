@@ -6,8 +6,9 @@ import "server-only";
 
 import {
   createTravelPlan,
-  lookupPoiContext,
+  placeDetails,
   saveTravelPlan,
+  searchPlaces,
   webSearch,
   webSearchBatch,
 } from "@ai/tools";
@@ -32,8 +33,9 @@ import { extractAgentParameters } from "./types";
  */
 const BASE_ITINERARY_TOOLS = {
   createTravelPlan,
-  lookupPoiContext,
   saveTravelPlan,
+  "search.placeDetails": placeDetails,
+  "search.places": searchPlaces,
   webSearch,
   webSearchBatch,
 } satisfies ToolSet;
@@ -85,8 +87,13 @@ export function createItineraryAgent(
 
   // Define phased tool sets with type safety
   type ToolName = keyof typeof BASE_ITINERARY_TOOLS;
-  const ResearchTools: ToolName[] = ["webSearch", "webSearchBatch", "lookupPoiContext"];
-  const PlanningTools: ToolName[] = ["createTravelPlan", "lookupPoiContext"];
+  const ResearchTools: ToolName[] = [
+    "webSearch",
+    "webSearchBatch",
+    "search.places",
+    "search.placeDetails",
+  ];
+  const PlanningTools: ToolName[] = ["createTravelPlan", "search.places"];
   const SaveTools: ToolName[] = ["saveTravelPlan", "createTravelPlan"];
 
   // Compute phase boundaries from maxSteps (40% research, 33% planning, 27% save)

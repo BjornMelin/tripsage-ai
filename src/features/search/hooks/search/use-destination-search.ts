@@ -3,6 +3,7 @@
  */
 
 import type { PlacesSearchRequest } from "@schemas/api";
+import { searchPlacesResultSchema } from "@schemas/places";
 import type { Destination } from "@schemas/search";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
@@ -30,16 +31,6 @@ export interface UseDestinationSearchResult {
   searchError: Error | null;
   resetSearch: () => void;
   results: DestinationResult[];
-}
-
-interface PlacesSearchResponse {
-  places?: Array<{
-    id: string;
-    displayName?: { text: string };
-    formattedAddress?: string;
-    location?: { latitude: number; longitude: number };
-    types?: string[];
-  }>;
 }
 
 function normalizeLimit(limit?: number): number {
@@ -159,30 +150,27 @@ export function useDestinationSearch(): UseDestinationSearchResult {
           );
         }
 
-        const data = (await response.json()) as PlacesSearchResponse;
-        const places = data.places ?? [];
+        const dataJson: unknown = await response.json();
+        const parsed = searchPlacesResultSchema.safeParse(dataJson);
+        if (!parsed.success) {
+          throw new Error("Unexpected response from places search.");
+        }
+        const places = parsed.data.places;
 
         const mappedResults: DestinationResult[] = places
           .filter((place) => {
             if (params.types && params.types.length > 0) {
-              return place.types?.some((type) => params.types?.includes(type));
+              return place.types.some((type) => params.types?.includes(type));
             }
             return true;
           })
           .slice(0, maxResultCount)
           .map((place) => ({
             address: place.formattedAddress ?? "",
-            location:
-              place.location?.latitude !== undefined &&
-              place.location?.longitude !== undefined
-                ? {
-                    lat: place.location.latitude,
-                    lng: place.location.longitude,
-                  }
-                : undefined,
-            name: place.displayName?.text ?? "Unknown Destination",
-            placeId: place.id,
-            types: place.types ?? [],
+            location: place.coordinates,
+            name: place.name,
+            placeId: place.placeId,
+            types: place.types,
           }));
 
         setResults(mappedResults);

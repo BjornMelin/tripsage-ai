@@ -5,6 +5,7 @@
 import "server-only";
 
 import { retryWithBackoff } from "@/lib/http/retry";
+import { GooglePlacesPhotoError } from "./errors";
 
 // === Coordinate Validation ===
 
@@ -396,50 +397,68 @@ type PlacePhotoParams = {
 export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response> {
   const photoNamePattern = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
   if (!photoNamePattern.test(params.photoName)) {
-    throw new Error(
-      `Invalid photoName "${params.photoName}": must match pattern places/{placeId}/photos/{photoId}`
+    throw new GooglePlacesPhotoError(
+      `Invalid photoName "${params.photoName}": must match pattern places/{placeId}/photos/{photoId}`,
+      "invalid_photo_name",
+      400
     );
   }
 
   // Google Places Photo API requires at least one dimension parameter
   if (params.maxWidthPx === undefined && params.maxHeightPx === undefined) {
-    throw new Error("Either maxWidthPx or maxHeightPx must be provided");
+    throw new GooglePlacesPhotoError(
+      "Either maxWidthPx or maxHeightPx must be provided",
+      "missing_photo_dimensions",
+      400
+    );
   }
 
   // Validate photo dimensions if provided (Google Places Photo API limit is 4800)
   const maxDimension = 4800;
   if (params.maxWidthPx !== undefined) {
     if (!Number.isFinite(params.maxWidthPx) || !Number.isInteger(params.maxWidthPx)) {
-      throw new Error(
-        `Invalid maxWidthPx "${params.maxWidthPx}": must be a finite integer`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must be a finite integer`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxWidthPx <= 0) {
-      throw new Error(
-        `Invalid maxWidthPx "${params.maxWidthPx}": must be greater than 0`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must be greater than 0`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxWidthPx > maxDimension) {
-      throw new Error(
-        `Invalid maxWidthPx "${params.maxWidthPx}": must not exceed ${maxDimension}`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must not exceed ${maxDimension}`,
+        "invalid_photo_dimensions",
+        400
       );
     }
   }
 
   if (params.maxHeightPx !== undefined) {
     if (!Number.isFinite(params.maxHeightPx) || !Number.isInteger(params.maxHeightPx)) {
-      throw new Error(
-        `Invalid maxHeightPx "${params.maxHeightPx}": must be a finite integer`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must be a finite integer`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxHeightPx <= 0) {
-      throw new Error(
-        `Invalid maxHeightPx "${params.maxHeightPx}": must be greater than 0`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must be greater than 0`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxHeightPx > maxDimension) {
-      throw new Error(
-        `Invalid maxHeightPx "${params.maxHeightPx}": must not exceed ${maxDimension}`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must not exceed ${maxDimension}`,
+        "invalid_photo_dimensions",
+        400
       );
     }
   }
@@ -455,16 +474,78 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
     url.searchParams.set("skipHttpRedirect", "true");
   }
 
-  return await retryWithBackoff(
+  const isAllowedRedirectHost = (candidate: URL): boolean => {
+    if (candidate.protocol !== "https:") return false;
+    const hostname = candidate.hostname.toLowerCase();
+    return (
+      hostname === "googleusercontent.com" ||
+      hostname.endsWith(".googleusercontent.com")
+    );
+  };
+
+  const initialResponse = await retryWithBackoff(
     () =>
       fetch(url.toString(), {
         headers: {
           "X-Goog-Api-Key": params.apiKey,
         },
         method: "GET",
+        redirect: "manual",
       }),
     { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
   );
+
+  // Default Places photo media behavior is an HTTP redirect to an image host (googleusercontent).
+  // Follow redirects manually to avoid leaking the API key header to the redirected request and
+  // to enforce an explicit allowlist of redirect targets.
+  if (initialResponse.status >= 300 && initialResponse.status < 400) {
+    const location = initialResponse.headers.get("location");
+    if (!location) {
+      return initialResponse;
+    }
+
+    let nextUrl = new URL(location, url);
+    const maxRedirects = 3;
+
+    for (let hop = 0; hop < maxRedirects; hop += 1) {
+      if (!isAllowedRedirectHost(nextUrl)) {
+        throw new GooglePlacesPhotoError(
+          `Unexpected Places photo redirect host: ${nextUrl.hostname}`,
+          "redirect_host_not_allowed",
+          502
+        );
+      }
+
+      // Do not forward the API key header to the redirected host.
+      const redirectedResponse = await retryWithBackoff(
+        () =>
+          fetch(nextUrl.toString(), {
+            method: "GET",
+            redirect: "manual",
+          }),
+        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+      );
+
+      if (redirectedResponse.status >= 300 && redirectedResponse.status < 400) {
+        const redirectedLocation = redirectedResponse.headers.get("location");
+        if (!redirectedLocation) {
+          return redirectedResponse;
+        }
+        nextUrl = new URL(redirectedLocation, nextUrl);
+        continue;
+      }
+
+      return redirectedResponse;
+    }
+
+    throw new GooglePlacesPhotoError(
+      "Places photo redirect limit exceeded",
+      "redirect_limit_exceeded",
+      502
+    );
+  }
+
+  return initialResponse;
 }
 
 // === Places Nearby Search API ===

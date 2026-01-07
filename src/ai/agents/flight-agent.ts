@@ -4,7 +4,13 @@
 
 import "server-only";
 
-import { distanceMatrix, geocode, lookupPoiContext, searchFlights } from "@ai/tools";
+import {
+  distanceMatrix,
+  geocode,
+  placeDetails,
+  searchFlights,
+  searchPlaces,
+} from "@ai/tools";
 import type { AgentConfig } from "@schemas/configuration";
 import type { FlightSearchRequest } from "@schemas/flights";
 import type { ToolSet } from "ai";
@@ -23,7 +29,8 @@ import { extractAgentParameters } from "./types";
 const FLIGHT_TOOLS = {
   distanceMatrix,
   geocode,
-  lookupPoiContext,
+  "search.placeDetails": placeDetails,
+  "search.places": searchPlaces,
   searchFlights,
 } satisfies ToolSet;
 
@@ -87,7 +94,7 @@ export function createFlightAgent(
       // Phase 1 (steps 0-2): Resolve locations
       if (stepNumber <= 2) {
         return {
-          activeTools: ["geocode", "lookupPoiContext"],
+          activeTools: ["geocode", "search.places", "search.placeDetails"],
         };
       }
       // Phase 2 (steps 3+): Search flights

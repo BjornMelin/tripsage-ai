@@ -9,11 +9,11 @@ import { server } from "@/test/msw/server";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
 interface Place {
-  id: string;
-  displayName?: { text: string };
+  placeId: string;
+  name: string;
   formattedAddress?: string;
-  location?: { latitude: number; longitude: number };
-  types?: string[];
+  coordinates?: { lat: number; lng: number };
+  types: string[];
 }
 
 const runSearch = async (
@@ -76,17 +76,17 @@ describe("useDestinationSearch", () => {
   it("maps API response to destination results", async () => {
     const places: Place[] = [
       {
-        displayName: { text: "Paris" },
+        coordinates: { lat: 48.8566, lng: 2.3522 },
         formattedAddress: "Paris, France",
-        id: "paris-1",
-        location: { latitude: 48.8566, longitude: 2.3522 },
+        name: "Paris",
+        placeId: "paris-1",
         types: ["city"],
       },
       {
-        displayName: { text: "Louvre" },
+        coordinates: { lat: 48.8606, lng: 2.3376 },
         formattedAddress: "Rue de Rivoli, Paris",
-        id: "louvre-1",
-        location: { latitude: 48.8606, longitude: 2.3376 },
+        name: "Louvre",
+        placeId: "louvre-1",
         types: ["museum", "landmark"],
       },
     ];
@@ -113,21 +113,21 @@ describe("useDestinationSearch", () => {
   it("filters by provided types and respects limit", async () => {
     const places: Place[] = [
       {
-        displayName: { text: "Paris" },
         formattedAddress: "FR",
-        id: "1",
+        name: "Paris",
+        placeId: "1",
         types: ["city"],
       },
       {
-        displayName: { text: "France" },
         formattedAddress: "FR",
-        id: "2",
+        name: "France",
+        placeId: "2",
         types: ["country"],
       },
       {
-        displayName: { text: "Berlin" },
         formattedAddress: "DE",
-        id: "3",
+        name: "Berlin",
+        placeId: "3",
         types: ["city"],
       },
     ];
@@ -203,7 +203,12 @@ describe("useDestinationSearch", () => {
         callCount++;
 
         return new Promise<Response>((resolve) => {
-          const complete = () => resolve(HttpResponse.json({ places: [{ id: "1" }] }));
+          const complete = () =>
+            resolve(
+              HttpResponse.json({
+                places: [{ name: "Place", placeId: "1", types: [] }],
+              })
+            );
           if (callCount === 1) {
             resolveFirst = complete;
           } else {

@@ -11,6 +11,7 @@ import { keys } from "@/lib/keys";
 import { HydrationBoundary } from "@/lib/query/hydration-boundary";
 import { prefetchDehydratedState } from "@/lib/query/prefetch";
 import { listItineraryItemsForTrip } from "@/server/queries/itinerary-items";
+import { listSavedPlacesForTrip } from "@/server/queries/saved-places";
 import { getTripByIdForUser } from "@/server/queries/trips";
 
 type TripDetailPageProps = {
@@ -42,6 +43,11 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
     await queryClient.prefetchQuery({
       queryFn: () => listItineraryItemsForTrip(supabase, { tripId }),
       queryKey: keys.trips.itinerary(user.id, tripId),
+    });
+
+    await queryClient.prefetchQuery({
+      queryFn: () => listSavedPlacesForTrip(supabase, { tripId }),
+      queryKey: keys.trips.savedPlaces(user.id, tripId),
     });
   });
 

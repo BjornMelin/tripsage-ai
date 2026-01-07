@@ -362,7 +362,8 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 | `crawlUrl` / `crawlSite` | Web crawling and content extraction | `server/web-crawl.ts` |
 | `searchActivities` | Activity search via Google Places | `server/activities.ts` |
 | `getActivityDetails` | Activity details by Place ID | `server/activities.ts` |
-| `lookupPoiContext` | POI context via Google Places | `server/google-places.ts` |
+| `search.places` | Places search (canonical) | `server/places.ts` |
+| `search.placeDetails` | Place details (canonical) | `server/places.ts` |
 
 ### Travel Planning
 

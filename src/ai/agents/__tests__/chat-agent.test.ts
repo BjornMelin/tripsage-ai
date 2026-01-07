@@ -83,8 +83,10 @@ const mockTools = vi.hoisted(() => {
     geocode: { description: "geocode", execute: vi.fn() },
     getCurrentWeather: { description: "weather", execute: vi.fn() },
     getTravelAdvisory: { description: "advisory", execute: vi.fn() },
-    lookupPoiContext: { description: "poi", execute: vi.fn() },
+    "search.placeDetails": { description: "place details", execute: vi.fn() },
+    "search.places": { description: "places", execute: vi.fn() },
     searchFlights: { description: "flights", execute: vi.fn() },
+    "trips.savePlace": { description: "save place", execute: vi.fn() },
     webSearch: { description: "web search", execute: vi.fn() },
     webSearchBatch: { description: "batch search", execute: vi.fn() },
   };
@@ -94,15 +96,7 @@ vi.mock("@ai/tools", () => mockTools);
 
 // Mock tool injection
 vi.mock("@ai/tools/server/injection", () => ({
-  wrapToolsWithUserId: vi.fn().mockReturnValue({
-    crawlSite: { description: "crawl", execute: vi.fn() },
-    distanceMatrix: { description: "distance", execute: vi.fn() },
-    geocode: { description: "geocode", execute: vi.fn() },
-    getCurrentWeather: { description: "weather", execute: vi.fn() },
-    searchFlights: { description: "flights", execute: vi.fn() },
-    webSearch: { description: "web search", execute: vi.fn() },
-    webSearchBatch: { description: "batch search", execute: vi.fn() },
-  }),
+  wrapToolsWithUserId: vi.fn().mockReturnValue(mockTools.tools),
 }));
 
 import type { LanguageModel, UIMessage } from "ai";

@@ -24,8 +24,9 @@ vi.mock("@/prompts/agents", () => ({
 vi.mock("@ai/tools", () => ({
   distanceMatrix: { description: "distance", execute: vi.fn() },
   geocode: { description: "geocode", execute: vi.fn() },
-  lookupPoiContext: { description: "poi", execute: vi.fn() },
+  placeDetails: { description: "place details", execute: vi.fn() },
   searchFlights: { description: "flights", execute: vi.fn() },
+  searchPlaces: { description: "places", execute: vi.fn() },
 }));
 
 import type { AgentConfig } from "@schemas/configuration";
@@ -125,7 +126,8 @@ describe("createFlightAgent", () => {
         tools: expect.objectContaining({
           distanceMatrix: expect.anything(),
           geocode: expect.anything(),
-          lookupPoiContext: expect.anything(),
+          "search.placeDetails": expect.anything(),
+          "search.places": expect.anything(),
           searchFlights: expect.anything(),
         }),
       })
@@ -142,7 +144,8 @@ describe("createFlightAgent", () => {
     // Phase 1: steps 0-2 should have geocode and POI tools
     const phase1 = config.prepareStep({ stepNumber: 0 });
     expect(phase1.activeTools).toContain("geocode");
-    expect(phase1.activeTools).toContain("lookupPoiContext");
+    expect(phase1.activeTools).toContain("search.places");
+    expect(phase1.activeTools).toContain("search.placeDetails");
 
     // Phase 2: steps 3+ should have search and distance tools
     const phase2 = config.prepareStep({ stepNumber: 3 });

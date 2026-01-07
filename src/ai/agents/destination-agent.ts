@@ -8,7 +8,8 @@ import {
   crawlSite,
   getCurrentWeather,
   getTravelAdvisory,
-  lookupPoiContext,
+  placeDetails,
+  searchPlaces,
   webSearch,
   webSearchBatch,
 } from "@ai/tools";
@@ -31,7 +32,8 @@ const DESTINATION_TOOLS = {
   crawlSite,
   getCurrentWeather,
   getTravelAdvisory,
-  lookupPoiContext,
+  "search.placeDetails": placeDetails,
+  "search.places": searchPlaces,
   webSearch,
   webSearchBatch,
 } satisfies ToolSet;
@@ -97,18 +99,23 @@ export function createDestinationAgent(
       // Phase 1: Initial search and POI context
       if (stepNumber <= phase1End) {
         return {
-          activeTools: ["webSearch", "webSearchBatch", "lookupPoiContext"],
+          activeTools: ["webSearch", "webSearchBatch", "search.places"],
         };
       }
       // Phase 2: Deep research via crawling
       if (stepNumber <= phase2End) {
         return {
-          activeTools: ["crawlSite", "webSearchBatch", "lookupPoiContext"],
+          activeTools: [
+            "crawlSite",
+            "webSearchBatch",
+            "search.places",
+            "search.placeDetails",
+          ],
         };
       }
       // Phase 3: Weather and safety information
       return {
-        activeTools: ["getCurrentWeather", "getTravelAdvisory", "lookupPoiContext"],
+        activeTools: ["getCurrentWeather", "getTravelAdvisory", "search.placeDetails"],
       };
     },
     temperature: params.temperature,

@@ -117,6 +117,18 @@ Search for places using Google Places Text Search.
 **Authentication**: Anonymous  
 **Rate Limit Key**: `places:search`
 
+**Caching**: Search results are cached in Upstash Redis to reduce upstream calls.
+
+- **TTL**: Default 10 minutes; clamped to 5–15 minutes. The underlying Places service supports overriding this via `cacheTtlSeconds` in service construction; `POST /api/places/search` currently uses the default.
+- **Cache key**: `places:search:v1:<sha256>` where the hash is computed from canonicalized request parameters:
+  - Normalized `textQuery` (trimmed, lowercased, and internal whitespace collapsed)
+  - `maxResultCount`
+  - `locationBias` (serialized as `lat,lon,radiusMeters` — even small coordinate changes produce different keys)
+  - `includedTypes` (lowercased and sorted before hashing)
+  - Raw query strings are never stored directly in Redis keys.
+- **Parameter behavior**: Cache entries are stored per distinct parameter set (including `maxResultCount`); results are not trimmed on retrieval.
+- **Invalidation**: TTL expiry only (no manual invalidation or background refresh).
+
 #### Request Body
 
 Identical to `POST /api/activities/search` - see Activities section above for complete schema details.
@@ -135,24 +147,15 @@ Identical to `POST /api/activities/search` - see Activities section above for co
 {
   "places": [
     {
-      "id": "places/ChIJN1t_tDeuEmsRUsoyG83frY4",
-      "displayName": {
-        "text": "Louvre Museum",
-        "languageCode": "en"
-      },
+      "placeId": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+      "name": "Louvre Museum",
       "formattedAddress": "Rue de Rivoli, 75001 Paris, France",
-      "location": {
-        "latitude": 48.8606,
-        "longitude": 2.3376
-      },
+      "coordinates": { "lat": 48.8606, "lng": 2.3376 },
       "rating": 4.7,
       "userRatingCount": 123456,
-      "photos": [
-        {
-          "name": "places/ChIJN1t_tDeuEmsRUsoyG83frY4/photos/AW30PQh8j1lbMpA1y2j6Cmbt1wEi4hlOnwRxfv-iEkT8ctM1wENl5A"
-        }
-      ],
-      "types": ["museum", "tourist_attraction", "point_of_interest", "establishment"]
+      "photoName": "places/ChIJN1t_tDeuEmsRUsoyG83frY4/photos/AW30PQh8j1lbMpA1y2j6Cmbt1wEi4hlOnwRxfv-iEkT8ctM1wENl5A",
+      "types": ["museum", "tourist_attraction", "point_of_interest", "establishment"],
+      "url": "https://www.google.com/maps/place/?q=place_id:ChIJN1t_tDeuEmsRUsoyG83frY4"
     }
   ]
 }
@@ -206,17 +209,11 @@ Get place details by Place ID.
 
 ```json
 {
-  "id": "places/ChIJN1t_tDeuEmsRUsoyG83frY4",
-  "displayName": {
-    "text": "Louvre Museum",
-    "languageCode": "en"
-  },
+  "placeId": "places/ChIJN1t_tDeuEmsRUsoyG83frY4",
+  "name": "Louvre Museum",
   "formattedAddress": "Rue de Rivoli, 75001 Paris, France",
-  "location": {
-    "latitude": 48.8606,
-    "longitude": 2.3376
-  },
-  "url": "https://maps.google.com/?cid=10281119596374313554",
+  "coordinates": { "lat": 48.8606, "lng": 2.3376 },
+  "url": "https://www.google.com/maps/place/?q=place_id:places%2FChIJN1t_tDeuEmsRUsoyG83frY4",
   "internationalPhoneNumber": "+33 1 40 20 50 50",
   "rating": 4.7,
   "userRatingCount": 123456,
@@ -232,17 +229,11 @@ Get place details by Place ID.
       "Sunday: 9:00 AM – 6:00 PM"
     ]
   },
-  "photos": [
-    {
-      "name": "places/ChIJN1t_tDeuEmsRUsoyG83frY4/photos/AW30PQh8j1lbMpA1y2j6Cmbt1wEi4hlOnwRxfv-iEkT8ctM1wENl5A"
-    }
-  ],
+  "photoName": "places/ChIJN1t_tDeuEmsRUsoyG83frY4/photos/AW30PQh8j1lbMpA1y2j6Cmbt1wEi4hlOnwRxfv-iEkT8ctM1wENl5A",
   "businessStatus": "OPERATIONAL",
   "types": ["museum", "tourist_attraction", "point_of_interest", "establishment"],
-  "editorialSummary": {
-    "text": "The Louvre, or the Louvre Museum, is a national art museum in Paris, France.",
-    "languageCode": "en"
-  }
+  "editorialSummary": "The Louvre, or the Louvre Museum, is a national art museum in Paris, France.",
+  "websiteUri": "https://www.louvre.fr"
 }
 ```
 

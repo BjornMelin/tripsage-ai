@@ -5,11 +5,11 @@
 import "server-only";
 
 import { placesPhotoRequestSchema } from "@schemas/api";
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, validateSchema } from "@/lib/api/route-helpers";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { getPlacePhoto } from "@/lib/google/client";
+import { handlePlacesPhoto } from "./_handler";
 
 /**
  * GET /api/places/photo
@@ -42,43 +42,17 @@ export const GET = withApiGuards({
   if (!validation.ok) return validation.error;
   const validated = validation.data;
 
-  const apiKey = getGoogleMapsServerKey();
-
-  let response: Response;
+  let apiKey: string;
   try {
-    response = await getPlacePhoto({
-      apiKey,
-      maxHeightPx: validated.maxHeightPx,
-      maxWidthPx: validated.maxWidthPx,
-      photoName: validated.name,
-      skipHttpRedirect: validated.skipHttpRedirect,
-    });
+    apiKey = getGoogleMapsServerKey();
   } catch (err) {
     return errorResponse({
-      err: err instanceof Error ? err : new Error("Photo fetch failed"),
+      err: err instanceof Error ? err : new Error("Missing Google Maps key"),
       error: "external_api_error",
-      reason: "Failed to fetch photo from Places API",
-      status: 502,
+      reason: "Places integration is not configured",
+      status: 503,
     });
   }
 
-  if (!response.ok) {
-    return errorResponse({
-      err: new Error(`Places API error: ${response.status}`),
-      error: "external_api_error",
-      reason: `Places API returned ${response.status}`,
-      status: response.status >= 400 && response.status < 500 ? response.status : 502,
-    });
-  }
-
-  // Stream photo bytes with cache-friendly headers
-  const photoData = await response.arrayBuffer();
-  const contentType = response.headers.get("content-type") ?? "image/jpeg";
-
-  return new NextResponse(photoData, {
-    headers: {
-      "Cache-Control": "public, max-age=86400", // 24h client cache
-      "Content-Type": contentType,
-    },
-  });
+  return await handlePlacesPhoto({ apiKey }, validated);
 });

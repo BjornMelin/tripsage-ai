@@ -34,16 +34,26 @@ export const googlePlacesHandlers: HttpHandler[] = [
 
     const places = [
       {
-        displayName: { text: textQuery },
+        coordinates: { lat: 48.8566, lng: 2.3522 },
         formattedAddress: `${textQuery}, Example Country`,
-        id: "places/mock-1",
+        name: textQuery,
+        photoName: defaultPhotoName,
+        placeId: "mock-1",
+        rating: 4.5,
         types: ["locality", "country"],
+        url: `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent("mock-1")}`,
+        userRatingCount: 128,
       },
       {
-        displayName: { text: `${textQuery} Museum` },
+        coordinates: { lat: 48.8606, lng: 2.3376 },
         formattedAddress: `${textQuery} Arts District`,
-        id: "places/mock-2",
-        types: ["establishment"],
+        name: `${textQuery} Museum`,
+        photoName: defaultPhotoName,
+        placeId: "mock-2",
+        rating: 4.6,
+        types: ["museum", "establishment"],
+        url: `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent("mock-2")}`,
+        userRatingCount: 256,
       },
     ];
 

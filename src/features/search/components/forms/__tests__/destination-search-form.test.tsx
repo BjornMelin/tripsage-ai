@@ -67,9 +67,9 @@ describe("DestinationSearchForm", () => {
         return HttpResponse.json({
           places: [
             {
-              displayName: { text: textQuery },
               formattedAddress: `${textQuery}, France`,
-              id: "place-paris",
+              name: textQuery,
+              placeId: "place-paris",
               types: ["locality", "country"],
             },
           ],
@@ -95,15 +95,15 @@ describe("DestinationSearchForm", () => {
         HttpResponse.json({
           places: [
             {
-              displayName: { text: "Country Match" },
               formattedAddress: "Country Match, Earth",
-              id: "match-1",
+              name: "Country Match",
+              placeId: "match-1",
               types: ["country"],
             },
             {
-              displayName: { text: "Museum Only" },
               formattedAddress: "Museum District",
-              id: "museum-1",
+              name: "Museum Only",
+              placeId: "museum-1",
               types: ["establishment"],
             },
           ],
@@ -154,9 +154,9 @@ describe("DestinationSearchForm", () => {
           return HttpResponse.json({
             places: [
               {
-                displayName: { text: "Old Pa" },
                 formattedAddress: "Old Pa Address",
-                id: "old-pa",
+                name: "Old Pa",
+                placeId: "old-pa",
                 types: ["locality"],
               },
             ],
@@ -166,9 +166,9 @@ describe("DestinationSearchForm", () => {
         return HttpResponse.json({
           places: [
             {
-              displayName: { text: "Paris" },
               formattedAddress: "Paris, France",
-              id: "new-paris",
+              name: "Paris",
+              placeId: "new-paris",
               types: ["locality"],
             },
           ],
