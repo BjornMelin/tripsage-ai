@@ -117,7 +117,17 @@ Search for places using Google Places Text Search.
 **Authentication**: Anonymous  
 **Rate Limit Key**: `places:search`
 
-**Caching**: Search results are cached in Upstash Redis for a short TTL (5–15 minutes; default 10 minutes).
+**Caching**: Search results are cached in Upstash Redis to reduce upstream calls.
+
+- **TTL**: Default 10 minutes; clamped to 5–15 minutes. The underlying Places service supports overriding this via `cacheTtlSeconds` in service construction; `POST /api/places/search` currently uses the default.
+- **Cache key**: `places:search:v1:<sha256>` where the hash is computed from canonicalized request parameters:
+  - Normalized `textQuery` (trimmed, lowercased, and internal whitespace collapsed)
+  - `maxResultCount`
+  - `locationBias` (serialized as `lat,lon,radiusMeters` — even small coordinate changes produce different keys)
+  - `includedTypes` (lowercased and sorted before hashing)
+  - Raw query strings are never stored directly in Redis keys.
+- **Parameter behavior**: Cache entries are stored per distinct parameter set (including `maxResultCount`); results are not trimmed on retrieval.
+- **Invalidation**: TTL expiry only (no manual invalidation or background refresh).
 
 #### Request Body
 

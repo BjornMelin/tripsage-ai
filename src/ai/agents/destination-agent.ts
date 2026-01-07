@@ -99,12 +99,7 @@ export function createDestinationAgent(
       // Phase 1: Initial search and POI context
       if (stepNumber <= phase1End) {
         return {
-          activeTools: [
-            "webSearch",
-            "webSearchBatch",
-            "search.places",
-            "search.placeDetails",
-          ],
+          activeTools: ["webSearch", "webSearchBatch", "search.places"],
         };
       }
       // Phase 2: Deep research via crawling
@@ -120,12 +115,7 @@ export function createDestinationAgent(
       }
       // Phase 3: Weather and safety information
       return {
-        activeTools: [
-          "getCurrentWeather",
-          "getTravelAdvisory",
-          "search.places",
-          "search.placeDetails",
-        ],
+        activeTools: ["getCurrentWeather", "getTravelAdvisory", "search.placeDetails"],
       };
     },
     temperature: params.temperature,
