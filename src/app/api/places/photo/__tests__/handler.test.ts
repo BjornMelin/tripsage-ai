@@ -136,6 +136,30 @@ describe("handlePlacesPhoto", () => {
     });
   });
 
+  it("returns JSON with photoUri when skipHttpRedirect is true", async () => {
+    const photoUri = "https://googleusercontent.com/photo/direct";
+
+    server.use(
+      http.get(placePhotoMediaUrlPattern, () => {
+        return HttpResponse.json({ photoUri }, { status: 200 });
+      })
+    );
+
+    const response = await handlePlacesPhoto(
+      { apiKey: "test-key" },
+      {
+        maxWidthPx: 400,
+        name: "places/ABC123/photos/XYZ789",
+        skipHttpRedirect: true,
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      photoUri,
+    });
+  });
+
   it("returns photo response with cache headers on success", async () => {
     const photoBytes = new Uint8Array([1, 2, 3, 4]);
 
