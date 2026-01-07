@@ -11,7 +11,7 @@ import { generateText, Output } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { getCachedJsonSafe, setCachedJson } from "@/lib/cache/upstash";
 import {
   isFilteredValue,
   sanitizeWithInjectionDetection,
@@ -136,11 +136,19 @@ async function generateSuggestionsWithCache(
   const cacheKey = buildSuggestionsCacheKey(userId, params);
 
   // Check cache
-  const cached = await getCachedJson<TripSuggestion[]>(cacheKey, {
+  const cachedResult = await getCachedJsonSafe(cacheKey, tripSuggestionSchema.array(), {
     namespace: "trips",
   });
-  if (cached) {
-    return cached;
+  if (cachedResult.status === "hit") {
+    return cachedResult.data;
+  }
+  if (cachedResult.status === "invalid") {
+    deps.logger?.warn("trips_suggestions_cache_invalid", {
+      cacheKeyLength: cacheKey.length,
+    });
+  }
+  if (cachedResult.status === "unavailable") {
+    deps.logger?.warn("trips_suggestions_cache_unavailable");
   }
 
   // Generate via AI
@@ -190,8 +198,9 @@ async function generateSuggestionsWithCache(
 
   const suggestions = result?.output?.suggestions;
 
-  if (!Array.isArray(suggestions)) {
-    deps.logger?.warn("trips_suggestions_generation_empty", {
+  const parsedSuggestions = tripSuggestionSchema.array().safeParse(suggestions);
+  if (!parsedSuggestions.success) {
+    deps.logger?.warn("trips_suggestions_generation_invalid_output", {
       hasOutput: Boolean(result?.output),
       modelHint,
       modelId,
@@ -199,14 +208,15 @@ async function generateSuggestionsWithCache(
     return [];
   }
 
+  const validSuggestions = parsedSuggestions.data;
   await setCachedJson(
     cacheKey,
-    suggestions,
+    validSuggestions,
     deps.config?.cacheTtlSeconds ?? SUGGESTIONS_CACHE_TTL_SECONDS,
     { namespace: "trips" }
   );
 
-  return suggestions;
+  return validSuggestions;
 }
 
 /**
