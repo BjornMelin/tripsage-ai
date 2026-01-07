@@ -63,6 +63,7 @@ function statusFromResultErrorCode(code: string): number {
 function apiCodeFromStatus(status: number): ApiErrorCode {
   if (status === 409) return "HTTP_409";
   if (status === 400) return "HTTP_400";
+  if (status === 422) return "HTTP_422";
   return ApiError.codeFromStatus(status);
 }
 
