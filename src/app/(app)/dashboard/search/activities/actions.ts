@@ -25,7 +25,7 @@ import {
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
-import { mapDbTripToUi, mapItineraryItemCreateToDbInsert } from "@/lib/trips/mappers";
+import { mapDbTripToUi, mapItineraryItemUpsertToDbInsert } from "@/lib/trips/mappers";
 
 const logger = createServerLogger("search.activities.actions");
 const tripIdSchema = z.coerce.number().int().positive();
@@ -136,10 +136,10 @@ export async function addActivityToTrip(
     location?: string;
     price?: number;
     currency?: string;
-    startTime?: string;
-    endTime?: string;
+    startAt?: string;
+    endAt?: string;
     externalId?: string;
-    metadata?: Record<string, unknown>;
+    payload?: Record<string, unknown>;
   }
 ): Promise<Result<{ success: true }, ResultError>> {
   const tripIdValidation = tripIdSchema.safeParse(tripId);
@@ -184,13 +184,13 @@ export async function addActivityToTrip(
     bookingStatus: "planned" as const,
     currency: activityData.currency ?? "USD",
     description: activityData.description,
-    endTime: activityData.endTime,
+    endAt: activityData.endAt,
     externalId: activityData.externalId,
     itemType: "activity" as const,
     location: activityData.location,
-    metadata: activityData.metadata,
+    payload: activityData.payload ?? {},
     price: activityData.price,
-    startTime: activityData.startTime,
+    startAt: activityData.startAt,
     title: activityData.title,
     tripId: validatedTripId,
   };
@@ -207,7 +207,7 @@ export async function addActivityToTrip(
     });
   }
 
-  const insertPayload = mapItineraryItemCreateToDbInsert(validation.data, user.id);
+  const insertPayload = mapItineraryItemUpsertToDbInsert(validation.data, user.id);
 
   const { error: insertError } = await supabase
     .from("itinerary_items")

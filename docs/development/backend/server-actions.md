@@ -212,7 +212,8 @@ revalidatePath(`/trips/${tripId}`);
 // - Use fetch for external HTTP endpoints
 // - Use the Supabase client for DB reads/writes
 // - Fetch data first, then call revalidateTag() for affected tags
-const trips = await fetch("/api/trips", { next: { tags: ["trips"] } });
+// Example:
+// const res = await fetch("https://example.com/api/resource", { next: { tags: ["resource"] } });
 
 // In action after mutation:
 import { revalidateTag } from "next/cache";

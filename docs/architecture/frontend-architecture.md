@@ -165,7 +165,7 @@ revalidateTag(nextCacheTags.publicConfig);
 
 **When to use:**
 
-- Client-side data fetching from API routes
+- Client-side data fetching from Server Actions (preferred) or API routes (read-only/public)
 - Real-time updates with Supabase subscriptions
 - Optimistic updates on mutations
 
@@ -181,13 +181,21 @@ revalidateTag(nextCacheTags.publicConfig);
 ```typescript
 const { data } = useQuery({
   queryKey: keys.trips.list(userId),
-  queryFn: () => fetch("/api/trips").then(r => r.json()),
+  queryFn: async () => {
+    const result = await getTripsForUser();
+    if (!result.ok) throw new Error(result.error.reason);
+    return result.data;
+  },
   staleTime: staleTimes.trips, // 2 min
 });
 
 // Invalidate on mutation:
 useMutation({
-  mutationFn: createTrip,
+  mutationFn: async (input) => {
+    const result = await createTrip(input);
+    if (!result.ok) throw new Error(result.error.reason);
+    return result.data;
+  },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: keys.trips.user(userId) });
   },

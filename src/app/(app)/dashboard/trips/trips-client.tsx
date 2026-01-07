@@ -115,6 +115,71 @@ const getTripStatus = (trip: Trip, nowTs: number): TripStatus => {
   return "active";
 };
 
+type TripStatusCounts = Record<TripStatus, number>;
+
+function countTripsByStatus(trips: Trip[]): TripStatusCounts {
+  if (trips.length === 0) {
+    return { active: 0, completed: 0, draft: 0, upcoming: 0 };
+  }
+
+  const nowTs = Date.now();
+  const counts: TripStatusCounts = { active: 0, completed: 0, draft: 0, upcoming: 0 };
+  for (const trip of trips) {
+    counts[getTripStatus(trip, nowTs)] += 1;
+  }
+
+  return counts;
+}
+
+function filterAndSortTrips(params: {
+  filterBy: FilterOption;
+  searchQuery: string;
+  sortBy: SortOption;
+  trips: Trip[];
+}): Trip[] {
+  const { trips, searchQuery, sortBy, filterBy } = params;
+  if (trips.length === 0) return [];
+
+  let filtered = trips;
+  const nowTs = Date.now();
+  const searchQueryLower = searchQuery.toLowerCase();
+
+  if (searchQuery) {
+    filtered = filtered.filter(
+      (trip) =>
+        (trip.title || "").toLowerCase().includes(searchQueryLower) ||
+        trip.description?.toLowerCase().includes(searchQueryLower) ||
+        (trip.destinations || []).some((dest) =>
+          dest.name.toLowerCase().includes(searchQueryLower)
+        )
+    );
+  }
+
+  if (filterBy !== "all") {
+    filtered = filtered.filter((trip) => getTripStatus(trip, nowTs) === filterBy);
+  }
+
+  return [...filtered].sort((a, b) => {
+    switch (sortBy) {
+      case "name":
+        return (a.title || "").localeCompare(b.title || "");
+      case "date": {
+        const parsedB =
+          parseTripDate(b.createdAt, { context: "TripsPage" }) ?? new Date(0);
+        const parsedA =
+          parseTripDate(a.createdAt, { context: "TripsPage" }) ?? new Date(0);
+        return parsedB.getTime() - parsedA.getTime();
+      }
+      case "budget":
+        return (b.budget || 0) - (a.budget || 0);
+      case "destinations":
+        return (b.destinations || []).length - (a.destinations || []).length;
+      default:
+        return 0;
+    }
+  });
+}
+
 /**
  * Renders the trips management dashboard with filtering, sorting, and view
  * toggles backed by realtime queries.
@@ -148,54 +213,16 @@ export default function TripsClient({ userId }: { userId: string }) {
   const connectionState = getConnectionState(realtimeErrorCount, isConnected);
   const connectionStatusMessage = getConnectionStatusMessage(connectionState);
 
-  const filteredAndSortedTrips = useMemo(() => {
-    if (tripsArray.length === 0) return [];
-
-    let filtered = tripsArray;
-    const nowTs = Date.now();
-    const searchQueryLower = searchQuery.toLowerCase();
-
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (trip: Trip) =>
-          (trip.title || "").toLowerCase().includes(searchQueryLower) ||
-          trip.description?.toLowerCase().includes(searchQueryLower) ||
-          (trip.destinations || []).some((dest) =>
-            dest.name.toLowerCase().includes(searchQueryLower)
-          )
-      );
-    }
-
-    // Apply status filter
-    if (filterBy !== "all") {
-      filtered = filtered.filter((trip: Trip) => {
-        const status = getTripStatus(trip, nowTs);
-        return status === filterBy;
-      });
-    }
-
-    // Apply sorting
-    return [...filtered].sort((a: Trip, b: Trip) => {
-      switch (sortBy) {
-        case "name":
-          return (a.title || "").localeCompare(b.title || "");
-        case "date": {
-          const parsedB =
-            parseTripDate(b.createdAt, { context: "TripsPage" }) ?? new Date(0);
-          const parsedA =
-            parseTripDate(a.createdAt, { context: "TripsPage" }) ?? new Date(0);
-          return parsedB.getTime() - parsedA.getTime();
-        }
-        case "budget":
-          return (b.budget || 0) - (a.budget || 0);
-        case "destinations":
-          return (b.destinations || []).length - (a.destinations || []).length;
-        default:
-          return 0;
-      }
-    });
-  }, [tripsArray, searchQuery, sortBy, filterBy]);
+  const filteredAndSortedTrips = useMemo(
+    () =>
+      filterAndSortTrips({
+        filterBy,
+        searchQuery,
+        sortBy,
+        trips: tripsArray,
+      }),
+    [filterBy, searchQuery, sortBy, tripsArray]
+  );
 
   const handleCreateTrip = async () => {
     try {
@@ -244,22 +271,7 @@ export default function TripsClient({ userId }: { userId: string }) {
     }
   };
 
-  const statusCounts = useMemo(() => {
-    const tripsForCounts = trips ?? [];
-    if (tripsForCounts.length === 0) {
-      return { active: 0, completed: 0, draft: 0, upcoming: 0 };
-    }
-
-    const nowTs = Date.now();
-    return tripsForCounts.reduce(
-      (counts: Record<string, number>, trip: Trip) => {
-        const status = getTripStatus(trip, nowTs);
-        counts[status]++;
-        return counts;
-      },
-      { active: 0, completed: 0, draft: 0, upcoming: 0 }
-    );
-  }, [trips]);
+  const statusCounts = useMemo(() => countTripsByStatus(tripsArray), [tripsArray]);
 
   // Handle error state
   useEffect(() => {

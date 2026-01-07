@@ -199,11 +199,8 @@ POST /api/auth/register           # User registration
 POST /api/auth/refresh            # Token refresh
 
 # Trip Management
-GET  /api/trips                   # List user trips
-POST /api/trips                   # Create new trip
-GET  /api/trips/{id}              # Get trip details
-PUT  /api/trips/{id}              # Update trip
-DELETE /api/trips/{id}            # Delete trip
+GET  /api/trips/suggestions       # AI-powered trip suggestions (read-only)
+# Note: Trip CRUD, collaborators, and itinerary mutations use Next.js Server Actions (no internal REST).
 
 # Flight Services
 GET  /api/flights/search          # Search flights

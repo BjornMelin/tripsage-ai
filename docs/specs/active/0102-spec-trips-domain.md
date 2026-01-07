@@ -57,7 +57,7 @@ Security and authorization:
 Validation:
 
 - Zod schemas for all inputs and patches
-- Strict enums for itinerary item types (see `src/domain/schemas/trips.ts` `itineraryItemCreateSchema.shape.itemType`).
+- Strict enums for itinerary item types (see `src/domain/schemas/trips.ts` `itineraryItemTypeSchema`).
   - Allowed values: `activity`, `meal`, `transport`, `accommodation`, `event`, `other`
 
 Error handling:

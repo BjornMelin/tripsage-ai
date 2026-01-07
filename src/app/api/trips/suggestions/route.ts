@@ -5,29 +5,14 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
-import type { TripSuggestion } from "@schemas/trips";
-import { tripSuggestionSchema } from "@schemas/trips";
-import { generateText, Output } from "ai";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
-import { canonicalizeParamsForCache } from "@/lib/cache/keys";
-import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
-import {
-  isFilteredValue,
-  sanitizeWithInjectionDetection,
-} from "@/lib/security/prompt-sanitizer";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { handleTripSuggestions, type TripSuggestionsQueryParams } from "./_handler";
 
-/** Cache TTL for AI suggestions (15 minutes). */
-const SUGGESTIONS_CACHE_TTL = 900;
 const MAX_BUDGET_LIMIT = 10_000_000;
-
-const logger = createServerLogger("api.trips.suggestions", {
-  redactKeys: ["cacheKey"],
-});
 
 const tripSuggestionsQuerySchema = z.object({
   budget_max: z
@@ -67,33 +52,6 @@ const tripSuggestionsQuerySchema = z.object({
 /**
  * Request query parameters for trip suggestion generation.
  */
-interface TripSuggestionsQueryParams {
-  readonly limit?: number;
-  readonly budgetMax?: number;
-  readonly category?: string;
-}
-
-/**
- * Builds cache key for trip suggestions.
- *
- * @param userId - Authenticated user ID.
- * @param params - Query parameters.
- * @returns Redis cache key.
- */
-function buildSuggestionsCacheKey(
-  userId: string,
-  params: TripSuggestionsQueryParams
-): string {
-  const canonical = canonicalizeParamsForCache(params as Record<string, unknown>);
-  return `trips:suggestions:${userId}:${canonical || "default"}`;
-}
-
-/**
- * Parses query-string parameters into a normalized suggestion input object.
- *
- * @param req - Next.js request object for this route.
- * @returns Parsed query parameter object.
- */
 function parseSuggestionQueryParams(req: NextRequest): TripSuggestionsQueryParams {
   const url = new URL(req.url);
   const parsed = tripSuggestionsQuerySchema.parse(Object.fromEntries(url.searchParams));
@@ -102,104 +60,6 @@ function parseSuggestionQueryParams(req: NextRequest): TripSuggestionsQueryParam
     category: parsed.category,
     limit: parsed.limit,
   };
-}
-
-/**
- * Builds a model prompt for trip suggestions based on user filters.
- *
- * @param params - Parsed query parameters.
- * @returns Prompt string for the language model.
- */
-function buildSuggestionPrompt(params: TripSuggestionsQueryParams): string {
-  const effectiveLimit = params.limit && params.limit > 0 ? params.limit : 4;
-
-  const parts: string[] = [
-    `Suggest ${effectiveLimit} realistic multi-day trips for a travel planning application.`,
-    "Return only structured data; do not include prose outside of the JSON structure.",
-  ];
-
-  if (params.budgetMax && params.budgetMax > 0) {
-    parts.push(
-      `Each trip should respect an approximate budget cap of ${params.budgetMax}.`
-    );
-  }
-
-  if (params.category) {
-    // Sanitize category to prevent prompt injection (with injection detection)
-    const safeCategory = sanitizeWithInjectionDetection(params.category, 50);
-    if (safeCategory && !isFilteredValue(safeCategory)) {
-      parts.push(`Focus on the "${safeCategory}" category where possible.`);
-    }
-  }
-
-  parts.push(
-    "Ensure destinations are diverse and include a short description, estimated price, duration in days, best time to visit, and at least three highlights."
-  );
-
-  return parts.join(" ");
-}
-
-/**
- * Generates trip suggestions, checking cache first.
- *
- * @param userId - Authenticated user ID.
- * @param params - Parsed query parameters.
- * @returns Array of trip suggestions.
- */
-async function generateSuggestionsWithCache(
-  userId: string,
-  params: TripSuggestionsQueryParams
-): Promise<TripSuggestion[]> {
-  const cacheKey = buildSuggestionsCacheKey(userId, params);
-
-  // Check cache
-  const cached = await getCachedJson<TripSuggestion[]>(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  // Generate via AI
-  const prompt = buildSuggestionPrompt(params);
-  const { model } = await resolveProvider(userId, "gpt-4o-mini");
-
-  const responseSchema = z.object({
-    suggestions: tripSuggestionSchema.array().nullable(),
-  });
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-
-  let result: Awaited<ReturnType<typeof generateText>> | undefined;
-  try {
-    result = await generateText({
-      abortSignal: controller.signal,
-      model,
-      output: Output.object({ schema: responseSchema }),
-      prompt,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      logger.warn("AI generation timed out", { cacheKey });
-      return [];
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  const suggestions = result?.output?.suggestions;
-
-  if (!Array.isArray(suggestions)) {
-    logger.warn("Model returned no suggestions", {
-      hasOutput: Boolean(result.output),
-      keys: result.output ? Object.keys(result.output) : [],
-    });
-    return [];
-  }
-
-  await setCachedJson(cacheKey, suggestions, SUGGESTIONS_CACHE_TTL);
-
-  return suggestions;
 }
 
 /**
@@ -213,13 +73,19 @@ export const GET = withApiGuards({
   rateLimit: "trips:suggestions",
   telemetry: "trips.suggestions",
 })(async (req, { user }) => {
+  const logger = createServerLogger("api.trips.suggestions", {
+    redactKeys: ["cacheKey"],
+  });
+
   try {
     const result = requireUserId(user);
     if (!result.ok) return result.error;
     const userId = result.data;
     const params = parseSuggestionQueryParams(req);
-    const suggestions = await generateSuggestionsWithCache(userId, params);
-    return NextResponse.json(suggestions);
+    return await handleTripSuggestions(
+      { logger, resolveProvider: (id, modelHint) => resolveProvider(id, modelHint) },
+      { abortSignal: req.signal, params, userId }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return errorResponse({

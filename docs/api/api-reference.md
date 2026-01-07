@@ -21,19 +21,9 @@ TypeScript
 
 ```ts
 const BASE = process.env.API_URL ?? "http://localhost:3000/api";
-export async function createTrip(jwt: string) {
-  const res = await fetch(`${BASE}/trips`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Cookie: `sb-access-token=${jwt}` },
-    body: JSON.stringify({
-      title: "Summer Vacation",
-      destination: "Paris",
-      startDate: "2025-07-01",
-      endDate: "2025-07-15",
-      travelers: 2,
-      budget: 3000,
-      currency: "USD",
-    }),
+export async function getTripSuggestions(jwt: string) {
+  const res = await fetch(`${BASE}/trips/suggestions?limit=5`, {
+    headers: { Cookie: `sb-access-token=${jwt}` },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -46,15 +36,15 @@ Python
 import requests
 BASE = "http://localhost:3000/api"
 cookies = {"sb-access-token": "<jwt>"}
-resp = requests.get(f"{BASE}/trips/1", cookies=cookies)
+resp = requests.get(f"{BASE}/trips/suggestions?limit=5", cookies=cookies)
 resp.raise_for_status()
-trip = resp.json()
+suggestions = resp.json()
 ```
 
 cURL
 
 ```bash
-curl -X GET "http://localhost:3000/api/trips/1" --cookie "sb-access-token=<jwt>"
+curl -X GET "http://localhost:3000/api/trips/suggestions?limit=5" --cookie "sb-access-token=<jwt>"
 ```
 
 ---
@@ -67,73 +57,13 @@ curl -X GET "http://localhost:3000/api/trips/1" --cookie "sb-access-token=<jwt>"
 
 ### Trips
 
-- `GET /trips` (Auth) — List trips the user can access (owned + shared); query: `destination`, `status`, `startDate`, `endDate`.
-- `POST /trips` (Auth) — Create trip. Body: `title`, `destination`, `startDate`, `endDate`; optional `budget`, `currency`, `status` (default `planning`), `travelers`, `tripType`, `visibility`, `tags`, `description`, `preferences`.
-- `GET /trips/{id}` (Auth) — Get trip.
-- `PUT /trips/{id}` (Auth) — Partial update (same fields as create).
-- `DELETE /trips/{id}` (Auth) — Delete trip.
 - `GET /trips/suggestions` (Auth) — AI suggestions. Query: `limit`, `budget_max`, `category`. Returns `TripSuggestion[]`.
-- `GET /trips/{id}/collaborators` (Auth) — List collaborators (owner id is derived from the trip).
-- `POST /trips/{id}/collaborators` (Auth) — Invite/add collaborator (owner-only).
-- `PATCH /trips/{id}/collaborators/{userId}` (Auth) — Update collaborator role (owner-only).
-- `DELETE /trips/{id}/collaborators/{userId}` (Auth) — Remove collaborator (owner) or leave trip (self).
 
-**Examples**
-TS (create)
-
-```ts
-await fetch(`${BASE}/trips`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json", Cookie: `sb-access-token=${jwt}` },
-  body: JSON.stringify({
-    title: "Summer Vacation",
-    destination: "Paris",
-    startDate: "2025-07-01",
-    endDate: "2025-07-15",
-    travelers: 2,
-    budget: 3000,
-    currency: "USD",
-  }),
-});
-```
-
-cURL (get)
-
-```bash
-curl -X GET "$BASE/trips/1" --cookie "sb-access-token=$JWT"
-```
-
-Python (update)
-
-```python
-requests.put(f"{BASE}/trips/1",
-             cookies={"sb-access-token": jwt},
-             json={"destination": "Rome", "title": "Updated Trip"})
-```
+Note: Trip CRUD, collaboration, and itinerary mutations are implemented as Next.js Server Actions (`src/lib/trips/actions.ts`) and are not exposed as internal REST routes.
 
 Sample responses
 
-- List: `200` → `UiTrip[]`
-- Detail: `200` → `UiTrip`; `404` if not found
 - Suggestions: `200` → `TripSuggestion[]`; `401` if unauthenticated
-
-### Itineraries (items)
-
-- `GET /itineraries` (Auth) — List itinerary items; optional `tripId` filter.
-- `POST /itineraries` (Auth) — Create itinerary item. Body per `itineraryItemCreateSchema` (`tripId`, `title`, `itemType`, optional times, price/currency, description, metadata, location, bookingStatus).
-
-Examples
-
-- cURL create:
-
-  ```bash
-  curl -X POST "$BASE/itineraries" \
-    --cookie "sb-access-token=$JWT" \
-    -H "Content-Type: application/json" \
-    -d '{"tripId":1,"title":"Louvre","itemType":"activity","startTime":"2025-07-02T10:00:00Z"}'
-  ```
-
-- Response: `201` → itinerary row; `403` if trip not owned.
 
 ### Activities (Google Places)
 

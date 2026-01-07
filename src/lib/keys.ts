@@ -177,6 +177,9 @@ export const keys = {
     detail: (userId: string, tripId: number) =>
       [...keys.trips.user(userId), "detail", tripId] as const,
     detailDisabled: () => [...keys.trips.all(), "detail", "disabled"] as const,
+    itinerary: (userId: string, tripId: number) =>
+      [...keys.trips.detail(userId, tripId), "itinerary"] as const,
+    itineraryDisabled: () => [...keys.trips.all(), "itinerary", "disabled"] as const,
     list: (userId: string, filters?: Record<string, unknown>) =>
       [...keys.trips.lists(userId), { filters: filters ?? null }] as const,
     listDisabled: () => [...keys.trips.all(), "list", "disabled"] as const,

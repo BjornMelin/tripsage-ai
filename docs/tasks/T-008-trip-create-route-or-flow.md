@@ -49,11 +49,11 @@ Impact:
 
 ## Implementation (summary)
 
-- Added `src/app/dashboard/trips/create/page.tsx` to ensure `/dashboard/trips/create` is a real route and renders a trip-creation UI.
+- Added `src/app/(app)/dashboard/trips/create/page.tsx` to ensure `/dashboard/trips/create` is a real route and renders a trip-creation UI.
 - The UI consumes `?suggestion=...`:
   - Always shows a visible “Using suggestion” indicator and the raw suggestion id.
   - Attempts to load suggestion details from `/api/trips/suggestions` and pre-fills destination/title/dates when found.
-- Trip creation uses existing authenticated API flow via `useCreateTrip()` (`POST /api/trips`), then navigates to `/dashboard/trips/:id`.
+- Trip creation uses Server Actions via `useCreateTrip()` (backed by `src/lib/trips/actions.ts`), then navigates to `/dashboard/trips/:id`.
 
 ## Tool Availability Check (recorded)
 

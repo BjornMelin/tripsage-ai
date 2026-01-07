@@ -11,11 +11,17 @@ import type {
   TripCollaboratorRoleUpdateInput,
 } from "@schemas/trips";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
-import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { ApiError, type ApiErrorCode, type AppError } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
+import type { Result, ResultError } from "@/lib/result";
+import {
+  addCollaborator,
+  getTripCollaborators,
+  removeCollaborator,
+  updateCollaboratorRole,
+} from "@/lib/trips/actions";
 
 export type TripCollaboratorsResponse = {
   readonly tripId: number;
@@ -33,9 +39,57 @@ export type UpdateTripCollaboratorRoleResponse = {
   readonly collaborator: TripCollaborator;
 };
 
-export function useTripCollaborators(tripId: number | null) {
-  const { makeAuthenticatedRequest } = useAuthenticatedApi();
-  const userId = useCurrentUserId();
+function statusFromResultErrorCode(code: string): number {
+  switch (code) {
+    case "unauthorized":
+      return 401;
+    case "forbidden":
+      return 403;
+    case "not_found":
+      return 404;
+    case "conflict":
+      return 409;
+    case "invalid_request":
+      return 422;
+    case "rate_limited":
+      return 429;
+    case "server_error":
+      return 500;
+    default:
+      return 500;
+  }
+}
+
+function apiCodeFromStatus(status: number): ApiErrorCode {
+  if (status === 409) return "HTTP_409";
+  if (status === 400) return "HTTP_400";
+  if (status === 422) return "HTTP_422";
+  return ApiError.codeFromStatus(status);
+}
+
+function toApiError(error: ResultError, endpoint: string): ApiError {
+  const status = statusFromResultErrorCode(error.error);
+  return new ApiError({
+    code: apiCodeFromStatus(status),
+    data: { error: error.error, issues: error.issues },
+    endpoint,
+    fieldErrors: error.fieldErrors,
+    message: error.reason,
+    status,
+  });
+}
+
+function unwrapResult<T>(result: Result<T, ResultError>, endpoint: string): T {
+  if (result.ok) return result.data;
+  throw toApiError(result.error, endpoint);
+}
+
+export function useTripCollaborators(
+  tripId: number | null,
+  options?: { userId?: string | null }
+) {
+  const inferredUserId = useCurrentUserId();
+  const userId = options?.userId ?? inferredUserId;
   const enabled = tripId !== null && !!userId;
 
   return useQuery<TripCollaboratorsResponse, AppError>({
@@ -46,13 +100,9 @@ export function useTripCollaborators(tripId: number | null) {
       if (tripId === null) {
         throw new Error("Trip id is required");
       }
-      try {
-        return await makeAuthenticatedRequest<TripCollaboratorsResponse>(
-          `/api/trips/${tripId}/collaborators`
-        );
-      } catch (error) {
-        throw handleApiError(error);
-      }
+
+      const result = await getTripCollaborators(tripId);
+      return unwrapResult(result, "trips.collaborators.list");
     },
     queryKey:
       tripId === null || !userId
@@ -64,7 +114,6 @@ export function useTripCollaborators(tripId: number | null) {
 }
 
 export function useInviteTripCollaborator(tripId: number) {
-  const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
@@ -74,18 +123,8 @@ export function useInviteTripCollaborator(tripId: number) {
     TripCollaboratorInviteInput
   >({
     mutationFn: async (payload) => {
-      try {
-        return await makeAuthenticatedRequest<InviteTripCollaboratorResponse>(
-          `/api/trips/${tripId}/collaborators`,
-          {
-            body: JSON.stringify(payload),
-            headers: { "Content-Type": "application/json" },
-            method: "POST",
-          }
-        );
-      } catch (error) {
-        throw handleApiError(error);
-      }
+      const result = await addCollaborator(tripId, payload);
+      return unwrapResult(result, "trips.collaborators.add");
     },
     onSuccess: () => {
       if (userId) {
@@ -103,7 +142,6 @@ export function useInviteTripCollaborator(tripId: number) {
 }
 
 export function useUpdateTripCollaboratorRole(tripId: number) {
-  const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
@@ -113,18 +151,8 @@ export function useUpdateTripCollaboratorRole(tripId: number) {
     { collaboratorUserId: string; payload: TripCollaboratorRoleUpdateInput }
   >({
     mutationFn: async ({ collaboratorUserId, payload }) => {
-      try {
-        return await makeAuthenticatedRequest<UpdateTripCollaboratorRoleResponse>(
-          `/api/trips/${tripId}/collaborators/${collaboratorUserId}`,
-          {
-            body: JSON.stringify(payload),
-            headers: { "Content-Type": "application/json" },
-            method: "PATCH",
-          }
-        );
-      } catch (error) {
-        throw handleApiError(error);
-      }
+      const result = await updateCollaboratorRole(tripId, collaboratorUserId, payload);
+      return unwrapResult(result, "trips.collaborators.update_role");
     },
     onSuccess: () => {
       if (userId) {
@@ -142,22 +170,13 @@ export function useUpdateTripCollaboratorRole(tripId: number) {
 }
 
 export function useRemoveTripCollaborator(tripId: number) {
-  const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
   return useMutation<void, AppError, { collaboratorUserId: string }>({
     mutationFn: async ({ collaboratorUserId }) => {
-      try {
-        await makeAuthenticatedRequest(
-          `/api/trips/${tripId}/collaborators/${collaboratorUserId}`,
-          {
-            method: "DELETE",
-          }
-        );
-      } catch (error) {
-        throw handleApiError(error);
-      }
+      const result = await removeCollaborator(tripId, collaboratorUserId);
+      unwrapResult(result, "trips.collaborators.remove");
     },
     onSuccess: () => {
       if (userId) {
@@ -178,7 +197,7 @@ export function getTripEditPermission(params: {
   currentUserId: string | null;
   ownerId: string;
   collaborators: TripCollaborator[];
-}): { canEdit: boolean; role: "admin" | "editor" | "owner" | "viewer" | "unknown" } {
+}): { canEdit: boolean; role: TripCollaboratorRole | "unknown" } {
   if (!params.currentUserId) {
     return { canEdit: false, role: "unknown" };
   }
@@ -189,6 +208,6 @@ export function getTripEditPermission(params: {
 
   const self = params.collaborators.find((c) => c.userId === params.currentUserId);
   const role: TripCollaboratorRole | "unknown" = self?.role ?? "unknown";
-  const canEdit = role === "admin" || role === "editor";
-  return { canEdit, role: role === "unknown" ? "unknown" : role };
+  const canEdit = role === "owner" || role === "editor";
+  return { canEdit, role };
 }

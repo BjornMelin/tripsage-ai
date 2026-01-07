@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +65,7 @@ export default function CreateTripPage() {
   const { toast } = useToast();
   const createTripMutation = useCreateTrip();
 
-  const defaultDates = useMemo(() => computeDefaultTripDates(new Date()), []);
+  const [defaultDates] = useState(() => computeDefaultTripDates(new Date()));
 
   const form = useZodForm({
     defaultValues: {

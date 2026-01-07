@@ -2190,6 +2190,7 @@ export type Database = {
           budget: number;
           created_at: string | null;
           currency: string;
+          description: string | null;
           destination: string;
           end_date: string;
           flexibility: Json | null;
@@ -2205,9 +2206,10 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          budget: number;
+          budget?: number;
           created_at?: string | null;
           currency?: string;
+          description?: string | null;
           destination: string;
           end_date: string;
           flexibility?: Json | null;
@@ -2226,6 +2228,7 @@ export type Database = {
           budget?: number;
           created_at?: string | null;
           currency?: string;
+          description?: string | null;
           destination?: string;
           end_date?: string;
           flexibility?: Json | null;
