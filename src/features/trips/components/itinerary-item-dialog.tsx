@@ -4,7 +4,11 @@
 
 "use client";
 
-import { itineraryItemTypeSchema } from "@schemas/trips";
+import {
+  type ItineraryItemBookingStatus,
+  itineraryItemBookingStatusSchema,
+  itineraryItemTypeSchema,
+} from "@schemas/trips";
 import { Loader2Icon } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +32,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { ItineraryDraft } from "@/lib/trips/itinerary-draft";
-import type { BookingStatus } from "@/lib/trips/trip-detail-utils";
 
 type ItineraryItemDialogProps = {
   open: boolean;
@@ -93,12 +96,15 @@ export function ItineraryItemDialog({
               <Label>Status</Label>
               <Select
                 value={draft.bookingStatus}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
+                  const parsed = itineraryItemBookingStatusSchema.safeParse(value);
+                  if (!parsed.success) return;
+
                   setDraft((prev) => ({
                     ...prev,
-                    bookingStatus: value as BookingStatus,
-                  }))
-                }
+                    bookingStatus: parsed.data satisfies ItineraryItemBookingStatus,
+                  }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />

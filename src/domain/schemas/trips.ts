@@ -262,10 +262,20 @@ export const itineraryItemTypeSchema = z.enum([
 /** TypeScript type for itinerary item types. */
 export type ItineraryItemType = z.infer<typeof itineraryItemTypeSchema>;
 
+export const itineraryItemBookingStatusSchema = z.enum([
+  "planned",
+  "reserved",
+  "booked",
+  "completed",
+  "cancelled",
+]);
+
+export type ItineraryItemBookingStatus = z.infer<
+  typeof itineraryItemBookingStatusSchema
+>;
+
 const itineraryItemBaseSchema = z.strictObject({
-  bookingStatus: z
-    .enum(["planned", "reserved", "booked", "completed", "cancelled"])
-    .default("planned"),
+  bookingStatus: itineraryItemBookingStatusSchema.default("planned"),
   currency: primitiveSchemas.isoCurrency.default("USD"),
   description: primitiveSchemas.nonEmptyString.max(1000).optional(),
   endAt: primitiveSchemas.isoDateTime.optional(),
