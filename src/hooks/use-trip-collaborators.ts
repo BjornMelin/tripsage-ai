@@ -51,6 +51,10 @@ function statusFromResultErrorCode(code: string): number {
       return 409;
     case "invalid_request":
       return 422;
+    case "rate_limited":
+      return 429;
+    case "server_error":
+      return 500;
     default:
       return 500;
   }
