@@ -211,17 +211,17 @@ export function useActivitySearch(): UseActivitySearchResult {
 
 ```typescript
 // Example uses the Places BFF route (`/api/places/search`) and normalizes to internal types.
+const normalizePlace = (place: PlaceSummary): Destination => ({
+  formattedAddress: place.formattedAddress,
+  id: place.placeId,
+  name: place.name,
+});
+
 export function useDestinationSearch() {
   const [results, setResults] = useState<Destination[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const normalizePlace = (place: PlaceSummary): Destination => ({
-    formattedAddress: place.formattedAddress,
-    id: place.placeId,
-    name: place.name,
-  });
 
   const search = useCallback(async (query: string) => {
     // Cancel previous request
