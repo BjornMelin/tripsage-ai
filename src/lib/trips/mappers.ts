@@ -2,13 +2,23 @@
  * @fileoverview Canonical mapper functions for converting between database and UI trip representations. Single source of truth for DB↔UI transformations.
  */
 
-import type { TripsRow } from "@schemas/supabase";
+import { jsonSchema, type TripsRow } from "@schemas/supabase";
 import type {
   ItineraryItemUpsertInput,
   TripCollaboratorRole,
   UiTrip,
 } from "@schemas/trips";
-import type { Database, Json } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database.types";
+
+function toSupabaseJson(value: unknown) {
+  try {
+    const serialized = JSON.stringify(value);
+    if (typeof serialized !== "string") return {};
+    return jsonSchema.parse(JSON.parse(serialized));
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Maps a database trip row to UI-friendly trip object format.
@@ -82,7 +92,7 @@ export function mapItineraryItemUpsertToDbInsert(
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     item_type: item.itemType,
     location: item.location ?? null,
-    metadata: item.payload as Json,
+    metadata: toSupabaseJson(item.payload),
     price: item.price ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     start_time: item.startAt ?? null,
@@ -109,7 +119,7 @@ export function mapItineraryItemUpsertToDbUpdate(
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     item_type: item.itemType,
     location: item.location ?? null,
-    metadata: item.payload as Json,
+    metadata: toSupabaseJson(item.payload),
     price: item.price ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     start_time: item.startAt ?? null,
