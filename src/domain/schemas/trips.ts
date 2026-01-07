@@ -5,8 +5,36 @@
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA } from "./shared/person";
-import { FUTURE_DATE_SCHEMA } from "./shared/time";
+import { FUTURE_DATE_SCHEMA, ISO_DATE_STRING } from "./shared/time";
 import { tripStatusSchema, tripTypeSchema } from "./supabase";
+
+const parseIsoDateToLocalMidnight = (value: string): Date | null => {
+  const [yearStr, monthStr, dayStr] = value.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+};
+
+const tripIsoDateSchema = ISO_DATE_STRING.superRefine((value, ctx) => {
+  if (!parseIsoDateToLocalMidnight(value)) {
+    ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
+  }
+});
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for trip management
@@ -179,8 +207,8 @@ export type UiTrip = z.infer<typeof storeTripSchema>;
  */
 export const tripFiltersSchema = z.strictObject({
   destination: primitiveSchemas.nonEmptyString.max(200).optional(),
-  endDate: z.string().optional(),
-  startDate: z.string().optional(),
+  endDate: tripIsoDateSchema.optional(),
+  startDate: tripIsoDateSchema.optional(),
   status: tripStatusSchema.optional(),
 });
 
@@ -196,9 +224,9 @@ export const tripCreateSchema = z.strictObject({
   currency: primitiveSchemas.isoCurrency.default("USD"),
   description: primitiveSchemas.nonEmptyString.max(1000).optional(),
   destination: primitiveSchemas.nonEmptyString.max(200),
-  endDate: z.string(),
+  endDate: tripIsoDateSchema,
   preferences: z.record(primitiveSchemas.nonEmptyString, z.unknown()).optional(),
-  startDate: z.string(),
+  startDate: tripIsoDateSchema,
   status: tripStatusSchema.default("planning"),
   tags: z.array(primitiveSchemas.nonEmptyString).max(50).optional(),
   title: primitiveSchemas.nonEmptyString.max(200),

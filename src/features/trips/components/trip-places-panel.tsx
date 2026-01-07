@@ -35,7 +35,7 @@ type TripPlacesPanelProps = {
   userId: string;
 };
 
-function PhotoUrlForName(photoName: string): string {
+function GetPhotoUrl(photoName: string): string {
   return `/api/places/photo?${new URLSearchParams({
     maxHeightPx: "400",
     maxWidthPx: "400",
@@ -240,7 +240,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                 const normalizedId = normalizePlaceIdForStorage(place.placeId);
                 const isSaved = savedPlaceIds.has(normalizedId);
                 const photoName = place.photoName;
-                const imageSrc = photoName ? PhotoUrlForName(photoName) : null;
+                const imageSrc = photoName ? GetPhotoUrl(photoName) : null;
 
                 return (
                   <div
@@ -310,7 +310,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                           <a
                             href={place.url}
                             target="_blank"
-                            rel="noreferrer"
+                            rel="noopener noreferrer"
                             aria-label="Open in Maps"
                           >
                             <ExternalLinkIcon className="h-4 w-4" />
@@ -355,7 +355,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
             </div>
           ) : savedPlacesQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {savedPlacesQuery.error.message}
+              {getErrorMessage(savedPlacesQuery.error)}
             </div>
           ) : savedPlaces.length === 0 ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -369,7 +369,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                   const place = item.place;
                   const normalizedId = normalizePlaceIdForStorage(place.placeId);
                   const photoName = place.photoName;
-                  const imageSrc = photoName ? PhotoUrlForName(photoName) : null;
+                  const imageSrc = photoName ? GetPhotoUrl(photoName) : null;
 
                   return (
                     <div
@@ -411,7 +411,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                             <a
                               href={place.url}
                               target="_blank"
-                              rel="noreferrer"
+                              rel="noopener noreferrer"
                               aria-label="Open in Maps"
                             >
                               <ExternalLinkIcon className="h-4 w-4" />

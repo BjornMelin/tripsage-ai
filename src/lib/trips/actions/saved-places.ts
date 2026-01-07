@@ -2,11 +2,14 @@
  * @fileoverview Trip saved places server action implementations.
  */
 
+"use server";
+
 import "server-only";
 
 import type { SavedPlaceSnapshot } from "@schemas/places";
 import { placeIdSchema, savedPlaceSnapshotSchema } from "@schemas/places";
 import { tripIdSchema } from "@schemas/trips";
+import { revalidatePath } from "next/cache";
 import {
   err,
   ok,
@@ -147,6 +150,15 @@ export async function savePlaceImpl(
         return err({ error: "internal", reason: "Failed to save place" });
       }
 
+      try {
+        revalidatePath(`/dashboard/trips/${tripIdResult.data}`);
+      } catch (error) {
+        logger.warn("saved_places_revalidate_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          tripId: tripIdResult.data,
+        });
+      }
+
       return ok(normalizedSnapshot);
     }
   );
@@ -216,6 +228,15 @@ export async function removePlaceImpl(
 
       if (!data) {
         return err({ error: "not_found", reason: "Saved place not found" });
+      }
+
+      try {
+        revalidatePath(`/dashboard/trips/${tripIdResult.data}`);
+      } catch (error) {
+        logger.warn("saved_places_revalidate_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          tripId: tripIdResult.data,
+        });
       }
 
       return ok({ deleted: true });

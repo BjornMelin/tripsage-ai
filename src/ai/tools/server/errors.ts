@@ -65,10 +65,10 @@ export const TOOL_ERROR_CODES = {
   // Trip errors
   tripSavePlaceFailed: "trip_save_place_failed",
   tripSavePlaceUnauthorized: "trip_save_place_unauthorized",
-  webSearchError: "web_search_error",
-  webSearchFailed: "web_search_failed",
 
   // Web search errors
+  webSearchError: "web_search_error",
+  webSearchFailed: "web_search_failed",
   webSearchNotConfigured: "web_search_not_configured",
   webSearchPaymentRequired: "web_search_payment_required",
   webSearchRateLimited: "web_search_rate_limited",

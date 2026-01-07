@@ -16,6 +16,11 @@ function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
+/**
+ * Retrieve saved places for a trip, with per-row validation and graceful degradation.
+ * RLS policy ensures the user has access to the trip.
+ * Invalid rows are logged but don't fail the query.
+ */
 export async function listSavedPlacesForTrip(
   supabase: TypedServerSupabase,
   params: { tripId: number }

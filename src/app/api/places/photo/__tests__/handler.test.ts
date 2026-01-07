@@ -165,4 +165,46 @@ describe("handlePlacesPhoto", () => {
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBe(photoBytes.byteLength);
   });
+
+  it("defaults to image/jpeg when content-type is missing", async () => {
+    const photoBytes = new Uint8Array([1, 2, 3, 4]);
+
+    server.use(
+      http.get(placePhotoMediaUrlPattern, () => {
+        return new HttpResponse(null, {
+          headers: { location: "https://googleusercontent.com/photo/no-ctype" },
+          status: 302,
+        });
+      }),
+      http.get("https://googleusercontent.com/photo/no-ctype", () => {
+        return new HttpResponse(photoBytes, { status: 200 });
+      })
+    );
+
+    const response = await handlePlacesPhoto(
+      { apiKey: "test-key" },
+      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/jpeg");
+  });
+
+  it("returns 429 when upstream rate limits", async () => {
+    server.use(
+      http.get(placePhotoMediaUrlPattern, () => {
+        return HttpResponse.json({ error: "rate_limit" }, { status: 429 });
+      })
+    );
+
+    const response = await handlePlacesPhoto(
+      { apiKey: "test-key" },
+      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
+    );
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "external_api_error",
+    });
+  });
 });
