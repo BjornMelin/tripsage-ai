@@ -165,6 +165,7 @@ export const placeDetails = createAiTool<PlaceDetailsInput, PlaceDetailsOutput>(
       }
       if (err instanceof PlacesServiceError) {
         mapPlacesServiceErrorToToolError(err, "details");
+        // Unreachable: mapPlacesServiceErrorToToolError always throws.
       }
       const message = err instanceof Error ? err.message : "unknown_error";
       throw createToolError(TOOL_ERROR_CODES.placesDetailsFailed, message, {

@@ -18,13 +18,9 @@ import { nowIso } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { normalizePlaceIdForStorage } from "@/lib/trips/place-id";
 import { listSavedPlacesForTrip } from "@/server/queries/saved-places";
-import {
-  isForeignKeyViolationError,
-  isPermissionDeniedError,
-  logger,
-  normalizePlaceIdForStorage,
-} from "./_shared";
+import { isForeignKeyViolationError, isPermissionDeniedError, logger } from "./_shared";
 
 export async function listSavedPlacesImpl(
   tripId: number

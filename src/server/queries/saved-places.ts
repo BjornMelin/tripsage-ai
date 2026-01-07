@@ -6,17 +6,14 @@ import "server-only";
 
 import type { SavedPlaceSnapshot } from "@schemas/places";
 import { savedPlaceSnapshotSchema } from "@schemas/places";
-import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { normalizePlaceIdForStorage } from "@/lib/trips/actions/_shared";
+import { normalizePlaceIdForStorage } from "@/lib/trips/place-id";
 
 const logger = createServerLogger("server.queries.saved_places");
 
-type SavedPlaceRow = Database["public"]["Tables"]["saved_places"]["Row"];
-
 function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 export async function listSavedPlacesForTrip(
@@ -37,10 +34,7 @@ export async function listSavedPlacesForTrip(
     throw new Error("Failed to load saved places");
   }
 
-  const rows = (data ?? []) as Pick<
-    SavedPlaceRow,
-    "created_at" | "place_id" | "place_snapshot"
-  >[];
+  const rows = data ?? [];
 
   const snapshots: SavedPlaceSnapshot[] = [];
   const invalidRows: Array<{ placeId: string; issues: string[] }> = [];
@@ -54,7 +48,10 @@ export async function listSavedPlacesForTrip(
     const parsed = savedPlaceSnapshotSchema.safeParse(snapshotJson);
     if (!parsed.success) {
       invalidRows.push({
-        issues: parsed.error.issues.map((issue) => issue.path.join(".")),
+        issues: parsed.error.issues.map((issue) => {
+          const path = issue.path.join(".");
+          return path.length > 0 ? `${path}: ${issue.message}` : issue.message;
+        }),
         placeId,
       });
       continue;
@@ -70,15 +67,7 @@ export async function listSavedPlacesForTrip(
       savedAt,
     };
 
-    const normalizedParse = savedPlaceSnapshotSchema.safeParse(normalized);
-    if (normalizedParse.success) {
-      snapshots.push(normalizedParse.data);
-    } else {
-      invalidRows.push({
-        issues: normalizedParse.error.issues.map((issue) => issue.path.join(".")),
-        placeId,
-      });
-    }
+    snapshots.push(normalized);
   }
 
   if (invalidRows.length > 0) {

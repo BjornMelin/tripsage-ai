@@ -43,7 +43,3 @@ export function isForeignKeyViolationError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   return (error as { code?: unknown }).code === "23503";
 }
-
-export function normalizePlaceIdForStorage(placeId: string): string {
-  return placeId.startsWith("places/") ? placeId.slice("places/".length) : placeId;
-}

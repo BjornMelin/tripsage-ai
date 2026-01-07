@@ -100,6 +100,7 @@ export const toolErrorCodeSchema = z.enum([
   "places_not_configured",
   "places_search_failed",
   "trip_save_place_failed",
+  "trip_save_place_unauthorized",
   "tool_execution_failed",
   "tool_rate_limited",
   "web_search_error",

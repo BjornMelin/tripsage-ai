@@ -21,7 +21,7 @@ import {
 import { nowIso } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { normalizePlaceIdForStorage } from "@/lib/trips/actions/_shared";
+import { normalizePlaceIdForStorage } from "@/lib/trips/place-id";
 
 const logger = createServerLogger("tools.trips");
 
@@ -37,9 +37,13 @@ export const savePlaceToTrip = createAiTool<
       const sessionUserId = auth?.user?.id;
 
       if (!sessionUserId || sessionUserId !== args.userId) {
-        throw createToolError(TOOL_ERROR_CODES.tripSavePlaceFailed, "Unauthorized", {
-          reason: "session_user_mismatch",
-        });
+        throw createToolError(
+          TOOL_ERROR_CODES.tripSavePlaceUnauthorized,
+          "Unauthorized",
+          {
+            reason: "session_user_mismatch",
+          }
+        );
       }
 
       const placeId = normalizePlaceIdForStorage(args.place.placeId);
@@ -70,7 +74,6 @@ export const savePlaceToTrip = createAiTool<
           code: (error as { code?: unknown }).code ?? null,
           message: error.message,
           tripId: args.tripId,
-          userId: sessionUserId,
         });
         throw createToolError(
           TOOL_ERROR_CODES.tripSavePlaceFailed,

@@ -27,16 +27,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useRemoveSavedPlace, useSavedPlaces, useSavePlace } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
+import { normalizePlaceIdForStorage } from "@/lib/trips/place-id";
 import { fireAndForget } from "@/lib/utils";
 
 type TripPlacesPanelProps = {
   tripId: number;
   userId: string;
 };
-
-function NormalizePlaceId(placeId: string): string {
-  return placeId.startsWith("places/") ? placeId.slice("places/".length) : placeId;
-}
 
 function PhotoUrlForName(photoName: string): string {
   return `/api/places/photo?${new URLSearchParams({
@@ -69,7 +66,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
   const savedPlaceIds = useMemo(() => {
     const ids = new Set<string>();
     for (const item of savedPlacesQuery.data ?? []) {
-      ids.add(NormalizePlaceId(item.place.placeId));
+      ids.add(normalizePlaceIdForStorage(item.place.placeId));
     }
     return ids;
   }, [savedPlacesQuery.data]);
@@ -240,7 +237,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
           ) : (
             <div className="space-y-3">
               {results.map((place) => {
-                const normalizedId = NormalizePlaceId(place.placeId);
+                const normalizedId = normalizePlaceIdForStorage(place.placeId);
                 const isSaved = savedPlaceIds.has(normalizedId);
                 const photoName = place.photoName;
                 const imageSrc = photoName ? PhotoUrlForName(photoName) : null;
@@ -370,7 +367,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
               <div className="space-y-3">
                 {savedPlaces.map((item) => {
                   const place = item.place;
-                  const normalizedId = NormalizePlaceId(place.placeId);
+                  const normalizedId = normalizePlaceIdForStorage(place.placeId);
                   const photoName = place.photoName;
                   const imageSrc = photoName ? PhotoUrlForName(photoName) : null;
 
