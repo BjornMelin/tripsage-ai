@@ -286,9 +286,9 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
   }
 
   const collaboratorCount = collaboratorsQuery.data?.collaborators.length ?? 0;
-  const ownerId = collaboratorsQuery.data?.ownerId ?? trip.userId ?? "";
+  const ownerId = collaboratorsQuery.data?.ownerId ?? trip.userId;
   const isOwner =
-    collaboratorsQuery.data?.isOwner ?? (trip.userId ? trip.userId === userId : false);
+    collaboratorsQuery.data?.isOwner ?? (ownerId ? ownerId === userId : false);
 
   return (
     <div className="container mx-auto space-y-6 py-8">
