@@ -2,6 +2,8 @@
  * @fileoverview Trip collaborator management server action implementations.
  */
 
+"use server";
+
 import "server-only";
 
 import type { TripCollaborator, TripCollaboratorInviteInput } from "@schemas/trips";

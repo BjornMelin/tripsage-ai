@@ -2,6 +2,8 @@
  * @fileoverview Trip CRUD server action implementations.
  */
 
+"use server";
+
 import "server-only";
 
 import { tripsRowSchema } from "@schemas/supabase";

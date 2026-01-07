@@ -110,6 +110,7 @@ export const searchPlaces = createAiTool<SearchPlacesInput, SearchPlacesOutput>(
       }
       if (err instanceof PlacesServiceError) {
         mapPlacesServiceErrorToToolError(err, "search");
+        // Unreachable: mapPlacesServiceErrorToToolError always throws.
       }
       const message = err instanceof Error ? err.message : "unknown_error";
       throw createToolError(TOOL_ERROR_CODES.placesSearchFailed, message, {

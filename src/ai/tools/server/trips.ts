@@ -21,12 +21,9 @@ import {
 import { nowIso } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { normalizePlaceIdForStorage } from "@/lib/trips/actions/_shared";
 
 const logger = createServerLogger("tools.trips");
-
-function normalizePlaceIdForStorage(placeId: string): string {
-  return placeId.startsWith("places/") ? placeId.slice("places/".length) : placeId;
-}
 
 export const savePlaceToTrip = createAiTool<
   SavePlaceToTripToolInput,

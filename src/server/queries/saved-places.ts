@@ -9,6 +9,7 @@ import { savedPlaceSnapshotSchema } from "@schemas/places";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { normalizePlaceIdForStorage } from "@/lib/trips/actions/_shared";
 
 const logger = createServerLogger("server.queries.saved_places");
 
@@ -16,10 +17,6 @@ type SavedPlaceRow = Database["public"]["Tables"]["saved_places"]["Row"];
 
 function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function normalizePlaceIdForStorage(placeId: string): string {
-  return placeId.startsWith("places/") ? placeId.slice("places/".length) : placeId;
 }
 
 export async function listSavedPlacesForTrip(

@@ -2,6 +2,8 @@
  * @fileoverview Trip itinerary server action implementations.
  */
 
+"use server";
+
 import "server-only";
 
 import type { ItineraryItem, ItineraryItemUpsertInput } from "@schemas/trips";
