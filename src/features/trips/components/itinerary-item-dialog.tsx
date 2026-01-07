@@ -388,6 +388,10 @@ export function ItineraryItemDialog({
                   />
                 </div>
               </div>
+            ) : draft.itemType === "other" ? (
+              <p className="text-sm text-muted-foreground">
+                No additional fields for this item type.
+              </p>
             ) : null}
 
             <div className="space-y-2">
