@@ -165,8 +165,11 @@ export interface TripSageAgentConfig<
   /**
    * Structured output specification.
    *
-   * Stored in config but not passed to ToolLoopAgent constructor.
-   * Pass output when calling agent.generate({ output }) or agent.stream({ output }).
+   * When set, the agent uses AI SDK `Output.object()` (JSON schema / responseFormat: "json")
+   * and validates/parses the model output against the schema.
+   *
+   * Note: this is appropriate for JSON-only agent endpoints. It is NOT suitable for
+   * mixed natural language responses that also embed schema cards in text.
    */
   output?: StructuredOutput<OutputType>;
 
@@ -204,8 +207,7 @@ export interface TripSageAgentResult<
   /**
    * Optional structured output spec associated with this agent.
    *
-   * ToolLoopAgent does not accept `output` at construction time; callers should pass
-   * this value explicitly to `agent.generate({ output })` / `agent.stream({ output })`.
+   * If provided, it is applied to the agent at construction time via `ToolLoopAgentSettings.output`.
    */
   output?: StructuredOutput<OutputType>;
 }

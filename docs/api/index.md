@@ -276,10 +276,10 @@ for event in client.events():
 ### cURL
 
 ```bash
-curl -N -X POST "http://localhost:3000/api/chat/stream" \
+curl -N -X POST "http://localhost:3000/api/chat" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"messages":[{"id":"msg-1","role":"user","parts":[{"type":"text","text":"Hello"}]}]}'
 ```
 
 ## Related Guides

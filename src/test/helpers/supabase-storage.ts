@@ -7,8 +7,10 @@ type StorageBucketApi = ReturnType<SupabaseClient<Database>["storage"]["from"]>;
 export type StorageFromHandlers = Partial<{
   createSignedUrl: StorageBucketApi["createSignedUrl"];
   createSignedUrls: StorageBucketApi["createSignedUrls"];
+  createSignedUploadUrl: StorageBucketApi["createSignedUploadUrl"];
   remove: StorageBucketApi["remove"];
   upload: StorageBucketApi["upload"];
+  uploadToSignedUrl: StorageBucketApi["uploadToSignedUrl"];
 }>;
 
 export function setupStorageFromMock(
@@ -24,11 +26,19 @@ export function setupStorageFromMock(
     if (handlers.createSignedUrls) {
       vi.spyOn(api, "createSignedUrls").mockImplementation(handlers.createSignedUrls);
     }
+    if (handlers.createSignedUploadUrl) {
+      vi.spyOn(api, "createSignedUploadUrl").mockImplementation(
+        handlers.createSignedUploadUrl
+      );
+    }
     if (handlers.remove) {
       vi.spyOn(api, "remove").mockImplementation(handlers.remove);
     }
     if (handlers.upload) {
       vi.spyOn(api, "upload").mockImplementation(handlers.upload);
+    }
+    if (handlers.uploadToSignedUrl) {
+      vi.spyOn(api, "uploadToSignedUrl").mockImplementation(handlers.uploadToSignedUrl);
     }
     return api;
   });

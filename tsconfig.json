@@ -5,17 +5,32 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@schemas/*": ["./src/domain/schemas/*"],
-      "@domain/*": ["./src/domain/*"],
-      "@ai/*": ["./src/ai/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@schemas/*": [
+        "./src/domain/schemas/*"
+      ],
+      "@domain/*": [
+        "./src/domain/*"
+      ],
+      "@ai/*": [
+        "./src/ai/*"
+      ]
     },
-    "typeRoots": ["./@types", "./node_modules/@types"],
+    "typeRoots": [
+      "./@types",
+      "./node_modules/@types"
+    ],
     "plugins": [
       {
         "name": "next"
@@ -26,7 +41,10 @@
     "strict": true,
     "target": "ES2017"
   },
-  "exclude": ["node_modules"],
+  "exclude": [
+    "node_modules",
+    "opensrc"
+  ],
   "include": [
     "next-env.d.ts",
     "**/*.ts",

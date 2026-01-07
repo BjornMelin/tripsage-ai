@@ -5,7 +5,7 @@
 import "server-only";
 
 import { openai } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { consumeStream, streamText } from "ai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { type RouteParamsContext, withApiGuards } from "@/lib/api/factory";
@@ -56,7 +56,7 @@ const guardedPOST = withApiGuards({
   rateLimit: "ai:stream",
   schema: STREAM_BODY_SCHEMA,
   telemetry: "ai.stream",
-})((_req, _ctx, body) => {
+})((req, _ctx, body) => {
   const { desiredMaxTokens, model, prompt } = body;
   const messages: ChatMessage[] | undefined = body.messages.length
     ? body.messages
@@ -85,6 +85,7 @@ const guardedPOST = withApiGuards({
   }
 
   const result = streamText({
+    abortSignal: req.signal,
     experimental_telemetry: {
       functionId: "ai.stream.demo",
       isEnabled: true,
@@ -100,7 +101,7 @@ const guardedPOST = withApiGuards({
   });
 
   // Return a UI Message Stream response suitable for AI Elements consumers
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({ consumeSseStream: consumeStream });
 });
 
 /**

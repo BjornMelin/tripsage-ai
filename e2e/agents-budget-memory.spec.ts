@@ -3,7 +3,11 @@ import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
 
 /** Expected shape of captured request body from chat stream API. */
 type ChatStreamBody = {
+  id?: string;
+  message?: unknown;
   messages?: unknown[];
+  sessionId?: string;
+  trigger?: string;
   [key: string]: unknown;
 };
 
@@ -12,12 +16,26 @@ test.describe("Budget and Memory Agents", () => {
     await resetTestAuth(page);
     await authenticateAsTestUser(page);
     await page.goto("/chat");
+
+    await page.route("**/api/chat/sessions", async (route) => {
+      const request = route.request();
+      if (request.method() !== "POST") {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        body: JSON.stringify({ id: "session-1" }),
+        contentType: "application/json",
+        status: 201,
+      });
+    });
   });
 
   test("budget agent displays chart", async ({ page }) => {
     let handled = false;
     let capturedBody: ChatStreamBody | null = null;
-    await page.route("**/api/chat/stream**", async (route) => {
+    await page.route("**/api/chat", async (route) => {
       const request = route.request();
       handled = true;
       const body = (() => {
@@ -51,8 +69,8 @@ test.describe("Budget and Memory Agents", () => {
     await textarea.fill("Plan a budget for Paris for 5 days");
     await textarea.press("Enter");
 
-    await expect.poll(() => handled).toBe(true);
-    expect(capturedBody).toMatchObject({ messages: expect.any(Array) });
+    await expect.poll(() => handled, { timeout: 10000 }).toBe(true);
+    expect(capturedBody).toMatchObject({ message: expect.any(Object) });
 
     // Wait for budget chart to appear
     await expect(page.locator("text=Budget Plan")).toBeVisible({ timeout: 10000 });
@@ -63,7 +81,7 @@ test.describe("Budget and Memory Agents", () => {
   test("memory agent confirms write", async ({ page }) => {
     let handled = false;
     let capturedBody: ChatStreamBody | null = null;
-    await page.route("**/api/chat/stream**", async (route) => {
+    await page.route("**/api/chat", async (route) => {
       const request = route.request();
       handled = true;
       const body = (() => {
@@ -88,8 +106,8 @@ test.describe("Budget and Memory Agents", () => {
     await textarea.fill("Remember that I prefer window seats");
     await textarea.press("Enter");
 
-    await expect.poll(() => handled).toBe(true);
-    expect(capturedBody).toMatchObject({ messages: expect.any(Array) });
+    await expect.poll(() => handled, { timeout: 10000 }).toBe(true);
+    expect(capturedBody).toMatchObject({ message: expect.any(Object) });
 
     // Wait for confirmation message
     await expect(page.locator("text=Memory stored")).toBeVisible({ timeout: 10000 });

@@ -53,7 +53,7 @@ export const webSearchBatchInputSchema = z.strictObject({
     .describe("Content sources to search"),
   tbs: z.string().nullable().describe("Time-based search filter"),
   timeoutMs: z.number().int().positive().nullable().describe("Timeout in milliseconds"),
-  userId: z.string().nullable().describe("User identifier for the search"),
+  userId: z.string().min(1).nullish().describe("User identifier for the search"),
 });
 
 // ===== MODEL OUTPUT SCHEMAS =====

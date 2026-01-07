@@ -32,7 +32,7 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
 
 - Vercel AI Gateway:
   - `AI_GATEWAY_API_KEY`
-  - `AI_GATEWAY_URL` (defaults to `https://ai-gateway.vercel.sh/v1`)
+  - `AI_GATEWAY_URL` (optional `baseURL` override for AI SDK Gateway; leave unset to use the SDK default)
   - Dashboard: <https://vercel.com/ai-gateway>
 - Direct providers:
   - `OPENAI_API_KEY` — <https://platform.openai.com/api-keys>

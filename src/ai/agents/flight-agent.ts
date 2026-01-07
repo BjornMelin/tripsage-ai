@@ -87,8 +87,8 @@ export function createFlightAgent(
     maxOutputTokens: maxTokens,
     maxSteps: params.maxSteps,
     name: "Flight Search Agent",
-    // Note: For structured output, pass Output.object({ schema: flightSearchResultSchema })
-    // when calling agent.generate() or agent.stream()
+    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
+    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for flight search workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1 (steps 0-2): Resolve locations

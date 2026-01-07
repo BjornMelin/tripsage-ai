@@ -22,16 +22,16 @@ import { Response } from "@/components/ai-elements/response";
 /**
  * Render the AI SDK v6 demo page.
  *
- * Submits user input to `/api/_health/stream` and appends streamed chunks to
+ * Submits user input to `/api/ai/stream` and appends streamed chunks to
  * a preview area. This page intentionally keeps logic minimal for foundations.
  *
  * @returns The demo page component.
  */
 export default function AiDemoPage() {
-  const [_input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submitStatus = error ? "error" : isLoading ? "submitted" : undefined;
 
   const logTelemetry = useCallback((status: "success" | "error", detail?: string) => {
     (async () => {
@@ -75,27 +75,41 @@ export default function AiDemoPage() {
 
         const decoder = new TextDecoder();
         let buffer = "";
+        let shouldStop = false;
         // Parse UI Message Stream events and append text parts
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          buffer += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(value, { stream: true }).replaceAll("\r\n", "\n");
           const events = buffer.split("\n\n");
           // Keep the last partial chunk in buffer
           buffer = events.pop() ?? "";
           for (const evt of events) {
-            const line = evt.trim();
-            if (!line.startsWith("data: ")) continue;
-            const json = line.slice(6);
-            try {
-              const payload = JSON.parse(json) as { type?: string; text?: string };
-              if (payload.type === "text" && typeof payload.text === "string") {
-                setOutput((prev) => prev + payload.text);
+            const lines = evt.split("\n");
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const data = trimmed.slice(5).trim();
+              if (!data) continue;
+              if (data === "[DONE]") {
+                shouldStop = true;
+                break;
               }
-            } catch {
-              // Ignore malformed chunks
+              try {
+                const payload = JSON.parse(data) as { type?: string; delta?: string };
+                if (
+                  payload.type === "text-delta" &&
+                  typeof payload.delta === "string"
+                ) {
+                  setOutput((prev) => prev + payload.delta);
+                }
+              } catch {
+                // Ignore malformed chunks
+              }
             }
+            if (shouldStop) break;
           }
+          if (shouldStop) break;
         }
         logTelemetry("success");
       } catch (err) {
@@ -129,7 +143,6 @@ export default function AiDemoPage() {
       <div className="border-t p-2">
         <PromptInput
           onSubmit={async (message) => {
-            setInput(message.text ?? "");
             await onSubmit(message.text ?? "");
           }}
         >
@@ -140,7 +153,7 @@ export default function AiDemoPage() {
             />
           </PromptInputBody>
           <PromptInputFooter>
-            <PromptInputSubmit status={isLoading ? "streaming" : undefined} />
+            <PromptInputSubmit status={submitStatus} />
           </PromptInputFooter>
         </PromptInput>
       </div>

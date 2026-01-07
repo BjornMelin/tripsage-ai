@@ -16,6 +16,7 @@ import {
   grantApproval,
   requireApproval,
 } from "./server/approvals";
+import { attachmentsList } from "./server/attachments";
 import {
   createCalendarEvent,
   exportItineraryToIcs,
@@ -42,6 +43,7 @@ import { webSearchBatch } from "./server/web-search-batch";
 
 export {
   addConversationMemory,
+  attachmentsList,
   bookAccommodation,
   checkAvailability,
   combineSearchResults,
@@ -82,6 +84,7 @@ export {
  */
 export const toolRegistry = {
   addConversationMemory,
+  "attachments.list": attachmentsList,
   bookAccommodation,
   checkAvailability,
   combineSearchResults,

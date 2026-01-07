@@ -96,6 +96,7 @@ vi.mock("@ai/tools", () => mockTools);
 
 // Mock tool injection
 vi.mock("@ai/tools/server/injection", () => ({
+  wrapToolsWithChatId: vi.fn().mockImplementation((tools: unknown) => tools),
   wrapToolsWithUserId: vi.fn().mockReturnValue(mockTools.tools),
 }));
 

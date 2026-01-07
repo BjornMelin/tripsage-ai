@@ -2,11 +2,13 @@
  * @fileoverview DI handlers for chat sessions/messages routes.
  */
 
+import { safeValidateUIMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 /**
  * Dependencies interface for sessions handlers.
@@ -107,6 +109,8 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
  * List messages for a session.
  */
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
+  const logger = createServerLogger("chat.sessions.listMessages");
+
   const { data: session, error: sessionError } = await deps.supabase
     .from("chat_sessions")
     .select("id")
@@ -120,19 +124,212 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
       status: 500,
     });
   if (!session) return notFoundResponse("Session");
-  const { data, error } = await deps.supabase
+
+  const { data: messages, error: messageError } = await deps.supabase
     .from("chat_messages")
     .select("id, role, content, created_at, metadata")
     .eq("session_id", id)
     .eq("user_id", deps.userId)
     .order("id", { ascending: true });
-  if (error)
+  if (messageError)
     return errorResponse({
       error: "db_error",
       reason: "Failed to list messages",
       status: 500,
     });
-  return NextResponse.json(data ?? [], { status: 200 });
+
+  const getStringFromMetadata = (
+    metadata: unknown,
+    key: string
+  ): string | undefined => {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return undefined;
+    }
+    const record = metadata as Record<string, unknown>;
+    const value = record[key];
+    return typeof value === "string" && value.trim().length > 0
+      ? value.trim()
+      : undefined;
+  };
+
+  const isSupersededMessage = (metadata: unknown): boolean => {
+    const supersededBy = getStringFromMetadata(metadata, "supersededBy");
+    if (supersededBy) return true;
+    return getStringFromMetadata(metadata, "status") === "superseded";
+  };
+
+  const visibleMessages = (messages ?? []).filter(
+    (row) => !isSupersededMessage(row.metadata)
+  );
+
+  const messageIds = visibleMessages
+    .map((m) => m.id)
+    .filter((value): value is number => typeof value === "number");
+
+  const { data: toolCalls, error: toolError } =
+    messageIds.length > 0
+      ? await deps.supabase
+          .from("chat_tool_calls")
+          .select(
+            "message_id, tool_id, tool_name, arguments, result, status, error_message"
+          )
+          .in("message_id", messageIds)
+          .order("id", { ascending: true })
+      : { data: [], error: null };
+
+  if (toolError) {
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to list tool calls",
+      status: 500,
+    });
+  }
+
+  const toolCallsByMessageId = new Map<number, Array<(typeof toolCalls)[number]>>();
+  for (const toolCall of toolCalls ?? []) {
+    const messageId = toolCall.message_id;
+    if (typeof messageId !== "number") continue;
+    const existing = toolCallsByMessageId.get(messageId) ?? [];
+    existing.push(toolCall);
+    toolCallsByMessageId.set(messageId, existing);
+  }
+
+  const toParts = (content: unknown): unknown[] => {
+    if (typeof content !== "string") return [];
+    const trimmed = content.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+      return [{ text: trimmed, type: "text" }];
+    } catch (error) {
+      logger.warn("Failed to parse stored message parts JSON; falling back to text", {
+        contentLength: trimmed.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [{ text: trimmed, type: "text" }];
+    }
+  };
+
+  const isMetaWithUiMessageId = (value: unknown): value is { uiMessageId: string } => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    if (!("uiMessageId" in value)) return false;
+    const record = value as Record<string, unknown>;
+    const uiMessageId = record.uiMessageId;
+    return typeof uiMessageId === "string" && uiMessageId.trim().length > 0;
+  };
+
+  const toUiMessageId = (row: { id: number; metadata: unknown }): string => {
+    const meta = row.metadata;
+    if (isMetaWithUiMessageId(meta)) {
+      return meta.uiMessageId.trim();
+    }
+    return `db:${row.id}`;
+  };
+
+  const rawUiMessages = visibleMessages.map((row) => {
+    const baseParts = toParts(row.content);
+    const uiMessageId = toUiMessageId({ id: row.id, metadata: row.metadata });
+
+    let role: "assistant" | "system" | "user";
+    if (row.role === "user" || row.role === "assistant" || row.role === "system") {
+      role = row.role;
+    } else {
+      logger.warn("Unexpected message role value; defaulting to assistant", {
+        messageId: row.id,
+        role: row.role,
+        sessionId: id,
+      });
+      role = "assistant";
+    }
+
+    const enrichedParts = [...baseParts];
+    const toolRows = toolCallsByMessageId.get(row.id) ?? [];
+
+    if (toolRows.length > 0 && role === "assistant") {
+      for (const toolRow of toolRows) {
+        const toolName = toolRow.tool_name;
+        const toolCallId = toolRow.tool_id;
+        if (typeof toolName !== "string" || toolName.trim().length === 0) {
+          logger.warn("Skipping tool call with missing tool_name", {
+            messageId: row.id,
+            sessionId: id,
+            toolCallId,
+          });
+          continue;
+        }
+        if (typeof toolCallId !== "string" || toolCallId.trim().length === 0) {
+          logger.warn("Skipping tool call with missing tool_id", {
+            messageId: row.id,
+            sessionId: id,
+            toolName,
+          });
+          continue;
+        }
+
+        const baseToolPart = {
+          input: toolRow.arguments ?? {},
+          toolCallId,
+          type: `tool-${toolName}`,
+        } as const;
+
+        if (toolRow.status === "failed") {
+          const errorText =
+            toolRow.error_message ??
+            (typeof toolRow.result === "string" ? toolRow.result : "Tool failed");
+
+          enrichedParts.push({
+            ...baseToolPart,
+            errorText,
+            state: "output-error",
+          });
+        } else {
+          enrichedParts.push({
+            ...baseToolPart,
+            output: toolRow.result ?? null,
+            state: "output-available",
+          });
+        }
+      }
+    }
+
+    const metadata =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? row.metadata
+        : undefined;
+
+    return {
+      id: uiMessageId,
+      metadata,
+      parts: enrichedParts,
+      role,
+    };
+  });
+
+  if (rawUiMessages.length === 0) {
+    return NextResponse.json([], { status: 200 });
+  }
+
+  const validated = await safeValidateUIMessages({ messages: rawUiMessages });
+  if (!validated.success) {
+    const normalizedError =
+      validated.error instanceof Error
+        ? validated.error
+        : new Error(String(validated.error ?? "Invalid stored messages"));
+
+    logger.error("Failed to parse stored messages", {
+      error: normalizedError.message,
+      sessionId: id,
+    });
+
+    return errorResponse({
+      error: "internal",
+      reason: "Failed to parse stored messages",
+      status: 500,
+    });
+  }
+
+  return NextResponse.json(validated.data satisfies UIMessage[], { status: 200 });
 }
 
 /**

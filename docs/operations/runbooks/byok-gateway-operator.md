@@ -27,7 +27,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 
 # Team Gateway fallback (optional)
 AI_GATEWAY_API_KEY=...
-AI_GATEWAY_URL=https://ai-gateway.vercel.sh/v1   # optional override
+AI_GATEWAY_URL=https://ai-gateway.vercel.sh/v3/ai   # optional baseURL override
 
 # Optional provider fallbacks (server-only)
 OPENAI_API_KEY=...
@@ -49,7 +49,7 @@ OPENROUTER_API_KEY=...
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/upsert_user_gateway_config \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test-user","p_base_url":"https://my-gateway.vercel.sh/v1","p_api_key":"sk-gateway"}'
+  -d '{"p_user_id":"test-user","p_base_url":"https://my-gateway.vercel.sh/v3/ai","p_api_key":"sk-gateway"}'
 
 # Read back base URL
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/get_user_gateway_base_url \

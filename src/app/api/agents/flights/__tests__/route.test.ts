@@ -77,6 +77,7 @@ vi.mock("@ai/agents", () => ({
 }));
 
 // Mock createAgentUIStreamResponse with actual streaming Response
+const mockConsumeStream = vi.fn();
 const mockCreateAgentUIStreamResponse = vi.fn(() => {
   const stream = new ReadableStream({
     start(controller) {
@@ -90,6 +91,7 @@ const mockCreateAgentUIStreamResponse = vi.fn(() => {
   });
 });
 vi.mock("ai", () => ({
+  consumeStream: mockConsumeStream,
   createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
   InvalidToolInputError: { isInstance: () => false },
   NoSuchToolError: { isInstance: () => false },
@@ -152,6 +154,7 @@ describe("/api/agents/flights route", () => {
     expect(mockCreateAgentUIStreamResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         agent: expect.any(Object),
+        consumeSseStream: mockConsumeStream,
         uiMessages: expect.any(Array),
       })
     );

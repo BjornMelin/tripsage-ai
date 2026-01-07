@@ -69,6 +69,7 @@ type BuildSDKRequestOptions = {
   defaultBaseURL: string;
   headers?: Record<string, string>;
   modelId: string;
+  probePath?: string;
   sdkCreator: SDKCreator;
 };
 
@@ -88,7 +89,7 @@ function buildSDKRequest(options: BuildSDKRequestOptions): ProviderRequest {
   return {
     fetchImpl: config.fetch ?? fetch,
     headers: config.headers(),
-    url: new URL("models", normalizedBase).toString(),
+    url: new URL(options.probePath ?? "models", normalizedBase).toString(),
   };
 }
 
@@ -104,14 +105,14 @@ const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
     buildSDKRequest({
       apiKey,
       baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
-      defaultBaseURL: "https://ai-gateway.vercel.sh/v1",
+      defaultBaseURL: "https://ai-gateway.vercel.sh/v3/ai",
       modelId: DEFAULT_MODEL_IDS.gateway,
+      probePath: "config",
       sdkCreator: createGateway,
     }),
   openai: (apiKey) =>
     buildSDKRequest({
       apiKey,
-      baseURL: getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined),
       defaultBaseURL: OPENAI_BASE_URL,
       modelId: DEFAULT_MODEL_IDS.openai,
       sdkCreator: createOpenAI as SDKCreator,

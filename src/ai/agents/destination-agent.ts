@@ -92,8 +92,8 @@ export function createDestinationAgent(
     maxOutputTokens: maxTokens,
     maxSteps,
     name: "Destination Research Agent",
-    // Note: For structured output, pass Output.object({ schema: destinationResearchResultSchema })
-    // when calling agent.generate() or agent.stream()
+    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
+    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for destination research workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1: Initial search and POI context

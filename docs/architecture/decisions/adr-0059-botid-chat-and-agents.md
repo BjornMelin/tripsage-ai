@@ -6,10 +6,9 @@
 
 High-value API endpoints in TripSage AI are common targets for sophisticated automated bots:
 
-- `/api/chat` — Non-streaming chat completions
-- `/api/chat/stream` — Streaming chat responses
+- `/api/chat` — Streaming chat responses
 - `/api/agents/router` — Agent workflow classification
-- `/api/chat/attachments` — File upload handling
+- `/api/chat/attachments` — Attachment signed upload URL issuance
 
 Current protection relies solely on Upstash rate limiting, which is effective for volumetric control but does not distinguish between human users and sophisticated bots that mimic real browser behavior.
 

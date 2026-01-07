@@ -34,6 +34,17 @@ type SourceUrlPart = {
   title?: string;
 };
 
+/**
+ * Custom message part used to signal the start of a new step in a multi-step response.
+ *
+ * This is an extension on top of AI SDK message parts. When present, `step` is a 1-indexed
+ * step number; omit `step` when the step index is unknown.
+ */
+type StepStartPart = {
+  type: "step-start";
+  step?: number;
+};
+
 type WebSearchUiResult = {
   results: Array<{
     url: string;
@@ -55,6 +66,26 @@ function isSourceUrlPart(value: unknown): value is SourceUrlPart {
   if (typeof value !== "object" || value === null) return false;
   const part = value as Record<string, unknown>;
   return part.type === "source-url" && typeof part.url === "string";
+}
+
+// biome-ignore lint/style/useNamingConvention: Type guard helper for discriminated parts
+function isStepStartPart(value: unknown): value is StepStartPart {
+  if (typeof value !== "object" || value === null) return false;
+  const part = value as Record<string, unknown>;
+  if (part.type !== "step-start") return false;
+
+  const step = part.step;
+  const valid =
+    step === undefined ||
+    (typeof step === "number" && Number.isInteger(step) && step > 0);
+
+  if (!valid && process.env.NODE_ENV === "development") {
+    console.warn("Invalid step-start part: expected step to be a positive integer.", {
+      step,
+    });
+  }
+
+  return valid;
 }
 
 /** Keys that must be redacted from tool output. */
@@ -272,9 +303,22 @@ export function ChatMessageItem({
               );
             }
 
+            if (isStepStartPart(part)) {
+              const step = part.step;
+
+              return (
+                <div
+                  key={`${message.id}-step-${idx}`}
+                  className="my-3 flex items-center gap-2 text-xs text-muted-foreground"
+                >
+                  <div className="h-px flex-1 bg-border" />
+                  <span>{step !== undefined ? `Step ${step}` : "Step"}</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+              );
+            }
+
             const isToolLike =
-              partType === "tool-call" ||
-              partType === "tool-call-result" ||
               partType === "dynamic-tool" ||
               (typeof partType === "string" && partType.startsWith("tool-"));
 
@@ -293,6 +337,7 @@ export function ChatMessageItem({
                 output?: unknown;
                 data?: unknown;
                 error?: unknown;
+                errorText?: unknown;
               };
 
               const p = part as ToolPartLike;
@@ -301,14 +346,7 @@ export function ChatMessageItem({
                   ? partType.slice("tool-".length)
                   : undefined;
               const toolName = p?.name ?? p?.toolName ?? p?.tool ?? inferredFromType;
-              const status =
-                p?.state ??
-                p?.status ??
-                (partType === "tool-call"
-                  ? "call"
-                  : partType === "tool-call-result"
-                    ? "result"
-                    : undefined);
+              const status = p?.state ?? p?.status;
 
               const raw = p?.result ?? p?.output ?? p?.data;
               const result =
@@ -395,7 +433,12 @@ export function ChatMessageItem({
               }
 
               const rawInput = p?.args ?? p?.input ?? p?.parameters;
-              const rawOutput = p?.result ?? p?.output ?? p?.data ?? p?.error ?? part;
+              const rawOutput =
+                p?.result ??
+                p?.output ??
+                p?.data ??
+                p?.error ??
+                (typeof p?.errorText === "string" ? p.errorText : undefined);
               const inputSanitized =
                 rawInput !== undefined ? sanitizeToolOutput(rawInput) : undefined;
               const outputSanitized =
@@ -408,53 +451,6 @@ export function ChatMessageItem({
                   name={toolName ?? "Tool"}
                   output={outputSanitized}
                   status={status}
-                />
-              );
-            }
-
-            // AI SDK v6 standardized part types: tool-invocation, tool-result
-            if (partType === "tool-invocation") {
-              const invocation = AsRecord(part);
-              if (!invocation) return null;
-              const toolName =
-                (typeof invocation.toolName === "string" && invocation.toolName) ||
-                (typeof invocation.name === "string" && invocation.name) ||
-                "Tool";
-              const inputVal = invocation.args ?? invocation.input;
-              const outputVal = invocation.result ?? invocation.output;
-              const state =
-                typeof invocation.state === "string" ? invocation.state : "";
-              return (
-                <Tool
-                  key={`${message.id}-inv-${idx}`}
-                  input={
-                    inputVal !== undefined ? sanitizeToolOutput(inputVal) : undefined
-                  }
-                  name={toolName}
-                  output={
-                    outputVal !== undefined ? sanitizeToolOutput(outputVal) : undefined
-                  }
-                  status={state === "result" ? "result" : "call"}
-                />
-              );
-            }
-
-            if (partType === "tool-result") {
-              const toolResult = AsRecord(part);
-              if (!toolResult) return null;
-              const resultToolName =
-                (typeof toolResult.toolName === "string" && toolResult.toolName) ||
-                (typeof toolResult.name === "string" && toolResult.name) ||
-                "Tool";
-              const resultVal = toolResult.result ?? toolResult.output;
-              return (
-                <Tool
-                  key={`${message.id}-res-${idx}`}
-                  name={resultToolName}
-                  output={
-                    resultVal !== undefined ? sanitizeToolOutput(resultVal) : undefined
-                  }
-                  status="result"
                 />
               );
             }

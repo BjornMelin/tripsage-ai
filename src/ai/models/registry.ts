@@ -26,8 +26,6 @@ const providerRegistryLogger = createServerLogger("ai.providers");
  */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
 
-const DEFAULT_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v1";
-
 /**
  * Extracts the host from a URL string.
  *
@@ -116,11 +114,11 @@ function isPrivateGatewayHost(hostname: string): boolean {
 }
 
 function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
-  baseUrl: string;
+  baseUrl?: string;
   source: GatewayBaseUrlSource;
 } {
   if (!rawBaseUrl) {
-    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "default" };
+    return { baseUrl: undefined, source: "default" };
   }
 
   let parsed: URL;
@@ -128,27 +126,40 @@ function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
     parsed = new URL(rawBaseUrl);
   } catch {
     providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "invalid_url" });
-    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+    return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (parsed.protocol !== "https:") {
     providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "non_https" });
-    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+    return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (parsed.username || parsed.password) {
     providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "credentials" });
-    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+    return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (isPrivateGatewayHost(parsed.hostname)) {
     providerRegistryLogger.warn("gateway_base_url_rejected", {
       reason: "private_host",
     });
-    return { baseUrl: DEFAULT_GATEWAY_BASE_URL, source: "invalid_user_fallback" };
+    return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   return { baseUrl: parsed.toString(), source: "user" };
+}
+
+function normalizeGatewayModelId(provider: ProviderId, modelId: string): string {
+  const trimmed = modelId.trim();
+  if (!trimmed) {
+    return `${provider}/${DEFAULT_MODEL_MAPPER(provider)}`;
+  }
+
+  // If the caller already provided a provider-qualified id (e.g., "openai/gpt-4o-mini"),
+  // keep it as-is to support direct gateway ids and OpenRouter-style hints.
+  if (trimmed.includes("/")) return trimmed;
+
+  return `${provider}/${trimmed}`;
 }
 
 /**
@@ -224,12 +235,19 @@ export async function resolveProvider(
   if (userGatewayKey) {
     const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
     const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
+
     const client = createGateway({
       apiKey: userGatewayKey,
-      // biome-ignore lint/style/useNamingConvention: provider option name
-      baseURL: baseUrl,
+      ...(baseUrl
+        ? {
+            // biome-ignore lint/style/useNamingConvention: provider option name
+            baseURL: baseUrl,
+          }
+        : {}),
     });
-    const modelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+
+    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
     return await withTelemetrySpan(
       "providers.resolve",
       {
@@ -388,14 +406,18 @@ export async function resolveProvider(
   const allowFallback = await getUserAllowGatewayFallback(userId);
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
   if (gatewayApiKey) {
-    const gatewayUrl =
-      getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined) ??
-      "https://ai-gateway.vercel.sh/v1";
-    const modelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);
+    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
+
     const gateway = createGateway({
       apiKey: gatewayApiKey,
-      // biome-ignore lint/style/useNamingConvention: provider option name
-      baseURL: gatewayUrl,
+      ...(gatewayUrl?.trim()
+        ? {
+            // biome-ignore lint/style/useNamingConvention: provider option name
+            baseURL: gatewayUrl.trim(),
+          }
+        : {}),
     });
     if (allowFallback === false) {
       throw new Error(

@@ -107,10 +107,8 @@ Conversational AI with session management:
 
 | Endpoint                | Method   | Description                   |
 | ----------------------- | -------- | ----------------------------- |
-| `/api/chat`             | POST     | Non-streaming chat completion |
-| `/api/chat/stream`      | POST     | Streaming chat with SSE       |
+| `/api/chat`             | POST     | Streaming chat (AI SDK UI stream protocol) |
 | `/api/chat/sessions`    | GET/POST | Session management            |
-| `/api/chat/send`        | POST     | Send message to session       |
 | `/api/chat/attachments` | POST     | File attachments              |
 
 ### Trips (`/api/trips/*`)

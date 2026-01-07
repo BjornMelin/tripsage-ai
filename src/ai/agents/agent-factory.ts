@@ -101,8 +101,6 @@ export function createTripSageAgent<
     maxSteps = DEFAULT_MAX_STEPS,
     name,
     onStepFinish: configOnStepFinish,
-    // Note: output is NOT passed to ToolLoopAgent constructor.
-    // It should be passed when calling agent.generate() or agent.stream().
     output,
     prepareCall,
     prepareStep,
@@ -472,6 +470,7 @@ export function createTripSageAgent<
     // Generation parameters
     maxOutputTokens,
     model: deps.model,
+    output,
     stopWhen: buildStopConditions(),
     temperature,
     toolChoice: "auto",

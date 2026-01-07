@@ -39,7 +39,7 @@ const ACCOMMODATION_TOOLS = {
  * Creates an accommodation search agent for autonomous property search, availability checks, and bookings.
  *
  * Uses phased tool selection: search → details → availability/booking.
- * Returns structured AccommodationSearchResult via Output.object().
+ * Encourages schema-versioned JSON payloads in the assistant text (schema cards) for UI rendering.
  *
  * @param deps - Runtime dependencies (model, identifiers).
  * @param config - Agent configuration from database.
@@ -77,8 +77,8 @@ export function createAccommodationAgent(
     maxOutputTokens: maxTokens,
     maxSteps: params.maxSteps,
     name: "Accommodation Search Agent",
-    // Note: For structured output, pass Output.object({ schema: accommodationSearchResultSchema })
-    // when calling agent.generate() or agent.stream()
+    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
+    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for accommodation workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1 (steps 0-2): Search for accommodations

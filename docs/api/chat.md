@@ -4,63 +4,27 @@ Chat sessions, messaging, and attachments.
 
 ## `POST /api/chat`
 
-Non-streaming chat completion.
-
-**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
-**Rate Limit Key**: `chat:nonstream`
-
-### Request Body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `messages` | array | Yes | Array of chat messages |
-| `sessionId` | string | No | Chat session ID |
-| `model` | string | No | Model override |
-
-### Response
-
-`200 OK` - Returns complete chat response
-
-```json
-{
-  "id": "chat-msg-123",
-  "content": "This is the assistant's response",
-  "role": "assistant",
-  "tokens": {
-    "input": 50,
-    "output": 25
-  }
-}
-```
-
-### Errors
-
-- `400` - Invalid request parameters
-- `401` - Not authenticated
-- `429` - Rate limit exceeded
-
----
-
-## `POST /api/chat/stream`
-
-Streaming chat completion (SSE).
+Streaming chat completion using the AI SDK v6 **UI message stream protocol**.
 
 **Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:stream`
-**Response**: `text/event-stream` (SSE)
+**Response**: `text/event-stream` (AI SDK UI message stream protocol; header `x-vercel-ai-ui-message-stream: v1`)
 
 ### Request Body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `messages` | array | Yes | Array of UI messages |
+| `messages` | array | Yes | Array of AI SDK `UIMessage` objects |
 | `sessionId` | string | No | Chat session ID |
 | `model` | string | No | Model override |
-| `desiredMaxTokens` | number | No | Maximum tokens |
+| `desiredMaxTokens` | number | No | Maximum output tokens |
 
 ### Response
 
-`200 OK` - SSE stream with chat messages
+`200 OK` - Streams an AI SDK UI message stream. The server also returns:
+
+- header `x-tripsage-session-id` (resolved/created session id)
+- assistant message metadata includes `sessionId` on the `start` part
 
 ### Errors
 
@@ -71,43 +35,19 @@ Streaming chat completion (SSE).
 ### Example
 
 ```bash
-curl -N -X POST "http://localhost:3000/api/chat/stream" \
+curl -N -X POST "http://localhost:3000/api/chat" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
-      {"role": "user", "content": "Hello"}
+      {
+        "id": "msg-1",
+        "role": "user",
+        "parts": [{ "type": "text", "text": "Hello" }]
+      }
     ]
   }'
 ```
-
----
-
-## `POST /api/chat/send`
-
-Send message to chat session.
-
-**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
-**Rate Limit Key**: `chat:nonstream`
-
-### Request Body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `message` | string | Yes | Message content (max 10000 chars) |
-| `conversationId` | string | No | Conversation ID |
-| `attachments` | array | No | Attachment array |
-| `context` | object | No | Context object |
-
-### Response
-
-`200 OK` - Returns chat response
-
-### Errors
-
-- `400` - Invalid request parameters
-- `401` - Not authenticated
-- `429` - Rate limit exceeded
 
 ---
 
@@ -128,9 +68,9 @@ List chat sessions for authenticated user.
 [
   {
     "id": "session-uuid",
-    "title": "Trip Planning",
-    "createdAt": "2025-01-15T10:00:00Z",
-    "updatedAt": "2025-01-15T10:00:00Z"
+    "created_at": "2025-01-15T10:00:00Z",
+    "updated_at": "2025-01-15T10:00:00Z",
+    "metadata": { "title": "Trip Planning" }
   }
 ]
 ```
@@ -158,6 +98,10 @@ Create a new chat session.
 #### Response
 
 `201 Created` - Returns created session
+
+```json
+{ "id": "session-uuid" }
+```
 
 #### Errors
 
@@ -234,7 +178,7 @@ List messages in a chat session.
 
 #### Response
 
-`200 OK` - Returns messages array
+`200 OK` - Returns an array of AI SDK `UIMessage` objects (including tool invocation parts where available).
 
 #### Errors
 
@@ -266,7 +210,7 @@ Create a message in a chat session.
 
 #### Response
 
-`201 Created` - Returns created message
+`201 Created` - No body
 
 #### Errors
 
@@ -281,57 +225,58 @@ Create a message in a chat session.
 
 ### `POST /api/chat/attachments`
 
-Upload chat attachment (multipart form data).
+Create signed upload URLs (Supabase Storage) + persist attachment metadata.
 
-**Authentication**: Required — derived from Supabase session cookie (`sb-access-token`). Caller-supplied `Authorization` headers are ignored for this endpoint.
+**Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:attachments`
 
 #### Request
 
-Multipart form data with file uploads.
+JSON body describing the files to be uploaded. The server returns signed upload URLs and tokens.
+The client uploads directly to Supabase Storage using `uploadToSignedUrl`.
 
-**Form Field Names:**
+At least one of `chatId` or `tripId` is required. `chatMessageId` is optional but requires `chatId`.
+If both `chatId` and `tripId` are provided, the attachment is associated with both.
 
-- Single file: `file`
-- Multiple files: `files` (can include multiple files with same field name)
-
-**File Constraints:**
-
-- **Maximum file size**: 10 MB (10,485,760 bytes)
-- **Maximum files per request**: 5 files
-- **Maximum total payload (Content-Length)**: 50 MB — requests advertising a larger body are rejected with `413`
-- **Accepted MIME types**: All types accepted (validation performed by backend)
-- **Multiple files**: Supported - submit up to 5 files in a single request
-
-**Content-Type**: `multipart/form-data`
-
-#### Response
-
-`200 OK` - Returns attachment metadata
+Chat-scoped example:
 
 ```json
 {
+  "chatId": "uuid",
+  "chatMessageId": 123,
   "files": [
+    { "originalName": "a.pdf", "mimeType": "application/pdf", "size": 12345 }
+  ]
+}
+```
+
+Trip-scoped example:
+
+```json
+{
+  "tripId": 42,
+  "files": [
+    { "originalName": "a.pdf", "mimeType": "application/pdf", "size": 12345 }
+  ]
+}
+```
+
+#### Response
+
+`200 OK` - Returns signed upload details.
+
+```json
+{
+  "uploads": [
     {
-      "id": "file-uuid-abc123",
-      "name": "travel-document.pdf",
-      "type": "application/pdf",
-      "size": 524288,
-      "status": "completed",
-      "url": "/api/attachments/file-uuid-abc123/download"
-    },
-    {
-      "id": "file-uuid-def456",
-      "name": "boarding-pass.png",
-      "type": "image/png",
-      "size": 245760,
-      "status": "completed",
-      "url": "/api/attachments/file-uuid-def456/download"
+      "attachmentId": "file-uuid-abc123",
+      "mimeType": "application/pdf",
+      "originalName": "a.pdf",
+      "path": "userId/chatId/file-uuid-abc123/a.pdf",
+      "signedUrl": "https://...",
+      "size": 12345,
+      "token": "token-from-supabase"
     }
-  ],
-  "urls": [
-    "/api/attachments/file-uuid-abc123/download",
-    "/api/attachments/file-uuid-def456/download"
   ]
 }
 ```
@@ -339,10 +284,8 @@ Multipart form data with file uploads.
 #### Errors
 
 - `400` - Invalid request:
-  - No files uploaded
-  - File size exceeds 10 MB limit
-  - More than 5 files submitted
-  - Invalid content type (not multipart/form-data)
+  - Missing `chatId`/`tripId`
+  - File size/type/count constraints
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
-- `502` - Backend upload service error
+- `500` - Failed to create signed upload URLs

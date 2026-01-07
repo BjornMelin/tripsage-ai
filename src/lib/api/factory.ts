@@ -771,13 +771,14 @@ export function createAgentRoute<
           input
         );
 
-        const { createAgentUIStreamResponse } = await import("ai");
+        const { consumeStream, createAgentUIStreamResponse } = await import("ai");
 
         const { createErrorHandler } = await import("@/lib/agents/error-recovery");
 
         return createAgentUIStreamResponse({
           abortSignal: req.signal,
           agent,
+          consumeSseStream: consumeStream,
           onError: createErrorHandler(),
           uiMessages: defaultMessages,
         });

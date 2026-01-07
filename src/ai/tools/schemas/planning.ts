@@ -60,7 +60,7 @@ export const createTravelPlanInputSchema = z.strictObject({
     .min(1, { error: "title required" })
     .describe("Descriptive title for the travel plan"),
   travelers: z.number().int().min(1).max(50).default(1).describe("Number of travelers"),
-  userId: z.string().min(1).nullable().describe("User identifier for the plan owner"),
+  userId: z.string().min(1).nullish().describe("User identifier for the plan owner"),
 });
 
 /** Schema for saveTravelPlan tool input. */
@@ -71,7 +71,7 @@ export const saveTravelPlanInputSchema = z.strictObject({
     .nullable()
     .describe("Whether to finalize and lock the plan"),
   planId: UUID_V4.describe("Unique identifier of the plan to save"),
-  userId: z.string().min(1).nullable().describe("User identifier for authorization"),
+  userId: z.string().min(1).nullish().describe("User identifier for authorization"),
 });
 
 /** Schema for updateTravelPlan tool input. */
@@ -80,7 +80,7 @@ export const updateTravelPlanInputSchema = z.strictObject({
   updates: z
     .looseRecord(z.string(), z.unknown())
     .describe("Fields to update in the plan"),
-  userId: z.string().min(1).nullable().describe("User identifier for authorization"),
+  userId: z.string().min(1).nullish().describe("User identifier for authorization"),
 });
 
 // ===== TOOL OUTPUT SCHEMAS =====
