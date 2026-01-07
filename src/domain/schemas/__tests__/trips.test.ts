@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { itineraryItemUpsertSchema, tripSettingsFormSchema } from "@schemas/trips";
 import { describe, expect, it } from "vitest";
 
