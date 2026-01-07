@@ -96,7 +96,7 @@ export function TripSettingsPanel({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="trip-description">Notes</Label>
+          <Label htmlFor="trip-description">Description</Label>
           <Textarea
             id="trip-description"
             value={settings.description ?? ""}
