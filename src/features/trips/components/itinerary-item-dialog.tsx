@@ -69,7 +69,7 @@ export function ItineraryItemDialog({
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label htmlFor="it-type">Type</Label>
               <Select
                 value={draft.itemType}
                 onValueChange={(value) => {
@@ -78,7 +78,7 @@ export function ItineraryItemDialog({
                   setDraft((prev) => ({ ...prev, itemType: parsed.data }));
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="it-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -93,7 +93,7 @@ export function ItineraryItemDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label htmlFor="it-status">Status</Label>
               <Select
                 value={draft.bookingStatus}
                 onValueChange={(value) => {
@@ -106,7 +106,7 @@ export function ItineraryItemDialog({
                   }));
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="it-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
