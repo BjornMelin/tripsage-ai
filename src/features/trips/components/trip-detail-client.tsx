@@ -219,6 +219,7 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
     try {
       await deleteTripMutation.mutateAsync(tripId);
       toast({ description: "Trip deleted.", title: "Deleted" });
+      setIsDeleteTripOpen(false);
       router.push("/dashboard/trips");
     } catch (error) {
       toast({
@@ -226,8 +227,6 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
         title: "Delete failed",
         variant: "destructive",
       });
-    } finally {
-      setIsDeleteTripOpen(false);
     }
   };
 
