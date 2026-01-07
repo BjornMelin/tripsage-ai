@@ -12,10 +12,7 @@ export function toDateTimeLocalValue(value: string | undefined): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-    date.getHours()
-  )}:${pad(date.getMinutes())}`;
+  return DateUtils.formatForInput(date);
 }
 
 export function toIsoDateTimeOrUndefined(value: string): string | undefined {
