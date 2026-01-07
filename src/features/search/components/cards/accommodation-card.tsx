@@ -22,18 +22,19 @@ export function AccommodationCard({
   onSelect,
   onCompare,
 }: AccommodationCardProps) {
-  const googleKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY;
   const place = (accommodation as Record<string, unknown>).placeDetails as
     | { rating?: number; userRatingCount?: number; photos?: Array<{ name?: string }> }
     | undefined;
   const userRating = place?.rating ?? accommodation.rating;
-  const primaryImage =
-    accommodation.images?.[0] ??
-    (place?.photos?.[0]?.name
-      ? `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=800&maxWidthPx=1200${
-          googleKey ? `&key=${googleKey}` : ""
-        }`
-      : undefined);
+  const photoName = place?.photos?.[0]?.name;
+  const photoUrl = photoName
+    ? `/api/places/photo?${new URLSearchParams({
+        maxHeightPx: "800",
+        maxWidthPx: "1200",
+        name: photoName,
+      }).toString()}`
+    : undefined;
+  const primaryImage = accommodation.images?.[0] ?? photoUrl;
   const rawNights = Math.ceil(
     (new Date(accommodation.checkOut).getTime() -
       new Date(accommodation.checkIn).getTime()) /

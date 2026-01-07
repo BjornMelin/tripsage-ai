@@ -25,6 +25,28 @@
 - Support provider abstraction if multiple APIs are used.
 - Persist “saved places” to trips.
 
+## Implementation notes (reference)
+
+- **Provider**: Google Places API (New), per ADR-0050 and ADR-0053.
+- **Canonical server module**: `src/features/search/server/places/places-service.ts`.
+- **Canonical DTO + tool schemas**: `src/domain/schemas/places.ts` (`@schemas/places`).
+- **API surface**:
+  - `POST /api/places/search` → canonical `{ places: PlaceSummary[] }`
+  - `GET /api/places/details/[id]` → canonical `PlaceDetails`
+  - `GET /api/places/photo` → photo byte proxy (use `name=...` from `photoName`)
+  - `POST /api/places/nearby` → nearby search (Google Places API New)
+- **Caching**:
+  - Search results: Upstash Redis short TTL (default 10 minutes, clamped 5–15 minutes).
+  - Cache keys must not include raw user query strings (hash/canonicalize first).
+  - Place details: fetched fresh (no caching of full payloads).
+- **SSRF / abuse controls**:
+  - All outbound requests use fixed, allowlisted hosts (e.g., `places.googleapis.com`).
+  - No user-controlled URL fetch is permitted.
+  - Photo proxy validates `photoName` format and dimensions before requesting media.
+- **Persistence**:
+  - `public.saved_places` stores a minimal `place_snapshot` (no raw upstream payloads) and is protected by trip-membership RLS.
+  - Uniqueness is enforced per `(trip_id, place_id)`.
+
 ## Tooling
 
 Agent tools:

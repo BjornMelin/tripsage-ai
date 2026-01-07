@@ -22,9 +22,9 @@ import {
   getAvailability,
 } from "./server/calendar";
 import { searchFlights } from "./server/flights";
-import { lookupPoiContext } from "./server/google-places";
 import { distanceMatrix, geocode } from "./server/maps";
 import { addConversationMemory, searchUserMemories } from "./server/memory";
+import { placeDetails, searchPlaces } from "./server/places";
 import {
   combineSearchResults,
   createTravelPlan,
@@ -34,6 +34,7 @@ import {
 } from "./server/planning";
 import { ragSearch } from "./server/rag";
 import { getTravelAdvisory } from "./server/travel-advisory";
+import { savePlaceToTrip } from "./server/trips";
 import { getCurrentWeather } from "./server/weather";
 import { crawlSite, crawlUrl } from "./server/web-crawl";
 import { webSearch } from "./server/web-search";
@@ -60,13 +61,15 @@ export {
   getCurrentWeather,
   getTravelAdvisory,
   grantApproval,
-  lookupPoiContext,
+  placeDetails,
   ragSearch,
   requireApproval,
   saveTravelPlan,
+  savePlaceToTrip,
   searchAccommodations,
   searchActivities,
   searchFlights,
+  searchPlaces,
   searchUserMemories,
   updateTravelPlan,
   webSearch,
@@ -95,13 +98,15 @@ export const toolRegistry = {
   getAvailability,
   getCurrentWeather,
   getTravelAdvisory,
-  lookupPoiContext,
   ragSearch,
   saveTravelPlan,
+  "search.placeDetails": placeDetails,
+  "search.places": searchPlaces,
   searchAccommodations,
   searchActivities,
   searchFlights,
   searchUserMemories,
+  "trips.savePlace": savePlaceToTrip,
   updateTravelPlan,
   webSearch,
   webSearchBatch,

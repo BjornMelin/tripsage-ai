@@ -538,3 +538,16 @@ export const addTravelerFormSchema = z.object({
 
 /** TypeScript type for add traveler form data. */
 export type AddTravelerFormData = z.infer<typeof addTravelerFormSchema>;
+
+// ===== TOOL INPUT SCHEMAS =====
+// Runtime validation for ids passed via server actions and routes.
+
+export const tripIdSchema = z.coerce
+  .number()
+  .int()
+  .gt(0, { error: "Trip id must be a positive integer" });
+
+export const itineraryItemIdSchema = z.coerce
+  .number()
+  .int()
+  .gt(0, { error: "Itinerary item id must be a positive integer" });

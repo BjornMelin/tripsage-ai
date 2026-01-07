@@ -52,8 +52,15 @@ export const TOOL_ERROR_CODES = {
   invalidOutput: "invalid_output",
   invalidParams: "invalid_params",
   memoryUnexpectedStream: "memory_unexpected_stream",
+
+  // Places errors
+  placesDetailsFailed: "places_details_failed",
+  placesDetailsNotFound: "places_details_not_found",
+  placesNotConfigured: "places_not_configured",
+  placesSearchFailed: "places_search_failed",
   toolExecutionFailed: "tool_execution_failed",
   toolRateLimited: "tool_rate_limited",
+  tripSavePlaceFailed: "trip_save_place_failed",
   webSearchError: "web_search_error",
   webSearchFailed: "web_search_failed",
 

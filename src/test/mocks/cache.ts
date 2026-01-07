@@ -12,12 +12,14 @@ import { vi } from "vitest";
 export type UpstashCacheMock = {
   store: Map<string, string>;
   getCachedJson: ReturnType<typeof vi.fn>;
+  getCachedJsonSafe: ReturnType<typeof vi.fn>;
   setCachedJson: ReturnType<typeof vi.fn>;
   deleteCachedJson: ReturnType<typeof vi.fn>;
   deleteCachedJsonMany: ReturnType<typeof vi.fn>;
   reset: () => void;
   module: {
     getCachedJson: UpstashCacheMock["getCachedJson"];
+    getCachedJsonSafe: UpstashCacheMock["getCachedJsonSafe"];
     setCachedJson: UpstashCacheMock["setCachedJson"];
     deleteCachedJson: UpstashCacheMock["deleteCachedJson"];
     deleteCachedJsonMany: UpstashCacheMock["deleteCachedJsonMany"];
@@ -46,6 +48,38 @@ export function buildUpstashCacheMock(): UpstashCacheMock {
     }
   });
 
+  const getCachedJsonSafe = vi.fn(
+    async <T>(
+      key: string,
+      schema?: {
+        safeParse: (
+          value: unknown
+        ) => { success: boolean; data: T } | { success: false };
+      }
+    ) => {
+      await Promise.resolve();
+      const raw = store.get(key);
+      if (!raw) return { status: "miss" as const };
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return { raw, status: "invalid" as const };
+      }
+
+      if (schema) {
+        const result = schema.safeParse(parsed);
+        if (!result.success) {
+          return { raw: parsed, status: "invalid" as const };
+        }
+        return { data: result.data, status: "hit" as const };
+      }
+
+      return { data: parsed as T, status: "hit" as const };
+    }
+  );
+
   const setCachedJson = vi.fn((key: string, value: unknown): Promise<void> => {
     store.set(key, JSON.stringify(value));
     return Promise.resolve();
@@ -67,6 +101,7 @@ export function buildUpstashCacheMock(): UpstashCacheMock {
   const reset = (): void => {
     store.clear();
     getCachedJson.mockClear();
+    getCachedJsonSafe.mockClear();
     setCachedJson.mockClear();
     deleteCachedJson.mockClear();
     deleteCachedJsonMany.mockClear();
@@ -76,11 +111,13 @@ export function buildUpstashCacheMock(): UpstashCacheMock {
     deleteCachedJson,
     deleteCachedJsonMany,
     getCachedJson,
+    getCachedJsonSafe,
     module: {
       __reset: reset,
       deleteCachedJson,
       deleteCachedJsonMany,
       getCachedJson,
+      getCachedJsonSafe,
       setCachedJson,
     },
     reset,

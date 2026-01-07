@@ -10,7 +10,7 @@ The TripSage search domain uses three distinct hook patterns, each optimized for
 |---------|------|----------|
 | React Query Integration | `useAccommodationSearch` | Store-integrated searches with caching |
 | Self-Contained State | `useActivitySearch` | Searches with custom metadata |
-| External API Integration | `useDestinationSearch` | Third-party APIs (Google Places) |
+| External API Integration | `useDestinationSearch` | Third-party APIs via BFF routes (`/api/places/**`) |
 
 ## Pattern 1: React Query Integration
 
@@ -192,7 +192,7 @@ export function useActivitySearch(): UseActivitySearchResult {
 - Uses AbortController for request cancellation
 - Implements debouncing for text input
 - Normalizes external API responses to internal types
-- Handles API-specific authentication
+- Calls server BFF routes (secrets stay server-only)
 
 **Dependencies:**
 
@@ -202,27 +202,25 @@ export function useActivitySearch(): UseActivitySearchResult {
 
 **Use when:**
 
-- Integrating with third-party APIs (Google Places, Amadeus, etc.)
+- Integrating with third-party APIs via server routes (Google Places, Amadeus, etc.)
 - Need request cancellation for typeahead/autocomplete
 - Response format differs from internal types
-- API has unique rate limiting or auth requirements
+- API has unique rate limiting requirements
 
 **Code pattern:**
 
 ```typescript
-// Example assumes a Google Places API key (e.g., from env) and a normalize helper.
+// Example uses the Places BFF route (`/api/places/search`) and normalizes to internal types.
 export function useDestinationSearch() {
   const [results, setResults] = useState<Destination[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY;
 
-  const normalizeGooglePlace = (place: GooglePlace): Destination => ({
-    id: place.id,
-    name: place.displayName.text,
-    country: place.addressComponents?.country,
+  const normalizePlace = (place: PlaceSummary): Destination => ({
     formattedAddress: place.formattedAddress,
+    id: place.placeId,
+    name: place.name,
   });
 
   const search = useCallback(async (query: string) => {
@@ -232,20 +230,13 @@ export function useDestinationSearch() {
     setIsSearching(true);
     setError(null);
 
-    if (!apiKey) {
-      setError(new Error("Google Places API key is not configured"));
-      setIsSearching(false);
-      return;
-    }
-
     try {
       const response = await fetch(
-        "https://places.googleapis.com/v1/places:searchText",
+        "/api/places/search",
         {
           body: JSON.stringify({ textQuery: query }),
           headers: {
             "Content-Type": "application/json",
-            "X-Goog-Api-Key": apiKey,
           },
           method: "POST",
           signal: abortControllerRef.current.signal,
@@ -254,7 +245,7 @@ export function useDestinationSearch() {
 
       const data = await response.json();
       // Normalize to internal Destination type
-      const destinations = (data.places ?? []).map(normalizeGooglePlace);
+      const destinations = (data.places ?? []).map(normalizePlace);
       setResults(destinations);
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -263,14 +254,14 @@ export function useDestinationSearch() {
     } finally {
       setIsSearching(false);
     }
-  }, [apiKey]);
+  }, []);
 
   return { results, search, isSearching, error };
 }
 ```
 
 If the same normalization logic is needed in other hooks, extract
-`normalizeGooglePlace` into a shared utility to avoid duplication.
+`normalizePlace` into a shared utility to avoid duplication.
 
 ## Decision Guide
 

@@ -7,8 +7,9 @@ export const CHAT_DEFAULT_SYSTEM_PROMPT = `You are a helpful travel planning ass
 When the user asks for something factual, call the matching tool by name:
 - Flights: use searchFlights for routes/fares.
 - Lodging: use searchAccommodations, getAccommodationDetails, checkAvailability, bookAccommodation (confirm before booking).
-- Activities/POIs: use searchActivities / lookupPoiContext; include hours and location.
+- Places/POIs: use search.places and search.placeDetails; include hours and location when available.
 - Planning: use createTravelPlan / saveTravelPlan to build and store itineraries; confirm before saving.
+- Trips: use trips.savePlace(tripId, place) to save candidate places to a trip when the user asks.
 - Weather: use getCurrentWeather for conditions; include units and location.
 - Maps: use geocode for addresses and distanceMatrix for travel times/distances.
 - Discovery: use webSearch/webSearchBatch for general research.

@@ -2153,6 +2153,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      saved_places: {
+        Row: {
+          created_at: string | null;
+          id: number;
+          place_id: string;
+          place_snapshot: Json;
+          provider: string;
+          trip_id: number;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: never;
+          place_id: string;
+          place_snapshot?: Json;
+          provider?: string;
+          trip_id: number;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: never;
+          place_id?: string;
+          place_snapshot?: Json;
+          provider?: string;
+          trip_id?: number;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_places_trip_id_fkey";
+            columns: ["trip_id"];
+            isOneToOne: false;
+            referencedRelation: "trips";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       trip_collaborators: {
         Row: {
           created_at: string | null;

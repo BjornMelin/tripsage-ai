@@ -455,16 +455,70 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
     url.searchParams.set("skipHttpRedirect", "true");
   }
 
-  return await retryWithBackoff(
+  const isAllowedRedirectHost = (candidate: URL): boolean => {
+    if (candidate.protocol !== "https:") return false;
+    const hostname = candidate.hostname.toLowerCase();
+    return (
+      hostname === "googleusercontent.com" ||
+      hostname.endsWith(".googleusercontent.com")
+    );
+  };
+
+  const initialResponse = await retryWithBackoff(
     () =>
       fetch(url.toString(), {
         headers: {
           "X-Goog-Api-Key": params.apiKey,
         },
         method: "GET",
+        redirect: "manual",
       }),
     { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
   );
+
+  // Default Places photo media behavior is an HTTP redirect to an image host (googleusercontent).
+  // Follow redirects manually to avoid leaking the API key header to the redirected request and
+  // to enforce an explicit allowlist of redirect targets.
+  if (initialResponse.status >= 300 && initialResponse.status < 400) {
+    const location = initialResponse.headers.get("location");
+    if (!location) {
+      return initialResponse;
+    }
+
+    let nextUrl = new URL(location, url);
+    const maxRedirects = 3;
+
+    for (let hop = 0; hop < maxRedirects; hop += 1) {
+      if (!isAllowedRedirectHost(nextUrl)) {
+        throw new Error(`Unexpected Places photo redirect host: ${nextUrl.hostname}`);
+      }
+
+      // Do not forward the API key header to the redirected host.
+      const redirectedResponse = await retryWithBackoff(
+        () =>
+          fetch(nextUrl.toString(), {
+            method: "GET",
+            redirect: "manual",
+          }),
+        { attempts: 3, baseDelayMs: 200, maxDelayMs: 1_000 }
+      );
+
+      if (redirectedResponse.status >= 300 && redirectedResponse.status < 400) {
+        const redirectedLocation = redirectedResponse.headers.get("location");
+        if (!redirectedLocation) {
+          return redirectedResponse;
+        }
+        nextUrl = new URL(redirectedLocation, nextUrl);
+        continue;
+      }
+
+      return redirectedResponse;
+    }
+
+    throw new Error("Places photo redirect limit exceeded");
+  }
+
+  return initialResponse;
 }
 
 // === Places Nearby Search API ===

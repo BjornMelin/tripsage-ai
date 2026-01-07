@@ -7,7 +7,8 @@ import "server-only";
 import {
   combineSearchResults,
   getTravelAdvisory,
-  lookupPoiContext,
+  placeDetails,
+  searchPlaces,
   webSearchBatch,
 } from "@ai/tools";
 import type { BudgetPlanRequest } from "@schemas/agents";
@@ -28,7 +29,8 @@ import { extractAgentParameters } from "./types";
 const BUDGET_TOOLS = {
   combineSearchResults,
   getTravelAdvisory,
-  lookupPoiContext,
+  "search.placeDetails": placeDetails,
+  "search.places": searchPlaces,
   webSearchBatch,
 } satisfies ToolSet;
 
@@ -87,12 +89,17 @@ export function createBudgetAgent(
       // Phase 1 (steps 0-3): Research destination costs and advisories
       if (stepNumber <= 3) {
         return {
-          activeTools: ["webSearchBatch", "getTravelAdvisory", "lookupPoiContext"],
+          activeTools: [
+            "webSearchBatch",
+            "getTravelAdvisory",
+            "search.places",
+            "search.placeDetails",
+          ],
         };
       }
       // Phase 2 (steps 4+): Combine and finalize budget allocation
       return {
-        activeTools: ["combineSearchResults", "lookupPoiContext"],
+        activeTools: ["combineSearchResults", "search.places", "search.placeDetails"],
       };
     },
     temperature: params.temperature,

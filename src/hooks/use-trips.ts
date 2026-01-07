@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { PlaceSummary, SavedPlaceSnapshot } from "@schemas/places";
 import type {
   ItineraryItem,
   ItineraryItemUpsertInput,
@@ -29,6 +30,9 @@ import {
   getTripById as getTripByIdAction,
   getTripItinerary as getTripItineraryAction,
   getTripsForUser as getTripsForUserAction,
+  listSavedPlaces as listSavedPlacesAction,
+  removePlace as removePlaceAction,
+  savePlace as savePlaceAction,
   updateTrip as updateTripAction,
   upsertItineraryItem as upsertItineraryItemAction,
 } from "@/lib/trips/actions";
@@ -629,6 +633,131 @@ export function useDeleteTripItineraryItem(
     onSettled: () => {
       if (!userId) return;
       queryClient.invalidateQueries({ queryKey: keys.trips.itinerary(userId, tripId) });
+    },
+    throwOnError: false,
+  });
+}
+
+export function useSavedPlaces(tripId: number, options?: { userId?: string | null }) {
+  const inferredUserId = useCurrentUserId();
+  const userId = options?.userId ?? inferredUserId;
+
+  return useQuery<SavedPlaceSnapshot[], AppError>({
+    enabled: !!userId && Number.isFinite(tripId) && tripId > 0,
+    gcTime: cacheTimes.short,
+    queryFn: async () => {
+      const result = await listSavedPlacesAction(tripId);
+      return unwrapResult(result, "trips.saved_places.list");
+    },
+    queryKey: userId
+      ? keys.trips.savedPlaces(userId, tripId)
+      : keys.trips.savedPlacesDisabled(),
+    staleTime: staleTimes.trips,
+    throwOnError: false,
+  });
+}
+
+export function useSavePlace(tripId: number, options?: { userId?: string | null }) {
+  const queryClient = useQueryClient();
+  const inferredUserId = useCurrentUserId();
+  const userId = options?.userId ?? inferredUserId;
+
+  return useMutation<
+    SavedPlaceSnapshot,
+    AppError,
+    { place: PlaceSummary },
+    { previous?: SavedPlaceSnapshot[] }
+  >({
+    mutationFn: async ({ place }) => {
+      const result = await savePlaceAction(tripId, { place });
+      return unwrapResult(result, "trips.saved_places.save");
+    },
+    onError: (_error, _vars, context) => {
+      if (!userId) return;
+      const key = keys.trips.savedPlaces(userId, tripId);
+      if (context?.previous) {
+        queryClient.setQueryData(key, context.previous);
+      }
+    },
+    onMutate: async ({ place }) => {
+      if (!userId) return {};
+
+      const key = keys.trips.savedPlaces(userId, tripId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<SavedPlaceSnapshot[]>(key);
+
+      const optimistic: SavedPlaceSnapshot = {
+        place,
+        savedAt: nowIso(),
+      };
+
+      if (previous) {
+        queryClient.setQueryData(key, [
+          optimistic,
+          ...previous.filter((item) => item.place.placeId !== place.placeId),
+        ]);
+      } else {
+        queryClient.setQueryData(key, [optimistic]);
+      }
+
+      return { previous };
+    },
+    onSettled: () => {
+      if (!userId) return;
+      queryClient.invalidateQueries({
+        queryKey: keys.trips.savedPlaces(userId, tripId),
+      });
+    },
+    throwOnError: false,
+  });
+}
+
+export function useRemoveSavedPlace(
+  tripId: number,
+  options?: { userId?: string | null }
+) {
+  const queryClient = useQueryClient();
+  const inferredUserId = useCurrentUserId();
+  const userId = options?.userId ?? inferredUserId;
+
+  return useMutation<
+    void,
+    AppError,
+    { placeId: string },
+    { previous?: SavedPlaceSnapshot[] }
+  >({
+    mutationFn: async ({ placeId }) => {
+      const result = await removePlaceAction(tripId, placeId);
+      unwrapResult(result, "trips.saved_places.remove");
+    },
+    onError: (_error, _vars, context) => {
+      if (!userId) return;
+      const key = keys.trips.savedPlaces(userId, tripId);
+      if (context?.previous) {
+        queryClient.setQueryData(key, context.previous);
+      }
+    },
+    onMutate: async ({ placeId }) => {
+      if (!userId) return {};
+
+      const key = keys.trips.savedPlaces(userId, tripId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<SavedPlaceSnapshot[]>(key);
+
+      if (previous) {
+        queryClient.setQueryData(
+          key,
+          previous.filter((item) => item.place.placeId !== placeId)
+        );
+      }
+
+      return { previous };
+    },
+    onSettled: () => {
+      if (!userId) return;
+      queryClient.invalidateQueries({
+        queryKey: keys.trips.savedPlaces(userId, tripId),
+      });
     },
     throwOnError: false,
   });

@@ -69,10 +69,11 @@ vi.mock("@ai/tools", () => {
     getAccommodationDetails: createMockTool("accommodation details"),
     getCurrentWeather: createMockTool("weather"),
     getTravelAdvisory: createMockTool("advisory"),
-    lookupPoiContext: createMockTool("poi"),
+    placeDetails: createMockTool("place details"),
     saveTravelPlan: createMockTool("save plan"),
     searchAccommodations: createMockTool("accommodations"),
     searchFlights: createMockTool("flights"),
+    searchPlaces: createMockTool("places"),
     webSearch: createMockTool("web search"),
     webSearchBatch: createMockTool("batch search"),
   };

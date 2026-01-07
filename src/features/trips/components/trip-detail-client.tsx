@@ -13,6 +13,7 @@ import { itineraryItemUpsertSchema, tripSettingsFormSchema } from "@schemas/trip
 import {
   ChevronLeftIcon,
   Loader2Icon,
+  MapPinnedIcon,
   PlusIcon,
   SettingsIcon,
   UsersIcon,
@@ -39,6 +40,7 @@ import { ItineraryItemDialog } from "@/features/trips/components/itinerary-item-
 import { TripCollaboratorsPanel } from "@/features/trips/components/trip-collaborators-panel";
 import { TripDetailHeader } from "@/features/trips/components/trip-detail-header";
 import { TripItineraryPanel } from "@/features/trips/components/trip-itinerary-panel";
+import { TripPlacesPanel } from "@/features/trips/components/trip-places-panel";
 import { TripSettingsPanel } from "@/features/trips/components/trip-settings-panel";
 import { useTripCollaborators } from "@/hooks/use-trip-collaborators";
 import {
@@ -82,7 +84,7 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
   const [draft, setDraft] = useState<ItineraryDraft>(DEFAULT_ITINERARY_DRAFT);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "itinerary" | "collaborators" | "settings"
+    "itinerary" | "places" | "collaborators" | "settings"
   >("itinerary");
 
   const [settings, setSettings] = useState<TripSettingsFormData>({ title: "" });
@@ -311,10 +313,14 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as typeof activeTab)}
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="itinerary" className="gap-2">
             <PlusIcon className="h-4 w-4" />
             Itinerary
+          </TabsTrigger>
+          <TabsTrigger value="places" className="gap-2">
+            <MapPinnedIcon className="h-4 w-4" />
+            Places
           </TabsTrigger>
           <TabsTrigger value="collaborators" className="gap-2">
             <UsersIcon className="h-4 w-4" />
@@ -336,6 +342,10 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
             onDelete={handleDeleteItineraryItem}
             isDeleting={deleteItineraryMutation.isPending}
           />
+        </TabsContent>
+
+        <TabsContent value="places" className="mt-6 space-y-4">
+          <TripPlacesPanel tripId={tripId} userId={userId} />
         </TabsContent>
 
         <TabsContent value="collaborators" className="mt-6 space-y-4">

@@ -4,6 +4,8 @@
 
 "use client";
 
+import type { PlaceSummary } from "@schemas/places";
+import { searchPlacesResultSchema } from "@schemas/places";
 import type { DestinationSearchFormData } from "@schemas/search";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -28,22 +30,9 @@ type DestinationSuggestion = {
   types: string[];
 };
 
-const PlacesApiPlaceSchema = z.strictObject({
-  displayName: z.strictObject({ text: z.string() }).optional(),
-  formattedAddress: z.string().optional(),
-  id: z.string(),
-  types: z.array(z.string()).optional(),
-});
-
-const PlacesApiResponseSchema = z.strictObject({
-  places: z.array(PlacesApiPlaceSchema).optional(),
-});
-
 const PlacesApiErrorSchema = z.strictObject({
   reason: z.string().optional(),
 });
-
-type PlacesApiPlace = z.infer<typeof PlacesApiPlaceSchema>;
 
 type DestinationAutocompleteFieldProps = {
   form: UseFormReturn<DestinationSearchFormData>;
@@ -54,13 +43,13 @@ const CACHE_TTL_MS = 2 * 60_000;
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const MAX_CACHE_ENTRIES = 50;
 
-function MapPlaceToSuggestion(place: PlacesApiPlace): DestinationSuggestion {
+function MapPlaceToSuggestion(place: PlaceSummary): DestinationSuggestion {
   return {
-    description: place.formattedAddress ?? place.displayName?.text ?? "",
-    mainText: place.displayName?.text ?? "Unknown",
-    placeId: place.id,
+    description: place.formattedAddress ?? place.name,
+    mainText: place.name,
+    placeId: place.placeId,
     secondaryText: place.formattedAddress ?? "",
-    types: place.types ?? [],
+    types: place.types,
   };
 }
 
@@ -78,7 +67,7 @@ export function DestinationAutocompleteField({
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const cacheRef = useRef<Map<string, { places: PlacesApiPlace[]; timestamp: number }>>(
+  const cacheRef = useRef<Map<string, { places: PlaceSummary[]; timestamp: number }>>(
     new Map()
   );
 
@@ -86,7 +75,7 @@ export function DestinationAutocompleteField({
   const query = form.watch("query");
 
   const filterPlaces = useCallback(
-    (places: PlacesApiPlace[]) => {
+    (places: PlaceSummary[]) => {
       const selectedTypes = form.getValues("types") ?? [];
       if (selectedTypes.length === 0) return places;
       const selectedTypeSet = new Set<string>(selectedTypes);
@@ -143,11 +132,11 @@ export function DestinationAutocompleteField({
         }
 
         const dataJson: unknown = await response.json();
-        const parsedData = PlacesApiResponseSchema.safeParse(dataJson);
+        const parsedData = searchPlacesResultSchema.safeParse(dataJson);
         if (!parsedData.success) {
           throw new Error("Unexpected response from places search.");
         }
-        const places = parsedData.data.places ?? [];
+        const places = parsedData.data.places;
         cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
         while (cacheRef.current.size > MAX_CACHE_ENTRIES) {
           const oldestKey = cacheRef.current.keys().next().value;

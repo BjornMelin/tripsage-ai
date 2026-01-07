@@ -21,7 +21,6 @@ import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag, versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { FALLBACK_HOTEL_IMAGE } from "@/lib/constants/images";
-import { getGoogleMapsBrowserKey } from "@/lib/env/server";
 import { enrichHotelListingWithPlaces } from "@/lib/google/places-enrichment";
 import { resolveLocationToLatLng } from "@/lib/google/places-geocoding";
 import { retryWithBackoff } from "@/lib/http/retry";
@@ -43,11 +42,11 @@ const logger = createServerLogger("search.unified.actions");
 /** Build photo URL. */
 function buildPhotoUrl(photoName?: string): string | undefined {
   if (!photoName) return undefined;
-  // This URL is consumed by the client; use the public browser key (referrer-restricted),
-  // not a privileged server key.
-  const apiKey = getGoogleMapsBrowserKey();
-  if (!apiKey) return undefined;
-  return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=800&maxWidthPx=1200&key=${apiKey}`;
+  return `/api/places/photo?${new URLSearchParams({
+    maxHeightPx: "800",
+    maxWidthPx: "1200",
+    name: photoName,
+  }).toString()}`;
 }
 
 /**

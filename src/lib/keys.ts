@@ -184,6 +184,10 @@ export const keys = {
       [...keys.trips.lists(userId), { filters: filters ?? null }] as const,
     listDisabled: () => [...keys.trips.all(), "list", "disabled"] as const,
     lists: (userId: string) => [...keys.trips.user(userId), "list"] as const,
+    savedPlaces: (userId: string, tripId: number) =>
+      [...keys.trips.detail(userId, tripId), "saved-places"] as const,
+    savedPlacesDisabled: () =>
+      [...keys.trips.all(), "saved-places", "disabled"] as const,
     suggestion: (userId: string, params?: Record<string, unknown>) =>
       [...keys.trips.suggestions(userId), { params: params ?? null }] as const,
     suggestions: (userId: string) =>
