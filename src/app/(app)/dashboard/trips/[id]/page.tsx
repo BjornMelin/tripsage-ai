@@ -26,17 +26,18 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
     notFound();
   }
 
+  const detailKey = keys.trips.detail(user.id, tripId);
+
+  const trip = await getTripByIdForUser(supabase, {
+    currentUserId: user.id,
+    tripId,
+  });
+  if (!trip) {
+    notFound();
+  }
+
   const state = await prefetchDehydratedState(async (queryClient) => {
-    const detailKey = keys.trips.detail(user.id, tripId);
-
-    const trip = await queryClient.fetchQuery({
-      queryFn: () => getTripByIdForUser(supabase, { currentUserId: user.id, tripId }),
-      queryKey: detailKey,
-    });
-
-    if (!trip) {
-      notFound();
-    }
+    queryClient.setQueryData(detailKey, trip);
 
     await queryClient.prefetchQuery({
       queryFn: () => listItineraryItemsForTrip(supabase, { tripId }),
