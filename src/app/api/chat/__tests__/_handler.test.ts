@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockModel } from "@/test/ai-sdk/mock-model";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
@@ -86,7 +87,7 @@ describe("handleChat", () => {
     await handleChat(
       {
         resolveProvider: async () => ({
-          model: unsafeCast<import("ai").LanguageModel>(() => ({})),
+          model: createMockModel(),
           modelId: "gpt-4o",
           provider: "openai",
         }),

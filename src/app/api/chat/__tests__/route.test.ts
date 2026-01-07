@@ -35,7 +35,7 @@ describe("/api/chat (AI SDK UI stream)", () => {
     vi.clearAllMocks();
   });
 
-  it("accepts DefaultChatTransport request fields (id/trigger/messageId) and ignores unknown keys", async () => {
+  it("accepts DefaultChatTransport request fields (id/trigger/messageId)", async () => {
     const mod = await import("../route");
 
     const sessionId = "22222222-2222-4222-8222-222222222222";
@@ -51,8 +51,6 @@ describe("/api/chat (AI SDK UI stream)", () => {
       ],
       sessionId,
       trigger: "submit-message",
-      // Forward-compat: should not break strict parsing
-      unexpected: { nested: true },
     });
 
     const res = await mod.POST(req, createRouteParamsContext());

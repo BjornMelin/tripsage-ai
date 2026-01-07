@@ -6,6 +6,7 @@ import "server-only";
 
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { toolRegistry } from "@ai/tools";
+import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
 import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ProviderResolution } from "@schemas/providers";
 import type { ModelMessage, ToolSet, UIMessage } from "ai";
@@ -70,6 +71,8 @@ export interface ChatPayload {
   abortSignal?: AbortSignal;
 }
 
+// Local schemas for AI SDK callback payloads; they differ from domain schemas
+// in @schemas/chat that represent persisted entities.
 const toolCallSchema = z.looseObject({
   args: z.unknown().optional(),
   input: z.unknown().optional(),
@@ -662,6 +665,7 @@ export async function handleChat(
   const visibleHistory = historyResult.messages.filter((m) => !m.isSuperseded);
 
   let promptUiMessages: UIMessage[];
+  let latestUserMessage: UIMessage | null = null;
   let regenerationOf: string | null = null;
 
   if (trigger === "submit-message") {
@@ -683,26 +687,7 @@ export async function handleChat(
     }
 
     promptUiMessages = [...visibleHistory.map((m) => m.uiMessage), latest];
-
-    // Persist latest user message (best-effort).
-    await persistMemoryTurn({
-      logger: deps.logger,
-      sessionId,
-      turn: uiMessageToMemoryTurn(latest),
-      userId,
-    });
-
-    const userPersist = await persistChatMessage({
-      content: encodePartsToContent(latest.parts),
-      metadata: {
-        uiMessageId: latest.id,
-      },
-      role: "user",
-      sessionId,
-      supabase: deps.supabase,
-      userId,
-    });
-    if (!userPersist.ok) return userPersist.res;
+    latestUserMessage = latest;
   } else {
     const requestedMessageId = payload.messageId?.trim() || undefined;
     const targetIndex = requestedMessageId
@@ -741,6 +726,28 @@ export async function handleChat(
       reason: attachmentValidation.reason,
       status: 400,
     });
+  }
+
+  if (latestUserMessage) {
+    // Persist latest user message (best-effort).
+    await persistMemoryTurn({
+      logger: deps.logger,
+      sessionId,
+      turn: uiMessageToMemoryTurn(latestUserMessage),
+      userId,
+    });
+
+    const userPersist = await persistChatMessage({
+      content: encodePartsToContent(latestUserMessage.parts),
+      metadata: {
+        uiMessageId: latestUserMessage.id,
+      },
+      role: "user",
+      sessionId,
+      supabase: deps.supabase,
+      userId,
+    });
+    if (!userPersist.ok) return userPersist.res;
   }
 
   // Memory hydration: fetch context (semantic when possible).
@@ -826,31 +833,16 @@ export async function handleChat(
   const maxSteps = deps.config?.maxSteps ?? 10;
 
   // Tools that require user scope injection.
-  const userScopedTools = [
-    "createTravelPlan",
-    "updateTravelPlan",
-    "saveTravelPlan",
-    "deleteTravelPlan",
-    "bookAccommodation",
-    "trips.savePlace",
-    "webSearch",
-    "webSearchBatch",
-  ];
-
-  const chatScopedTools = ["attachments.list"];
-
   const baseTools = wrapToolsWithUserId(
     toolRegistry,
     userId,
-    userScopedTools,
+    [...USER_SCOPED_TOOLS],
     sessionId
   ) satisfies ToolSet;
 
-  const chatTools = wrapToolsWithChatId(
-    baseTools,
-    sessionId,
-    chatScopedTools
-  ) satisfies ToolSet;
+  const chatTools = wrapToolsWithChatId(baseTools, sessionId, [
+    ...CHAT_SCOPED_TOOLS,
+  ]) satisfies ToolSet;
 
   const modelMessages = await convertToModelMessages(promptUiMessages, {
     ignoreIncompleteToolCalls: true,

@@ -266,7 +266,7 @@ Do not return final response until all gates pass for code changes.
 
 ## Source Code Reference
 
-Source code for dependencies is available in `opensrc/` for deeper understanding of implementation details.
+Source code for dependencies is available in `opensrc/` for comprehensive understanding of implementation details.
 
 See `opensrc/sources.json` for the list of available packages and their versions.
 

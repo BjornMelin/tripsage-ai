@@ -4,6 +4,8 @@
 
 import "server-only";
 
+import { isPlainObject } from "@/lib/utils/type-guards";
+
 type ToolWithExecute = {
   description?: string;
   execute?: (params: unknown, callOptions?: unknown) => Promise<unknown> | unknown;
@@ -34,9 +36,7 @@ function sanitizeToolInput(input: unknown): Record<string, unknown> {
       return sanitized;
     }
 
-    const proto = Object.getPrototypeOf(value);
-    const isPlainObject = proto === Object.prototype || proto === null;
-    if (!isPlainObject) {
+    if (!isPlainObject(value)) {
       return value;
     }
 

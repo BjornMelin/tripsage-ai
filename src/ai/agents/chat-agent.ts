@@ -6,6 +6,7 @@ import "server-only";
 
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { toolRegistry } from "@ai/tools";
+import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
 import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ModelMessage, PrepareStepFunction, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
@@ -206,14 +207,7 @@ export function createChatAgent(
     memorySummary,
     systemPrompt = CHAT_DEFAULT_SYSTEM_PROMPT,
     useCallOptions = false,
-    userScopedTools = [
-      "createTravelPlan",
-      "updateTravelPlan",
-      "saveTravelPlan",
-      "deleteTravelPlan",
-      "bookAccommodation",
-      "trips.savePlace",
-    ],
+    userScopedTools = [...USER_SCOPED_TOOLS],
   } = config;
 
   // Build base system prompt with optional memory context
@@ -244,7 +238,7 @@ export function createChatAgent(
   const { maxTokens } = clampMaxTokens(clampInput, desiredMaxTokens, deps.modelId);
 
   // Build tools with user ID injection for user-scoped operations
-  const chatScopedTools = ["attachments.list"];
+  const chatScopedTools = [...CHAT_SCOPED_TOOLS];
 
   const baseTools = wrapToolsWithUserId(
     toolRegistry,

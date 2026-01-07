@@ -49,11 +49,7 @@ export function Tool({
   const badgeVariant = useMemo(() => {
     if (!status) return "secondary" as const;
     const lower = status.toLowerCase();
-    if (
-      lower.includes("error") ||
-      lower.includes("failed") ||
-      lower.includes("denied")
-    ) {
+    if (lower.includes("error") || lower.includes("failed")) {
       return "destructive" as const;
     }
     return "secondary" as const;

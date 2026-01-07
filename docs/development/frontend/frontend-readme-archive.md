@@ -586,7 +586,8 @@ UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
 # OPTIONAL - AI Provider Keys
 # Vercel AI Gateway (primary routing layer for multi-provider support)
 AI_GATEWAY_API_KEY=your_gateway_api_key  # Server-only
-# Server-only, optional override (createGateway baseURL)
+# Server-only, optional override (createGateway baseURL). This repo pins v3/ai for
+# the OpenAI-compatible gateway endpoint; omit to use the SDK default (v1/ai).
 AI_GATEWAY_URL=https://ai-gateway.vercel.sh/v3/ai
 
 # Fallback provider keys (used when BYOK not configured, checked in preference order)

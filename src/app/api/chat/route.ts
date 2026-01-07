@@ -36,7 +36,7 @@ function getDefaultMaxSteps(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_STEPS_FALLBACK;
 }
 
-const chatRequestSchema = z.looseObject({
+const chatRequestSchema = z.strictObject({
   desiredMaxTokens: z.number().int().min(1).max(16_384).optional(),
   id: z.string().trim().min(1).max(200).optional(),
   message: z.unknown().optional(),
@@ -125,8 +125,7 @@ export const POST = withApiGuards({
       clock: { now: () => Date.now() },
       config: { defaultMaxTokens, maxSteps },
       logger,
-      resolveProvider: (resolvedUserId, modelHint) =>
-        resolveProvider(resolvedUserId, modelHint),
+      resolveProvider,
       supabase,
     },
     {

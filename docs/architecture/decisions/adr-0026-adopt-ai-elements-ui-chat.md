@@ -16,7 +16,7 @@ The project previously shipped bespoke chat UIs and hooks spread across `src/com
 
 - Use AI Elements primitives for conversation, messages, and prompt input.
 - Standardize client transport on `@ai-sdk/react` with `DefaultChatTransport`.
-- Provide a Next.js route handler at `src/app/api/chat/route.ts` using `streamText(...).toUIMessageStreamResponse()` to serve the AI SDK v6 UI message stream protocol.
+- Provide a Next.js route handler at `src/app/api/chat/route.ts` using `streamText(…).toUIMessageStreamResponse()` to serve the AI SDK v6 UI message stream protocol.
 - Add a simple first-party page `src/app/chat/page.tsx` to render the chat UI and wire prompt submission.
 
 ## Consequences
