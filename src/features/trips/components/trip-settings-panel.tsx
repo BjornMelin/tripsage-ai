@@ -104,7 +104,7 @@ export function TripSettingsPanel({
               const nextValue = e.target.value;
               setSettings((prev) => ({
                 ...prev,
-                description: nextValue.length ? nextValue : undefined,
+                description: nextValue,
               }));
             }}
             rows={4}

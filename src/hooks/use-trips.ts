@@ -244,10 +244,15 @@ export function useUpdateTrip(options?: { userId?: string | null }) {
         queryKey: listPrefix,
       });
 
+      const optimisticData = {
+        ...data,
+        description: data.description === null ? undefined : data.description,
+      };
+
       if (previousDetail) {
         queryClient.setQueryData<Trip>(detailKey, {
           ...previousDetail,
-          ...data,
+          ...optimisticData,
           updatedAt: nowIso(),
         });
       }
@@ -256,7 +261,7 @@ export function useUpdateTrip(options?: { userId?: string | null }) {
         if (!current) return current;
         return current.map((trip) =>
           trip.id === String(numericTripId)
-            ? { ...trip, ...data, updatedAt: nowIso() }
+            ? { ...trip, ...optimisticData, updatedAt: nowIso() }
             : trip
         );
       });

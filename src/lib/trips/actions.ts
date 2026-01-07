@@ -439,7 +439,8 @@ export async function updateTrip(
       const updates: Database["public"]["Tables"]["trips"]["Update"] = {
         budget: payload.budget ?? undefined,
         currency: payload.currency ?? undefined,
-        description: payload.description ?? undefined,
+        description:
+          payload.description === null ? null : (payload.description ?? undefined),
         destination: payload.destination ?? undefined,
         // biome-ignore lint/style/useNamingConvention: Supabase column name
         end_date: payload.endDate ? normalizeIsoDate(payload.endDate) : undefined,

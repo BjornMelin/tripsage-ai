@@ -1,9 +1,25 @@
 /** @vitest-environment node */
 
-import { itineraryItemUpsertSchema, tripSettingsFormSchema } from "@schemas/trips";
+import {
+  itineraryItemUpsertSchema,
+  tripSettingsFormSchema,
+  tripUpdateSchema,
+} from "@schemas/trips";
 import { describe, expect, it } from "vitest";
 
 describe("trips schemas", () => {
+  describe("tripUpdateSchema", () => {
+    it("accepts null description to clear", () => {
+      const result = tripUpdateSchema.safeParse({ description: null });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects empty description strings", () => {
+      const result = tripUpdateSchema.safeParse({ description: "" });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe("tripSettingsFormSchema", () => {
     it("accepts a minimal payload", () => {
       const result = tripSettingsFormSchema.safeParse({ title: "Tokyo weekender" });

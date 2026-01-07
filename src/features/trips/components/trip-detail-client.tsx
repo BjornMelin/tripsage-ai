@@ -196,8 +196,16 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
     }
 
     try {
+      const descriptionRaw = validation.data.description;
+      const descriptionTrimmed = descriptionRaw?.trim() ?? "";
+
       const normalized = {
-        description: validation.data.description?.trim() || undefined,
+        description:
+          descriptionRaw === undefined
+            ? undefined
+            : descriptionTrimmed.length
+              ? descriptionTrimmed
+              : null,
         destination: validation.data.destination?.trim() || undefined,
         endDate: validation.data.endDate,
         startDate: validation.data.startDate,

@@ -214,7 +214,9 @@ export type TripCreateInput = z.infer<typeof tripCreateSchema>;
  * Zod schema for updating existing trips.
  * Allows partial updates while maintaining validation constraints.
  */
-export const tripUpdateSchema = tripCreateSchema.partial();
+export const tripUpdateSchema = tripCreateSchema.partial().extend({
+  description: primitiveSchemas.nonEmptyString.max(1000).nullable().optional(),
+});
 
 /** TypeScript type for trip update input. */
 export type TripUpdateInput = z.infer<typeof tripUpdateSchema>;
