@@ -2,7 +2,7 @@
  * @fileoverview Trip-related Zod schemas for runtime validation. Includes trip creation, updates, filtering, suggestions, and itinerary items.
  */
 
-import { type ZodObject, type ZodRawShape, z } from "zod";
+import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA } from "./shared/person";
 import { FUTURE_DATE_SCHEMA } from "./shared/time";
@@ -336,47 +336,32 @@ const itineraryEventPayloadSchema = z
 
 const itineraryOtherPayloadSchema = z.strictObject({}).catchall(z.unknown());
 
-const itineraryItemPayloadSchemas = {
-  accommodation: itineraryAccommodationPayloadSchema,
-  activity: itineraryActivityPayloadSchema,
-  event: itineraryEventPayloadSchema,
-  meal: itineraryMealPayloadSchema,
-  other: itineraryOtherPayloadSchema,
-  transport: itineraryTransportPayloadSchema,
-} as const;
-
-type ItineraryItemPayloadType = keyof typeof itineraryItemPayloadSchemas;
-
-function buildItineraryItemVariants(
-  baseSchema: ZodObject<ZodRawShape>,
-  extraFields: ZodRawShape
-): [ZodObject<ZodRawShape>, ZodObject<ZodRawShape>, ...ZodObject<ZodRawShape>[]] {
-  const variants = (
-    Object.entries(itineraryItemPayloadSchemas) as Array<
-      [
-        ItineraryItemPayloadType,
-        (typeof itineraryItemPayloadSchemas)[ItineraryItemPayloadType],
-      ]
-    >
-  ).map(([itemType, payloadSchema]) =>
-    baseSchema.extend({
-      ...extraFields,
-      itemType: z.literal(itemType),
-      payload: payloadSchema,
-    })
-  );
-
-  return variants as [
-    ZodObject<ZodRawShape>,
-    ZodObject<ZodRawShape>,
-    ...ZodObject<ZodRawShape>[],
-  ];
-}
-
-export const itineraryItemCreateSchema = z.discriminatedUnion(
-  "itemType",
-  buildItineraryItemVariants(itineraryItemBaseSchema, {})
-);
+export const itineraryItemCreateSchema = z.discriminatedUnion("itemType", [
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("activity"),
+    payload: itineraryActivityPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("meal"),
+    payload: itineraryMealPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("transport"),
+    payload: itineraryTransportPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("accommodation"),
+    payload: itineraryAccommodationPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("event"),
+    payload: itineraryEventPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("other"),
+    payload: itineraryOtherPayloadSchema,
+  }),
+]);
 
 /** TypeScript type for itinerary item creation input. */
 export type ItineraryItemCreateInput = z.infer<typeof itineraryItemCreateSchema>;
@@ -387,12 +372,38 @@ export type ItineraryItemCreateInput = z.infer<typeof itineraryItemCreateSchema>
  * - New item: omit `id`
  * - Update existing: include `id`
  */
-export const itineraryItemUpsertSchema = z.discriminatedUnion(
-  "itemType",
-  buildItineraryItemVariants(itineraryItemBaseSchema, {
+export const itineraryItemUpsertSchema = z.discriminatedUnion("itemType", [
+  itineraryItemBaseSchema.extend({
     id: primitiveSchemas.positiveNumber.int().optional(),
-  })
-);
+    itemType: z.literal("activity"),
+    payload: itineraryActivityPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("meal"),
+    payload: itineraryMealPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("transport"),
+    payload: itineraryTransportPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("accommodation"),
+    payload: itineraryAccommodationPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("event"),
+    payload: itineraryEventPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("other"),
+    payload: itineraryOtherPayloadSchema,
+  }),
+]);
 
 /** TypeScript type for itinerary item upsert input. */
 export type ItineraryItemUpsertInput = z.infer<typeof itineraryItemUpsertSchema>;
@@ -405,10 +416,32 @@ const itineraryItemUiBaseSchema = itineraryItemBaseSchema.extend({
 });
 
 /** Zod schema for itinerary items returned by queries and actions. */
-export const itineraryItemSchema = z.discriminatedUnion(
-  "itemType",
-  buildItineraryItemVariants(itineraryItemUiBaseSchema, {})
-);
+export const itineraryItemSchema = z.discriminatedUnion("itemType", [
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("activity"),
+    payload: itineraryActivityPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("meal"),
+    payload: itineraryMealPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("transport"),
+    payload: itineraryTransportPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("accommodation"),
+    payload: itineraryAccommodationPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("event"),
+    payload: itineraryEventPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("other"),
+    payload: itineraryOtherPayloadSchema,
+  }),
+]);
 
 /** TypeScript type for itinerary items returned by queries and actions. */
 export type ItineraryItem = z.infer<typeof itineraryItemSchema>;
