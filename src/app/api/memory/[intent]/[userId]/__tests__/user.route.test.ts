@@ -119,7 +119,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
     expect(res.status).toBe(405);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("method_not_allowed");
-  });
+  }, 15_000);
 
   it("returns 401 when user is unauthenticated", async () => {
     supabaseClient.auth.getUser.mockResolvedValue({

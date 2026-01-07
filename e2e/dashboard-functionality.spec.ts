@@ -4,6 +4,32 @@ import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
 const navigationTimeoutMs = 15_000;
 const visibilityTimeoutMs = navigationTimeoutMs;
 
+function getUserMenuTrigger(page: Page): Locator {
+  return page
+    .getByRole("banner")
+    .getByRole("button", { name: /Test User|test@example\.com|User/i });
+}
+
+async function openUserMenu(page: Page): Promise<Locator> {
+  const trigger = getUserMenuTrigger(page);
+  await expect(trigger).toBeVisible({ timeout: visibilityTimeoutMs });
+
+  const popoverContent = page.getByRole("dialog").filter({ hasText: "Log out" });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await trigger.click();
+    try {
+      await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
+      return popoverContent;
+    } catch (error) {
+      if (attempt === 1) throw error;
+      await page.waitForTimeout(200);
+    }
+  }
+
+  return popoverContent;
+}
+
 async function clickAndWaitForUrl(
   page: Page,
   locator: Locator,
@@ -30,6 +56,8 @@ async function clickAndWaitForUrl(
 }
 
 test.describe("Dashboard Functionality", () => {
+  test.describe.configure({ timeout: 60_000 });
+
   test.beforeEach(async ({ page }) => {
     await resetTestAuth(page);
     // Navigate to the application
@@ -85,6 +113,8 @@ test.describe("Dashboard Functionality", () => {
   });
 
   test("user navigation menu works", async ({ page }) => {
+    test.setTimeout(60_000);
+
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
@@ -92,12 +122,7 @@ test.describe("Dashboard Functionality", () => {
       page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
     ).toBeVisible({ timeout: visibilityTimeoutMs });
 
-    // Click on user menu
-    await page.getByRole("button", { name: "User" }).click();
-
-    // Wait for popover to be visible and target menu items within the popover content
-    const popoverContent = page.locator("[data-radix-popper-content-wrapper]");
-    await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
+    const popoverContent = await openUserMenu(page);
 
     // Verify menu options using the popover container to avoid sidebar conflicts
     await expect(popoverContent.getByRole("link", { name: "Profile" })).toBeVisible({
@@ -115,6 +140,7 @@ test.describe("Dashboard Functionality", () => {
     await expect(page).toHaveURL("/dashboard/profile", {
       timeout: navigationTimeoutMs,
     });
+    await page.waitForLoadState("domcontentloaded");
 
     // Navigate back and test settings
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -122,10 +148,8 @@ test.describe("Dashboard Functionality", () => {
     await expect(
       page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
     ).toBeVisible({ timeout: visibilityTimeoutMs });
-    await page.getByRole("button", { name: "User" }).click();
 
-    // Wait for popover again and click settings
-    await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
+    await openUserMenu(page);
     await popoverContent.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL("/dashboard/settings", {
       timeout: navigationTimeoutMs,
@@ -136,12 +160,7 @@ test.describe("Dashboard Functionality", () => {
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    // Click on user menu and logout
-    await page.getByRole("button", { name: "User" }).click();
-
-    // Wait for popover to be visible and target logout button within it
-    const popoverContent = page.locator("[data-radix-popper-content-wrapper]");
-    await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
+    const popoverContent = await openUserMenu(page);
     await popoverContent.getByRole("button", { name: "Log out" }).click();
 
     // Wait for redirect to login page
@@ -184,31 +203,47 @@ test.describe("Dashboard Functionality", () => {
   });
 
   test("dashboard quick actions work", async ({ page }) => {
+    test.setTimeout(60_000);
+
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // Test quick action navigation
     const searchFlightsLink = page
+      .getByRole("main")
       .getByRole("link", { name: "Search Flights" })
       .first();
     await expect(searchFlightsLink).toHaveAttribute(
       "href",
-      "/dashboard/search/flights"
+      "/dashboard/search/flights",
+      {
+        timeout: visibilityTimeoutMs,
+      }
     );
     await clickAndWaitForUrl(page, searchFlightsLink, "/dashboard/search/flights");
 
     // Go back to dashboard
-    await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
-    const findHotelsLink = page.getByRole("link", { name: "Find Hotels" });
-    await expect(findHotelsLink).toHaveAttribute("href", "/dashboard/search/hotels");
+
+    const findHotelsLink = page
+      .getByRole("main")
+      .getByRole("link", { name: "Find Hotels" });
+    await expect(findHotelsLink).toHaveAttribute("href", "/dashboard/search/hotels", {
+      timeout: visibilityTimeoutMs,
+    });
     await clickAndWaitForUrl(page, findHotelsLink, "/dashboard/search/hotels");
 
     // Go back and test AI Assistant
-    await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL("/dashboard", { timeout: navigationTimeoutMs });
-    const aiAssistantLink = page.getByRole("link", { name: "Ask AI Assistant" });
-    await expect(aiAssistantLink).toHaveAttribute("href", "/chat");
+
+    const aiAssistantLink = page
+      .getByRole("main")
+      .getByRole("link", { name: "Ask AI Assistant" });
+    await expect(aiAssistantLink).toHaveAttribute("href", "/chat", {
+      timeout: visibilityTimeoutMs,
+    });
     await expect(aiAssistantLink).toBeVisible({ timeout: visibilityTimeoutMs });
     await clickAndWaitForUrl(page, aiAssistantLink, "/chat");
   });

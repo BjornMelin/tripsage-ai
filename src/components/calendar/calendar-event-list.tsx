@@ -91,7 +91,7 @@ export function CalendarEventList({
     isError,
     isPending,
   } = useQuery<CalendarEventListItem[]>({
-    enabled: !!userId,
+    enabled: Boolean(userId),
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       params.set("calendarId", calendarId);
@@ -119,19 +119,24 @@ export function CalendarEventList({
 
       return parsed.data.items;
     },
-    queryKey: keys.calendar.events(userId ?? "no-user", {
-      calendarId,
-      timeMaxIso,
-      timeMinIso,
-    }),
+    queryKey: userId
+      ? keys.calendar.events(userId, {
+          calendarId,
+          timeMaxIso,
+          timeMinIso,
+        })
+      : keys.calendar.eventsDisabled(),
   });
 
   if (isPending) {
     return (
       <Card className={className}>
         <CardHeader>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-48 mt-2" />
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Upcoming Events
+          </CardTitle>
+          <CardDescription>Loading events…</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {[1, 2, 3].map((i) => (
