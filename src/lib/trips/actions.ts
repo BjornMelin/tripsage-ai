@@ -66,6 +66,42 @@ const itineraryItemIdSchema = z.coerce
   .gt(0, { error: "Itinerary item id must be a positive integer" });
 
 type TripRow = Pick<Database["public"]["Tables"]["trips"]["Row"], "id" | "user_id">;
+type ItineraryItemRow = Database["public"]["Tables"]["itinerary_items"]["Row"];
+
+function parseItineraryItemRow(
+  row: ItineraryItemRow,
+  itemType: ItineraryItemUpsertInput["itemType"]
+): Result<ItineraryItem, z.ZodIssue[]> {
+  const payload =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+
+  const parsed = itineraryItemSchema.safeParse({
+    bookingStatus: row.booking_status ?? "planned",
+    createdAt: row.created_at ?? undefined,
+    createdBy: row.user_id,
+    currency: row.currency ?? "USD",
+    description: row.description ?? undefined,
+    endAt: row.end_time ?? undefined,
+    externalId: row.external_id ?? undefined,
+    id: row.id,
+    itemType,
+    location: row.location ?? undefined,
+    payload,
+    price: row.price ?? undefined,
+    startAt: row.start_time ?? undefined,
+    title: row.title,
+    tripId: row.trip_id,
+    updatedAt: row.updated_at ?? undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues, ok: false };
+  }
+
+  return { data: parsed.data, ok: true };
+}
 
 function normalizeIsoDate(value: string): string {
   const trimmed = value.trim();
@@ -1050,29 +1086,10 @@ export async function upsertItineraryItem(
           return err({ error: "internal", reason: "Failed to add itinerary item" });
         }
 
-        const parsed = itineraryItemSchema.safeParse({
-          bookingStatus: data.booking_status ?? "planned",
-          createdAt: data.created_at ?? undefined,
-          createdBy: data.user_id,
-          currency: data.currency ?? "USD",
-          description: data.description ?? undefined,
-          endAt: data.end_time ?? undefined,
-          externalId: data.external_id ?? undefined,
-          id: data.id,
-          itemType: payload.itemType,
-          location: data.location ?? undefined,
-          payload:
-            typeof data.metadata === "object" && data.metadata ? data.metadata : {},
-          price: data.price ?? undefined,
-          startAt: data.start_time ?? undefined,
-          title: data.title,
-          tripId: data.trip_id,
-          updatedAt: data.updated_at ?? undefined,
-        });
-
-        if (!parsed.success) {
+        const parsed = parseItineraryItemRow(data, payload.itemType);
+        if (!parsed.ok) {
           logger.error("itinerary_item_insert_parse_failed", {
-            issues: parsed.error.issues,
+            issues: parsed.error,
             tripId: tripIdResult.data,
           });
           return err({
@@ -1126,29 +1143,10 @@ export async function upsertItineraryItem(
         return err({ error: "not_found", reason: "Itinerary item not found" });
       }
 
-      const parsed = itineraryItemSchema.safeParse({
-        bookingStatus: data.booking_status ?? "planned",
-        createdAt: data.created_at ?? undefined,
-        createdBy: data.user_id,
-        currency: data.currency ?? "USD",
-        description: data.description ?? undefined,
-        endAt: data.end_time ?? undefined,
-        externalId: data.external_id ?? undefined,
-        id: data.id,
-        itemType: payload.itemType,
-        location: data.location ?? undefined,
-        payload:
-          typeof data.metadata === "object" && data.metadata ? data.metadata : {},
-        price: data.price ?? undefined,
-        startAt: data.start_time ?? undefined,
-        title: data.title,
-        tripId: data.trip_id,
-        updatedAt: data.updated_at ?? undefined,
-      });
-
-      if (!parsed.success) {
+      const parsed = parseItineraryItemRow(data, payload.itemType);
+      if (!parsed.ok) {
         logger.error("itinerary_item_update_parse_failed", {
-          issues: parsed.error.issues,
+          issues: parsed.error,
           itemId: idResult.data,
           tripId: tripIdResult.data,
         });
