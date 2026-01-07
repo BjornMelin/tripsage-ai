@@ -113,3 +113,47 @@ export async function listTripsForUser(
 
   return validated;
 }
+
+export async function getTripByIdForUser(
+  supabase: TypedServerSupabase,
+  params: { currentUserId: string; tripId: number }
+): Promise<UiTrip | null> {
+  const { data, error } = await supabase
+    .from("trips")
+    .select("*")
+    .eq("id", params.tripId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("trip_detail_query_failed", {
+      error: error.message,
+      tripId: params.tripId,
+    });
+    throw new Error("Failed to load trip");
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const parsed = tripsRowSchema.safeParse(data);
+  if (!parsed.success) {
+    logger.warn("trip_detail_row_validation_failed", {
+      issues: parsed.error.issues.map((issue) => issue.path.join(".")),
+      tripId: params.tripId,
+    });
+    return null;
+  }
+
+  const uiTrip = mapDbTripToUi(parsed.data, { currentUserId: params.currentUserId });
+  const validated = storeTripSchema.safeParse(uiTrip);
+  if (!validated.success) {
+    logger.warn("trip_detail_ui_validation_failed", {
+      issues: validated.error.issues.map((issue) => issue.path.join(".")),
+      tripId: params.tripId,
+    });
+    return null;
+  }
+
+  return validated.data;
+}

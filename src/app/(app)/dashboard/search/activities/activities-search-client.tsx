@@ -249,7 +249,7 @@ export default function ActivitiesSearchClient({
           description: selectedActivity.description,
           externalId: selectedActivity.id,
           location: selectedActivity.location,
-          metadata: {
+          payload: {
             ...(selectedActivity.images && { images: selectedActivity.images }),
             rating: selectedActivity.rating,
             type: selectedActivity.type,

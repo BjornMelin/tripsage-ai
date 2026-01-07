@@ -3,7 +3,11 @@
  */
 
 import type { TripsRow } from "@schemas/supabase";
-import type { ItineraryItemCreateInput, UiTrip } from "@schemas/trips";
+import type {
+  ItineraryItemUpsertInput,
+  TripCollaboratorRole,
+  UiTrip,
+} from "@schemas/trips";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 /**
@@ -29,7 +33,7 @@ export function mapDbTripToUi(
     budget: row.budget,
     createdAt: row.created_at ?? undefined,
     currency: row.currency,
-    description: undefined,
+    description: row.description ?? undefined,
     destination: row.destination,
     destinations: [],
     endDate: row.end_date ?? undefined,
@@ -47,6 +51,13 @@ export function mapDbTripToUi(
   };
 }
 
+export function mapTripCollaboratorRoleToDb(
+  role: TripCollaboratorRole
+): "viewer" | "editor" | "admin" {
+  if (role === "owner") return "admin";
+  return role;
+}
+
 /**
  * Maps a validated itinerary item input into a Supabase `itinerary_items` insert payload.
  *
@@ -55,8 +66,8 @@ export function mapDbTripToUi(
  * @param item - Validated itinerary item data.
  * @param userId - Owning user id.
  */
-export function mapItineraryItemCreateToDbInsert(
-  item: ItineraryItemCreateInput,
+export function mapItineraryItemUpsertToDbInsert(
+  item: ItineraryItemUpsertInput,
   userId: string
 ): Database["public"]["Tables"]["itinerary_items"]["Insert"] {
   return {
@@ -65,20 +76,43 @@ export function mapItineraryItemCreateToDbInsert(
     currency: item.currency,
     description: item.description ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
-    end_time: item.endTime ?? null,
+    end_time: item.endAt ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     external_id: item.externalId ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     item_type: item.itemType,
     location: item.location ?? null,
-    metadata: (item.metadata ?? {}) as Json,
+    metadata: item.payload as Json,
     price: item.price ?? null,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
-    start_time: item.startTime ?? null,
+    start_time: item.startAt ?? null,
     title: item.title,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     trip_id: item.tripId,
     // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
     user_id: userId,
+  };
+}
+
+export function mapItineraryItemUpsertToDbUpdate(
+  item: ItineraryItemUpsertInput
+): Database["public"]["Tables"]["itinerary_items"]["Update"] {
+  return {
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    booking_status: item.bookingStatus,
+    currency: item.currency,
+    description: item.description ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    end_time: item.endAt ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    external_id: item.externalId ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    item_type: item.itemType,
+    location: item.location ?? null,
+    metadata: item.payload as Json,
+    price: item.price ?? null,
+    // biome-ignore lint/style/useNamingConvention: Supabase columns use snake_case
+    start_time: item.startAt ?? null,
+    title: item.title,
   };
 }

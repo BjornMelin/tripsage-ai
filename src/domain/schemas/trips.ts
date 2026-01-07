@@ -18,7 +18,7 @@ export const visibilitySchema = z.enum(["private", "shared", "public"]);
 export type TripVisibility = z.infer<typeof visibilitySchema>;
 
 /** Zod schema for trip collaborator permission tiers. */
-export const tripCollaboratorRoleSchema = z.enum(["viewer", "editor", "admin"]);
+export const tripCollaboratorRoleSchema = z.enum(["viewer", "editor", "owner"]);
 
 /** TypeScript type for trip collaborator permission tiers. */
 export type TripCollaboratorRole = z.infer<typeof tripCollaboratorRoleSchema>;
@@ -250,41 +250,191 @@ export type TripSuggestion = z.infer<typeof tripSuggestionSchema>;
  * Zod schema for creating itinerary items like activities, meals, and transportation.
  * Validates item details including booking status, timing, and pricing.
  */
-export const itineraryItemCreateSchema = z.strictObject({
+export const itineraryItemTypeSchema = z.enum([
+  "activity",
+  "meal",
+  "transport",
+  "accommodation",
+  "event",
+  "other",
+]);
+
+/** TypeScript type for itinerary item types. */
+export type ItineraryItemType = z.infer<typeof itineraryItemTypeSchema>;
+
+const itineraryItemBaseSchema = z.strictObject({
   bookingStatus: z
     .enum(["planned", "reserved", "booked", "completed", "cancelled"])
     .default("planned"),
   currency: primitiveSchemas.isoCurrency.default("USD"),
   description: primitiveSchemas.nonEmptyString.max(1000).optional(),
-  endTime: z.string().optional(),
+  endAt: primitiveSchemas.isoDateTime.optional(),
   externalId: z.string().optional(),
-  itemType: z.enum([
-    "activity",
-    "meal",
-    "transport",
-    "accommodation",
-    "event",
-    "other",
-  ]),
   location: z.string().optional(),
-  metadata: z.record(primitiveSchemas.nonEmptyString, z.unknown()).optional(),
   price: primitiveSchemas.nonNegativeNumber.optional(),
-  startTime: z.string().optional(),
+  startAt: primitiveSchemas.isoDateTime.optional(),
   title: primitiveSchemas.nonEmptyString.max(200),
   tripId: primitiveSchemas.positiveNumber.int(),
 });
+
+const itineraryActivityPayloadSchema = z
+  .strictObject({
+    placeId: z.string().optional(),
+    provider: z.string().optional(),
+    url: primitiveSchemas.url.optional(),
+  })
+  .catchall(z.unknown());
+
+const itineraryMealPayloadSchema = z
+  .strictObject({
+    cuisine: z.string().optional(),
+    reservationName: z.string().optional(),
+    reservationPhone: z.string().optional(),
+    url: primitiveSchemas.url.optional(),
+  })
+  .catchall(z.unknown());
+
+const itineraryTransportPayloadSchema = z
+  .strictObject({
+    bookingReference: z.string().optional(),
+    from: z.string().optional(),
+    mode: z
+      .enum(["flight", "train", "car", "bus", "ferry", "walk", "rideshare", "other"])
+      .optional(),
+    to: z.string().optional(),
+    url: primitiveSchemas.url.optional(),
+  })
+  .catchall(z.unknown());
+
+const itineraryAccommodationPayloadSchema = z
+  .strictObject({
+    checkIn: primitiveSchemas.isoDateTime.optional(),
+    checkOut: primitiveSchemas.isoDateTime.optional(),
+    propertyName: z.string().optional(),
+    provider: z.string().optional(),
+    url: primitiveSchemas.url.optional(),
+  })
+  .catchall(z.unknown());
+
+const itineraryEventPayloadSchema = z
+  .strictObject({
+    eventId: z.string().optional(),
+    organizer: z.string().optional(),
+    ticketsUrl: primitiveSchemas.url.optional(),
+  })
+  .catchall(z.unknown());
+
+const itineraryOtherPayloadSchema = z.strictObject({}).catchall(z.unknown());
+
+export const itineraryItemCreateSchema = z.discriminatedUnion("itemType", [
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("activity"),
+    payload: itineraryActivityPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("meal"),
+    payload: itineraryMealPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("transport"),
+    payload: itineraryTransportPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("accommodation"),
+    payload: itineraryAccommodationPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("event"),
+    payload: itineraryEventPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    itemType: z.literal("other"),
+    payload: itineraryOtherPayloadSchema,
+  }),
+]);
 
 /** TypeScript type for itinerary item creation input. */
 export type ItineraryItemCreateInput = z.infer<typeof itineraryItemCreateSchema>;
 
 /**
- * Zod schema for updating existing itinerary items.
- * Allows partial updates of itinerary item properties.
+ * Zod schema for creating or updating itinerary items.
+ *
+ * - New item: omit `id`
+ * - Update existing: include `id`
  */
-export const itineraryItemUpdateSchema = itineraryItemCreateSchema.partial();
+export const itineraryItemUpsertSchema = z.discriminatedUnion("itemType", [
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("activity"),
+    payload: itineraryActivityPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("meal"),
+    payload: itineraryMealPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("transport"),
+    payload: itineraryTransportPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("accommodation"),
+    payload: itineraryAccommodationPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("event"),
+    payload: itineraryEventPayloadSchema,
+  }),
+  itineraryItemBaseSchema.extend({
+    id: primitiveSchemas.positiveNumber.int().optional(),
+    itemType: z.literal("other"),
+    payload: itineraryOtherPayloadSchema,
+  }),
+]);
 
-/** TypeScript type for itinerary item update input. */
-export type ItineraryItemUpdateInput = z.infer<typeof itineraryItemUpdateSchema>;
+/** TypeScript type for itinerary item upsert input. */
+export type ItineraryItemUpsertInput = z.infer<typeof itineraryItemUpsertSchema>;
+
+const itineraryItemUiBaseSchema = itineraryItemBaseSchema.extend({
+  createdAt: primitiveSchemas.isoDateTime.optional(),
+  createdBy: primitiveSchemas.uuid,
+  id: primitiveSchemas.positiveNumber.int(),
+  updatedAt: primitiveSchemas.isoDateTime.optional(),
+});
+
+/** Zod schema for itinerary items returned by queries and actions. */
+export const itineraryItemSchema = z.discriminatedUnion("itemType", [
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("activity"),
+    payload: itineraryActivityPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("meal"),
+    payload: itineraryMealPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("transport"),
+    payload: itineraryTransportPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("accommodation"),
+    payload: itineraryAccommodationPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("event"),
+    payload: itineraryEventPayloadSchema,
+  }),
+  itineraryItemUiBaseSchema.extend({
+    itemType: z.literal("other"),
+    payload: itineraryOtherPayloadSchema,
+  }),
+]);
+
+/** TypeScript type for itinerary items returned by queries and actions. */
+export type ItineraryItem = z.infer<typeof itineraryItemSchema>;
 
 // ===== FORM SCHEMAS =====
 // UI form validation schemas with user-friendly error messages
@@ -335,23 +485,32 @@ export const createTripFormSchema = z
 export type CreateTripFormData = z.infer<typeof createTripFormSchema>;
 
 /**
- * Form schema for updating existing trips.
- * Allows partial updates of trip properties with validation.
+ * Form schema for updating trip details from the trip detail page.
+ *
+ * This schema is intentionally UI-focused (Client Components) and should stay
+ * aligned with the allowed `updateTrip()` action patch fields.
  */
-export const updateTripFormSchema = z.object({
-  budget: z.number().optional(),
-  description: z.string().optional(),
-  destination: z.string().optional(),
-  endDate: z.iso.date().optional(),
-  id: primitiveSchemas.uuid,
-  maxParticipants: z.number().optional(),
-  startDate: z.iso.date().optional(),
-  tags: z.array(z.string()).optional(),
-  title: z.string().optional(),
-});
+export const tripSettingsFormSchema = z
+  .strictObject({
+    description: z.string().max(1000, { error: "Description too long" }).optional(),
+    destination: z.string().max(200, { error: "Destination too long" }).optional(),
+    endDate: z.iso.date().optional(),
+    startDate: z.iso.date().optional(),
+    title: z
+      .string()
+      .min(1, { error: "Trip title is required" })
+      .max(200, { error: "Title too long" }),
+  })
+  .refine(
+    (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
+    {
+      error: "End date must be on or after start date",
+      path: ["endDate"],
+    }
+  );
 
-/** TypeScript type for trip update form data. */
-export type UpdateTripFormData = z.infer<typeof updateTripFormSchema>;
+/** TypeScript type for trip settings form data. */
+export type TripSettingsFormData = z.infer<typeof tripSettingsFormSchema>;
 
 /**
  * Form schema for adding travelers to trips.

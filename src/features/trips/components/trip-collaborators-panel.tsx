@@ -18,7 +18,7 @@ import {
   Trash2Icon,
   UserPlusIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +50,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import type { TripActivityKind } from "@/hooks/use-trip-activity-feed";
 import {
   useInviteTripCollaborator,
   useRemoveTripCollaborator,
@@ -64,15 +63,15 @@ const ROLE_META: Record<
   TripCollaboratorRole,
   { icon: typeof ShieldIcon; label: string; badge: string }
 > = {
-  admin: {
-    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    icon: CrownIcon,
-    label: "Admin",
-  },
   editor: {
     badge: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
     icon: ShieldIcon,
     label: "Editor",
+  },
+  owner: {
+    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    icon: CrownIcon,
+    label: "Owner",
   },
   viewer: {
     badge: "bg-muted text-muted-foreground",
@@ -94,7 +93,6 @@ export function TripCollaboratorsPanel(props: {
   currentUserId: string | null;
   collaborators: TripCollaborator[];
   isOwner: boolean;
-  onActivity?: (input: { kind: TripActivityKind; message: string }) => void;
 }) {
   const { toast } = useToast();
   const [pendingRemoval, setPendingRemoval] = useState<TripCollaborator | null>(null);
@@ -111,13 +109,10 @@ export function TripCollaboratorsPanel(props: {
     validateMode: "onChange",
   });
 
-  const shareUrl = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    return `${window.location.origin}/dashboard/trips/${props.tripId}/collaborate`;
-  }, [props.tripId]);
-
   const handleCopyShareLink = async () => {
-    if (!shareUrl) return;
+    if (typeof window === "undefined") return;
+
+    const shareUrl = `${window.location.origin}/dashboard/trips/${props.tripId}`;
     await copyToClipboardWithToast(shareUrl, toast, {
       success: { description: "Share link copied to clipboard", title: "Link Copied" },
     });
@@ -133,11 +128,6 @@ export function TripCollaboratorsPanel(props: {
           ? "Invite email sent. They’ll have access after accepting."
           : "Collaborator added to this trip.",
         title: "Collaborator Invited",
-      });
-
-      props.onActivity?.({
-        kind: "collaborator_invited",
-        message: `Invited ${result.collaborator.userEmail ?? "a collaborator"} as ${result.collaborator.role}`,
       });
     } catch (error) {
       toast({
@@ -163,11 +153,6 @@ export function TripCollaboratorsPanel(props: {
         description: `Updated role for ${collaborator.userEmail ?? "collaborator"}.`,
         title: "Role Updated",
       });
-
-      props.onActivity?.({
-        kind: "collaborator_role_updated",
-        message: `Changed ${collaborator.userEmail ?? "collaborator"} to ${role}`,
-      });
     } catch (error) {
       toast({
         description: error instanceof Error ? error.message : "Unable to update role",
@@ -185,11 +170,6 @@ export function TripCollaboratorsPanel(props: {
       toast({
         description: `${pendingRemoval.userEmail ?? "Collaborator"} removed from this trip.`,
         title: "Collaborator Removed",
-      });
-
-      props.onActivity?.({
-        kind: "collaborator_removed",
-        message: `Removed ${pendingRemoval.userEmail ?? "a collaborator"}`,
       });
     } catch (error) {
       toast({
@@ -219,7 +199,6 @@ export function TripCollaboratorsPanel(props: {
             variant="outline"
             size="sm"
             onClick={handleCopyShareLink}
-            disabled={!shareUrl}
           >
             <LinkIcon className="mr-2 h-4 w-4" />
             Copy Link
@@ -269,7 +248,7 @@ export function TripCollaboratorsPanel(props: {
                     <SelectContent>
                       <SelectItem value="viewer">Viewer</SelectItem>
                       <SelectItem value="editor">Editor</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -372,11 +351,7 @@ export function TripCollaboratorsPanel(props: {
                       onValueChange={(value) => {
                         const parsed = tripCollaboratorRoleSchema.safeParse(value);
                         if (!parsed.success) return;
-                        handleUpdateRole(collaborator, parsed.data).catch((error) => {
-                          if (process.env.NODE_ENV === "development") {
-                            console.warn("Role update failed:", error);
-                          }
-                        });
+                        handleUpdateRole(collaborator, parsed.data);
                       }}
                       disabled={updateRoleMutation.isPending}
                     >
@@ -386,7 +361,7 @@ export function TripCollaboratorsPanel(props: {
                       <SelectContent>
                         <SelectItem value="viewer">Viewer</SelectItem>
                         <SelectItem value="editor">Editor</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="owner">Owner</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (

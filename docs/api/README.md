@@ -115,15 +115,10 @@ Conversational AI with session management:
 
 ### Trips (`/api/trips/*`)
 
-Trip CRUD with Redis caching:
+Trip suggestions (read-only). Trip CRUD/collaboration/itinerary mutations are implemented as Server Actions:
 
 | Endpoint                 | Method | Description                 |
 | ------------------------ | ------ | --------------------------- |
-| `/api/trips`             | GET    | List trips with filters     |
-| `/api/trips`             | POST   | Create new trip             |
-| `/api/trips/[id]`        | GET    | Get trip details            |
-| `/api/trips/[id]`        | PUT    | Update trip fields          |
-| `/api/trips/[id]`        | DELETE | Delete a trip               |
 | `/api/trips/suggestions` | GET    | AI-powered trip suggestions |
 
 ### Authentication (`/api/auth/*`)
@@ -218,7 +213,6 @@ BYOK API key management:
 | `/api/embeddings`    | POST     | Generate embeddings      |
 | `/api/routes`        | POST     | Route planning           |
 | `/api/route-matrix`  | POST     | Distance/duration matrix |
-| `/api/itineraries`   | GET/POST | Itinerary management     |
 | `/api/user-settings` | GET/POST | User preferences         |
 
 ## Development

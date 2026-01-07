@@ -46,7 +46,7 @@ Notes:
 
 Allowed:
 - `src/ai/tools/server/accommodations.ts` → `@domain/accommodations/service`
-- `src/app/api/trips/route.ts` → `@domain/trips/service`, `@/lib/telemetry/span`
+- `src/app/api/flights/search/route.ts` → `@domain/flights/service`, `@/lib/telemetry/span`
 - `src/app/agents/page.tsx` → `@ai/agents/chat-agent`
 
 Forbidden:

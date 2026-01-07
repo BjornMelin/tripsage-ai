@@ -130,12 +130,12 @@ gitleaks detect --source . --verbose
 ```bash
 # Test authentication
 curl -H "Authorization: Bearer invalid_token" \
-     http://localhost:3000/api/trips
+     http://localhost:3000/api/trips/suggestions
 # Expected: 401 Unauthorized
 
 # Test rate limiting
 for i in {1..150}; do
-  curl http://localhost:3000/api/trips
+  curl http://localhost:3000/api/trips/suggestions
 done
 # Expected: 429 Too Many Requests
 ```

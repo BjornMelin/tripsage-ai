@@ -537,7 +537,7 @@ When external services (flights, accommodations) are unavailable:
 
 ```bash
 curl -H "Authorization: Bearer invalid_token" \
-  "https://api.tripsage.ai/api/trips"
+  "https://api.tripsage.ai/api/trips/suggestions"
 ```
 
 **Solutions**:

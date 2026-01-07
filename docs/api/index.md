@@ -31,14 +31,14 @@ Most endpoints require authentication via Supabase SSR cookies. The authenticati
 #### Cookie-based (Recommended)
 
 ```bash
-curl -X GET "http://localhost:3000/api/trips" \
+curl -X GET "http://localhost:3000/api/trips/suggestions" \
   --cookie "sb-access-token=<jwt_token>"
 ```
 
 #### TypeScript
 
 ```typescript
-const response = await fetch("http://localhost:3000/api/trips", {
+const response = await fetch("http://localhost:3000/api/trips/suggestions", {
   headers: {
     // Manual Cookie header construction (equivalent to credentials: "include")
     Cookie: `sb-access-token=${jwtToken}`,
@@ -52,7 +52,7 @@ const response = await fetch("http://localhost:3000/api/trips", {
 import requests
 
 response = requests.get(
-    "http://localhost:3000/api/trips",
+    "http://localhost:3000/api/trips/suggestions",
     cookies={"sb-access-token": jwt_token}
 )
 ```
@@ -87,8 +87,7 @@ When rate limits are exceeded, responses include:
 
 Rate limit keys follow the pattern `{resource}:{action}`. Common examples:
 
-- `trips:list` - List trips endpoint
-- `trips:create` - Create trip endpoint
+- `trips:suggestions` - Trip suggestions endpoint
 - `chat:stream` - Chat streaming endpoint
 - `agents:flight` - Flight agent endpoint
 
@@ -182,9 +181,8 @@ Validation errors (`400 Bad Request`) include a `issues` array with Zod validati
 
 Most list endpoints return full results without pagination. Some endpoints support query parameters for filtering:
 
-- `GET /api/trips` - Supports `destination`, `status`, `startDate`, `endDate` filters
+- `GET /api/trips/suggestions` - Supports `limit`, `category`, `budget_max` filters
 - `GET /api/calendar/events` - Supports `maxResults`, `pageToken` for pagination
-- `GET /api/itineraries` - Supports `tripId` filter
 
 Pagination details are documented per endpoint where applicable.
 
@@ -195,7 +193,7 @@ API resources are organized by domain:
 | Resource | Description |
 |----------|-------------|
 | [Auth](auth.md) | Authentication and login |
-| [Trips](trips.md) | Trip management and itineraries |
+| [Trips](trips.md) | Trip suggestions (read-only HTTP endpoint) |
 | [Agents](agents.md) | AI streaming agents (flights, accommodations, etc.) |
 | [Chat](chat.md) | Chat sessions and messaging |
 | [Calendar](calendar.md) | Calendar events and ICS import/export |
