@@ -33,7 +33,7 @@ export async function listTripCollaborators(
 ): Promise<TripCollaborator[]> {
   const { data, error } = await supabase
     .from("trip_collaborators")
-    .select("id,trip_id,user_id,user_email,role,created_at")
+    .select("id,trip_id,user_id,role,created_at")
     .eq("trip_id", params.tripId)
     .order("created_at", { ascending: true });
 
@@ -55,7 +55,6 @@ export async function listTripCollaborators(
       id: row.id,
       role: normalizeTripCollaboratorRole(row.role),
       tripId: row.trip_id,
-      userEmail: row.user_email ?? undefined,
       userId: row.user_id,
     });
 
