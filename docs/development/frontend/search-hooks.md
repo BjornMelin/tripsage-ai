@@ -205,7 +205,7 @@ export function useActivitySearch(): UseActivitySearchResult {
 - Integrating with third-party APIs via server routes (Google Places, Amadeus, etc.)
 - Need request cancellation for typeahead/autocomplete
 - Response format differs from internal types
-- API has unique rate limiting requirements
+- API has unique rate-limiting requirements.
 
 **Code pattern:**
 
