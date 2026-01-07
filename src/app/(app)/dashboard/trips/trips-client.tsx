@@ -12,7 +12,7 @@ import {
   PlusIcon,
   SearchIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -213,12 +213,16 @@ export default function TripsClient({ userId }: { userId: string }) {
   const connectionState = getConnectionState(realtimeErrorCount, isConnected);
   const connectionStatusMessage = getConnectionStatusMessage(connectionState);
 
-  const filteredAndSortedTrips = filterAndSortTrips({
-    filterBy,
-    searchQuery,
-    sortBy,
-    trips: tripsArray,
-  });
+  const filteredAndSortedTrips = useMemo(
+    () =>
+      filterAndSortTrips({
+        filterBy,
+        searchQuery,
+        sortBy,
+        trips: tripsArray,
+      }),
+    [filterBy, searchQuery, sortBy, tripsArray]
+  );
 
   const handleCreateTrip = async () => {
     try {
@@ -267,7 +271,7 @@ export default function TripsClient({ userId }: { userId: string }) {
     }
   };
 
-  const statusCounts = countTripsByStatus(tripsArray);
+  const statusCounts = useMemo(() => countTripsByStatus(tripsArray), [tripsArray]);
 
   // Handle error state
   useEffect(() => {
