@@ -5,6 +5,7 @@
 import "server-only";
 
 import { retryWithBackoff } from "@/lib/http/retry";
+import { GooglePlacesPhotoError } from "./errors";
 
 // === Coordinate Validation ===
 
@@ -396,50 +397,68 @@ type PlacePhotoParams = {
 export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response> {
   const photoNamePattern = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
   if (!photoNamePattern.test(params.photoName)) {
-    throw new Error(
-      `Invalid photoName "${params.photoName}": must match pattern places/{placeId}/photos/{photoId}`
+    throw new GooglePlacesPhotoError(
+      `Invalid photoName "${params.photoName}": must match pattern places/{placeId}/photos/{photoId}`,
+      "invalid_photo_name",
+      400
     );
   }
 
   // Google Places Photo API requires at least one dimension parameter
   if (params.maxWidthPx === undefined && params.maxHeightPx === undefined) {
-    throw new Error("Either maxWidthPx or maxHeightPx must be provided");
+    throw new GooglePlacesPhotoError(
+      "Either maxWidthPx or maxHeightPx must be provided",
+      "missing_photo_dimensions",
+      400
+    );
   }
 
   // Validate photo dimensions if provided (Google Places Photo API limit is 4800)
   const maxDimension = 4800;
   if (params.maxWidthPx !== undefined) {
     if (!Number.isFinite(params.maxWidthPx) || !Number.isInteger(params.maxWidthPx)) {
-      throw new Error(
-        `Invalid maxWidthPx "${params.maxWidthPx}": must be a finite integer`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must be a finite integer`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxWidthPx <= 0) {
-      throw new Error(
-        `Invalid maxWidthPx "${params.maxWidthPx}": must be greater than 0`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must be greater than 0`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxWidthPx > maxDimension) {
-      throw new Error(
-        `Invalid maxWidthPx "${params.maxWidthPx}": must not exceed ${maxDimension}`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxWidthPx "${params.maxWidthPx}": must not exceed ${maxDimension}`,
+        "invalid_photo_dimensions",
+        400
       );
     }
   }
 
   if (params.maxHeightPx !== undefined) {
     if (!Number.isFinite(params.maxHeightPx) || !Number.isInteger(params.maxHeightPx)) {
-      throw new Error(
-        `Invalid maxHeightPx "${params.maxHeightPx}": must be a finite integer`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must be a finite integer`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxHeightPx <= 0) {
-      throw new Error(
-        `Invalid maxHeightPx "${params.maxHeightPx}": must be greater than 0`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must be greater than 0`,
+        "invalid_photo_dimensions",
+        400
       );
     }
     if (params.maxHeightPx > maxDimension) {
-      throw new Error(
-        `Invalid maxHeightPx "${params.maxHeightPx}": must not exceed ${maxDimension}`
+      throw new GooglePlacesPhotoError(
+        `Invalid maxHeightPx "${params.maxHeightPx}": must not exceed ${maxDimension}`,
+        "invalid_photo_dimensions",
+        400
       );
     }
   }
@@ -490,7 +509,11 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
 
     for (let hop = 0; hop < maxRedirects; hop += 1) {
       if (!isAllowedRedirectHost(nextUrl)) {
-        throw new Error(`Unexpected Places photo redirect host: ${nextUrl.hostname}`);
+        throw new GooglePlacesPhotoError(
+          `Unexpected Places photo redirect host: ${nextUrl.hostname}`,
+          "redirect_host_not_allowed",
+          502
+        );
       }
 
       // Do not forward the API key header to the redirected host.
@@ -515,7 +538,11 @@ export async function getPlacePhoto(params: PlacePhotoParams): Promise<Response>
       return redirectedResponse;
     }
 
-    throw new Error("Places photo redirect limit exceeded");
+    throw new GooglePlacesPhotoError(
+      "Places photo redirect limit exceeded",
+      "redirect_limit_exceeded",
+      502
+    );
   }
 
   return initialResponse;

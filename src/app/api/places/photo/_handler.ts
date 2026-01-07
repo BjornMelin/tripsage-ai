@@ -8,6 +8,7 @@ import type { PlacesPhotoRequest } from "@schemas/api";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getPlacePhoto } from "@/lib/google/client";
+import { GooglePlacesPhotoError } from "@/lib/google/errors";
 
 export type PlacesPhotoDeps = {
   apiKey: string;
@@ -27,12 +28,19 @@ export async function handlePlacesPhoto(
       skipHttpRedirect: params.skipHttpRedirect,
     });
   } catch (err) {
-    const status = err instanceof Error && /invalid/i.test(err.message) ? 400 : 502;
+    if (err instanceof GooglePlacesPhotoError) {
+      return errorResponse({
+        err,
+        error: err.code,
+        reason: err.message,
+        status: err.status,
+      });
+    }
     return errorResponse({
       err: err instanceof Error ? err : new Error("Photo fetch failed"),
-      error: status === 400 ? "invalid_request" : "external_api_error",
-      reason: status === 400 ? "Invalid photo request" : "Failed to fetch photo",
-      status,
+      error: "external_api_error",
+      reason: "Failed to fetch photo",
+      status: 502,
     });
   }
 
