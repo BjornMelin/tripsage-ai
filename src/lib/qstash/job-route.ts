@@ -15,6 +15,7 @@ import type {
 import {
   enforceQstashMessageIdempotency,
   getQstashReceiver,
+  QstashIdempotencyCommitError,
   qstashNonRetryableErrorResponse,
   verifyQstashRequest,
 } from "@/lib/qstash/receiver";
@@ -133,8 +134,9 @@ export async function runQstashJob<T>(
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     span.recordException(error as Error);
-    if (guard && isProcessGuard(guard)) {
-      await guard.release().catch(() => undefined);
+    const processGuard = guard && isProcessGuard(guard) ? guard : null;
+    if (processGuard && !(error instanceof QstashIdempotencyCommitError)) {
+      await processGuard.release().catch(() => undefined);
     }
 
     const mapped = options.mapNonRetryableError?.(error);

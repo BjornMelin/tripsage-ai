@@ -55,6 +55,25 @@ export interface QstashRequestMeta {
   retried: number;
 }
 
+export class QstashIdempotencyCommitError extends Error {
+  readonly code = "QSTASH_IDEMPOTENCY_COMMIT_FAILED" as const;
+  readonly messageId: string;
+  readonly retried: number;
+  readonly cause?: unknown;
+
+  constructor(
+    message: string,
+    params: { messageId: string; retried: number; cause?: unknown }
+  ) {
+    super(message);
+    this.name = "QstashIdempotencyCommitError";
+    this.messageId = params.messageId;
+    this.retried = params.retried;
+    this.cause = params.cause;
+    Object.setPrototypeOf(this, QstashIdempotencyCommitError.prototype);
+  }
+}
+
 /**
  * Parse QStash metadata headers.
  *
@@ -184,7 +203,24 @@ export async function enforceQstashMessageIdempotency(
   if (acquired === "OK") {
     return {
       commitProcessed: async () => {
-        await redis.set(key, "done", { ex: processedTtlSeconds });
+        try {
+          await redis.set(key, "done", { ex: processedTtlSeconds });
+        } catch (error) {
+          logger.error("qstash_idempotency_commit_failed", {
+            error,
+            key,
+            messageId: meta.messageId,
+            retried: meta.retried,
+          });
+          throw new QstashIdempotencyCommitError(
+            "Failed to mark QStash message as processed",
+            {
+              cause: error,
+              messageId: meta.messageId,
+              retried: meta.retried,
+            }
+          );
+        }
       },
       meta,
       ok: true,

@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { MemorySyncAccessError, MemorySyncDatabaseError } from "@domain/memory/errors";
 import { jsonSchema } from "@schemas/supabase";
 import type { MemorySyncJob } from "@schemas/webhooks";
 import { nowIso as secureNowIso } from "@/lib/security/random";
@@ -37,7 +38,10 @@ export async function handleMemorySyncJob(
     .single();
 
   if (sessionError || !session) {
-    throw new Error("session_not_found_or_unauthorized");
+    throw new MemorySyncAccessError("Session not found or user unauthorized", {
+      sessionId: payload.sessionId,
+      userId: payload.userId,
+    });
   }
 
   let memoriesStored = 0;
@@ -45,6 +49,7 @@ export async function handleMemorySyncJob(
 
   // Process conversation messages if provided
   if (payload.conversationMessages && payload.conversationMessages.length > 0) {
+    // Supabase transactions are not available here; rely on idempotency + retries.
     const messagesToStore = payload.conversationMessages.slice(
       0,
       MaxConversationBatchSize
@@ -60,7 +65,11 @@ export async function handleMemorySyncJob(
       .single();
 
     if (sessionCheckError && sessionCheckError.code !== "PGRST116") {
-      throw new Error(`memory_session_check_failed: ${sessionCheckError.message}`);
+      throw new MemorySyncDatabaseError("Memory session check failed", {
+        cause: sessionCheckError,
+        operation: "session_check",
+        sessionId: payload.sessionId,
+      });
     }
 
     // Create session if it doesn't exist
@@ -82,7 +91,11 @@ export async function handleMemorySyncJob(
         });
 
       if (createError) {
-        throw new Error(`memory_session_create_failed: ${createError.message}`);
+        throw new MemorySyncDatabaseError("Memory session creation failed", {
+          cause: createError,
+          operation: "session_create",
+          sessionId: payload.sessionId,
+        });
       }
     }
 
@@ -95,7 +108,7 @@ export async function handleMemorySyncJob(
           text: msg.content,
         },
         // biome-ignore lint/style/useNamingConvention: Database field name
-        pii_scrubbed: false,
+        pii_scrubbed: false, // PII scrubbing handled upstream (chat ingestion).
         role: msg.role,
         // biome-ignore lint/style/useNamingConvention: Database field name
         session_id: payload.sessionId,
@@ -114,7 +127,12 @@ export async function handleMemorySyncJob(
       .select("id");
 
     if (insertError) {
-      throw new Error(`memory_turn_insert_failed: ${insertError.message}`);
+      throw new MemorySyncDatabaseError("Memory turn insert failed", {
+        cause: insertError,
+        context: { turnCount: turnInserts.length },
+        operation: "turn_insert",
+        sessionId: payload.sessionId,
+      });
     }
 
     // Update session last_synced_at
@@ -127,7 +145,11 @@ export async function handleMemorySyncJob(
       })
       .eq("id", payload.sessionId);
     if (syncError) {
-      throw new Error(`memory_session_sync_update_failed: ${syncError.message}`);
+      throw new MemorySyncDatabaseError("Memory session sync update failed", {
+        cause: syncError,
+        operation: "session_sync_update",
+        sessionId: payload.sessionId,
+      });
     }
 
     memoriesStored = messagesToStore.length;
@@ -146,7 +168,11 @@ export async function handleMemorySyncJob(
       .eq("id", payload.sessionId);
 
     if (updateError) {
-      throw new Error(`session_update_failed: ${updateError.message}`);
+      throw new MemorySyncDatabaseError("Chat session update failed", {
+        cause: updateError,
+        operation: "chat_session_update",
+        sessionId: payload.sessionId,
+      });
     }
 
     contextUpdated = true;
