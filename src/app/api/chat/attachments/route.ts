@@ -73,7 +73,7 @@ export const POST = withApiGuards({
   auth: true,
   botId: true,
   rateLimit: "chat:attachments",
-  telemetry: "chat.attachments.signedUpload",
+  telemetry: "chat.attachments.signed-upload",
 })(async (req, { supabase, user }) => {
   const logger = createServerLogger("chat.attachments.signed-upload");
 

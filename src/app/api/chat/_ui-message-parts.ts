@@ -195,6 +195,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
 
     if (status === "completed") {
       if (toolRow.result == null) {
+        // toolRow completed without a result; providerExecuted stays true and we keep state as "input-available".
         parts.push({
           input,
           providerExecuted,
