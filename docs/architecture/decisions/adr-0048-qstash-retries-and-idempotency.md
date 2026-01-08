@@ -1,6 +1,6 @@
 # ADR-0048: QStash Retries and Idempotency for Webhooks/Tasks
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Status**: Accepted
 **Date**: 2025-12-10
 **Category**: Reliability
@@ -15,13 +15,14 @@
 
 ## Decision
 
-- Use QStash `deduplication-id` with deterministic keys: `${route}:${resourceId}:${eventName}:${timestampBucket}`.  
-- Handlers must be idempotent: wrap side-effecting operations in a per-idempotency-key Upstash Redis lock (TTL 2 minutes) before executing.  
-- Retry policy: max 6 attempts, exponential backoff starting at 10s; mark dead-letter to `qstash-dlq` Redis list with payload + attempt count.  
+- Use QStash `Upstash-Deduplication-Id` with deterministic keys derived from the business operation (e.g. `<job>:<resourceId>`). Use time bucketing only when intentional fan-out is required.  
+- Handlers must be idempotent: wrap side-effecting operations in a per-business-key Upstash Redis reservation (default TTL 300s) before executing.  
+- Retry policy: max 6 attempts (1 initial + 5 retries), with an explicit retry delay expression via `Upstash-Retry-Delay` (configured by `src/lib/qstash/client.ts`).  
+- Dead Letter Queue (DLQ): Use QStash's native DLQ support. For non-retryable errors, return HTTP `489` and set `Upstash-NonRetryable-Error: true` so QStash forwards the message to the configured DLQ.  
 - Observability: emit OTEL span attributes `qstash.attempt`, `qstash.dedup_id`, `qstash.dlq` and structured log on final failure.  
 - Security:
   - Validate QStash signature on the raw request body; reject unverified requests before any side effects.
-  - Enforce a hard request body size limit before verification/parsing (return `413 Payload Too Large`).
+  - Enforce a hard request body size limit before verification/parsing (reject before JSON parsing). For QStash-delivered jobs, treat oversized payloads as non-retryable (`489` + header) to avoid retry loops.
   - Never log raw signature headers; if correlation is required, log a short hash prefix only.  
 - Storage writes must be transactional (Supabase RPC or single statement) to keep idempotency guarantees.
 - Degraded-mode policy: job endpoints are privileged; idempotency must fail closed when Redis is unavailable.
@@ -54,24 +55,24 @@ Rejected: inconsistent policies and repeated logic across handlers.
 
 ## Implementation
 
-The DLQ and retry handling is implemented in:
+Canonical retry/idempotency and verification are implemented in:
 
-- `src/lib/qstash/config.ts` - Configuration constants (retry count, DLQ TTL, key prefixes)
-- `src/lib/qstash/dlq.ts` - Dead Letter Queue operations (push, list, remove, count)
-- `src/lib/qstash/receiver.ts` - Signature verification with bounded raw body reads
-- `src/app/api/jobs/notify-collaborators/route.ts` - Worker with DLQ integration
+- `src/lib/qstash/config.ts` - Configuration constants (retry count, header names)
+- `src/lib/qstash/client.ts` - Publishing helper enforcing retry policy and dedup headers
+- `src/lib/qstash/receiver.ts` - Signature verification with bounded raw body reads + delivery idempotency via `Upstash-Message-Id`
+- `src/app/api/jobs/**/route.ts` - Job workers using the shared QStash receiver utilities
 
 Key implementation details:
 
-- Max 6 total attempts (1 initial + 5 retries) with exponential backoff starting at 10s
-- DLQ entries stored in Redis with 7-day TTL and max 1000 entries per job type
-- Retry attempt tracked via `Upstash-Retried` header; DLQ push on final failure
+- Max 6 total attempts (1 initial + 5 retries)
+- Retry delay expression: `10000 * pow(2, retried)` (milliseconds; `retried` starts at 0 for the first retry)
+- Retry attempt tracked via `Upstash-Retried` header; DLQ forwarding uses `489` + `Upstash-NonRetryable-Error: true`
+- Delivery idempotency uses `Upstash-Message-Id` with an in-flight lock (default 240s) and a processed marker (default 24h). Longer-running jobs may set `lockTtlSeconds` explicitly.
 - Telemetry spans emit the following attributes:
   - `qstash.attempt` - Current attempt number (1-based)
   - `qstash.max_retries` - Maximum configured retries
   - `qstash.final_attempt` - Boolean indicating if this is the last retry
-  - `qstash.dlq` - Boolean indicating entry was pushed to DLQ
-  - `qstash.dlq_entry_id` - Unique ID of the DLQ entry (if pushed)
+  - `qstash.dlq` - Boolean indicating the response was non-retryable (eligible for DLQ forwarding)
 
 ## References
 

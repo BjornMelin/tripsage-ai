@@ -48,6 +48,9 @@ const parseAndVerifyMock = vi.hoisted(() =>
 
 const buildEventKeyMock = vi.hoisted(() => vi.fn(() => "event-key"));
 const tryReserveKeyMock = vi.hoisted(() => vi.fn(async () => true));
+const releaseKeyMock = vi.hoisted(() =>
+  vi.fn(async (_key: string, _opts?: unknown) => true)
+);
 const checkRateLimitMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const spanAttributes = vi.hoisted(() => [] as Array<[string, unknown]>);
 
@@ -63,6 +66,7 @@ vi.mock("@/lib/idempotency/redis", () => ({
       this.name = "IdempotencyServiceUnavailableError";
     }
   },
+  releaseKey: (key: string, opts?: unknown) => releaseKeyMock(key, opts),
   tryReserveKey: tryReserveKeyMock,
 }));
 

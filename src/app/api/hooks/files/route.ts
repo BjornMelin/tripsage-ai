@@ -4,8 +4,10 @@
 
 import "server-only";
 
+import { tryEnqueueJob } from "@/lib/qstash/client";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { WebhookServiceUnavailableError } from "@/lib/webhooks/errors";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
 
 type FileAttachmentRow = Database["public"]["Tables"]["file_attachments"]["Row"];
@@ -25,6 +27,7 @@ export const POST = createWebhookHandler({
 
   async handle(payload, _eventKey, span) {
     const record = payload.record as Partial<FileAttachmentRow> | null;
+    const oldRecord = payload.oldRecord as Partial<FileAttachmentRow> | null;
     const attachmentId = record?.id;
     const uploadStatus = record?.upload_status;
 
@@ -44,6 +47,35 @@ export const POST = createWebhookHandler({
       }
 
       span.setAttribute("file.verified", true);
+    }
+
+    // Trigger ingestion when upload completes (UPDATE: uploading -> completed)
+    const oldUploadStatus = oldRecord?.upload_status;
+    if (
+      payload.type === "UPDATE" &&
+      attachmentId &&
+      uploadStatus === "completed" &&
+      oldUploadStatus !== "completed"
+    ) {
+      const enqueue = await tryEnqueueJob(
+        "attachments-ingest",
+        { attachmentId },
+        "/api/jobs/attachments-ingest",
+        {
+          deduplicationId: `attachments-ingest:${attachmentId}`,
+          delay: 0,
+        }
+      );
+
+      if (enqueue.success) {
+        span.setAttribute("qstash.message_id", enqueue.messageId);
+        return { enqueued: true };
+      }
+
+      span.setAttribute("qstash.unavailable", true);
+      throw new WebhookServiceUnavailableError("qstash_unavailable", {
+        cause: enqueue.error ?? undefined,
+      });
     }
 
     return {};

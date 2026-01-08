@@ -17,7 +17,11 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn(() => "test-next-key"),
 }));
 
+type ReleaseKey = (key: string, options?: unknown) => Promise<boolean>;
+const releaseKeyMock = vi.hoisted(() => vi.fn<ReleaseKey>(async () => true));
+
 vi.mock("@/lib/idempotency/redis", () => ({
+  releaseKey: (key: string, options?: unknown) => releaseKeyMock(key, options),
   tryReserveKey: vi.fn().mockResolvedValue(true),
 }));
 
@@ -158,11 +162,18 @@ beforeAll(async () => {
 });
 
 describe("POST /api/jobs/memory-sync", () => {
-  const mockRequest = (body: unknown, signature = "valid-sig") => {
+  const mockRequest = (
+    body: unknown,
+    {
+      signature = "valid-sig",
+      messageId = "msg-1",
+    }: { signature?: string; messageId?: string } = {}
+  ) => {
     return new NextRequest("http://localhost/api/jobs/memory-sync", {
       body: JSON.stringify(body),
       headers: {
         "Content-Type": "application/json",
+        "Upstash-Message-Id": messageId,
         "Upstash-Signature": signature,
       },
       method: "POST",
@@ -174,6 +185,7 @@ describe("POST /api/jobs/memory-sync", () => {
     // Reset MOCK_FROM to default implementation before each test
     MOCK_FROM.mockImplementation(createDefaultFromMock);
     tryReserveKeyMock.mockResolvedValue(true);
+    releaseKeyMock.mockReset();
   });
 
   it("processes valid memory sync job successfully", async () => {
@@ -215,7 +227,7 @@ describe("POST /api/jobs/memory-sync", () => {
 
     upstashMocks.qstash.__forceVerify(false);
 
-    const req = mockRequest(payload, "invalid-sig");
+    const req = mockRequest(payload, { signature: "invalid-sig" });
     const response = await post(req);
     const result = await response.json();
 
@@ -233,9 +245,10 @@ describe("POST /api/jobs/memory-sync", () => {
     const response = await post(req);
     const result = await response.json();
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(489);
     expect(result.error).toBe("invalid_request");
     expect(result.reason).toBe("Request validation failed");
+    expect(response.headers.get("Upstash-NonRetryable-Error")).toBe("true");
   });
 
   it("handles duplicate jobs gracefully", async () => {
@@ -257,6 +270,29 @@ describe("POST /api/jobs/memory-sync", () => {
     expect(response.status).toBe(200);
     expect(result.duplicate).toBe(true);
     expect(result.ok).toBe(true);
+  });
+
+  it("returns duplicate on repeated Upstash-Message-Id without invoking side effects", async () => {
+    const payload = {
+      idempotencyKey: "test-key-123",
+      payload: {
+        sessionId: "123e4567-e89b-12d3-a456-426614174000",
+        syncType: "conversation" as const,
+        userId: "11111111-1111-4111-8111-111111111111",
+      },
+    };
+
+    const res1 = await post(mockRequest(payload, { messageId: "msg-dupe" }));
+    expect(res1.status).toBe(200);
+
+    tryReserveKeyMock.mockClear();
+
+    const res2 = await post(mockRequest(payload, { messageId: "msg-dupe" }));
+    const json2 = await res2.json();
+    expect(res2.status).toBe(200);
+    expect(json2.ok).toBe(true);
+    expect(json2.duplicate).toBe(true);
+    expect(tryReserveKeyMock).not.toHaveBeenCalled();
   });
 
   it("handles session not found error", async () => {
@@ -292,6 +328,9 @@ describe("POST /api/jobs/memory-sync", () => {
     const _result = await response.json();
 
     expect(response.status).toBe(500);
+    expect(releaseKeyMock).toHaveBeenCalledWith("memory-sync:test-key-123", {
+      degradedMode: "fail_open",
+    });
   });
 
   it("limits batch size to 50 messages", async () => {

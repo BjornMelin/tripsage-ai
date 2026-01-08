@@ -231,6 +231,7 @@ export function errorResponse({
   status,
   issues,
   extras,
+  headers,
 }: {
   error: string;
   reason: string;
@@ -238,6 +239,7 @@ export function errorResponse({
   err?: unknown;
   issues?: ValidationIssue[];
   extras?: Record<string, unknown>;
+  headers?: HeadersInit;
 }): NextResponse {
   if (err) {
     const { context, message } = redactErrorForLogging(err);
@@ -256,7 +258,7 @@ export function errorResponse({
     Object.assign(body, extras);
   }
 
-  return NextResponse.json(body, { status });
+  return NextResponse.json(body, { headers, status });
 }
 
 /**

@@ -7,15 +7,26 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { Receiver } from "@upstash/qstash";
 import type { NextResponse } from "next/server";
+import type { z } from "zod";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { PayloadTooLargeError, readRequestBodyBytesWithLimit } from "@/lib/http/body";
+import { getRedis } from "@/lib/redis";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { QSTASH_SIGNATURE_HEADER } from "./config";
+import {
+  QSTASH_MESSAGE_ID_HEADER,
+  QSTASH_NONRETRYABLE_ERROR_HEADER,
+  QSTASH_RETRIED_HEADER,
+  QSTASH_SIGNATURE_HEADER,
+} from "./config";
 
 const DEFAULT_CLOCK_TOLERANCE_SECONDS = 30;
 const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
+const DEFAULT_MESSAGE_ID_TTL_SECONDS = 60 * 60 * 24; // 24h
+// Keep this shorter than the overall retry window so a crashed worker doesn't
+// push messages to DLQ purely due to a stale in-flight lock.
+const DEFAULT_MESSAGE_LOCK_TTL_SECONDS = 60 * 4; // 4m
 const DEFAULT_KEY_ROTATION_ALERT_WINDOW_MS = 6 * 60 * 60 * 1000; // 6h
 const logger = createServerLogger("qstash.receiver");
 
@@ -35,6 +46,142 @@ export type VerifyQstashRequestResult =
       reason: QstashVerifyFailureReason;
       response: NextResponse;
     };
+
+export interface QstashRequestMeta {
+  /** Message identifier (stable across retries for the same message). */
+  messageId: string;
+  /** Number of retries already performed (0 for first attempt). */
+  retried: number;
+}
+
+/**
+ * Parse QStash metadata headers.
+ *
+ * Per Upstash docs, `Upstash-Message-Id` is stable across retries and should be
+ * used for idempotency, and `Upstash-Retried` indicates how many retries have already
+ * happened.
+ */
+export function getQstashRequestMeta(req: Request): QstashRequestMeta | null {
+  const messageId = req.headers.get(QSTASH_MESSAGE_ID_HEADER);
+  if (!messageId) return null;
+
+  const retriedRaw = req.headers.get(QSTASH_RETRIED_HEADER);
+  let retried = Number.parseInt(retriedRaw ?? "", 10);
+  if (!Number.isFinite(retried) || retried < 0) retried = 0;
+
+  return { messageId, retried };
+}
+
+/**
+ * Build a response that tells QStash to stop retrying and forward the message to the DLQ.
+ *
+ * QStash requires HTTP 489 + `Upstash-NonRetryable-Error: true`.
+ */
+export function qstashNonRetryableErrorResponse({
+  err,
+  error,
+  extras,
+  issues,
+  reason,
+}: {
+  error: string;
+  reason: string;
+  err?: unknown;
+  issues?: z.core.$ZodIssue[];
+  extras?: Record<string, unknown>;
+}): NextResponse {
+  return errorResponse({
+    err,
+    error,
+    extras,
+    headers: {
+      [QSTASH_NONRETRYABLE_ERROR_HEADER]: "true",
+    },
+    issues,
+    reason,
+    status: 489,
+  });
+}
+
+export type QstashIdempotencyResult =
+  | {
+      ok: true;
+      meta: QstashRequestMeta;
+      outcome: "process";
+      commitProcessed: () => Promise<void>;
+      release: () => Promise<void>;
+    }
+  | { ok: true; meta: QstashRequestMeta; outcome: "duplicate" }
+  | { ok: false; response: NextResponse };
+
+/**
+ * Enforce idempotency for a QStash-delivered request via `Upstash-Message-Id`.
+ *
+ * The marker is stored in Upstash Redis with a TTL and `NX` to ensure the same message
+ * (including retries) is only processed once.
+ */
+export async function enforceQstashMessageIdempotency(
+  req: Request,
+  options: { lockTtlSeconds?: number; processedTtlSeconds?: number } = {}
+): Promise<QstashIdempotencyResult> {
+  const meta = getQstashRequestMeta(req);
+  if (!meta) {
+    return {
+      ok: false,
+      response: qstashNonRetryableErrorResponse({
+        error: "invalid_request",
+        reason: "Missing Upstash message id",
+      }),
+    };
+  }
+
+  const redis = getRedis();
+  if (!redis) {
+    return {
+      ok: false,
+      response: errorResponse({
+        error: "service_unavailable",
+        reason: "Idempotency service unavailable",
+        status: 503,
+      }),
+    };
+  }
+
+  const key = `qstash:message:${meta.messageId}`;
+  const lockTtlSeconds = options.lockTtlSeconds ?? DEFAULT_MESSAGE_LOCK_TTL_SECONDS;
+  const processedTtlSeconds =
+    options.processedTtlSeconds ?? DEFAULT_MESSAGE_ID_TTL_SECONDS;
+
+  const acquired = await redis.set(key, "processing", { ex: lockTtlSeconds, nx: true });
+  if (acquired === "OK") {
+    return {
+      commitProcessed: async () => {
+        await redis.set(key, "done", { ex: processedTtlSeconds });
+      },
+      meta,
+      ok: true,
+      outcome: "process",
+      release: async () => {
+        await redis.del(key);
+      },
+    };
+  }
+
+  const state = await redis.get<string>(key);
+  if (state === "done") {
+    return { meta, ok: true, outcome: "duplicate" };
+  }
+
+  // Another worker is currently processing this message; return non-2xx to trigger retry.
+  return {
+    ok: false,
+    response: errorResponse({
+      error: "in_progress",
+      reason: "Message is already being processed",
+      status: 409,
+    }),
+  };
+}
 
 /**
  * Create a QStash Receiver for signature verification.
@@ -104,21 +251,19 @@ export async function verifyQstashRequest(
       return {
         ok: false,
         reason: "payload_too_large",
-        response: errorResponse({
+        response: qstashNonRetryableErrorResponse({
           error: "payload_too_large",
           reason: "Request body exceeds limit",
-          status: 413,
         }),
       };
     }
     return {
       ok: false,
       reason: "body_read_error",
-      response: errorResponse({
+      response: qstashNonRetryableErrorResponse({
         err: error,
         error: "bad_request",
         reason: "Failed to read request body",
-        status: 400,
       }),
     };
   }

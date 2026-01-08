@@ -66,6 +66,7 @@ vi.mock("@/lib/idempotency/redis", () => ({
       this.name = "IdempotencyServiceUnavailableError";
     }
   },
+  releaseKey: vi.fn(async () => true),
   tryReserveKey: vi.fn(async () => true),
 }));
 

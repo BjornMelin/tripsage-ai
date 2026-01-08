@@ -72,7 +72,7 @@ describe("verifyQstashRequest", () => {
     );
   });
 
-  it("returns 413 when payload exceeds maxBytes", async () => {
+  it("returns 489 when payload exceeds maxBytes", async () => {
     const { verifyQstashRequest } = await import("@/lib/qstash/receiver");
 
     const receiver = {
@@ -93,11 +93,12 @@ describe("verifyQstashRequest", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.reason).toBe("payload_too_large");
-    expect(result.response.status).toBe(413);
+    expect(result.response.status).toBe(489);
+    expect(result.response.headers.get("Upstash-NonRetryable-Error")).toBe("true");
     expect(receiver.verify).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when request body has already been read", async () => {
+  it("returns 489 when request body has already been read", async () => {
     const { verifyQstashRequest } = await import("@/lib/qstash/receiver");
 
     const receiver = {
@@ -121,7 +122,8 @@ describe("verifyQstashRequest", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.reason).toBe("body_read_error");
-    expect(result.response.status).toBe(400);
+    expect(result.response.status).toBe(489);
+    expect(result.response.headers.get("Upstash-NonRetryable-Error")).toBe("true");
     expect(receiver.verify).not.toHaveBeenCalled();
   });
 });

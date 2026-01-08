@@ -38,7 +38,7 @@ TripSage needs:
 Upstash RateLimit docs: https://upstash.com/docs/redis/sdks/ratelimit-ts/overview
 RateLimit getting started: https://upstash.com/docs/redis/sdks/ratelimit-ts/gettingstarted
 Upstash QStash local development: https://upstash.com/docs/qstash/howto/local-development
-QStash retry behavior: https://upstash.com/docs/qstash/features/retries
+QStash retry behavior: https://upstash.com/docs/qstash/features/retry
 NPM @upstash/ratelimit: https://www.npmjs.com/package/@upstash/ratelimit
 NPM @upstash/redis: https://www.npmjs.com/package/@upstash/redis
 NPM @upstash/qstash: https://www.npmjs.com/package/@upstash/qstash

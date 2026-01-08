@@ -12,6 +12,7 @@ export type QStashPublishOptions = {
   body: unknown;
   headers?: Record<string, string>;
   retries?: number;
+  retryDelay?: string;
   delay?: number;
   deduplicationId?: string;
   callback?: string;

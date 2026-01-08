@@ -11,6 +11,7 @@ const {
   mocks: upstashMocks,
 } = setupUpstashTestEnvironment();
 type TryReserveKey = (key: string, ttlSecondsOrOptions?: unknown) => Promise<boolean>;
+type ReleaseKey = (key: string, options?: unknown) => Promise<boolean>;
 type SendNotifications = (
   payload: NotifyJob["payload"],
   eventKey: string
@@ -28,9 +29,12 @@ vi.mock("next/headers", () => ({
 const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
   QSTASH_CURRENT_SIGNING_KEY: "current",
   QSTASH_NEXT_SIGNING_KEY: "next",
+  UPSTASH_REDIS_REST_TOKEN: "token",
+  UPSTASH_REDIS_REST_URL: "https://example.upstash.local",
 }));
 
 const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true));
+const releaseKeyMock = vi.hoisted(() => vi.fn<ReleaseKey>(async () => true));
 const sendNotificationsMock = vi.hoisted(() =>
   vi.fn<SendNotifications>(async () => ({ emailed: true, webhookPosted: false }))
 );
@@ -50,6 +54,7 @@ vi.mock("@/lib/env/server", () => ({
 }));
 
 vi.mock("@/lib/idempotency/redis", () => ({
+  releaseKey: (key: string, options?: unknown) => releaseKeyMock(key, options),
   tryReserveKey: (key: string, ttlSecondsOrOptions?: unknown) =>
     tryReserveKeyMock(key, ttlSecondsOrOptions),
 }));
@@ -88,6 +93,7 @@ function makeRequest(
   return createMockNextRequest({
     body,
     headers: {
+      "Upstash-Message-Id": "msg-1",
       "Upstash-Signature": "sig",
       ...headers,
     },
@@ -112,9 +118,11 @@ describe("POST /api/jobs/notify-collaborators", () => {
     upstashBeforeEachHook();
     vi.clearAllMocks();
     tryReserveKeyMock.mockReset();
+    releaseKeyMock.mockReset();
     sendNotificationsMock.mockReset();
     upstashMocks.qstash.__forceVerify(true);
     tryReserveKeyMock.mockResolvedValue(true);
+    releaseKeyMock.mockResolvedValue(true);
     envStore.QSTASH_CURRENT_SIGNING_KEY = "current";
     envStore.QSTASH_NEXT_SIGNING_KEY = "next";
   });
@@ -147,10 +155,11 @@ describe("POST /api/jobs/notify-collaborators", () => {
   it("returns 400 on invalid job payload", async () => {
     const { POST } = await loadRoute();
     const res = await POST(makeRequest({}));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(489);
     const json = await res.json();
     expect(json.error).toBe("invalid_request");
     expect(json.reason).toBe("Request validation failed");
+    expect(res.headers.get("Upstash-NonRetryable-Error")).toBe("true");
   });
 
   it("marks duplicates when idempotency guard fails", async () => {
@@ -173,6 +182,17 @@ describe("POST /api/jobs/notify-collaborators", () => {
       validJob.payload,
       validJob.eventKey
     );
+  });
+
+  it("releases the idempotency key when notification sending fails", async () => {
+    sendNotificationsMock.mockRejectedValueOnce(new Error("resend_down"));
+
+    const { POST } = await loadRoute();
+    const res = await POST(makeRequest(validJob));
+    expect(res.status).toBe(500);
+    expect(releaseKeyMock).toHaveBeenCalledWith(`notify:${validJob.eventKey}`, {
+      degradedMode: "fail_open",
+    });
   });
 
   afterAll(() => {

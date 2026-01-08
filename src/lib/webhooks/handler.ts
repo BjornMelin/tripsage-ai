@@ -8,6 +8,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import {
   IdempotencyServiceUnavailableError,
+  releaseKey,
   tryReserveKey,
 } from "@/lib/idempotency/redis";
 import { type Span, withTelemetrySpan } from "@/lib/telemetry/span";
@@ -153,6 +154,9 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
       `webhook.${name}`,
       { attributes: { route: `/api/hooks/${name}` } },
       async (span) => {
+        let eventKey: string | null = null;
+        let reservedIdempotencyKey = false;
+
         // 1. Rate limiting
         const rateLimitResult = await checkWebhookRateLimit(req);
 
@@ -244,7 +248,7 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
         span.setAttribute("webhook.op", payload.type);
 
         // 4. Build event key (used for global idempotency across handlers)
-        const eventKey = buildEventKey(payload);
+        eventKey = buildEventKey(payload);
         span.setAttribute("webhook.event_key", eventKey);
 
         try {
@@ -259,6 +263,7 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
               span.setAttribute("webhook.duplicate", true);
               return withRateLimitHeaders({ duplicate: true, ok: true });
             }
+            reservedIdempotencyKey = true;
           }
 
           // 6. Table filtering (post-idempotency to prevent duplicate processing
@@ -280,6 +285,19 @@ export function createWebhookHandler<T extends WebhookHandlerResult>(
           span.setAttribute("webhook.error", true);
 
           const webhookError = normalizeWebhookError(error);
+          if (
+            enableIdempotency &&
+            reservedIdempotencyKey &&
+            eventKey &&
+            webhookError.status >= 500
+          ) {
+            // Allow retries to re-attempt on downstream failures. Keep this best-effort to avoid
+            // masking the original error.
+            await releaseKey(eventKey, { degradedMode: "fail_open" }).catch(
+              () => undefined
+            );
+            span.setAttribute("webhook.idempotency_released", true);
+          }
           span.setAttribute("webhook.error_code", webhookError.code);
           span.setAttribute("webhook.error_status", webhookError.status);
           if (exception.message) {

@@ -59,9 +59,16 @@ export class RedisMockClient {
   set(
     key: string,
     value: unknown,
-    opts?: { ex?: number; px?: number }
-  ): Promise<string> {
+    opts?: { ex?: number; px?: number; nx?: boolean; xx?: boolean }
+  ): Promise<string | null> {
     const now = Date.now();
+    const existing = touch(this.store, key, now);
+
+    // Match Redis semantics: NX and XX are mutually exclusive.
+    if (opts?.nx && opts?.xx) return Promise.resolve(null);
+    if (opts?.nx && existing) return Promise.resolve(null);
+    if (opts?.xx && !existing) return Promise.resolve(null);
+
     const expiresAt = opts?.px
       ? now + opts.px
       : opts?.ex
@@ -298,14 +305,13 @@ export class RedisMockClient {
   }
 }
 
-export class RedisMock {
-  static fromEnv(): RedisMockClient {
-    return new RedisMockClient(sharedUpstashStore);
+export class RedisMock extends RedisMockClient {
+  static fromEnv(): RedisMock {
+    return new RedisMock({ store: sharedUpstashStore });
   }
 
   constructor(options?: { store?: UpstashMemoryStore }) {
-    const client = new RedisMockClient(options?.store ?? sharedUpstashStore);
-    Object.assign(this, client);
+    super(options?.store ?? sharedUpstashStore);
   }
 }
 

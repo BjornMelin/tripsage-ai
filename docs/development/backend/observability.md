@@ -140,16 +140,15 @@ Common attributes:
 - `cache.has_schema`: `true` when a schema is provided (`cache.get_safe`)
 - `cache.validation_failed`: `true` when schema validation fails (`cache.get_safe`)
 
-### QStash + DLQ
+### QStash
 
-QStash helpers emit spans for enqueue and DLQ operations:
+QStash helpers emit spans for enqueue operations:
 
 | Span name | Location |
 | --- | --- |
 | `qstash.enqueue` | `src/lib/qstash/client.ts` |
-| `qstash.dlq.push` | `src/lib/qstash/dlq.ts` |
-| `qstash.dlq.list` | `src/lib/qstash/dlq.ts` |
-| `qstash.dlq.remove` | `src/lib/qstash/dlq.ts` |
+
+Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt` (derived from `Upstash-Retried`) for correlation with the Upstash Console.
 
 ## Client-side telemetry
 
