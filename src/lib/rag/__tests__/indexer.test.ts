@@ -1,7 +1,11 @@
 /** @vitest-environment node */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { embedMany } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { chunkText } from "../indexer";
+import type { Database } from "@/lib/supabase/database.types";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { chunkText, indexDocuments } from "../indexer";
 
 // Mock server-only
 vi.mock("server-only", () => ({}));
@@ -35,7 +39,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 // Mock secureUuid
 vi.mock("@/lib/security/random", () => ({
-  secureUuid: () => "test-uuid-1234",
+  secureUuid: () => "0c7a8d3a-4c79-4e28-9d2c-8e6a4f5b0f4a",
 }));
 
 describe("chunkText", () => {
@@ -155,5 +159,80 @@ describe("chunkText", () => {
     chunks.forEach((chunk) => {
       expect(chunk.length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("indexDocuments", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("upserts chunks using (id, chunk_index) and keeps `id` stable per document", async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn(() => ({ upsert }));
+
+    const supabase = unsafeCast<SupabaseClient<Database>>({
+      from,
+    });
+
+    const content1 = "A".repeat(1200);
+    const content2 = "B".repeat(1200);
+
+    const chunks1 = chunkText(content1, 100, 20);
+    const chunks2 = chunkText(content2, 100, 20);
+    expect(chunks1.length).toBeGreaterThan(1);
+    expect(chunks2.length).toBeGreaterThan(1);
+
+    vi.mocked(embedMany)
+      .mockResolvedValueOnce({
+        embeddings: chunks1.map((_, idx) => [idx]),
+        usage: { tokens: 0 },
+        values: chunks1,
+        warnings: [],
+      })
+      .mockResolvedValueOnce({
+        embeddings: chunks2.map((_, idx) => [idx + 1000]),
+        usage: { tokens: 0 },
+        values: chunks2,
+        warnings: [],
+      });
+
+    const documentId = "11111111-1111-1111-1111-111111111111";
+
+    await indexDocuments({
+      config: { chunkOverlap: 20, chunkSize: 100, namespace: "default" },
+      documents: [{ content: content1, id: documentId }],
+      supabase,
+      userId: "22222222-2222-2222-2222-222222222222",
+    });
+
+    await indexDocuments({
+      config: { chunkOverlap: 20, chunkSize: 100, namespace: "default" },
+      documents: [{ content: content2, id: documentId }],
+      supabase,
+      userId: "22222222-2222-2222-2222-222222222222",
+    });
+
+    expect(from).toHaveBeenCalledWith("rag_documents");
+    expect(upsert).toHaveBeenCalledTimes(2);
+
+    for (const [callIndex, expectedChunks] of [
+      [0, chunks1],
+      [1, chunks2],
+    ] as const) {
+      const [rowsArg, optionsArg] = upsert.mock.calls[callIndex] ?? [];
+      expect(optionsArg).toEqual({
+        ignoreDuplicates: false,
+        onConflict: "id,chunk_index",
+      });
+
+      const rows = unsafeCast<Array<Record<string, unknown>>>(rowsArg);
+      expect(rows).toHaveLength(expectedChunks.length);
+
+      for (let i = 0; i < rows.length; i++) {
+        expect(rows[i]?.id).toBe(documentId);
+        expect(rows[i]?.["chunk_index"]).toBe(i);
+      }
+    }
   });
 });

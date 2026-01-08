@@ -344,7 +344,10 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       chunk_index: item.chunkIndex,
       content: item.chunk,
       embedding: toPgvector(embeddings[idx]),
-      id: `${item.documentId}:${item.chunkIndex}`,
+      // NOTE: `id` is the document identifier; chunk uniqueness is handled via `chunk_index`.
+      // Changing `id` to include `chunk_index` breaks upsert deduplication on (id, chunk_index)
+      // and violates the RagDocument/RagChunk UUID semantics.
+      id: item.documentId,
       metadata: (item.document.metadata ??
         {}) as Database["public"]["Tables"]["rag_documents"]["Insert"]["metadata"],
       namespace: config.namespace,
