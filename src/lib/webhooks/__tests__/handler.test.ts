@@ -49,7 +49,7 @@ const parseAndVerifyMock = vi.hoisted(() =>
 const buildEventKeyMock = vi.hoisted(() => vi.fn(() => "event-key"));
 const tryReserveKeyMock = vi.hoisted(() => vi.fn(async () => true));
 const releaseKeyMock = vi.hoisted(() =>
-  vi.fn(async (_key: string, _opts?: unknown) => true)
+  vi.fn((_key: string, _opts?: unknown) => Promise.resolve(true))
 );
 const checkRateLimitMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const spanAttributes = vi.hoisted(() => [] as Array<[string, unknown]>);

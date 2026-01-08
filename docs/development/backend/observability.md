@@ -148,7 +148,23 @@ QStash helpers emit spans for enqueue operations:
 | --- | --- |
 | `qstash.enqueue` | `src/lib/qstash/client.ts` |
 
-Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt` (derived from `Upstash-Retried`) for correlation with the Upstash Console.
+Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt`
+(derived from `Upstash-Retried`) for correlation with the Upstash Console.
+
+#### DLQ visibility (Upstash native)
+
+When a job is non-retryable and should be forwarded to the DLQ, return HTTP `489`
+with `Upstash-NonRetryable-Error: true` (use `qstashNonRetryableErrorResponse`).
+In these cases, use the telemetry helpers in `@/lib/telemetry/{span,logger}` to:
+
+- Record that the job is DLQ-eligible (e.g., `qstash.dlq_eligible: true`) and include
+  the HTTP status and failure reason.
+- Add or update `qstash.message_id` and `qstash.attempt` for correlation.
+- Treat `Upstash-NonRetryable-Error` as terminal (no retries); log it as a non-retriable
+  failure so it’s clear why the job moved to the DLQ.
+
+In the Upstash Console, use `qstash.message_id` to find the DLQ-forwarded message and
+`qstash.attempt` (from `Upstash-Retried`) to map retry history.
 
 ## Client-side telemetry
 

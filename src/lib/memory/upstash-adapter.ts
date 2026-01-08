@@ -30,7 +30,9 @@ async function handleOnTurnCommitted(
   ];
 
   try {
-    const idempotencyKey = `conv-sync:${intent.sessionId}:${intent.turn.id}`;
+    // Use a time-bucketed component so the same turn can be re-processed after a short window.
+    const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000)); // 5-minute buckets
+    const idempotencyKey = `conv-sync:${intent.sessionId}:${intent.turn.id}:${timeBucket}`;
     const result = await tryEnqueueJob(
       "memory-sync",
       {
@@ -82,7 +84,6 @@ async function handleSyncSession(
       },
       "/api/jobs/memory-sync",
       {
-        deduplicationId: `memory-sync:${idempotencyKey}`,
         delay: isFull ? undefined : 5,
       }
     );

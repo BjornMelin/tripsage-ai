@@ -101,7 +101,6 @@ function createSupabaseStub(params: {
 describe("POST /api/jobs/attachments-ingest", () => {
   beforeEach(() => {
     upstashBeforeEachHook();
-    vi.clearAllMocks();
     tryEnqueueJobMock.mockReset();
     tryEnqueueJobMock.mockResolvedValue({ messageId: "rag-1", success: true });
     createAdminSupabaseMock.mockReset();

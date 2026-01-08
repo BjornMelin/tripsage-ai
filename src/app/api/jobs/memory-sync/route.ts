@@ -29,7 +29,7 @@ export async function POST(req: Request) {
           const businessKey = `memory-sync:${payload.idempotencyKey}`;
           const unique = await tryReserveKey(businessKey, {
             degradedMode: "fail_closed",
-            ttlSeconds: 300, // short TTL to avoid amplification across republishes
+            ttlSeconds: 300, // TTL to de-duplicate retried deliveries within a 5-minute window
           });
           if (!unique) {
             span.setAttribute("job.duplicate", true);

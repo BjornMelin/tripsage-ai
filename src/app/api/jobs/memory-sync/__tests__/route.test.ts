@@ -325,7 +325,7 @@ describe("POST /api/jobs/memory-sync", () => {
 
     const req = mockRequest(payload);
     const response = await post(req);
-    const _result = await response.json();
+    await response.json();
 
     expect(response.status).toBe(500);
     expect(releaseKeyMock).toHaveBeenCalledWith("memory-sync:test-key-123", {

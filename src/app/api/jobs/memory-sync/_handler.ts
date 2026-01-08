@@ -11,6 +11,7 @@ import type { Database } from "@/lib/supabase/database.types";
 
 export interface MemorySyncJobDeps {
   supabase: TypedAdminSupabase;
+  clock?: { now: () => string };
 }
 
 export async function handleMemorySyncJob(
@@ -23,6 +24,8 @@ export async function handleMemorySyncJob(
   syncType: MemorySyncJob["payload"]["syncType"];
 }> {
   const { supabase } = deps;
+  const nowIso = deps.clock?.now ?? (() => new Date().toISOString());
+  const MaxConversationBatchSize = 50;
 
   // Verify user has access to this session
   const { data: session, error: sessionError } = await supabase
@@ -41,7 +44,10 @@ export async function handleMemorySyncJob(
 
   // Process conversation messages if provided
   if (payload.conversationMessages && payload.conversationMessages.length > 0) {
-    const messagesToStore = payload.conversationMessages.slice(0, 50); // Limit batch size
+    const messagesToStore = payload.conversationMessages.slice(
+      0,
+      MaxConversationBatchSize
+    );
 
     // Ensure memory session exists
     const { data: memorySession, error: sessionCheckError } = await supabase
@@ -106,14 +112,17 @@ export async function handleMemorySyncJob(
     }
 
     // Update session last_synced_at
-    await supabase
+    const { error: syncError } = await supabase
       .schema("memories")
       .from("sessions")
       .update({
         // biome-ignore lint/style/useNamingConvention: Database field name
-        last_synced_at: new Date().toISOString(),
+        last_synced_at: nowIso(),
       })
       .eq("id", payload.sessionId);
+    if (syncError) {
+      throw new Error(`memory_session_sync_update_failed: ${syncError.message}`);
+    }
 
     memoriesStored = messagesToStore.length;
   }
@@ -128,9 +137,9 @@ export async function handleMemorySyncJob(
       .from("chat_sessions")
       .update({
         // biome-ignore lint/style/useNamingConvention: Database field name
-        memory_synced_at: new Date().toISOString(),
+        memory_synced_at: nowIso(),
         // biome-ignore lint/style/useNamingConvention: Database field name
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso(),
       })
       .eq("id", payload.sessionId);
 

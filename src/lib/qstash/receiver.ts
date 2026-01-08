@@ -7,7 +7,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { Receiver } from "@upstash/qstash";
 import type { NextResponse } from "next/server";
-import type { z } from "zod";
+import type { $ZodIssue } from "zod/v4/core";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getServerEnvVar, getServerEnvVarWithFallback } from "@/lib/env/server";
 import { PayloadTooLargeError, readRequestBodyBytesWithLimit } from "@/lib/http/body";
@@ -87,7 +87,7 @@ export function qstashNonRetryableErrorResponse({
   error: string;
   reason: string;
   err?: unknown;
-  issues?: z.core.$ZodIssue[];
+  issues?: $ZodIssue[];
   extras?: Record<string, unknown>;
 }): NextResponse {
   return errorResponse({
@@ -177,7 +177,8 @@ export async function enforceQstashMessageIdempotency(
     ok: false,
     response: errorResponse({
       error: "in_progress",
-      reason: "Message is already being processed",
+      reason:
+        "Message is currently being processed by another worker (or lock is stale)",
       status: 409,
     }),
   };

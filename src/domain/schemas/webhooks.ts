@@ -87,7 +87,7 @@ export type AttachmentsIngestJob = z.infer<typeof attachmentsIngestJobSchema>;
 export const ragIndexJobSchema = z
   .strictObject({
     chatId: primitiveSchemas.uuid.nullable().optional(),
-    chunkOverlap: z.number().int().min(0).max(500).default(100),
+    chunkOverlap: z.number().int().nonnegative().max(500).default(100),
     chunkSize: z.number().int().min(100).max(2000).default(512),
     documents: z.array(ragDocumentSchema).min(1).max(100, {
       error: "Maximum 100 documents per batch",

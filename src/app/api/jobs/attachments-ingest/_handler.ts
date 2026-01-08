@@ -39,7 +39,21 @@ export class NonRetryableJobError extends Error {
 }
 
 function normalizeExtractedText(text: string): string {
-  return text.replaceAll("\u0000", "").trim();
+  const normalized = text.normalize("NFC");
+  let cleaned = "";
+  for (let i = 0; i < normalized.length; i += 1) {
+    const code = normalized.charCodeAt(i);
+    const isControl =
+      code <= 8 ||
+      code === 11 ||
+      code === 12 ||
+      (code >= 14 && code <= 31) ||
+      code === 127;
+    if (!isControl) {
+      cleaned += normalized[i] ?? "";
+    }
+  }
+  return cleaned.trim();
 }
 
 async function downloadStorageObjectToBuffer(params: {
@@ -54,17 +68,11 @@ async function downloadStorageObjectToBuffer(params: {
     throw new Error(`storage_download_failed:${error?.message ?? "no_data"}`);
   }
 
-  if (maxBytes != null) {
-    const size = (data as { size?: unknown }).size;
-    if (typeof size !== "number") {
-      throw new Error("storage_download_size_unknown");
-    }
-    if (size > maxBytes) {
-      throw new NonRetryableJobError(
-        "file_too_large",
-        "Attachment exceeds supported size"
-      );
-    }
+  if (maxBytes != null && data.size > maxBytes) {
+    throw new NonRetryableJobError(
+      "file_too_large",
+      "Attachment exceeds supported size"
+    );
   }
 
   const bytes = await data.arrayBuffer();
@@ -91,22 +99,9 @@ async function extractTextFromBuffer(params: {
     }
 
     case "application/pdf": {
-      type PdfParseFn = (
-        data: Buffer,
-        options?: { max?: number }
-      ) => Promise<{ text: string }>;
-      const mod = await import("pdf-parse");
-
-      const pdfParse: PdfParseFn = (() => {
-        if (typeof mod === "function") return mod as PdfParseFn;
-        if (typeof mod === "object" && mod !== null && "default" in mod) {
-          const candidate = (mod as { default?: unknown }).default;
-          if (typeof candidate === "function") return candidate as PdfParseFn;
-        }
-        throw new Error("pdf-parse did not export a callable parser");
-      })();
-
-      const parsed = await pdfParse(buffer, { max: MAX_PDF_PAGES });
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: buffer });
+      const parsed = await parser.getText({ first: MAX_PDF_PAGES });
       return { ok: true, text: parsed.text };
     }
 

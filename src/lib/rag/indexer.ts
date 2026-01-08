@@ -256,6 +256,8 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   const failed: RagIndexFailedDoc[] = [];
   let indexed = 0;
   let chunksCreated = 0;
+  const effectiveChunkSize = Math.max(1, config.chunkSize - config.chunkOverlap);
+  let estimatedChunkCount = 0;
 
   // Prepare all chunks with document index tracking
   const allChunks: Array<{
@@ -278,6 +280,19 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     }
 
     const documentId = document.id ?? secureUuid();
+    estimatedChunkCount += Math.ceil(document.content.length / effectiveChunkSize);
+    if (estimatedChunkCount > MAX_CHUNKS_PER_EMBED_BATCH) {
+      logger.warn("chunk_limit_exceeded", {
+        batchStartIndex,
+        chunkCount: estimatedChunkCount,
+        chunkOverlap: config.chunkOverlap,
+        chunkSize: config.chunkSize,
+        documentCount: batch.length,
+        limit: MAX_CHUNKS_PER_EMBED_BATCH,
+      });
+      // Hard limit to avoid runaway embedding costs; callers should split batches.
+      throw new Error("rag_limit:too_many_chunks");
+    }
     const chunks = chunkText(document.content, config.chunkSize, config.chunkOverlap);
 
     for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
@@ -304,6 +319,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       documentCount: batch.length,
       limit: MAX_CHUNKS_PER_EMBED_BATCH,
     });
+    // Hard limit to avoid runaway embedding costs; callers should split batches.
     throw new Error("rag_limit:too_many_chunks");
   }
 
@@ -328,7 +344,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       chunk_index: item.chunkIndex,
       content: item.chunk,
       embedding: toPgvector(embeddings[idx]),
-      id: item.documentId,
+      id: `${item.documentId}:${item.chunkIndex}`,
       metadata: (item.document.metadata ??
         {}) as Database["public"]["Tables"]["rag_documents"]["Insert"]["metadata"],
       namespace: config.namespace,

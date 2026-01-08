@@ -60,7 +60,7 @@ export async function POST(req: Request): Promise<Response> {
           return result;
         },
         internalErrorReason: "RAG index job failed",
-        lockTtlSeconds: 60 * 4,
+        lockTtlSeconds: 60 * 4, // 4 min: allows for processing up to ~100 docs with embeddings + vector upserts
         mapNonRetryableError: (error) =>
           error instanceof NonRetryableRagIndexError
             ? { error: error.errorCode, reason: error.message }

@@ -36,7 +36,7 @@ const buildEventKeyMock = vi.hoisted(() =>
 );
 const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true));
 const releaseKeyMock = vi.hoisted(() =>
-  vi.fn(async (_key: string, _opts?: unknown) => true)
+  vi.fn((_key: string, _opts?: unknown) => Promise.resolve(true))
 );
 const tryEnqueueJobMock = vi.hoisted(() =>
   vi.fn<TryEnqueueJob>(async () => ({ messageId: "job-1", success: true }))
