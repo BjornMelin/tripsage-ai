@@ -27,6 +27,34 @@ function normalizeContentForDedupe(content: unknown): string {
   return JSON.stringify(content ?? "");
 }
 
+function normalizeMetadataForDedupe(value: unknown): string {
+  return JSON.stringify(value ?? null);
+}
+
+function buildTurnDedupeKey(params: {
+  createdAt: string;
+  role: string;
+  content: unknown;
+  attachments: unknown;
+  toolCalls: unknown;
+  toolResults: unknown;
+}): string {
+  const content = normalizeContentForDedupe(params.content);
+  const attachments = normalizeMetadataForDedupe(params.attachments);
+  const toolCalls = normalizeMetadataForDedupe(params.toolCalls);
+  const toolResults = normalizeMetadataForDedupe(params.toolResults);
+  return `${params.createdAt}|${params.role}|${content}|${attachments}|${toolCalls}|${toolResults}`;
+}
+
+function normalizeMessageTimestamp(timestamp: unknown, nowIso: () => string): string {
+  if (typeof timestamp !== "string") return nowIso();
+  const trimmed = timestamp.trim();
+  if (trimmed.length === 0) return nowIso();
+  const parsed = Date.parse(trimmed);
+  if (Number.isNaN(parsed)) return nowIso();
+  return trimmed;
+}
+
 /**
  * Dependencies for the memory sync job handler.
  */
@@ -82,7 +110,10 @@ export async function handleMemorySyncJob(
   // Process conversation messages if provided
   const conversationMessages = payload.conversationMessages ?? [];
   if (conversationMessages.length > 0) {
-    // Supabase transactions are not available here; rely on idempotency + retries.
+    // Supabase PostgREST clients do not support multi-statement transactions in this context.
+    // We rely on idempotency + retries to reach eventual consistency: partial batch inserts
+    // are safe because dedupe prevents duplicates, and reruns can repair missed turns or
+    // session updates after transient failures/timeouts.
     const messageBatches = [];
     for (let i = 0; i < conversationMessages.length; i += MaxConversationBatchSize) {
       messageBatches.push(conversationMessages.slice(i, i + MaxConversationBatchSize));
@@ -136,15 +167,18 @@ export async function handleMemorySyncJob(
     let storedTurns = 0;
     for (const messagesToStore of messageBatches) {
       if (messagesToStore.length === 0) continue;
+      const normalizedTimestamps = messagesToStore.map((msg) =>
+        normalizeMessageTimestamp(msg.timestamp, nowIso)
+      );
       const turnInserts: Database["memories"]["Tables"]["turns"]["Insert"][] =
-        messagesToStore.map((msg) => ({
+        messagesToStore.map((msg, index) => ({
           attachments: jsonSchema.parse(msg.metadata?.attachments ?? []),
           // Convert string content to JSONB format: { text: string }
           content: {
             text: msg.content,
           },
           // biome-ignore lint/style/useNamingConvention: Database field name
-          created_at: msg.timestamp,
+          created_at: normalizedTimestamps[index],
           // biome-ignore lint/style/useNamingConvention: Database field name
           pii_scrubbed: false, // PII scrubbing handled upstream (chat ingestion).
           role: msg.role,
@@ -158,12 +192,12 @@ export async function handleMemorySyncJob(
           user_id: payload.userId,
         }));
 
-      const turnTimestamps = messagesToStore.map((msg) => msg.timestamp);
+      const turnTimestamps = normalizedTimestamps;
       // Indexed by memories_turns_session_idx (session_id, created_at).
       const { data: existingTurns, error: existingError } = await supabase
         .schema("memories")
         .from("turns")
-        .select("created_at, role, content")
+        .select("created_at, role, content, attachments, tool_calls, tool_results")
         .eq("session_id", payload.sessionId)
         .in("created_at", turnTimestamps);
 
@@ -178,13 +212,27 @@ export async function handleMemorySyncJob(
 
       const existingKeys = new Set(
         (existingTurns ?? []).map((turn) => {
-          const content = normalizeContentForDedupe(turn.content);
-          return `${turn.created_at}|${turn.role}|${content}`;
+          return buildTurnDedupeKey({
+            attachments: turn.attachments,
+            content: turn.content,
+            createdAt: turn.created_at,
+            role: turn.role,
+            toolCalls: turn.tool_calls,
+            toolResults: turn.tool_results,
+          });
         })
       );
       const dedupedInserts = turnInserts.filter((turn) => {
-        const content = normalizeContentForDedupe(turn.content);
-        return !existingKeys.has(`${turn.created_at}|${turn.role}|${content}`);
+        return !existingKeys.has(
+          buildTurnDedupeKey({
+            attachments: turn.attachments,
+            content: turn.content,
+            createdAt: turn.created_at ?? "",
+            role: turn.role ?? "",
+            toolCalls: turn.tool_calls,
+            toolResults: turn.tool_results,
+          })
+        );
       });
 
       if (dedupedInserts.length > 0) {

@@ -231,7 +231,7 @@ describe("indexDocuments", () => {
 
       for (let i = 0; i < rows.length; i++) {
         expect(rows[i]?.id).toBe(documentId);
-        expect(rows[i]?.["chunk_index"]).toBe(i);
+        expect(rows[i]?.chunk_index).toBe(i);
       }
     }
   });
