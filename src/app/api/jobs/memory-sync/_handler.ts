@@ -128,11 +128,7 @@ export async function handleMemorySyncJob(
   }
 
   // Update memory context summary (simplified - could be enhanced with AI)
-  if (
-    payload.syncType === "conversation" ||
-    payload.syncType === "full" ||
-    payload.syncType === "incremental"
-  ) {
+  {
     const { error: updateError } = await supabase
       .from("chat_sessions")
       .update({

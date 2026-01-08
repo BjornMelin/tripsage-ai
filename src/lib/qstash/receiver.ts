@@ -24,8 +24,9 @@ import {
 const DEFAULT_CLOCK_TOLERANCE_SECONDS = 30;
 const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_MESSAGE_ID_TTL_SECONDS = 60 * 60 * 24; // 24h
-// Keep this shorter than the overall retry window so a crashed worker doesn't
-// push messages to DLQ purely due to a stale in-flight lock.
+// Keep this shorter than the QStash retry backoff window (initial retries are
+// seconds to minutes apart) so a crashed worker doesn't push messages to the
+// DLQ purely due to a stale in-flight lock.
 const DEFAULT_MESSAGE_LOCK_TTL_SECONDS = 60 * 4; // 4m
 const DEFAULT_KEY_ROTATION_ALERT_WINDOW_MS = 6 * 60 * 60 * 1000; // 6h
 const logger = createServerLogger("qstash.receiver");
