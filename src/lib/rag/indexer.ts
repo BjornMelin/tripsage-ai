@@ -26,6 +26,7 @@ const logger = createServerLogger("rag.indexer");
 
 /** Token to character ratio approximation (conservative). */
 const CHARS_PER_TOKEN = 4;
+/** Max chunks per embedding batch to prevent runaway costs and respect API limits. */
 const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
 
 interface ChunkLimitContext {
@@ -278,7 +279,10 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   const failed: RagIndexFailedDoc[] = [];
   let indexed = 0;
   let chunksCreated = 0;
-  const effectiveChunkSize = Math.max(1, config.chunkSize - config.chunkOverlap);
+  const estimatedChunkChars = Math.max(
+    1,
+    (config.chunkSize - config.chunkOverlap) * CHARS_PER_TOKEN
+  );
   let estimatedChunkCount = 0;
 
   // Prepare all chunks with document index tracking
@@ -302,7 +306,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     }
 
     const documentId = document.id ?? secureUuid();
-    estimatedChunkCount += Math.ceil(document.content.length / effectiveChunkSize);
+    estimatedChunkCount += Math.ceil(document.content.length / estimatedChunkChars);
     enforceChunkLimit(estimatedChunkCount, {
       batchStartIndex,
       chunkOverlap: config.chunkOverlap,
