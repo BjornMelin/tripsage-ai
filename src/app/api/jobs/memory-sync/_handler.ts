@@ -19,7 +19,10 @@ import type { Database } from "@/lib/supabase/database.types";
  */
 function normalizeContentForDedupe(content: unknown): string {
   if (typeof content === "object" && content && "text" in content) {
-    return String((content as { text?: unknown }).text ?? "");
+    const text = (content as { text?: unknown }).text;
+    if (typeof text === "string") return text;
+    if (typeof text === "number" || typeof text === "boolean") return String(text);
+    return JSON.stringify(text ?? "");
   }
   return JSON.stringify(content ?? "");
 }
@@ -55,7 +58,7 @@ export async function handleMemorySyncJob(
 }> {
   const { supabase } = deps;
   const nowIso = deps.clock?.now ?? (() => secureNowIso());
-  // Limit each sync batch to 50 messages to reduce payload size and avoid timeouts.
+  // Process conversation messages in bounded batches to reduce payload size and avoid timeouts.
   const MaxConversationBatchSize = 50;
 
   // Verify user has access to this session
@@ -77,12 +80,13 @@ export async function handleMemorySyncJob(
   let contextUpdated = false;
 
   // Process conversation messages if provided
-  if (payload.conversationMessages && payload.conversationMessages.length > 0) {
+  const conversationMessages = payload.conversationMessages ?? [];
+  if (conversationMessages.length > 0) {
     // Supabase transactions are not available here; rely on idempotency + retries.
-    const messagesToStore = payload.conversationMessages.slice(
-      0,
-      MaxConversationBatchSize
-    );
+    const messageBatches = [];
+    for (let i = 0; i < conversationMessages.length; i += MaxConversationBatchSize) {
+      messageBatches.push(conversationMessages.slice(i, i + MaxConversationBatchSize));
+    }
 
     // Ensure memory session exists
     const { data: memorySession, error: sessionCheckError } = await supabase
@@ -103,7 +107,7 @@ export async function handleMemorySyncJob(
 
     // Create session if it doesn't exist
     if (!memorySession) {
-      const firstMessageContent = messagesToStore[0]?.content?.trim() ?? "";
+      const firstMessageContent = conversationMessages[0]?.content?.trim() ?? "";
       const title =
         firstMessageContent.length > 0
           ? firstMessageContent.substring(0, 100)
@@ -129,71 +133,77 @@ export async function handleMemorySyncJob(
     }
 
     // Store conversation turns with best-effort dedupe for retries.
-    const turnInserts: Database["memories"]["Tables"]["turns"]["Insert"][] =
-      messagesToStore.map((msg) => ({
-        attachments: jsonSchema.parse(msg.metadata?.attachments ?? []),
-        // Convert string content to JSONB format: { text: string }
-        content: {
-          text: msg.content,
-        },
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        created_at: msg.timestamp,
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        pii_scrubbed: false, // PII scrubbing handled upstream (chat ingestion).
-        role: msg.role,
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        session_id: payload.sessionId,
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        tool_calls: jsonSchema.parse(msg.metadata?.toolCalls ?? []),
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        tool_results: jsonSchema.parse(msg.metadata?.toolResults ?? []),
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        user_id: payload.userId,
-      }));
+    let storedTurns = 0;
+    for (const messagesToStore of messageBatches) {
+      if (messagesToStore.length === 0) continue;
+      const turnInserts: Database["memories"]["Tables"]["turns"]["Insert"][] =
+        messagesToStore.map((msg) => ({
+          attachments: jsonSchema.parse(msg.metadata?.attachments ?? []),
+          // Convert string content to JSONB format: { text: string }
+          content: {
+            text: msg.content,
+          },
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          created_at: msg.timestamp,
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          pii_scrubbed: false, // PII scrubbing handled upstream (chat ingestion).
+          role: msg.role,
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          session_id: payload.sessionId,
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          tool_calls: jsonSchema.parse(msg.metadata?.toolCalls ?? []),
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          tool_results: jsonSchema.parse(msg.metadata?.toolResults ?? []),
+          // biome-ignore lint/style/useNamingConvention: Database field name
+          user_id: payload.userId,
+        }));
 
-    const turnTimestamps = messagesToStore.map((msg) => msg.timestamp);
-    // Indexed by memories_turns_session_idx (session_id, created_at).
-    const { data: existingTurns, error: existingError } = await supabase
-      .schema("memories")
-      .from("turns")
-      .select("created_at, role, content")
-      .eq("session_id", payload.sessionId)
-      .in("created_at", turnTimestamps);
-
-    if (existingError) {
-      throw new MemorySyncDatabaseError("Memory turn dedupe lookup failed", {
-        cause: existingError,
-        context: { turnCount: turnInserts.length },
-        operation: "turn_dedupe_lookup",
-        sessionId: payload.sessionId,
-      });
-    }
-
-    const existingKeys = new Set(
-      (existingTurns ?? []).map((turn) => {
-        const content = normalizeContentForDedupe(turn.content);
-        return `${turn.created_at}|${turn.role}|${content}`;
-      })
-    );
-    const dedupedInserts = turnInserts.filter((turn) => {
-      const content = normalizeContentForDedupe(turn.content);
-      return !existingKeys.has(`${turn.created_at}|${turn.role}|${content}`);
-    });
-
-    if (dedupedInserts.length > 0) {
-      const { error: insertError } = await supabase
+      const turnTimestamps = messagesToStore.map((msg) => msg.timestamp);
+      // Indexed by memories_turns_session_idx (session_id, created_at).
+      const { data: existingTurns, error: existingError } = await supabase
         .schema("memories")
         .from("turns")
-        .insert(dedupedInserts);
+        .select("created_at, role, content")
+        .eq("session_id", payload.sessionId)
+        .in("created_at", turnTimestamps);
 
-      if (insertError) {
-        throw new MemorySyncDatabaseError("Memory turn insert failed", {
-          cause: insertError,
-          context: { turnCount: dedupedInserts.length },
-          operation: "turn_insert",
+      if (existingError) {
+        throw new MemorySyncDatabaseError("Memory turn dedupe lookup failed", {
+          cause: existingError,
+          context: { turnCount: turnInserts.length },
+          operation: "turn_dedupe_lookup",
           sessionId: payload.sessionId,
         });
       }
+
+      const existingKeys = new Set(
+        (existingTurns ?? []).map((turn) => {
+          const content = normalizeContentForDedupe(turn.content);
+          return `${turn.created_at}|${turn.role}|${content}`;
+        })
+      );
+      const dedupedInserts = turnInserts.filter((turn) => {
+        const content = normalizeContentForDedupe(turn.content);
+        return !existingKeys.has(`${turn.created_at}|${turn.role}|${content}`);
+      });
+
+      if (dedupedInserts.length > 0) {
+        const { error: insertError } = await supabase
+          .schema("memories")
+          .from("turns")
+          .insert(dedupedInserts);
+
+        if (insertError) {
+          throw new MemorySyncDatabaseError("Memory turn insert failed", {
+            cause: insertError,
+            context: { turnCount: dedupedInserts.length },
+            operation: "turn_insert",
+            sessionId: payload.sessionId,
+          });
+        }
+      }
+
+      storedTurns += dedupedInserts.length;
     }
 
     // Update session last_synced_at
@@ -213,7 +223,7 @@ export async function handleMemorySyncJob(
       });
     }
 
-    memoriesStored = dedupedInserts.length;
+    memoriesStored = storedTurns;
   }
 
   // Update memory context summary (simplified - could be enhanced with AI)

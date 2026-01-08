@@ -349,7 +349,7 @@ describe("POST /api/jobs/memory-sync", () => {
     });
   });
 
-  it("limits batch size to 50 messages", async () => {
+  it("processes conversation messages in batches", async () => {
     // Override the memories insert mock to return 50 items
     MOCK_FROM.mockImplementation((table: string) => {
       if (table === "chat_sessions") {
@@ -409,7 +409,7 @@ describe("POST /api/jobs/memory-sync", () => {
     const result = await response.json();
 
     expect(response.status).toBe(200);
-    expect(result.memoriesStored).toBe(50); // Should be limited to 50
+    expect(result.memoriesStored).toBe(60);
   });
 
   it("handles incremental sync type", async () => {

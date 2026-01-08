@@ -274,6 +274,9 @@ export class RedisMockClient {
     keys: string[],
     args: Array<string | number>
   ): Promise<unknown> {
+    const QstashIdempotencyGetPattern = 'redis.call("GET", KEYS[1]) == "processing"';
+    const QstashIdempotencySetPattern = 'redis.call("SET", KEYS[1], "done"';
+
     // Support circuit-breaker script: INCR + EXPIRE
     if (script.includes("INCR") && script.includes("EXPIRE") && keys.length === 1) {
       const ttl = Number(args[0] ?? 0);
@@ -302,10 +305,21 @@ export class RedisMockClient {
     }
 
     // Support QStash idempotency commit: GET -> conditional SET done with EX
+    // NOTE: Detects the specific Lua script pattern used by @upstash/qstash >= 2.x
+    // for idempotent job delivery. If the library changes its EVAL script, this
+    // detection may fail and tests should update this mock accordingly.
     const normalizedScript = script.replace(/\s+/g, " ");
-    const isIdempotencyCommitScript =
-      normalizedScript.includes('redis.call("GET", KEYS[1]) == "processing"') &&
+    const looksLikeQstashIdempotencyScript =
+      normalizedScript.includes('redis.call("GET", KEYS[1])') ||
       normalizedScript.includes('redis.call("SET", KEYS[1], "done"');
+    const isIdempotencyCommitScript =
+      normalizedScript.includes(QstashIdempotencyGetPattern) &&
+      normalizedScript.includes(QstashIdempotencySetPattern);
+    if (looksLikeQstashIdempotencyScript && !isIdempotencyCommitScript) {
+      throw new Error(
+        "Unsupported QStash idempotency script pattern in RedisMockClient.eval"
+      );
+    }
     if (isIdempotencyCommitScript && keys.length === 1) {
       const current = await this.get<string>(keys[0]);
       if (current === "processing") {
@@ -322,13 +336,23 @@ export class RedisMockClient {
   }
 }
 
+type RedisMockConstructorArg =
+  | UpstashMemoryStore
+  | {
+      store?: UpstashMemoryStore;
+      token?: string;
+      url?: string;
+    };
+
 export class RedisMock extends RedisMockClient {
   static fromEnv(): RedisMock {
-    return new RedisMock({ store: sharedUpstashStore });
+    return new RedisMock(sharedUpstashStore);
   }
 
-  constructor(options?: { store?: UpstashMemoryStore }) {
-    super(options?.store ?? sharedUpstashStore);
+  constructor(storeOrOptions?: RedisMockConstructorArg) {
+    const store =
+      storeOrOptions instanceof Map ? storeOrOptions : storeOrOptions?.store;
+    super(store ?? sharedUpstashStore);
   }
 }
 
