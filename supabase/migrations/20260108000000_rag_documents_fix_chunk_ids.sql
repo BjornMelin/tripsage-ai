@@ -36,12 +36,12 @@ BEGIN
       ALTER COLUMN chunk_index SET DEFAULT 0,
       ALTER COLUMN chunk_index SET NOT NULL;
 
-    -- Ensure the conflict arbiter exists.
-    CREATE UNIQUE INDEX IF NOT EXISTS rag_documents_id_chunk_idx
+    -- Create unique index and promote it to the primary key.
+    CREATE UNIQUE INDEX IF NOT EXISTS rag_documents_pkey
       ON public.rag_documents (id, chunk_index);
 
     ALTER TABLE public.rag_documents
-      ADD PRIMARY KEY (id, chunk_index);
+      ADD PRIMARY KEY USING INDEX rag_documents_pkey;
   END IF;
 END;
 $do$;
@@ -129,9 +129,9 @@ BEGIN
           updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at);
 
     DELETE FROM public.rag_documents d
-    USING bad b
-    WHERE d.id = b.bad_id
-      AND d.chunk_index = b.chunk_index;
+    WHERE d.chunk_index IS NOT NULL
+      AND d.id::text ~ ':([0-9]+)$'
+      AND right(d.id::text, length(d.chunk_index::text) + 1) = ':' || d.chunk_index::text;
   $sql$, v_id_expr);
 END;
 $do$;

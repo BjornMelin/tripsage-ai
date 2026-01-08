@@ -19,6 +19,7 @@ import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { RagLimitError } from "./errors";
 import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
@@ -26,6 +27,27 @@ const logger = createServerLogger("rag.indexer");
 /** Token to character ratio approximation (conservative). */
 const CHARS_PER_TOKEN = 4;
 const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
+
+interface ChunkLimitContext {
+  batchStartIndex: number;
+  chunkOverlap: number;
+  chunkSize: number;
+  documentCount: number;
+}
+
+function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
+  if (count <= MAX_CHUNKS_PER_EMBED_BATCH) return;
+  logger.warn("chunk_limit_exceeded", {
+    ...context,
+    chunkCount: count,
+    limit: MAX_CHUNKS_PER_EMBED_BATCH,
+  });
+  // Hard limit to avoid runaway embedding costs; callers should split batches.
+  throw new RagLimitError("too_many_chunks", {
+    chunkCount: count,
+    limit: MAX_CHUNKS_PER_EMBED_BATCH,
+  });
+}
 
 /**
  * Chunk document text with overlap.
@@ -281,18 +303,12 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
 
     const documentId = document.id ?? secureUuid();
     estimatedChunkCount += Math.ceil(document.content.length / effectiveChunkSize);
-    if (estimatedChunkCount > MAX_CHUNKS_PER_EMBED_BATCH) {
-      logger.warn("chunk_limit_exceeded", {
-        batchStartIndex,
-        chunkCount: estimatedChunkCount,
-        chunkOverlap: config.chunkOverlap,
-        chunkSize: config.chunkSize,
-        documentCount: batch.length,
-        limit: MAX_CHUNKS_PER_EMBED_BATCH,
-      });
-      // Hard limit to avoid runaway embedding costs; callers should split batches.
-      throw new Error("rag_limit:too_many_chunks");
-    }
+    enforceChunkLimit(estimatedChunkCount, {
+      batchStartIndex,
+      chunkOverlap: config.chunkOverlap,
+      chunkSize: config.chunkSize,
+      documentCount: batch.length,
+    });
     const chunks = chunkText(document.content, config.chunkSize, config.chunkOverlap);
 
     for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
@@ -310,18 +326,12 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     return { chunksCreated: 0, failed, indexed: 0 };
   }
 
-  if (allChunks.length > MAX_CHUNKS_PER_EMBED_BATCH) {
-    logger.warn("chunk_limit_exceeded", {
-      batchStartIndex,
-      chunkCount: allChunks.length,
-      chunkOverlap: config.chunkOverlap,
-      chunkSize: config.chunkSize,
-      documentCount: batch.length,
-      limit: MAX_CHUNKS_PER_EMBED_BATCH,
-    });
-    // Hard limit to avoid runaway embedding costs; callers should split batches.
-    throw new Error("rag_limit:too_many_chunks");
-  }
+  enforceChunkLimit(allChunks.length, {
+    batchStartIndex,
+    chunkOverlap: config.chunkOverlap,
+    chunkSize: config.chunkSize,
+    documentCount: batch.length,
+  });
 
   // Generate embeddings for all chunks in batch
   const { embeddings } = await embedMany({
