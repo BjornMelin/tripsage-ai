@@ -8,7 +8,8 @@ import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
-import { createServerLogger } from "@/lib/telemetry/logger";
+import type { ServerLogger } from "@/lib/telemetry/logger";
+import { getUiMessageIdFromRow, isSupersededMessage } from "../_metadata-helpers";
 import {
   ensureNonEmptyParts,
   parsePersistedUiParts,
@@ -21,6 +22,7 @@ import {
 export interface SessionsDeps {
   supabase: TypedServerSupabase;
   userId: string;
+  logger: ServerLogger;
 }
 
 /**
@@ -114,7 +116,7 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
  * List messages for a session.
  */
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
-  const logger = createServerLogger("chat.sessions.listMessages");
+  const logger = deps.logger;
 
   const { data: session, error: sessionError } = await deps.supabase
     .from("chat_sessions")
@@ -142,26 +144,6 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
       reason: "Failed to list messages",
       status: 500,
     });
-
-  const getStringFromMetadata = (
-    metadata: unknown,
-    key: string
-  ): string | undefined => {
-    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-      return undefined;
-    }
-    const record = metadata as Record<string, unknown>;
-    const value = record[key];
-    return typeof value === "string" && value.trim().length > 0
-      ? value.trim()
-      : undefined;
-  };
-
-  const isSupersededMessage = (metadata: unknown): boolean => {
-    const supersededBy = getStringFromMetadata(metadata, "supersededBy");
-    if (supersededBy) return true;
-    return getStringFromMetadata(metadata, "status") === "superseded";
-  };
 
   const visibleMessages = (messages ?? []).filter(
     (row) => !isSupersededMessage(row.metadata)
@@ -199,22 +181,6 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
     toolCallsByMessageId.set(messageId, existing);
   }
 
-  const isMetaWithUiMessageId = (value: unknown): value is { uiMessageId: string } => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-    if (!("uiMessageId" in value)) return false;
-    const record = value as Record<string, unknown>;
-    const uiMessageId = record.uiMessageId;
-    return typeof uiMessageId === "string" && uiMessageId.trim().length > 0;
-  };
-
-  const toUiMessageId = (row: { id: number; metadata: unknown }): string => {
-    const meta = row.metadata;
-    if (isMetaWithUiMessageId(meta)) {
-      return meta.uiMessageId.trim();
-    }
-    return `db:${row.id}`;
-  };
-
   const rawUiMessages = visibleMessages.map((row) => {
     const baseParts = parsePersistedUiParts({
       content: row.content,
@@ -222,7 +188,10 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
       messageDbId: row.id,
       sessionId: id,
     });
-    const uiMessageId = toUiMessageId({ id: row.id, metadata: row.metadata });
+    const uiMessageId = getUiMessageIdFromRow({
+      id: row.id,
+      metadata: row.metadata,
+    });
 
     let role: "assistant" | "system" | "user";
     if (row.role === "user" || row.role === "assistant" || row.role === "system") {

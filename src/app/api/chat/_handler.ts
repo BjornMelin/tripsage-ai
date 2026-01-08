@@ -35,6 +35,7 @@ import type { ServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
+import { getUiMessageIdFromRow, isSupersededMessage } from "./_metadata-helpers";
 import {
   ensureNonEmptyParts,
   parsePersistedUiParts,
@@ -310,8 +311,10 @@ function buildTokenBudget(options: {
   const promptCount = countTokens([options.system, ...tokenTexts], options.modelId);
   const modelLimit = getModelContextLimit(options.modelId);
   const available = Math.max(0, modelLimit - promptCount);
+  // Apply a safety margin for tokenizer variance across providers.
+  const safeAvailable = Math.floor(available * 0.95);
 
-  if (available <= 0) {
+  if (safeAvailable <= 0) {
     return {
       ok: false,
       res: errorResponse({
@@ -333,7 +336,7 @@ function buildTokenBudget(options: {
   ];
   const { maxTokens } = clampMaxTokens(clampInput, desired, options.modelId);
 
-  return { maxOutputTokens: maxTokens, ok: true };
+  return { maxOutputTokens: Math.min(maxTokens, safeAvailable), ok: true };
 }
 
 function parseToolCall(value: unknown): ParsedToolCall | null {
@@ -376,30 +379,6 @@ type HydratedChatMessage = {
 };
 
 const HISTORY_LIMIT = 40;
-
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function getStringFromMetadata(metadata: unknown, key: string): string | undefined {
-  if (!isJsonObject(metadata)) return undefined;
-  const value = metadata[key];
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : undefined;
-}
-
-function getUiMessageIdFromRow(row: { id: number; metadata: unknown }): string {
-  const uiMessageId = getStringFromMetadata(row.metadata, "uiMessageId");
-  return uiMessageId ?? `db:${row.id}`;
-}
-
-function isSupersededMessage(metadata: unknown): boolean {
-  const supersededBy = getStringFromMetadata(metadata, "supersededBy");
-  if (supersededBy) return true;
-  const status = getStringFromMetadata(metadata, "status");
-  return status === "superseded";
-}
 
 async function loadChatHistory(options: {
   limit?: number;

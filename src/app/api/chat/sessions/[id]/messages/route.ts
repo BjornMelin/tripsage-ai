@@ -18,6 +18,7 @@ import {
   requireUserId,
   validateSchema,
 } from "@/lib/api/route-helpers";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { createMessage, listMessages } from "../../_handlers";
 
 /**
@@ -33,13 +34,14 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
     rateLimit: "chat:sessions:messages:list",
     telemetry: "chat.sessions.messages.list",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
+    const logger = createServerLogger("chat.sessions.messages.list");
     const result = requireUserId(user);
     if (!result.ok) return result.error;
     const userId = result.data;
     const idResult = await parseStringId(routeContext, "id");
     if (!idResult.ok) return idResult.error;
     const sessionId = idResult.data;
-    return listMessages({ supabase, userId }, sessionId);
+    return listMessages({ logger, supabase, userId }, sessionId);
   })(req, context);
 }
 
@@ -58,6 +60,7 @@ export function POST(req: NextRequest, context: { params: Promise<{ id: string }
     rateLimit: "chat:sessions:messages:create",
     telemetry: "chat.sessions.messages.create",
   })(async (request, { supabase, user }, _data, routeContext: RouteParamsContext) => {
+    const logger = createServerLogger("chat.sessions.messages.create");
     const result = requireUserId(user);
     if (!result.ok) return result.error;
     const userId = result.data;
@@ -70,7 +73,7 @@ export function POST(req: NextRequest, context: { params: Promise<{ id: string }
     if (!validation.ok) return validation.error;
     const validatedBody = validation.data;
     // Transform validated content to parts format expected by handler
-    return createMessage({ supabase, userId }, sessionId, {
+    return createMessage({ logger, supabase, userId }, sessionId, {
       parts: [{ text: validatedBody.content, type: "text" }],
       role: validatedBody.role,
     });

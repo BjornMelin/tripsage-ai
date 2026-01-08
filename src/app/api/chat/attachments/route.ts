@@ -5,6 +5,7 @@
 import "server-only";
 
 import {
+  type AttachmentSignedUpload,
   attachmentCreateSignedUploadRequestSchema,
   attachmentCreateSignedUploadResponseSchema,
   sanitizeFilename,
@@ -90,7 +91,7 @@ export const POST = withApiGuards({
   if (!validation.ok) return validation.error;
   const body = validation.data;
 
-  const uploads = [];
+  const uploads: AttachmentSignedUpload[] = [];
   const insertedIds: string[] = [];
 
   const cleanupInserted = async (): Promise<void> => {

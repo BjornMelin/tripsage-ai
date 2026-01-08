@@ -12,6 +12,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseJsonBody, requireUserId } from "@/lib/api/route-helpers";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { createSession, listSessions } from "./_handlers";
 
 const createSessionBodySchema = z.looseObject({
@@ -38,6 +39,7 @@ export const POST = withApiGuards({
   rateLimit: "chat:sessions:create",
   telemetry: "chat.sessions.create",
 })(async (req: NextRequest, { supabase, user }) => {
+  const logger = createServerLogger("chat.sessions.create");
   const result = requireUserId(user);
   if (!result.ok) return result.error;
   const userId = result.data;
@@ -48,7 +50,7 @@ export const POST = withApiGuards({
     if (parsed.error.status === 413) {
       return parsed.error;
     }
-    return createSession({ supabase, userId }, undefined);
+    return createSession({ logger, supabase, userId }, undefined);
   }
 
   const validation = createSessionBodySchema.safeParse(parsed.data);
@@ -63,7 +65,7 @@ export const POST = withApiGuards({
   }
 
   const title = validation.data.title;
-  return createSession({ supabase, userId }, title);
+  return createSession({ logger, supabase, userId }, title);
 });
 
 /**
@@ -76,8 +78,9 @@ export const GET = withApiGuards({
   rateLimit: "chat:sessions:list",
   telemetry: "chat.sessions.list",
 })((_req, { supabase, user }) => {
+  const logger = createServerLogger("chat.sessions.list");
   const result = requireUserId(user);
   if (!result.ok) return result.error;
   const userId = result.data;
-  return listSessions({ supabase, userId });
+  return listSessions({ logger, supabase, userId });
 });

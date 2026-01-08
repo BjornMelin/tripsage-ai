@@ -1,7 +1,8 @@
 /** @vitest-environment node */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import type { ServerLogger } from "@/lib/telemetry/logger";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import {
@@ -20,40 +21,46 @@ type UntypedSupabaseInsert = {
 };
 
 describe("sessions _handlers", () => {
+  const logger = {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  } satisfies ServerLogger;
+
   it("create/list session happy path", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u1" } });
-    const res1 = await createSession({ supabase: s, userId: "u1" }, "Trip");
+    const res1 = await createSession({ logger, supabase: s, userId: "u1" }, "Trip");
     expect(res1.status).toBe(201);
-    const res2 = await listSessions({ supabase: s, userId: "u1" });
+    const res2 = await listSessions({ logger, supabase: s, userId: "u1" });
     expect(res2.status).toBe(200);
   });
 
   it("get/delete session auth gating", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u2" } });
-    const created = await createSession({ supabase: s, userId: "u2" }, "Trip");
+    const created = await createSession({ logger, supabase: s, userId: "u2" }, "Trip");
     const { id } = (await created.json()) as { id: string };
-    const g = await getSession({ supabase: s, userId: "u2" }, id);
+    const g = await getSession({ logger, supabase: s, userId: "u2" }, id);
     expect(g.status).toBe(200);
-    const d = await deleteSession({ supabase: s, userId: "u2" }, id);
+    const d = await deleteSession({ logger, supabase: s, userId: "u2" }, id);
     expect(d.status).toBe(204);
   });
 
   it("list/create messages happy path", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u3" } });
-    const created = await createSession({ supabase: s, userId: "u3" }, "Trip");
+    const created = await createSession({ logger, supabase: s, userId: "u3" }, "Trip");
     const { id } = (await created.json()) as { id: string };
-    const r1 = await createMessage({ supabase: s, userId: "u3" }, id, {
+    const r1 = await createMessage({ logger, supabase: s, userId: "u3" }, id, {
       parts: [{ text: "hi", type: "text" }],
       role: "user",
     });
     expect(r1.status).toBe(201);
-    const r2 = await listMessages({ supabase: s, userId: "u3" }, id);
+    const r2 = await listMessages({ logger, supabase: s, userId: "u3" }, id);
     expect(r2.status).toBe(200);
   });
 
   it("includes tool output parts for assistant messages", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u4" } });
-    const created = await createSession({ supabase: s, userId: "u4" }, "Trip");
+    const created = await createSession({ logger, supabase: s, userId: "u4" }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
 
     await unsafeCast<UntypedSupabaseInsert>(s)
@@ -86,7 +93,7 @@ describe("sessions _handlers", () => {
       tool_name: "webSearch",
     });
 
-    const res = await listMessages({ supabase: s, userId: "u4" }, sessionId);
+    const res = await listMessages({ logger, supabase: s, userId: "u4" }, sessionId);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{
       role: string;
@@ -95,6 +102,17 @@ describe("sessions _handlers", () => {
 
     const assistant = body.find((m) => m.role === "assistant");
     expect(assistant).toBeTruthy();
+    const toolPart = assistant?.parts.find(
+      (p) => p.type === "dynamic-tool" || p.type.startsWith("tool-")
+    );
+    expect(toolPart).toBeTruthy();
+    expect(toolPart).toMatchObject({
+      input: { query: "london" },
+      output: { ok: true },
+      toolCallId: "call-1",
+      toolName: "webSearch",
+      type: "dynamic-tool",
+    });
     expect(
       assistant?.parts.some(
         (p) => p.type === "dynamic-tool" || p.type.startsWith("tool-")
@@ -104,7 +122,7 @@ describe("sessions _handlers", () => {
 
   it("tolerates legacy model tool-call parts in stored content", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u6" } });
-    const created = await createSession({ supabase: s, userId: "u6" }, "Trip");
+    const created = await createSession({ logger, supabase: s, userId: "u6" }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
 
     await unsafeCast<UntypedSupabaseInsert>(s)
@@ -145,7 +163,7 @@ describe("sessions _handlers", () => {
       tool_name: "webSearch",
     });
 
-    const res = await listMessages({ supabase: s, userId: "u6" }, sessionId);
+    const res = await listMessages({ logger, supabase: s, userId: "u6" }, sessionId);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{
       role: string;
@@ -163,7 +181,7 @@ describe("sessions _handlers", () => {
 
   it("filters superseded assistant messages", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u5" } });
-    const created = await createSession({ supabase: s, userId: "u5" }, "Trip");
+    const created = await createSession({ logger, supabase: s, userId: "u5" }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
 
     await unsafeCast<UntypedSupabaseInsert>(s)
@@ -195,7 +213,7 @@ describe("sessions _handlers", () => {
         },
       ]);
 
-    const res = await listMessages({ supabase: s, userId: "u5" }, sessionId);
+    const res = await listMessages({ logger, supabase: s, userId: "u5" }, sessionId);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{ role: string }>;
 

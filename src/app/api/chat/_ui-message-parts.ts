@@ -16,6 +16,8 @@ type ToolCallRow = {
   result?: unknown;
   status?: unknown;
   // biome-ignore lint/style/useNamingConvention: Database field name
+  provider_executed?: unknown;
+  // biome-ignore lint/style/useNamingConvention: Database field name
   error_message?: unknown;
 };
 
@@ -166,6 +168,10 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
     const input = toolRow.arguments ?? {};
 
     const status = typeof toolRow.status === "string" ? toolRow.status : undefined;
+    const providerExecuted =
+      typeof toolRow.provider_executed === "boolean"
+        ? toolRow.provider_executed
+        : status === "completed" || status === "failed";
     if (status === "failed") {
       const errorText =
         typeof toolRow.error_message === "string" &&
@@ -178,6 +184,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
       parts.push({
         errorText,
         input,
+        providerExecuted,
         state: "output-error",
         toolCallId,
         toolName,
@@ -190,6 +197,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
       if (toolRow.result == null) {
         parts.push({
           input,
+          providerExecuted,
           state: "input-available",
           toolCallId,
           toolName,
@@ -201,6 +209,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
       parts.push({
         input,
         output: toolRow.result,
+        providerExecuted,
         state: "output-available",
         toolCallId,
         toolName,
@@ -211,6 +220,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
 
     parts.push({
       input,
+      providerExecuted,
       state: "input-available",
       toolCallId,
       toolName,
