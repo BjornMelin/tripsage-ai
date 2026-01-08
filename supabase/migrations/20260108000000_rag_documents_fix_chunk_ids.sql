@@ -95,8 +95,7 @@ BEGIN
       WHERE d.chunk_index IS NOT NULL
         AND d.id::text ~ ':([0-9]+)$'
         AND right(d.id::text, length(d.chunk_index::text) + 1) = ':' || d.chunk_index::text
-    ),
-    inserted AS (
+    )
     INSERT INTO public.rag_documents (
       id,
       chunk_index,
@@ -138,9 +137,7 @@ BEGIN
           trip_id = EXCLUDED.trip_id,
           chat_id = EXCLUDED.chat_id,
           created_at = LEAST(public.rag_documents.created_at, EXCLUDED.created_at),
-          updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at)
-      RETURNING 1
-    )
+          updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at);
     DELETE FROM public.rag_documents d
     USING bad b
     WHERE d.id = b.bad_id

@@ -19,6 +19,9 @@ export class RagLimitError extends Error {
     super(message);
     this.name = "RagLimitError";
     Object.setPrototypeOf(this, RagLimitError.prototype);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, RagLimitError);
+    }
     this.chunkCount = options?.chunkCount;
     this.limit = options?.limit;
   }
