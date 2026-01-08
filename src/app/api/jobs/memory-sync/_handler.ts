@@ -42,6 +42,7 @@ export async function handleMemorySyncJob(
 }> {
   const { supabase } = deps;
   const nowIso = deps.clock?.now ?? (() => secureNowIso());
+  // Limit each sync batch to 50 messages to reduce payload size and avoid timeouts.
   const MaxConversationBatchSize = 50;
 
   // Verify user has access to this session
@@ -114,7 +115,7 @@ export async function handleMemorySyncJob(
       }
     }
 
-    // Store conversation turns
+    // Store conversation turns with best-effort dedupe for retries.
     const turnInserts: Database["memories"]["Tables"]["turns"]["Insert"][] =
       messagesToStore.map((msg) => ({
         attachments: jsonSchema.parse(msg.metadata?.attachments ?? []),
@@ -122,6 +123,8 @@ export async function handleMemorySyncJob(
         content: {
           text: msg.content,
         },
+        // biome-ignore lint/style/useNamingConvention: Database field name
+        created_at: msg.timestamp,
         // biome-ignore lint/style/useNamingConvention: Database field name
         pii_scrubbed: false, // PII scrubbing handled upstream (chat ingestion).
         role: msg.role,
@@ -135,18 +138,54 @@ export async function handleMemorySyncJob(
         user_id: payload.userId,
       }));
 
-    const { error: insertError } = await supabase
+    const turnTimestamps = messagesToStore.map((msg) => msg.timestamp);
+    const { data: existingTurns, error: existingError } = await supabase
       .schema("memories")
       .from("turns")
-      .insert(turnInserts);
+      .select("created_at, role, content")
+      .eq("session_id", payload.sessionId)
+      .in("created_at", turnTimestamps);
 
-    if (insertError) {
-      throw new MemorySyncDatabaseError("Memory turn insert failed", {
-        cause: insertError,
+    if (existingError) {
+      throw new MemorySyncDatabaseError("Memory turn dedupe lookup failed", {
+        cause: existingError,
         context: { turnCount: turnInserts.length },
-        operation: "turn_insert",
+        operation: "turn_dedupe_lookup",
         sessionId: payload.sessionId,
       });
+    }
+
+    const existingKeys = new Set(
+      (existingTurns ?? []).map((turn) => {
+        const content =
+          typeof turn.content === "object" && turn.content && "text" in turn.content
+            ? String(turn.content.text ?? "")
+            : JSON.stringify(turn.content ?? "");
+        return `${turn.created_at}|${turn.role}|${content}`;
+      })
+    );
+    const dedupedInserts = turnInserts.filter((turn) => {
+      const content =
+        typeof turn.content === "object" && turn.content && "text" in turn.content
+          ? String(turn.content.text ?? "")
+          : JSON.stringify(turn.content ?? "");
+      return !existingKeys.has(`${turn.created_at}|${turn.role}|${content}`);
+    });
+
+    if (dedupedInserts.length > 0) {
+      const { error: insertError } = await supabase
+        .schema("memories")
+        .from("turns")
+        .insert(dedupedInserts);
+
+      if (insertError) {
+        throw new MemorySyncDatabaseError("Memory turn insert failed", {
+          cause: insertError,
+          context: { turnCount: dedupedInserts.length },
+          operation: "turn_insert",
+          sessionId: payload.sessionId,
+        });
+      }
     }
 
     // Update session last_synced_at

@@ -307,7 +307,7 @@ export class RedisMockClient {
       if (current === "processing") {
         const ttlSeconds = Number(args[0] ?? 0);
         await this.set(keys[0], "done", {
-          ex: Number.isFinite(ttlSeconds) ? ttlSeconds : undefined,
+          ex: Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : undefined,
         });
         return 1;
       }

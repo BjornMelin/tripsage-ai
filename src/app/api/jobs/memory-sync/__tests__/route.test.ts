@@ -84,6 +84,20 @@ const createDefaultFromMock = vi.hoisted(() => {
       };
     }
     if (table === "turns") {
+      const createTurnsSelectBuilder = () => {
+        const builder: {
+          eq: ReturnType<typeof vi.fn>;
+          in: ReturnType<typeof vi.fn>;
+        } = {
+          eq: vi.fn(),
+          in: vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        };
+        builder.eq = vi.fn(() => builder);
+        return builder;
+      };
       return {
         insert: vi.fn(() => ({
           select: vi.fn().mockResolvedValue({
@@ -91,6 +105,7 @@ const createDefaultFromMock = vi.hoisted(() => {
             error: null,
           }),
         })),
+        select: vi.fn(() => createTurnsSelectBuilder()),
       };
     }
     if (table === "memories") {

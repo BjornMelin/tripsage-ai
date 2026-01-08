@@ -5,6 +5,7 @@
 export type MemorySyncDatabaseOperation =
   | "session_check"
   | "session_create"
+  | "turn_dedupe_lookup"
   | "turn_insert"
   | "session_sync_update"
   | "chat_session_update";
