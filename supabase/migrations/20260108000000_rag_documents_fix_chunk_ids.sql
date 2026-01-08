@@ -15,18 +15,29 @@ BEGIN;
 DO $do$
 DECLARE
   v_pk_cols text[];
+  v_table regclass;
 BEGIN
+  SELECT to_regclass('public.rag_documents')
+  INTO v_table;
+
+  IF v_table IS NULL THEN
+    RETURN;
+  END IF;
+
   SELECT array_agg(a.attname ORDER BY array_position(i.indkey, a.attnum))
   INTO v_pk_cols
   FROM pg_index i
   JOIN pg_attribute a
     ON a.attrelid = i.indrelid
    AND a.attnum = ANY (i.indkey)
-  WHERE i.indrelid = 'public.rag_documents'::regclass
+  WHERE i.indrelid = v_table
     AND i.indisprimary;
 
   IF v_pk_cols = ARRAY['id'] THEN
     ALTER TABLE public.rag_documents DROP CONSTRAINT IF EXISTS rag_documents_pkey;
+  END IF;
+
+  IF v_pk_cols IS NULL OR v_pk_cols = ARRAY['id'] THEN
 
     UPDATE public.rag_documents
     SET chunk_index = 0
@@ -84,7 +95,8 @@ BEGIN
       WHERE d.chunk_index IS NOT NULL
         AND d.id::text ~ ':([0-9]+)$'
         AND right(d.id::text, length(d.chunk_index::text) + 1) = ':' || d.chunk_index::text
-    )
+    ),
+    inserted AS (
     INSERT INTO public.rag_documents (
       id,
       chunk_index,
@@ -126,12 +138,13 @@ BEGIN
           trip_id = EXCLUDED.trip_id,
           chat_id = EXCLUDED.chat_id,
           created_at = LEAST(public.rag_documents.created_at, EXCLUDED.created_at),
-          updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at);
-
+          updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at)
+      RETURNING 1
+    )
     DELETE FROM public.rag_documents d
-    WHERE d.chunk_index IS NOT NULL
-      AND d.id::text ~ ':([0-9]+)$'
-      AND right(d.id::text, length(d.chunk_index::text) + 1) = ':' || d.chunk_index::text;
+    USING bad b
+    WHERE d.id = b.bad_id
+      AND d.chunk_index = b.chunk_index;
   $sql$, v_id_expr);
 END;
 $do$;

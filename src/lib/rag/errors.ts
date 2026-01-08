@@ -18,6 +18,7 @@ export class RagLimitError extends Error {
   constructor(message: string = "too_many_chunks", options?: RagLimitErrorOptions) {
     super(message);
     this.name = "RagLimitError";
+    Object.setPrototypeOf(this, RagLimitError.prototype);
     this.chunkCount = options?.chunkCount;
     this.limit = options?.limit;
   }
