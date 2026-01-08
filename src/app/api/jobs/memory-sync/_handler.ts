@@ -11,6 +11,13 @@ import { nowIso as secureNowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 
+function normalizeContentForDedupe(content: unknown): string {
+  if (typeof content === "object" && content && "text" in content) {
+    return String((content as { text?: unknown }).text ?? "");
+  }
+  return JSON.stringify(content ?? "");
+}
+
 /**
  * Dependencies for the memory sync job handler.
  */
@@ -157,18 +164,12 @@ export async function handleMemorySyncJob(
 
     const existingKeys = new Set(
       (existingTurns ?? []).map((turn) => {
-        const content =
-          typeof turn.content === "object" && turn.content && "text" in turn.content
-            ? String(turn.content.text ?? "")
-            : JSON.stringify(turn.content ?? "");
+        const content = normalizeContentForDedupe(turn.content);
         return `${turn.created_at}|${turn.role}|${content}`;
       })
     );
     const dedupedInserts = turnInserts.filter((turn) => {
-      const content =
-        typeof turn.content === "object" && turn.content && "text" in turn.content
-          ? String(turn.content.text ?? "")
-          : JSON.stringify(turn.content ?? "");
+      const content = normalizeContentForDedupe(turn.content);
       return !existingKeys.has(`${turn.created_at}|${turn.role}|${content}`);
     });
 
