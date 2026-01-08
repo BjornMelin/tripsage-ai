@@ -11,6 +11,12 @@ import { nowIso as secureNowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 
+/**
+ * Normalizes content for deduplication by extracting text from structured content.
+ * Handles both JSONB content from DB and structured { text: string } objects.
+ * @param content - Content to normalize (object with text property or primitive)
+ * @returns Normalized string for dedupe key generation
+ */
 function normalizeContentForDedupe(content: unknown): string {
   if (typeof content === "object" && content && "text" in content) {
     return String((content as { text?: unknown }).text ?? "");
@@ -146,6 +152,7 @@ export async function handleMemorySyncJob(
       }));
 
     const turnTimestamps = messagesToStore.map((msg) => msg.timestamp);
+    // Indexed by memories_turns_session_idx (session_id, created_at).
     const { data: existingTurns, error: existingError } = await supabase
       .schema("memories")
       .from("turns")
@@ -206,7 +213,7 @@ export async function handleMemorySyncJob(
       });
     }
 
-    memoriesStored = messagesToStore.length;
+    memoriesStored = dedupedInserts.length;
   }
 
   // Update memory context summary (simplified - could be enhanced with AI)

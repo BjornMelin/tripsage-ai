@@ -302,9 +302,11 @@ export class RedisMockClient {
     }
 
     // Support QStash idempotency commit: GET -> conditional SET done with EX
-    const QstashIdempotencyScriptPrefix =
-      '              if redis.call("GET", KEYS[1]) == "processing" then';
-    if (script.includes(QstashIdempotencyScriptPrefix) && keys.length === 1) {
+    const normalizedScript = script.replace(/\s+/g, " ");
+    const isIdempotencyCommitScript =
+      normalizedScript.includes('redis.call("GET", KEYS[1]) == "processing"') &&
+      normalizedScript.includes('redis.call("SET", KEYS[1], "done"');
+    if (isIdempotencyCommitScript && keys.length === 1) {
       const current = await this.get<string>(keys[0]);
       if (current === "processing") {
         const ttlSeconds = Number(args[0] ?? 0);
