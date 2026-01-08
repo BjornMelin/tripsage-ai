@@ -6,6 +6,7 @@ import "server-only";
 
 import { jsonSchema } from "@schemas/supabase";
 import type { MemorySyncJob } from "@schemas/webhooks";
+import { nowIso as secureNowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -24,7 +25,7 @@ export async function handleMemorySyncJob(
   syncType: MemorySyncJob["payload"]["syncType"];
 }> {
   const { supabase } = deps;
-  const nowIso = deps.clock?.now ?? (() => new Date().toISOString());
+  const nowIso = deps.clock?.now ?? (() => secureNowIso());
   const MaxConversationBatchSize = 50;
 
   // Verify user has access to this session
@@ -64,13 +65,18 @@ export async function handleMemorySyncJob(
 
     // Create session if it doesn't exist
     if (!memorySession) {
+      const firstMessageContent = messagesToStore[0]?.content?.trim() ?? "";
+      const title =
+        firstMessageContent.length > 0
+          ? firstMessageContent.substring(0, 100)
+          : "Untitled session";
       const { error: createError } = await supabase
         .schema("memories")
         .from("sessions")
         .insert({
           id: payload.sessionId,
           metadata: {},
-          title: messagesToStore[0]?.content?.substring(0, 100) || "Untitled session",
+          title,
           // biome-ignore lint/style/useNamingConvention: Database field name
           user_id: payload.userId,
         });

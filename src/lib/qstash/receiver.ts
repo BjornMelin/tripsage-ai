@@ -104,6 +104,10 @@ export function qstashNonRetryableErrorResponse({
   });
 }
 
+/**
+ * The callbacks `commitProcessed` and `release` perform Redis writes and may reject.
+ * Callers should await and handle errors from these functions.
+ */
 export type QstashIdempotencyResult =
   | {
       ok: true;
@@ -153,7 +157,30 @@ export async function enforceQstashMessageIdempotency(
   const processedTtlSeconds =
     options.processedTtlSeconds ?? DEFAULT_MESSAGE_ID_TTL_SECONDS;
 
-  const acquired = await redis.set(key, "processing", { ex: lockTtlSeconds, nx: true });
+  let acquired: string | null;
+  try {
+    acquired = await redis.set(key, "processing", {
+      ex: lockTtlSeconds,
+      nx: true,
+    });
+  } catch (error) {
+    logger.error("qstash_idempotency_set_failed", {
+      error,
+      key,
+      lockTtlSeconds,
+      messageId: meta.messageId,
+      retried: meta.retried,
+    });
+    return {
+      ok: false,
+      response: errorResponse({
+        err: error,
+        error: "service_unavailable",
+        reason: "Idempotency check failed",
+        status: 503,
+      }),
+    };
+  }
   if (acquired === "OK") {
     return {
       commitProcessed: async () => {
@@ -168,7 +195,26 @@ export async function enforceQstashMessageIdempotency(
     };
   }
 
-  const state = await redis.get<string>(key);
+  let state: string | null;
+  try {
+    state = await redis.get<string>(key);
+  } catch (error) {
+    logger.error("qstash_idempotency_get_failed", {
+      error,
+      key,
+      messageId: meta.messageId,
+      retried: meta.retried,
+    });
+    return {
+      ok: false,
+      response: errorResponse({
+        err: error,
+        error: "service_unavailable",
+        reason: "Idempotency check failed",
+        status: 503,
+      }),
+    };
+  }
   if (state === "done") {
     return { meta, ok: true, outcome: "duplicate" };
   }
