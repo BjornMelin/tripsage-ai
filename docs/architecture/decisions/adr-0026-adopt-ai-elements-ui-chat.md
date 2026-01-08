@@ -16,20 +16,20 @@ The project previously shipped bespoke chat UIs and hooks spread across `src/com
 
 - Use AI Elements primitives for conversation, messages, and prompt input.
 - Standardize client transport on `@ai-sdk/react` with `DefaultChatTransport`.
-- Provide a Next.js route handler at `src/app/api/chat/stream/route.ts` using `streamText(...).toDataStreamResponse()` to serve SSE.
+- Provide a Next.js route handler at `src/app/api/chat/route.ts` using `streamText(…).toUIMessageStreamResponse()` to serve the AI SDK v6 UI message stream protocol.
 - Add a simple first-party page `src/app/chat/page.tsx` to render the chat UI and wire prompt submission.
 
 ## Consequences
 
 - Reduces bespoke UI code and aligns with AI SDK v6 patterns.
-- Establishes a clear streaming contract (DataStream) for the chat UI.
+- Establishes a clear streaming contract (AI SDK UI message stream protocol) for the chat UI.
 - Enables progressive enhancement of tool usage visualization without custom protocols.
 
 ## Alternatives considered
 
-- UI Message Stream with manual client parsing: deferred for simplicity; `useChat`+DataStream provides robust default behavior.
+- UI Message Stream with manual client parsing: `useChat` + UI message stream protocol provides robust default behavior.
 - Retrofitting custom chat components: rejected in favor of library-first approach.
 
 ## Migration notes
 
-- Legacy chat pages/components remain available during transition to avoid broader test impact; future cleanup can remove superseded modules when back-compat is not required.
+- Legacy chat pages/components are deleted as part of FINAL-ONLY cleanup once the AI Elements implementation is complete.

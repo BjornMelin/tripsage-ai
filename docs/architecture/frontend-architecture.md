@@ -57,7 +57,7 @@ Avoid new barrels; import concrete modules.
 
 ## Feature Highlights
 
-- Streaming chat with AI SDK v6 (`/api/chat/stream`) using shared schemas for deterministic tool and output handling.
+- Streaming chat with AI SDK v6 (`/api/chat`) using shared schemas for deterministic tool and output handling.
 - Agent endpoints under `/api/agents/*` (flights, accommodations, destinations, itineraries, budget, memory) with domain-specific tool registries.
 - BYOK + Gateway provider resolution with request-scoped registry in `src/ai/models/registry.ts`.
 - Realtime presence/broadcast via `use-realtime-channel` wrappers; no LLM tokens over Realtime.
@@ -214,7 +214,7 @@ See also: `docs/development/backend/cache-versioned-keys.md` for detailed Upstas
 
 ## Workflow Examples
 
-- **Chat streaming**: Client `useChat` (DefaultChatTransport) → `/api/chat/stream` → provider resolved via registry → `streamText` with tools → `toUIMessageStreamResponse()` SSE to client → UI renders progressive tokens.
+- **Chat streaming**: Client `useChat` (DefaultChatTransport) → `/api/chat` → provider resolved via registry → `streamText` with tools → `toUIMessageStreamResponse()` UI stream to client → UI renders progressive tokens.
 - **Flight search agent**: Client sends message tagged for flights → `/api/agents/flights` handler → Supabase auth + rate limit + schema validation → AI SDK call with flight tools → structured flight offers streamed back; optional Realtime broadcast for collaboration.
 - **Memory sync job**: Chat UI enqueues QStash job → `/api/jobs/memory-sync` verifies Upstash signature + Redis idempotency → caps batch to 50 conversation messages → inserts memories + updates `chat_sessions` in Supabase → returns `{ ok: true, memoriesStored, contextUpdated }`.
 - **Attachment upload/use**: Client uploads to `attachments` bucket (signed URL) → Postgres row stores path/MIME/owner → API routes include signed URLs in responses; AI tools may fetch via signed URL for processing.

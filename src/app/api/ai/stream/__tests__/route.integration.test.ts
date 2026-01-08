@@ -18,6 +18,7 @@ vi.mock("next/headers", () => ({
 
 // Mock the `ai` package to avoid network/model dependencies
 vi.mock("ai", () => ({
+  consumeStream: vi.fn(),
   simulateReadableStream: vi.fn(),
   streamText: vi.fn(),
 }));

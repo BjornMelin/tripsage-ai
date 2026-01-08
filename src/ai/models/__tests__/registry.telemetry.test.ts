@@ -30,7 +30,7 @@ vi.mock("@/lib/supabase/rpc", () => ({
 
 vi.mock("ai", () => ({
   createGateway: (opts: { apiKey?: string; baseURL?: string }) => (id: string) => ({
-    baseURL: opts.baseURL ?? "https://ai-gateway.vercel.sh/v1",
+    baseURL: opts.baseURL ?? "https://ai-gateway.vercel.sh/v3/ai",
     id,
     kind: "gateway-mock",
     withKey: Boolean(opts.apiKey),
@@ -41,7 +41,7 @@ vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (key: string) => process.env[key] || "",
   getServerEnvVarWithFallback: (key: string, fallback?: string) => {
     if (key === "AI_GATEWAY_API_KEY") return "team-key";
-    if (key === "AI_GATEWAY_URL") return "https://ai-gateway.vercel.sh/v1";
+    if (key === "AI_GATEWAY_URL") return "https://ai-gateway.vercel.sh/v3/ai";
     return fallback as string | undefined;
   },
 }));
@@ -69,7 +69,7 @@ describe("resolveProvider telemetry", () => {
     const rpc = await import("@/lib/supabase/rpc");
     vi.mocked(rpc.getUserApiKey).mockResolvedValue(null);
     vi.stubEnv("AI_GATEWAY_API_KEY", "team-key");
-    vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1");
+    vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v3/ai");
     const { resolveProvider } = await import("@ai/models/registry");
     await resolveProvider("u2", "openai/gpt-4o-mini");
     const span = CAPTURED.filter((c) => c.name === "providers.resolve").pop();

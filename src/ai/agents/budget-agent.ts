@@ -39,7 +39,7 @@ const BUDGET_TOOLS = {
  *
  * Autonomously researches destinations, gathers pricing data, and generates
  * structured budget allocations through phased tool calling (research → pricing → allocation).
- * Uses Output.object() for structured results and prepareStep for dynamic tool selection.
+ * Encourages schema-versioned JSON payloads in the assistant text (schema cards) for UI rendering.
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
@@ -82,8 +82,8 @@ export function createBudgetAgent(
     maxOutputTokens: maxTokens,
     maxSteps: params.maxSteps,
     name: "Budget Planning Agent",
-    // Note: For structured output, pass Output.object({ schema: budgetPlanResultSchema })
-    // when calling agent.generate() or agent.stream()
+    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
+    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for budget workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1 (steps 0-3): Research destination costs and advisories

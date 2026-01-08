@@ -20,9 +20,9 @@
 
 ## Known Risk Areas
 
-- AI streaming endpoints (`/api/ai/stream`, `/api/chat/stream`) can generate cost spikes if not rate limited and fail-closed under degraded infra.
+- AI streaming endpoints (`/api/ai/stream`, `/api/chat`) can generate cost spikes if not rate limited and fail-closed under degraded infra.
 - Travel API endpoints (flights/accommodations/activities) can exhaust third-party quotas.
-- File uploads (`/api/attachments/files`) can increase storage/egress costs; enforce size limits and auth checks.
+- File uploads (`/api/chat/attachments` signed uploads to Supabase Storage) can increase storage/egress costs; enforce size limits and auth checks.
 
 ## Action Items
 

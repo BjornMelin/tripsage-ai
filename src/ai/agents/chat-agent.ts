@@ -6,7 +6,8 @@ import "server-only";
 
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { toolRegistry } from "@ai/tools";
-import { wrapToolsWithUserId } from "@ai/tools/server/injection";
+import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
+import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ModelMessage, PrepareStepFunction, ToolSet, UIMessage } from "ai";
 import { convertToModelMessages } from "ai";
 import { z } from "zod";
@@ -62,11 +63,6 @@ const toolResultIdPartSchema = z.looseObject({
   type: z.literal("tool-result"),
 });
 
-const toolResultOutputSchema = z.looseObject({
-  type: z.string().optional(),
-  value: z.unknown().optional(),
-});
-
 const messageContentPartSchema = z.union([
   toolCallPartSchema,
   toolResultPartSchema,
@@ -74,7 +70,6 @@ const messageContentPartSchema = z.union([
 ]);
 
 type MessageContentPart = z.infer<typeof messageContentPartSchema>;
-type ToolResultOutput = z.infer<typeof toolResultOutputSchema>;
 type ToolCallIdPart = z.infer<typeof toolCallIdPartSchema>;
 type ToolResultIdPart = z.infer<typeof toolResultIdPartSchema>;
 
@@ -90,11 +85,6 @@ const parseToolCallIdPart = (value: unknown): ToolCallIdPart | null => {
 
 const parseToolResultIdPart = (value: unknown): ToolResultIdPart | null => {
   const parsed = toolResultIdPartSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
-};
-
-const parseToolResultOutput = (value: unknown): ToolResultOutput | null => {
-  const parsed = toolResultOutputSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 };
 
@@ -217,14 +207,7 @@ export function createChatAgent(
     memorySummary,
     systemPrompt = CHAT_DEFAULT_SYSTEM_PROMPT,
     useCallOptions = false,
-    userScopedTools = [
-      "createTravelPlan",
-      "updateTravelPlan",
-      "saveTravelPlan",
-      "deleteTravelPlan",
-      "bookAccommodation",
-      "trips.savePlace",
-    ],
+    userScopedTools = [...USER_SCOPED_TOOLS],
   } = config;
 
   // Build base system prompt with optional memory context
@@ -255,11 +238,19 @@ export function createChatAgent(
   const { maxTokens } = clampMaxTokens(clampInput, desiredMaxTokens, deps.modelId);
 
   // Build tools with user ID injection for user-scoped operations
-  const chatTools = wrapToolsWithUserId(
+  const chatScopedTools = [...CHAT_SCOPED_TOOLS];
+
+  const baseTools = wrapToolsWithUserId(
     toolRegistry,
     deps.userId,
     userScopedTools,
     deps.sessionId
+  ) as ToolSet;
+
+  const chatTools = wrapToolsWithChatId(
+    baseTools,
+    deps.sessionId,
+    chatScopedTools
   ) as ToolSet;
 
   logger.info("Creating chat agent", {
@@ -295,13 +286,10 @@ export function createChatAgent(
       }
 
       if (parsedPart.type === "tool-result") {
-        const parsedOutput = parseToolResultOutput(parsedPart.output);
-        if (!parsedOutput) continue;
-
-        if (parsedOutput.type === "text" && typeof parsedOutput.value === "string") {
-          texts.push(parsedOutput.value);
-        } else if (Object.hasOwn(parsedOutput, "value")) {
-          texts.push(JSON.stringify(parsedOutput.value));
+        try {
+          texts.push(JSON.stringify(parsedPart.output ?? null));
+        } catch {
+          texts.push(String(parsedPart.output ?? "tool-result"));
         }
       }
     }

@@ -34,7 +34,7 @@ vi.mock("@ai-sdk/anthropic", () => ({
 vi.mock("ai", () => ({
   createGateway: (opts: { apiKey?: string; baseURL?: string }) => (id: string) =>
     makeModel(
-      `gateway(${opts.baseURL ?? "https://ai-gateway.vercel.sh/v1"})::${opts.apiKey ? "key" : "no-key"}::${id}`
+      `gateway(${opts.baseURL ?? "https://ai-gateway.vercel.sh/v3/ai"})::${opts.apiKey ? "key" : "no-key"}::${id}`
     ),
 }));
 
@@ -78,7 +78,21 @@ describe("resolveProvider", () => {
     const result = await resolveProvider("user-gw", "openai/gpt-4o-mini");
     expect(result.provider).toBe("openai");
     expect(String(result.model)).toContain(
-      "gateway(https://ai-gateway.vercel.sh/v1)::key::openai/gpt-4o-mini"
+      "gateway(https://ai-gateway.vercel.sh/v3/ai)::key::openai/gpt-4o-mini"
+    );
+  });
+
+  it("normalizes unprefixed model ids for Gateway usage", async () => {
+    const { getUserApiKey } = await import("@/lib/supabase/rpc");
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "gateway" ? "gw-user-key" : null
+    );
+    const { resolveProvider } = await import("@ai/models/registry");
+    const result = await resolveProvider("user-gw2", "gpt-4o-mini");
+    expect(result.provider).toBe("openai");
+    expect(result.modelId).toBe("openai/gpt-4o-mini");
+    expect(String(result.model)).toContain(
+      "gateway(https://ai-gateway.vercel.sh/v3/ai)::key::openai/gpt-4o-mini"
     );
   });
 

@@ -138,7 +138,7 @@ src/app/api/embeddings/__tests__/route.test.ts:80:    vi.stubEnv("EMBEDDINGS_API
 src/app/api/embeddings/__tests__/route.test.ts:92:    vi.unstubAllEnvs();
 src/app/api/embeddings/__tests__/route.test.ts:97:    vi.stubEnv("EMBEDDINGS_API_KEY", "");
 src/ai/models/__tests__/registry.telemetry.test.ts:71:    vi.stubEnv("AI_GATEWAY_API_KEY", "team-key");
-src/ai/models/__tests__/registry.telemetry.test.ts:72:    vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1");
+src/ai/models/__tests__/registry.telemetry.test.ts:72:    vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v3/ai");
 src/lib/security/__tests__/random.test.ts:38:    vi.stubGlobal("crypto", unsafeCast<Crypto>(undefined));
 src/lib/security/__tests__/random.test.ts:46:      vi.unstubAllGlobals();
 src/app/api/itineraries/__tests__/route.test.ts:9:import { stubRateLimitDisabled, unstubAllEnvs } from "@/test/helpers/env";

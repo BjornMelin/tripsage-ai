@@ -1,4 +1,4 @@
-# ADR-0031: Next.js Chat API (SSE + Non-Stream) with AI SDK v6
+# ADR-0031: Next.js Chat API (AI SDK UI stream) with AI SDK v6
 
 **Status**: Accepted
 **Date**: 2025-11-02
@@ -7,16 +7,15 @@
 
 ## Context
 
-We are migrating chat endpoints to Next.js App Router using AI SDK v6. This consolidates SSE and non-stream implementations beside the UI, integrates BYOK provider resolution, and standardizes token budgeting and usage metadata.
+We are migrating chat endpoints to Next.js App Router using AI SDK v6. This consolidates streaming beside the UI, integrates BYOK provider resolution, and standardizes token budgeting and usage metadata.
 
 ## Decision
 
-- Implement `POST /api/chat` (non-stream) using `generateText` with safe token clamping and usage metadata.
-- Implement `POST /api/chat/stream` (SSE) using `streamText(...).toUIMessageStreamResponse` with start/final/usage metadata and graceful error handling.
-- Enforce SSR-only secrets with Supabase auth and Upstash RL (stream: 40/min per user+IP). No RL on non-stream by default.
+- Implement `POST /api/chat` using `streamText(...).toUIMessageStreamResponse` and the AI SDK v6 UI message stream protocol (bounded tool loop via `stopWhen: stepCountIs(N)`).
+- Enforce SSR-only secrets with Supabase auth and Upstash RL (stream: 40/min per user+IP).
 - Validate attachments (image/* only) and reject others with `{ error: 'invalid_attachment' }`.
 - Persist assistant messages best‑effort on finish with usage metadata.
-- Remove legacy Python chat routes and any old Next.js v5 chat route; no back-compat.
+- Remove legacy Python chat routes and any duplicate/legacy Next.js chat transports; no back-compat.
 
 ## Consequences
 

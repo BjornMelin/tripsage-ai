@@ -122,8 +122,8 @@ export function createItineraryAgent(
     maxOutputTokens: maxTokens,
     maxSteps,
     name: "Itinerary Planning Agent",
-    // Note: For structured output, pass Output.object({ schema: itineraryPlanResultSchema })
-    // when calling agent.generate() or agent.stream()
+    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
+    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for itinerary workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1: Research destination

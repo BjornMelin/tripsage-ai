@@ -82,7 +82,7 @@ graph TD
 
 ## Representative Workflows
 
-- **Chat + tool calling**: `POST /api/chat/stream` → Zod validation → Supabase auth → Upstash rate limit → provider resolution → `streamText` with tools → SSE stream to UI → telemetry span with provider/tool attributes.
+- **Chat + tool calling**: `POST /api/chat` → Zod validation → Supabase auth → Upstash rate limit → provider resolution → `streamText` with tools → AI SDK UI message stream to UI → telemetry span with provider/tool attributes.
 - **Flight or accommodation search**: `POST /api/agents/flights|accommodations` → same guard pipeline → domain tools (external API or MCP adapters) → structured results streamed back; attachments handled via signed URLs when present.
 - **Memory sync job (QStash)**: Frontend enqueues job → QStash webhook calls `/api/jobs/memory-sync` with Upstash signature → signature verify + Redis idempotency key → payload validated → batch limited to 50 messages → Supabase inserts/updates chat session + memories → telemetry recorded; duplicates short-circuit with `{ duplicate: true }`.
 - **Realtime collaboration**: Clients subscribe via `use-realtime-channel` to `session:{id}` / `trip:{id}` topics for presence/broadcast; server never emits LLM tokens over Realtime.
@@ -96,7 +96,7 @@ graph TD
 ```mermaid
 sequenceDiagram
     participant UI as Client UI (useChat)
-    participant RH as Next.js Route Handler (/api/chat/stream)
+    participant RH as Next.js Route Handler (/api/chat)
     participant SUPA as Supabase (Auth/DB)
     participant RL as Upstash Ratelimit
     participant REG as Provider Registry
@@ -108,8 +108,8 @@ sequenceDiagram
     RH->>RL: sliding window check
     RH->>REG: resolve provider (gateway/BYOK)
     RH->>LLM: streamText({ messages, tools, schema })
-    LLM-->>RH: SSE deltas (text/tool calls)
-    RH-->>UI: SSE stream (toUIMessageStreamResponse)
+    LLM-->>RH: stream parts (text/tool calls)
+    RH-->>UI: UI message stream (toUIMessageStreamResponse)
     RH->>OBS: span + attrs (provider, tool, latency)
 ```
 

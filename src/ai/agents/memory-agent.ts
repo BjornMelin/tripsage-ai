@@ -41,9 +41,12 @@ export function runMemoryAgent(
     identifier: string;
   },
   config: import("@schemas/configuration").AgentConfig,
-  input: MemoryUpdateRequest
+  input: MemoryUpdateRequest,
+  options?: {
+    abortSignal?: AbortSignal;
+  }
 ) {
-  return persistAndSummarize(deps, config, input);
+  return persistAndSummarize(deps, config, input, options);
 }
 
 /** Result of a memory persistence operation. */
@@ -108,7 +111,10 @@ function normalizeMemoryCategory(
 async function persistAndSummarize(
   deps: { model: LanguageModel; modelId: string; identifier: string },
   config: import("@schemas/configuration").AgentConfig,
-  input: MemoryUpdateRequest
+  input: MemoryUpdateRequest,
+  options?: {
+    abortSignal?: AbortSignal;
+  }
 ) {
   const outcome = await persistMemoryRecords(deps.identifier, input);
 
@@ -138,6 +144,7 @@ async function persistAndSummarize(
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
 
   return streamText({
+    abortSignal: options?.abortSignal,
     // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
     experimental_telemetry: {
       functionId: "agent.memory.summarize",

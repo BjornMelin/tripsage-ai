@@ -124,20 +124,18 @@ Python (SSE) tip: use `sseclient-py` with `requests` streaming.
 
 ### Chat
 
-- `POST /chat` — Non-stream chat completion.
-- `POST /chat/stream` — Streaming chat (SSE).
-- `POST /chat/send` — Send message to session.
+- `POST /chat` — Streaming chat (AI SDK UI message stream protocol).
 - `GET /chat/sessions` — List sessions.
 - `POST /chat/sessions` — Create session.
-- `POST /chat/attachments` — Multipart upload; auth bound to Supabase session cookie (caller Authorization headers ignored); validates size/count and total payload.
+- `POST /chat/attachments` — Create signed upload URLs (Supabase Storage) + persist metadata.
 
 Example (stream)
 
 ```bash
-curl -N -X POST "$BASE/chat/stream" \
+curl -N -X POST "$BASE/chat" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"messages":[{"id":"msg-1","role":"user","parts":[{"type":"text","text":"Hello"}]}]}'
 ```
 
 ### Files & Attachments

@@ -7,6 +7,7 @@ import "server-only";
 import { runMemoryAgent } from "@ai/agents/memory-agent";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
+import { consumeStream } from "ai";
 import type { NextRequest } from "next/server";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
@@ -46,9 +47,11 @@ export const POST = withApiGuards({
   const result = await runMemoryAgent(
     { identifier: userId, model, modelId },
     config.config,
-    body
+    body,
+    { abortSignal: req.signal }
   );
   return result.toUIMessageStreamResponse({
+    consumeSseStream: consumeStream,
     onError: createErrorHandler(),
   });
 });

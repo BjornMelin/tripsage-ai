@@ -1,5 +1,5 @@
 /**
- * @fileoverview Hardened Next.js route handler for streaming chat responses.
+ * @fileoverview Canonical streaming chat route (AI SDK v6 UI stream protocol).
  */
 
 import "server-only";
@@ -16,29 +16,37 @@ import {
   requireUserId,
 } from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { handleChatStream } from "./_handler";
+import { handleChat } from "./_handler";
 
-// Allow streaming responses for up to 60 seconds
+// Allow streaming responses for up to 60 seconds.
 export const maxDuration = 60;
 
-const chatStreamRequestSchema = z.strictObject({
-  desiredMaxTokens: z.coerce.number().int().min(1).max(16_384).optional(),
+const DEFAULT_MAX_TOKENS_FALLBACK = 1024;
+const DEFAULT_MAX_STEPS_FALLBACK = 10;
+
+function getDefaultMaxTokens(): number {
+  const raw = process.env.CHAT_DEFAULT_MAX_TOKENS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_TOKENS_FALLBACK;
+}
+
+function getDefaultMaxSteps(): number {
+  const raw = process.env.CHAT_DEFAULT_MAX_STEPS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_STEPS_FALLBACK;
+}
+
+const chatRequestSchema = z.strictObject({
+  desiredMaxTokens: z.number().int().min(1).max(16_384).optional(),
+  id: z.string().trim().min(1).max(200).optional(),
+  message: z.unknown().optional(),
+  messageId: z.string().trim().min(1).max(200).optional(),
   messages: z.unknown().optional(),
   model: z.string().trim().min(1).max(200).optional(),
   sessionId: z.string().trim().min(1).max(200).optional(),
+  trigger: z.enum(["submit-message", "regenerate-message"]).optional(),
 });
 
-/**
- * Handles POST requests for streaming chat responses with AI SDK.
- *
- * Performs authentication, rate limiting, provider resolution, token budgeting,
- * memory integration, and streams AI responses with comprehensive error handling
- * and usage metadata.
- *
- * @param req - The Next.js request object.
- * @param routeContext - Route context from withApiGuards
- * @returns Promise resolving to a Response with streamed chat data.
- */
 export const POST = withApiGuards({
   auth: true,
   botId: true,
@@ -52,7 +60,7 @@ export const POST = withApiGuards({
   const parsed = await parseJsonBody(req);
   if (!parsed.ok) return parsed.error;
 
-  const requestValidation = chatStreamRequestSchema.safeParse(parsed.data);
+  const requestValidation = chatRequestSchema.safeParse(parsed.data);
   if (!requestValidation.success) {
     return errorResponse({
       err: requestValidation.error,
@@ -66,6 +74,8 @@ export const POST = withApiGuards({
   const body = requestValidation.data;
 
   const rawMessages = body.messages;
+  const rawMessage = body.message;
+
   if (rawMessages !== undefined && !Array.isArray(rawMessages)) {
     return errorResponse({
       error: "invalid_request",
@@ -74,7 +84,12 @@ export const POST = withApiGuards({
     });
   }
 
-  const rawMessagesArray = Array.isArray(rawMessages) ? rawMessages : [];
+  const rawMessagesArray: unknown[] =
+    rawMessage !== undefined
+      ? [rawMessage]
+      : Array.isArray(rawMessages)
+        ? rawMessages
+        : [];
   const safeMessagesResult =
     rawMessagesArray.length === 0
       ? { data: [], success: true as const }
@@ -92,23 +107,36 @@ export const POST = withApiGuards({
     });
   }
 
+  // Prevent client-side injection of system messages; system prompts are server-controlled.
+  if (safeMessagesResult.data.some((message) => message.role === "system")) {
+    return errorResponse({
+      error: "invalid_request",
+      reason: "system messages are not allowed",
+      status: 400,
+    });
+  }
+
   const ip = getClientIpFromHeaders(req);
-  const logger = createServerLogger("chat.stream");
-  return handleChatStream(
+  const logger = createServerLogger("chat");
+  const defaultMaxTokens = getDefaultMaxTokens();
+  const maxSteps = getDefaultMaxSteps();
+  return handleChat(
     {
       clock: { now: () => Date.now() },
-      config: { defaultMaxTokens: 1024 },
+      config: { defaultMaxTokens, maxSteps },
       logger,
-      resolveProvider: (userId, modelHint) => resolveProvider(userId, modelHint),
+      resolveProvider,
       supabase,
     },
     {
       abortSignal: req.signal,
       desiredMaxTokens: body.desiredMaxTokens,
       ip,
+      messageId: body.messageId,
       messages: safeMessagesResult.data,
       model: body.model,
       sessionId: body.sessionId,
+      trigger: body.trigger,
       userId,
     }
   );

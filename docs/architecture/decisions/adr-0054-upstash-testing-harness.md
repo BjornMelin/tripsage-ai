@@ -10,7 +10,7 @@
 
 ## Context
 
-Recent Vitest runs (`--pool=threads`) exposed brittle, duplicated Upstash mocks (hoisted TDZ, inconsistent reset semantics) across accommodations, payment, flights, travel-advisory, and chat suites. Missing MSW handlers for `/api/chat/stream` produced warnings; Zod error changes and Amadeus fallbacks highlighted gaps in Upstash contract coverage. We need a DRY, deterministic, and higher-fidelity testing approach that aligns with Upstash guidance while remaining fast for local and CI use.
+Recent Vitest runs (`--pool=threads`) exposed brittle, duplicated Upstash mocks (hoisted TDZ, inconsistent reset semantics) across accommodations, payment, flights, travel-advisory, and chat suites. Missing MSW handlers for `/api/chat` produced warnings; Zod error changes and Amadeus fallbacks highlighted gaps in Upstash contract coverage. We need a DRY, deterministic, and higher-fidelity testing approach that aligns with Upstash guidance while remaining fast for local and CI use.
 
 ## Decision
 

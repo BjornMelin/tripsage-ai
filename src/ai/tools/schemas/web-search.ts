@@ -114,5 +114,5 @@ export const webSearchInputSchema = z.strictObject({
     .positive()
     .nullable()
     .describe("Search timeout in milliseconds"),
-  userId: z.string().nullable().describe("User identifier for the search"),
+  userId: z.string().min(1).nullish().describe("User identifier for the search"),
 });

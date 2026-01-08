@@ -2,11 +2,19 @@
  * @fileoverview DI handlers for chat sessions/messages routes.
  */
 
+import { safeValidateUIMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
+import type { ServerLogger } from "@/lib/telemetry/logger";
+import { getUiMessageIdFromRow, isSupersededMessage } from "../_metadata-helpers";
+import {
+  ensureNonEmptyParts,
+  parsePersistedUiParts,
+  rehydrateToolInvocations,
+} from "../_ui-message-parts";
 
 /**
  * Dependencies interface for sessions handlers.
@@ -14,6 +22,7 @@ import { insertSingle } from "@/lib/supabase/typed-helpers";
 export interface SessionsDeps {
   supabase: TypedServerSupabase;
   userId: string;
+  logger: ServerLogger;
 }
 
 /**
@@ -107,6 +116,8 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
  * List messages for a session.
  */
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
+  const logger = deps.logger;
+
   const { data: session, error: sessionError } = await deps.supabase
     .from("chat_sessions")
     .select("id")
@@ -120,19 +131,133 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
       status: 500,
     });
   if (!session) return notFoundResponse("Session");
-  const { data, error } = await deps.supabase
+
+  const { data: messages, error: messageError } = await deps.supabase
     .from("chat_messages")
     .select("id, role, content, created_at, metadata")
     .eq("session_id", id)
     .eq("user_id", deps.userId)
     .order("id", { ascending: true });
-  if (error)
+  if (messageError)
     return errorResponse({
       error: "db_error",
       reason: "Failed to list messages",
       status: 500,
     });
-  return NextResponse.json(data ?? [], { status: 200 });
+
+  const visibleMessages = (messages ?? []).filter(
+    (row) => !isSupersededMessage(row.metadata)
+  );
+
+  const messageIds = visibleMessages
+    .map((m) => m.id)
+    .filter((value): value is number => typeof value === "number");
+
+  const { data: toolCalls, error: toolError } =
+    messageIds.length > 0
+      ? await deps.supabase
+          .from("chat_tool_calls")
+          .select(
+            "message_id, tool_id, tool_name, arguments, result, status, error_message"
+          )
+          .in("message_id", messageIds)
+          .order("id", { ascending: true })
+      : { data: [], error: null };
+
+  if (toolError) {
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to list tool calls",
+      status: 500,
+    });
+  }
+
+  const toolCallsByMessageId = new Map<number, Array<(typeof toolCalls)[number]>>();
+  for (const toolCall of toolCalls ?? []) {
+    const messageId = toolCall.message_id;
+    if (typeof messageId !== "number") continue;
+    const existing = toolCallsByMessageId.get(messageId) ?? [];
+    existing.push(toolCall);
+    toolCallsByMessageId.set(messageId, existing);
+  }
+
+  const rawUiMessages = visibleMessages.map((row) => {
+    const baseParts = parsePersistedUiParts({
+      content: row.content,
+      logger,
+      messageDbId: row.id,
+      sessionId: id,
+    });
+    const uiMessageId = getUiMessageIdFromRow({
+      id: row.id,
+      metadata: row.metadata,
+    });
+
+    let role: "assistant" | "system" | "user";
+    if (row.role === "user" || row.role === "assistant" || row.role === "system") {
+      role = row.role;
+    } else {
+      logger.warn("Unexpected message role value; defaulting to assistant", {
+        messageId: row.id,
+        role: row.role,
+        sessionId: id,
+      });
+      role = "assistant";
+    }
+
+    const enrichedParts = [...baseParts];
+    const toolRows = toolCallsByMessageId.get(row.id) ?? [];
+
+    if (toolRows.length > 0 && role === "assistant") {
+      const toolParts = rehydrateToolInvocations(toolRows);
+      if (toolParts.length !== toolRows.length) {
+        logger.warn("Some tool calls were skipped due to missing identifiers", {
+          hydratedToolCalls: toolParts.length,
+          messageId: row.id,
+          sessionId: id,
+          totalToolCalls: toolRows.length,
+        });
+      }
+      enrichedParts.push(...toolParts);
+    }
+
+    const metadata =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? row.metadata
+        : undefined;
+
+    return {
+      id: uiMessageId,
+      metadata,
+      parts: ensureNonEmptyParts(enrichedParts),
+      role,
+    };
+  });
+
+  if (rawUiMessages.length === 0) {
+    return NextResponse.json([], { status: 200 });
+  }
+
+  const validated = await safeValidateUIMessages({ messages: rawUiMessages });
+  if (!validated.success) {
+    const normalizedError =
+      validated.error instanceof Error
+        ? validated.error
+        : new Error(String(validated.error ?? "Invalid stored messages"));
+
+    logger.error("Failed to parse stored messages", {
+      error: normalizedError.message,
+      sessionId: id,
+    });
+
+    return errorResponse({
+      error: "internal",
+      reason: "Failed to parse stored messages",
+      status: 500,
+    });
+  }
+
+  return NextResponse.json(validated.data satisfies UIMessage[], { status: 200 });
 }
 
 /**

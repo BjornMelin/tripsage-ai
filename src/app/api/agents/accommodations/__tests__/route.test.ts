@@ -55,7 +55,9 @@ vi.mock("@ai/agents", () => ({
 const mockCreateAgentUIStreamResponse = vi.hoisted(() =>
   vi.fn(() => new Response("ok", { status: 200 }))
 );
+const mockConsumeStream = vi.hoisted(() => vi.fn());
 vi.mock("ai", () => ({
+  consumeStream: mockConsumeStream,
   createAgentUIStreamResponse: mockCreateAgentUIStreamResponse,
   InvalidToolInputError: { isInstance: () => false },
   NoSuchToolError: { isInstance: () => false },

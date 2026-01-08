@@ -98,7 +98,7 @@ YOU MUST USE the following skills explicitly in your workflow:
    - `src/instrumentation.ts`
    - Any telemetry helpers under `src/lib/telemetry/**`.
    - Route handlers:
-     - `/api/chat`, `/api/chat/stream`.
+     - `/api/chat`.
      - `/api/agents/*`.
    - Webhook handlers for Supabase.
    - Upstash wrapper modules.
@@ -128,7 +128,7 @@ YOU MUST USE the following skills explicitly in your workflow:
 
 For LLM calls in:
 
-- `/api/chat`, `/api/chat/stream`.
+- `/api/chat`.
 - `/api/agents/router`.
 - `/api/rag/search` (after Prompt 4).
 
