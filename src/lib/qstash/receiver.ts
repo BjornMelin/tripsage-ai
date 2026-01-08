@@ -226,7 +226,17 @@ export async function enforceQstashMessageIdempotency(
       ok: true,
       outcome: "process",
       release: async () => {
-        await redis.del(key);
+        try {
+          await redis.del(key);
+        } catch (error) {
+          logger.error("qstash_idempotency_release_failed", {
+            error,
+            key,
+            messageId: meta.messageId,
+            retried: meta.retried,
+          });
+          // Don't throw - release is best-effort cleanup.
+        }
       },
     };
   }

@@ -19,6 +19,9 @@ import {
   qstashNonRetryableErrorResponse,
   verifyQstashRequest,
 } from "@/lib/qstash/receiver";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("qstash.job-route");
 
 export interface QstashJobSpan {
   addEvent?(
@@ -73,7 +76,8 @@ export async function runQstashJob<T>(
     try {
       receiver = getQstashReceiver();
     } catch (error) {
-      span.recordException(error as Error);
+      const safeError = error instanceof Error ? error : new Error(String(error));
+      span.recordException(safeError);
       return errorResponse({
         err: error,
         error: "configuration_error",
@@ -108,7 +112,15 @@ export async function runQstashJob<T>(
     try {
       json = JSON.parse(verified.body) as unknown;
     } catch (error) {
-      await guard.release().catch(() => undefined);
+      const processGuard = guard && isProcessGuard(guard) ? guard : null;
+      await processGuard?.release().catch((releaseError) => {
+        logger.error("qstash_guard_release_failed", {
+          error: releaseError,
+          messageId: processGuard?.meta.messageId,
+          retried: processGuard?.meta.retried,
+          stage: "json_parse",
+        });
+      });
       return qstashNonRetryableErrorResponse({
         err: error,
         error: "invalid_request",
@@ -118,7 +130,15 @@ export async function runQstashJob<T>(
 
     const parsed = options.schema.safeParse(json);
     if (!parsed.success) {
-      await guard.release().catch(() => undefined);
+      const processGuard = guard && isProcessGuard(guard) ? guard : null;
+      await processGuard?.release().catch((releaseError) => {
+        logger.error("qstash_guard_release_failed", {
+          error: releaseError,
+          messageId: processGuard?.meta.messageId,
+          retried: processGuard?.meta.retried,
+          stage: "schema_validation",
+        });
+      });
       return qstashNonRetryableErrorResponse({
         err: parsed.error,
         error: "invalid_request",
@@ -133,23 +153,24 @@ export async function runQstashJob<T>(
     await guard.commitProcessed();
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    span.recordException(error as Error);
+    const safeError = error instanceof Error ? error : new Error(String(error));
+    span.recordException(safeError);
     const processGuard = guard && isProcessGuard(guard) ? guard : null;
-    if (processGuard && !(error instanceof QstashIdempotencyCommitError)) {
+    if (processGuard && !(safeError instanceof QstashIdempotencyCommitError)) {
       await processGuard.release().catch(() => undefined);
     }
 
-    const mapped = options.mapNonRetryableError?.(error);
+    const mapped = options.mapNonRetryableError?.(safeError);
     if (mapped) {
       return qstashNonRetryableErrorResponse({
-        err: error,
+        err: safeError,
         error: mapped.error,
         reason: mapped.reason,
       });
     }
 
     return errorResponse({
-      err: error,
+      err: safeError,
       error: "internal",
       reason: options.internalErrorReason,
       status: 500,

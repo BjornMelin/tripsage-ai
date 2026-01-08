@@ -123,8 +123,7 @@ export async function handleMemorySyncJob(
     const { error: insertError } = await supabase
       .schema("memories")
       .from("turns")
-      .insert(turnInserts)
-      .select("id");
+      .insert(turnInserts);
 
     if (insertError) {
       throw new MemorySyncDatabaseError("Memory turn insert failed", {
