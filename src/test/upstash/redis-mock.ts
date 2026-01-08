@@ -301,6 +301,19 @@ export class RedisMockClient {
       return 0;
     }
 
+    // Support QStash idempotency commit: GET -> conditional SET done with EX
+    if (script.includes("GET") && script.includes("SET") && keys.length === 1) {
+      const current = await this.get<string>(keys[0]);
+      if (current === "processing") {
+        const ttlSeconds = Number(args[0] ?? 0);
+        await this.set(keys[0], "done", {
+          ex: Number.isFinite(ttlSeconds) ? ttlSeconds : undefined,
+        });
+        return 1;
+      }
+      return 0;
+    }
+
     return null;
   }
 }

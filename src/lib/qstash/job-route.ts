@@ -150,14 +150,29 @@ export async function runQstashJob<T>(
     options.onPayloadValidated?.(parsed.data, guard.meta, span);
 
     const result = await options.handle(parsed.data, guard.meta, span);
-    await guard.commitProcessed();
+    try {
+      await guard.commitProcessed();
+    } catch (error) {
+      logger.error("qstash_commit_failed_after_success", {
+        error,
+        messageId: guard.meta.messageId,
+        retried: guard.meta.retried,
+      });
+    }
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     const safeError = error instanceof Error ? error : new Error(String(error));
     span.recordException(safeError);
     const processGuard = guard && isProcessGuard(guard) ? guard : null;
     if (processGuard && !(safeError instanceof QstashIdempotencyCommitError)) {
-      await processGuard.release().catch(() => undefined);
+      await processGuard.release().catch((releaseError) => {
+        logger.error("qstash_guard_release_failed", {
+          error: releaseError,
+          messageId: processGuard.meta.messageId,
+          retried: processGuard.meta.retried,
+          stage: "catch_block",
+        });
+      });
     }
 
     const mapped = options.mapNonRetryableError?.(safeError);

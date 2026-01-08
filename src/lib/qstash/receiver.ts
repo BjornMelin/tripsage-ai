@@ -204,7 +204,22 @@ export async function enforceQstashMessageIdempotency(
     return {
       commitProcessed: async () => {
         try {
-          await redis.set(key, "done", { ex: processedTtlSeconds });
+          const commitResult = await redis.eval(
+            `
+              if redis.call("GET", KEYS[1]) == "processing" then
+                redis.call("SET", KEYS[1], "done", "EX", tonumber(ARGV[1]))
+                return 1
+              end
+              return 0
+            `,
+            [key],
+            [processedTtlSeconds]
+          );
+          const committed =
+            commitResult === 1 || commitResult === "1" || commitResult === true;
+          if (!committed) {
+            throw new Error("Lock expired before commit");
+          }
         } catch (error) {
           logger.error("qstash_idempotency_commit_failed", {
             error,

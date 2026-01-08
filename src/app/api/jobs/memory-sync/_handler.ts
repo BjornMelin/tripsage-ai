@@ -11,11 +11,26 @@ import { nowIso as secureNowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 
+/**
+ * Dependencies for the memory sync job handler.
+ */
 export interface MemorySyncJobDeps {
+  /** Admin Supabase client for database operations. */
   supabase: TypedAdminSupabase;
+  /** Optional clock for deterministic timestamps during tests. */
   clock?: { now: () => string };
 }
 
+/**
+ * Handles memory sync jobs by validating session access, storing conversation turns,
+ * and updating sync timestamps.
+ *
+ * @param deps - Dependencies (Supabase client, optional clock)
+ * @param payload - Memory sync job payload with session and user metadata
+ * @returns Sync result with counts and metadata
+ * @throws {MemorySyncAccessError} When session is not found or user is unauthorized
+ * @throws {MemorySyncDatabaseError} When database operations fail
+ */
 export async function handleMemorySyncJob(
   deps: MemorySyncJobDeps,
   payload: MemorySyncJob["payload"]
