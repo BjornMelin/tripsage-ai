@@ -115,6 +115,13 @@ function sanitizePersistedPart(part: unknown): UiParts[number] | null {
   return null;
 }
 
+/**
+ * Parses persisted UI message parts from stored JSON content.
+ *
+ * Accepts a JSON string (or non-string) and returns sanitized UI parts using
+ * `sanitizePersistedPart`. Invalid input or parse errors return a single text
+ * part fallback and log a warning when a logger is provided.
+ */
 export function parsePersistedUiParts(options: {
   content: unknown;
   logger?: ServerLogger;
@@ -149,6 +156,15 @@ export function parsePersistedUiParts(options: {
   }
 }
 
+/**
+ * Rehydrates tool invocation rows into dynamic tool UI parts.
+ *
+ * Expects `toolRows` with fields like `tool_name`, `tool_id`, `arguments`,
+ * `status` ("completed" | "failed"), `provider_executed`, `result`, and
+ * `error_message`. Returns `dynamic-tool` parts with state
+ * ("input-available" | "output-available" | "output-error") plus input/output
+ * and error text when applicable.
+ */
 export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
   const parts: UiParts = [];
 
@@ -232,6 +248,12 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
   return parts;
 }
 
+/**
+ * Ensures the parts array contains at least one element.
+ *
+ * Returns the original parts when non-empty, otherwise a single empty text
+ * part fallback.
+ */
 export function ensureNonEmptyParts(parts: UiParts): UiParts {
   return parts.length > 0 ? parts : [{ text: "", type: "text" }];
 }

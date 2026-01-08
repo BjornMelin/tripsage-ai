@@ -28,6 +28,12 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 /** Storage bucket name for attachments. */
 const STORAGE_BUCKET = "attachments";
 
+const UPLOAD_STATUS = {
+  COMPLETED: "completed",
+  FAILED: "failed",
+  UPLOADING: "uploading",
+} as const;
+
 const uploadRecordSchema = z.object({
   path: z.string(),
   signedUrl: z.string(),
@@ -141,7 +147,7 @@ export const POST = withApiGuards({
         mime_type: file.mimeType,
         original_filename: file.originalName,
         trip_id: body.tripId ?? null,
-        upload_status: "uploading",
+        upload_status: UPLOAD_STATUS.UPLOADING,
         user_id: userId,
       });
 
