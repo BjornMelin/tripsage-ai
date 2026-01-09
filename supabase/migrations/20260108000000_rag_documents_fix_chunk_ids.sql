@@ -83,6 +83,7 @@ DO $do$
 DECLARE
   v_id_type text;
   v_id_expr text;
+  v_uuid_guard_sql text;
   v_upserted bigint;
   v_deleted bigint;
 BEGIN
@@ -98,11 +99,31 @@ BEGIN
     RETURN;
   END IF;
 
+  -- If chunk_index is missing, DO #1 already skipped PK migration; skip normalization too.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'rag_documents'
+      AND column_name = 'chunk_index'
+  ) THEN
+    RAISE NOTICE 'rag_documents.chunk_index column missing, skipping ID normalization';
+    RETURN;
+  END IF;
+
   -- Build an expression to convert the extracted base id into the target column type.
   -- `id` is expected to be UUID in most environments, but may be TEXT in some.
   v_id_expr := CASE
-    WHEN v_id_type = 'uuid' THEN 'b.base_id_text::uuid'
+    WHEN v_id_type = 'uuid' THEN
+      'CASE WHEN b.base_id_text ~* ''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'' THEN b.base_id_text::uuid ELSE NULL END'
     ELSE 'b.base_id_text'
+  END;
+
+  -- When `id` is UUID, prevent invalid base IDs from aborting the migration on `::uuid`.
+  v_uuid_guard_sql := CASE
+    WHEN v_id_type = 'uuid' THEN
+      'AND regexp_replace(d.id::text, '':([0-9]+)$'', '''') ~* ''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'''
+    ELSE ''
   END;
 
   EXECUTE format($sql$
@@ -117,6 +138,7 @@ BEGIN
         -- Limit suffix length to 9 digits (max 999,999,999) to avoid unexpected large values.
         AND length(substring(d.id::text from ':([0-9]+)$')) <= 9
         AND substring(d.id::text from ':([0-9]+)$')::bigint = d.chunk_index
+        %s
     ),
     upserted AS (
       INSERT INTO public.rag_documents (
@@ -173,7 +195,7 @@ BEGIN
     SELECT
       (SELECT count(*) FROM upserted),
       (SELECT count(*) FROM deleted);
-  $sql$, v_id_expr)
+  $sql$, v_uuid_guard_sql, v_id_expr)
   INTO v_upserted, v_deleted;
 
   RAISE NOTICE 'rag_documents migration: upserted=%, deleted=%', v_upserted, v_deleted;
