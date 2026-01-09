@@ -260,9 +260,21 @@ importers:
       '@semantic-release/changelog':
         specifier: ^6.0.3
         version: 6.0.3(semantic-release@25.0.2(typescript@5.9.3))
+      '@semantic-release/commit-analyzer':
+        specifier: ^13.0.1
+        version: 13.0.1(semantic-release@25.0.2(typescript@5.9.3))
       '@semantic-release/git':
         specifier: ^10.0.1
         version: 10.0.1(semantic-release@25.0.2(typescript@5.9.3))
+      '@semantic-release/github':
+        specifier: ^12.0.2
+        version: 12.0.2(semantic-release@25.0.2(typescript@5.9.3))
+      '@semantic-release/npm':
+        specifier: ^13.1.3
+        version: 13.1.3(semantic-release@25.0.2(typescript@5.9.3))
+      '@semantic-release/release-notes-generator':
+        specifier: ^14.1.0
+        version: 14.1.0(semantic-release@25.0.2(typescript@5.9.3))
       '@tailwindcss/postcss':
         specifier: ^4.1.18
         version: 4.1.18
