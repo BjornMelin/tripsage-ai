@@ -173,14 +173,38 @@ BEGIN
         ON b.bad_id = d.id
        AND b.chunk_index = d.chunk_index
       ON CONFLICT (id, chunk_index) DO UPDATE
-        SET content = EXCLUDED.content,
-            embedding = EXCLUDED.embedding,
-            metadata = EXCLUDED.metadata,
-            namespace = EXCLUDED.namespace,
-            source_id = EXCLUDED.source_id,
-            user_id = EXCLUDED.user_id,
-            trip_id = EXCLUDED.trip_id,
-            chat_id = EXCLUDED.chat_id,
+        SET content = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.content
+              ELSE EXCLUDED.content
+            END,
+            embedding = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.embedding
+              ELSE EXCLUDED.embedding
+            END,
+            metadata = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.metadata
+              ELSE EXCLUDED.metadata
+            END,
+            namespace = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.namespace
+              ELSE EXCLUDED.namespace
+            END,
+            source_id = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.source_id
+              ELSE EXCLUDED.source_id
+            END,
+            user_id = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.user_id
+              ELSE EXCLUDED.user_id
+            END,
+            trip_id = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.trip_id
+              ELSE EXCLUDED.trip_id
+            END,
+            chat_id = CASE
+              WHEN public.rag_documents.updated_at >= EXCLUDED.updated_at THEN public.rag_documents.chat_id
+              ELSE EXCLUDED.chat_id
+            END,
             created_at = LEAST(public.rag_documents.created_at, EXCLUDED.created_at),
             updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at)
       RETURNING 1
