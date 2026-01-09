@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks per testing.md Pattern A
@@ -63,6 +64,7 @@ describe("classifyUserMessage", () => {
         prompt: "Find me flights from NYC to LA",
         system: "System prompt for routing",
         temperature: 0.1,
+        timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
       })
     );
     // Verify Output.object was called with schema
@@ -97,6 +99,18 @@ describe("classifyUserMessage", () => {
       | undefined;
     expect(metadata).toBeDefined();
     expect(metadata).not.toHaveProperty("identifier");
+  });
+
+  it("passes abort signal to generateText", async () => {
+    const controller = new AbortController();
+    await classifyUserMessage(
+      { abortSignal: controller.signal, model: mockModel },
+      "Find flights"
+    );
+
+    expect(mockGenerateText).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: controller.signal })
+    );
   });
 
   it("throws error for empty message", async () => {

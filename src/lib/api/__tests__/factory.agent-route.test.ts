@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Agent } from "ai";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
@@ -132,25 +132,44 @@ describe("createAgentRoute", () => {
 
     const opts = captured.options as {
       messageMetadata?: (options: { part: Record<string, unknown> }) => unknown;
+      sendSources?: boolean;
       timeout?: unknown;
     };
 
     expect(opts.timeout).toEqual(buildTimeoutConfigFromSeconds(42));
+    expect(opts.sendSources).toBe(true);
 
     const usage = { completionTokens: 2, promptTokens: 1, totalTokens: 3 };
-    expect(opts.messageMetadata?.({ part: { type: "start" } })).toEqual({
+    const startMetadata = opts.messageMetadata?.({ part: { type: "start" } }) as {
+      agentType?: string;
+      modelId?: string;
+      requestId?: string;
+      versionId?: string;
+    };
+    expect(startMetadata).toMatchObject({
       agentType: "memoryAgent",
       modelId: "gpt-4o",
+      versionId: "v1700000000_deadbeef",
     });
-    expect(
-      opts.messageMetadata?.({
-        part: { finishReason: "stop", totalUsage: usage, type: "finish" },
-      })
-    ).toEqual({
+    expect(typeof startMetadata?.requestId).toBe("string");
+
+    const finishMetadata = opts.messageMetadata?.({
+      part: { finishReason: "stop", totalUsage: usage, type: "finish" },
+    }) as {
+      agentType?: string;
+      finishReason?: string | null;
+      modelId?: string;
+      requestId?: string;
+      totalUsage?: unknown;
+      versionId?: string;
+    };
+    expect(finishMetadata).toMatchObject({
       agentType: "memoryAgent",
       finishReason: "stop",
       modelId: "gpt-4o",
       totalUsage: usage,
+      versionId: "v1700000000_deadbeef",
     });
+    expect(typeof finishMetadata?.requestId).toBe("string");
   });
 });

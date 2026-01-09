@@ -5,6 +5,7 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
+import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -36,6 +37,13 @@ export interface UserPreferences {
   withFamily?: boolean;
   /** Whether traveling for business */
   forBusiness?: boolean;
+}
+
+export interface HotelPersonalizationOptions {
+  /** Optional abort signal for request cancellation. */
+  abortSignal?: AbortSignal;
+  /** Optional override for total timeout (milliseconds). */
+  timeoutMs?: number;
 }
 
 /** Hotel data for personalization */
@@ -221,12 +229,14 @@ Return results for all ${hotels.length} hotels in index order.`;
  * @param userId - User ID for caching and provider resolution
  * @param hotels - Hotels to personalize
  * @param preferences - User travel preferences
+ * @param options - Optional execution settings (abort signal, timeout override)
  * @returns Map of hotel index to personalization result
  */
 export async function personalizeHotels(
   userId: string,
   hotels: HotelForPersonalization[],
-  preferences: UserPreferences
+  preferences: UserPreferences,
+  options?: HotelPersonalizationOptions
 ): Promise<Map<number, HotelPersonalization>> {
   return await withTelemetrySpan(
     "ai.hotel.personalize",
@@ -279,14 +289,25 @@ export async function personalizeHotels(
 
       // Generate via AI
       const prompt = buildPersonalizationPrompt(hotels, preferences);
-      const { model } = await resolveProvider(userId, "gpt-4o-mini");
+      const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
 
       let response: Awaited<ReturnType<typeof generateText>>;
       try {
         response = await generateText({
+          abortSignal: options?.abortSignal,
+          // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
+          experimental_telemetry: {
+            functionId: "hotel.personalize",
+            isEnabled: true,
+            metadata: {
+              hotelCount: hotels.length,
+              modelId,
+            },
+          },
           model,
           output: Output.object({ schema: personalizationResponseSchema }),
           prompt,
+          timeout: buildTimeoutConfig(options?.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS),
         });
       } catch (error) {
         recordTelemetryEvent("ai.hotel.personalize.failure", {
@@ -299,7 +320,7 @@ export async function personalizeHotels(
         });
         emitOperationalAlertOncePerWindow({
           attributes: {
-            model: (model as { modelId?: string }).modelId,
+            model: modelId,
             version: AI_SDK_VERSION,
           },
           event: "ai-sdk.structured-output.failure",

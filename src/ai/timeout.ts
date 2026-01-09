@@ -7,6 +7,9 @@ import type { TimeoutConfiguration } from "ai";
 const MIN_TIMEOUT_MS = 5_000;
 const DEFAULT_STEP_TIMEOUT_MS = 20_000;
 
+/** Default total timeout for AI SDK calls (milliseconds). */
+export const DEFAULT_AI_TIMEOUT_MS = 30_000;
+
 function normalizeTimeoutMs(value: number): number {
   if (!Number.isFinite(value) || value <= 0) {
     return MIN_TIMEOUT_MS;

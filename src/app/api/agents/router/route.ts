@@ -48,10 +48,13 @@ export const POST = withApiGuards({
   const body = validation.data;
 
   const modelHint = new URL(req.url).searchParams.get("model") ?? undefined;
-  const { model } = await resolveProvider(userId, modelHint);
+  const { model, modelId } = await resolveProvider(userId, modelHint);
 
   try {
-    const classification = await classifyUserMessage({ model }, body.message);
+    const classification = await classifyUserMessage(
+      { abortSignal: req.signal, model, modelId },
+      body.message
+    );
     return NextResponse.json(classification);
   } catch (error) {
     const isInvalidPatternError =

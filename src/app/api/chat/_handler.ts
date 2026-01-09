@@ -9,11 +9,19 @@ import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { toolRegistry } from "@ai/tools";
 import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
 import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
+import {
+  type AiStreamStatus,
+  type ChatMessageMetadata,
+  chatDataPartSchemas,
+  chatMessageMetadataSchema,
+} from "@schemas/ai";
 import type { ProviderResolution } from "@schemas/providers";
 import type { ModelMessage, ToolSet, UIMessage } from "ai";
 import {
   consumeStream,
   convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   safeValidateUIMessages,
   stepCountIs,
   streamText,
@@ -97,6 +105,12 @@ const toolResultSchema = z.looseObject({
 
 type ParsedToolCall = z.infer<typeof toolCallSchema>;
 type ParsedToolResult = z.infer<typeof toolResultSchema>;
+
+type ChatUiDataParts = {
+  status: AiStreamStatus;
+};
+
+type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
 
 function getLastUserText(messages: UIMessage[]): string | undefined {
   const last = messages.findLast((m) => m.role === "user");
@@ -490,7 +504,11 @@ async function loadChatHistory(options: {
     return { messages: [], ok: true };
   }
 
-  const validated = await safeValidateUIMessages({ messages: rawUiMessages });
+  const validated = await safeValidateUIMessages<ChatUiMessage>({
+    dataSchemas: chatDataPartSchemas,
+    messages: rawUiMessages,
+    metadataSchema: chatMessageMetadataSchema,
+  });
   if (!validated.success) {
     const normalizedError =
       validated.error instanceof Error
@@ -796,156 +814,193 @@ export async function handleChat(
   const persistedToolCallIds = new Set<string>();
   const timeoutConfig = buildTimeoutConfigFromSeconds(deps.config?.timeoutSeconds);
 
-  const result = streamText({
-    abortSignal: payload.abortSignal,
-    maxOutputTokens: tokenBudget.maxOutputTokens,
-    messages: modelMessages,
-    model: provider.model,
-    onFinish: async ({ finishReason, text, totalUsage }) => {
-      const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
-
-      deps.logger?.info?.("chat:finish", {
-        durationMs,
-        finishReason,
-        model: provider.modelId,
-        requestId,
-        sessionId,
-        totalUsage: totalUsage ?? null,
-        userId,
-      });
-
-      if (trigger === "submit-message") {
-        await persistMemoryTurn({
-          logger: deps.logger,
-          sessionId,
-          turn: createTextMemoryTurn("assistant", text),
-          userId,
+  const stream = createUIMessageStream<ChatUiMessage>({
+    execute: ({ writer }) => {
+      const writeStatus = (status: AiStreamStatus) => {
+        writer.write({
+          data: status,
+          transient: true,
+          type: "data-status",
         });
-      }
+      };
 
-      const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
-        durationMs,
-        finishReason,
-        isAborted: false,
-        status: "completed",
-        totalUsage: totalUsage ?? null,
-      });
+      writeStatus({ kind: "start", label: "Thinking..." });
 
-      const content = encodePartsToContent([{ text, type: "text" }]);
+      let stepCount = 0;
 
-      const { error } = await updateSingle(
-        deps.supabase,
-        "chat_messages",
-        { content, metadata: updatedMeta },
-        (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
-      );
+      const result = streamText({
+        abortSignal: payload.abortSignal,
+        maxOutputTokens: tokenBudget.maxOutputTokens,
+        messages: modelMessages,
+        model: provider.model,
+        onFinish: async ({ finishReason, text, totalUsage }) => {
+          const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
 
-      if (error) {
-        deps.logger?.warn?.("chat:message_update_failed", {
-          error: error instanceof Error ? error.message : String(error),
-          requestId,
-          sessionId,
-          userId,
-        });
-      }
-    },
-    onStepFinish: async ({ toolCalls, toolResults }) => {
-      if (!toolCalls?.length && !toolResults?.length) {
-        return;
-      }
-
-      const resultsById = new Map<string, ParsedToolResult>();
-      for (const toolResult of toolResults ?? []) {
-        const parsed = parseToolResult(toolResult);
-        if (parsed) resultsById.set(parsed.toolCallId, parsed);
-      }
-
-      const now = nowIso();
-
-      for (const toolCall of toolCalls ?? []) {
-        const parsed = parseToolCall(toolCall);
-        if (!parsed) continue;
-        if (persistedToolCallIds.has(parsed.toolCallId)) continue;
-
-        persistedToolCallIds.add(parsed.toolCallId);
-        const maybeResult = resultsById.get(parsed.toolCallId);
-
-        const args = (parsed.args ?? parsed.input ?? {}) as Json;
-        const status = maybeResult?.isError ? "failed" : "completed";
-        const errorMessage =
-          maybeResult?.isError && typeof maybeResult.result === "string"
-            ? maybeResult.result
-            : null;
-
-        const toolRow = {
-          arguments: args,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          completed_at: now,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          created_at: now,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          error_message: errorMessage,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          message_id: assistantMessageId,
-          result: (maybeResult?.result ?? null) as Json | null,
-          status,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          tool_id: parsed.toolCallId,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          tool_name: parsed.toolName,
-        };
-
-        const { error } = await insertSingle(deps.supabase, "chat_tool_calls", toolRow);
-        if (error) {
-          const persistErrorMessage =
-            error instanceof Error
-              ? error.message
-              : String((error as { message?: unknown }).message ?? error);
-          deps.logger?.warn?.("chat:tool_persist_failed", {
-            error: persistErrorMessage,
+          deps.logger?.info?.("chat:finish", {
+            durationMs,
+            finishReason,
+            model: provider.modelId,
             requestId,
             sessionId,
-            toolCallId: parsed.toolCallId,
-            toolName: parsed.toolName,
+            totalUsage: totalUsage ?? null,
             userId,
           });
-        }
-      }
-    },
-    stopWhen: stepCountIs(maxSteps),
-    system,
-    timeout: timeoutConfig,
-    tools: chatTools,
-  });
 
-  return result.toUIMessageStreamResponse({
-    consumeSseStream: consumeStream,
-    generateMessageId: () => assistantUiMessageId,
-    headers: {
-      "x-tripsage-session-id": sessionId,
-    },
-    messageMetadata: ({ part }) => {
-      if (part.type === "start") {
-        return { sessionId };
-      }
-      if (part.type === "finish") {
-        const metadata: Record<string, Json> = {
-          finishReason: part.finishReason,
-          sessionId,
-          totalUsage: part.totalUsage,
-        };
-        return metadata;
-      }
-      return undefined;
-    },
-    onError: (error) => {
-      deps.logger?.error?.("chat:stream_error", {
-        error: error instanceof Error ? error.message : String(error),
-        requestId,
-        sessionId,
-        userId,
+          if (trigger === "submit-message") {
+            await persistMemoryTurn({
+              logger: deps.logger,
+              sessionId,
+              turn: createTextMemoryTurn("assistant", text),
+              userId,
+            });
+          }
+
+          const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
+            durationMs,
+            finishReason,
+            isAborted: false,
+            status: "completed",
+            totalUsage: totalUsage ?? null,
+          });
+
+          const content = encodePartsToContent([{ text, type: "text" }]);
+
+          const { error } = await updateSingle(
+            deps.supabase,
+            "chat_messages",
+            { content, metadata: updatedMeta },
+            (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+          );
+
+          if (error) {
+            deps.logger?.warn?.("chat:message_update_failed", {
+              error: error instanceof Error ? error.message : String(error),
+              requestId,
+              sessionId,
+              userId,
+            });
+          }
+        },
+        onStepFinish: async ({ toolCalls, toolResults }) => {
+          if (!toolCalls?.length && !toolResults?.length) {
+            return;
+          }
+
+          const resultsById = new Map<string, ParsedToolResult>();
+          for (const toolResult of toolResults ?? []) {
+            const parsed = parseToolResult(toolResult);
+            if (parsed) resultsById.set(parsed.toolCallId, parsed);
+          }
+
+          const now = nowIso();
+          const parsedToolCalls: ParsedToolCall[] = [];
+
+          for (const toolCall of toolCalls ?? []) {
+            const parsed = parseToolCall(toolCall);
+            if (!parsed) continue;
+            parsedToolCalls.push(parsed);
+            if (persistedToolCallIds.has(parsed.toolCallId)) continue;
+
+            persistedToolCallIds.add(parsed.toolCallId);
+            const maybeResult = resultsById.get(parsed.toolCallId);
+
+            const args = (parsed.args ?? parsed.input ?? {}) as Json;
+            const status = maybeResult?.isError ? "failed" : "completed";
+            const errorMessage =
+              maybeResult?.isError && typeof maybeResult.result === "string"
+                ? maybeResult.result
+                : null;
+
+            const toolRow = {
+              arguments: args,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              completed_at: now,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              created_at: now,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              error_message: errorMessage,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              message_id: assistantMessageId,
+              result: (maybeResult?.result ?? null) as Json | null,
+              status,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              tool_id: parsed.toolCallId,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              tool_name: parsed.toolName,
+            };
+
+            const { error } = await insertSingle(
+              deps.supabase,
+              "chat_tool_calls",
+              toolRow
+            );
+            if (error) {
+              const persistErrorMessage =
+                error instanceof Error
+                  ? error.message
+                  : String((error as { message?: unknown }).message ?? error);
+              deps.logger?.warn?.("chat:tool_persist_failed", {
+                error: persistErrorMessage,
+                requestId,
+                sessionId,
+                toolCallId: parsed.toolCallId,
+                toolName: parsed.toolName,
+                userId,
+              });
+            }
+          }
+
+          if (parsedToolCalls.length > 0) {
+            const toolNames = Array.from(
+              new Set(parsedToolCalls.map((call) => call.toolName))
+            );
+            if (toolNames.length > 0) {
+              stepCount += 1;
+              const rawLabel =
+                toolNames.length === 1
+                  ? `Running tool: ${toolNames[0]}`
+                  : `Running tools: ${toolNames.join(", ")}`;
+              const label =
+                rawLabel.length > 200 ? `${rawLabel.slice(0, 197)}...` : rawLabel;
+              writeStatus({ kind: "tool", label, step: stepCount });
+            }
+          }
+        },
+        stopWhen: stepCountIs(maxSteps),
+        system,
+        timeout: timeoutConfig,
+        tools: chatTools,
       });
-      return "An error occurred while processing your request.";
+
+      writer.merge(
+        result.toUIMessageStream<ChatUiMessage>({
+          generateMessageId: () => assistantUiMessageId,
+          messageMetadata: ({ part }) => {
+            if (part.type === "start") {
+              return { requestId, sessionId };
+            }
+            if (part.type === "finish") {
+              return {
+                finishReason: part.finishReason ?? null,
+                requestId,
+                sessionId,
+                totalUsage: part.totalUsage ?? null,
+              };
+            }
+            return undefined;
+          },
+          onError: (error) => {
+            deps.logger?.error?.("chat:stream_error", {
+              error: error instanceof Error ? error.message : String(error),
+              requestId,
+              sessionId,
+              userId,
+            });
+            return "An error occurred while processing your request.";
+          },
+          sendSources: true,
+        })
+      );
     },
     onFinish: async ({ finishReason, isAborted, responseMessage }) => {
       if (!isAborted) return;
@@ -981,5 +1036,13 @@ export async function handleChat(
         });
       }
     },
+  });
+
+  return createUIMessageStreamResponse({
+    consumeSseStream: consumeStream,
+    headers: {
+      "x-tripsage-session-id": sessionId,
+    },
+    stream,
   });
 }

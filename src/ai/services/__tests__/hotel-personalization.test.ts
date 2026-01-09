@@ -15,6 +15,8 @@ vi.mock("@ai/models/registry", () => ({
       modelId: "test-model",
       provider: "test-provider",
     },
+    modelId: "test-model",
+    provider: "test-provider",
   }),
 }));
 
@@ -293,7 +295,13 @@ describe("hotel-personalization", () => {
         travelStyle: "luxury",
       });
 
-      expect(generateText).toHaveBeenCalled();
+      expect(generateText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output: expect.anything(),
+          prompt: expect.any(String),
+          timeout: expect.anything(),
+        })
+      );
       expect(result.get(0)?.reason).toBe("AI reason");
     });
 

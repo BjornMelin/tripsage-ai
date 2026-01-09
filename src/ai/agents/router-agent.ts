@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import type { RouterClassification } from "@schemas/agents";
 import { routerClassificationSchema } from "@schemas/agents";
 import type { LanguageModel } from "ai";
@@ -23,6 +24,8 @@ export interface RouterAgentDeps {
   identifier?: string;
   /** Optional model ID for telemetry. */
   modelId?: string;
+  /** Optional abort signal for request cancellation. */
+  abortSignal?: AbortSignal;
 }
 
 export class InvalidPatternsError extends Error {
@@ -77,6 +80,7 @@ export async function classifyUserMessage(
 
   try {
     const result = await generateText({
+      abortSignal: deps.abortSignal,
       // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
       experimental_telemetry: {
         functionId: "router.classifyUserMessage",
@@ -94,6 +98,7 @@ export async function classifyUserMessage(
       system: systemPrompt,
       // Low temperature for consistent classification
       temperature: 0.1,
+      timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
     });
     if (!result.output) {
       throw new Error("Router classification missing structured output from model");

@@ -26,25 +26,59 @@ vi.mock("@/lib/memory/turn-utils", () => ({
 }));
 
 const captured = vi.hoisted(() => ({
+  responseOptions: null as unknown,
+  streamOptions: null as unknown,
   uiOptions: null as unknown,
+  writer: null as unknown,
 }));
 
-const toUIMessageStreamResponseMock = vi.hoisted(() =>
+const toUIMessageStreamMock = vi.hoisted(() =>
   vi.fn((options: unknown) => {
     captured.uiOptions = options;
-    return new Response("ok", { status: 200 });
+    return new ReadableStream();
   })
 );
 
 const streamTextMock = vi.hoisted(() =>
   vi.fn(() => ({
-    toUIMessageStreamResponse: toUIMessageStreamResponseMock,
+    toUIMessageStream: toUIMessageStreamMock,
   }))
+);
+
+const createUIMessageStreamMock = vi.hoisted(() =>
+  vi.fn(
+    (options: {
+      execute: (input: { writer: unknown }) => void;
+      onFinish?: unknown;
+    }) => {
+      const writer = {
+        merge: vi.fn(),
+        onError: undefined,
+        write: vi.fn(),
+      };
+      captured.writer = writer;
+      captured.streamOptions = options;
+      options.execute({ writer });
+      return new ReadableStream();
+    }
+  )
+);
+
+const createUIMessageStreamResponseMock = vi.hoisted(() =>
+  vi.fn((options: unknown) => {
+    captured.responseOptions = options;
+    return new Response("ok", { status: 200 });
+  })
 );
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
-  return { ...actual, streamText: streamTextMock };
+  return {
+    ...actual,
+    createUIMessageStream: createUIMessageStreamMock,
+    createUIMessageStreamResponse: createUIMessageStreamResponseMock,
+    streamText: streamTextMock,
+  };
 });
 
 describe("handleChat", () => {
@@ -52,8 +86,13 @@ describe("handleChat", () => {
     insertSingleMock.mockReset();
     updateSingleMock.mockReset();
     streamTextMock.mockClear();
-    toUIMessageStreamResponseMock.mockClear();
+    toUIMessageStreamMock.mockClear();
+    createUIMessageStreamMock.mockClear();
+    createUIMessageStreamResponseMock.mockClear();
     captured.uiOptions = null;
+    captured.streamOptions = null;
+    captured.responseOptions = null;
+    captured.writer = null;
   });
 
   it("passes consumeSseStream and updates persistence on abort", async () => {
@@ -107,9 +146,14 @@ describe("handleChat", () => {
       }
     );
 
-    expect(toUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
-    const opts = captured.uiOptions as {
+    expect(createUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+    const responseOpts = captured.responseOptions as {
       consumeSseStream?: unknown;
+    };
+    const streamOpts = captured.streamOptions as {
+      onFinish?: (event: unknown) => PromiseLike<void> | void;
+    };
+    const uiOpts = captured.uiOptions as {
       messageMetadata?: (options: {
         part: {
           type: string;
@@ -117,26 +161,32 @@ describe("handleChat", () => {
           totalUsage?: unknown;
         };
       }) => unknown;
-      onFinish?: (event: unknown) => PromiseLike<void> | void;
+      sendSources?: boolean;
     };
-    expect(typeof opts.consumeSseStream).toBe("function");
-    expect(opts.consumeSseStream).toBe(consumeStream);
-    expect(typeof opts.messageMetadata).toBe("function");
-    expect(typeof opts.onFinish).toBe("function");
+    expect(typeof responseOpts.consumeSseStream).toBe("function");
+    expect(responseOpts.consumeSseStream).toBe(consumeStream);
+    expect(typeof uiOpts.messageMetadata).toBe("function");
+    expect(uiOpts.sendSources).toBe(true);
 
     const usage = { completionTokens: 2, promptTokens: 1, totalTokens: 3 };
-    expect(opts.messageMetadata?.({ part: { type: "start" } })).toEqual({ sessionId });
+    const startMetadata = uiOpts.messageMetadata?.({ part: { type: "start" } }) as {
+      requestId?: string;
+      sessionId?: string;
+    };
+    expect(startMetadata).toMatchObject({ sessionId });
+    expect(typeof startMetadata?.requestId).toBe("string");
     expect(
-      opts.messageMetadata?.({
+      uiOpts.messageMetadata?.({
         part: { finishReason: "stop", totalUsage: usage, type: "finish" },
       })
     ).toEqual({
       finishReason: "stop",
+      requestId: expect.any(String),
       sessionId,
       totalUsage: usage,
     });
 
-    await opts.onFinish?.({
+    await streamOpts.onFinish?.({
       finishReason: undefined,
       isAborted: true,
       isContinuation: false,
@@ -246,6 +296,6 @@ describe("handleChat", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(toUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+    expect(createUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
   });
 });

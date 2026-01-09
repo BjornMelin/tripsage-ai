@@ -5,6 +5,7 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
+import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import { addConversationMemory } from "@ai/tools";
 import type { MemoryContextResponse } from "@schemas/chat";
 import type { MemoryInsightsResponse } from "@schemas/memory";
@@ -264,7 +265,7 @@ const getInsights = withApiGuards({
   auth: true,
   rateLimit: "memory:insights",
   telemetry: "memory.insights",
-})(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
+})(async (req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
   const result = requireUserId(user);
   if (!result.ok) return result.error;
   const userId = result.data;
@@ -326,6 +327,7 @@ const getInsights = withApiGuards({
       const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
 
       const result = await generateText({
+        abortSignal: req.signal,
         experimental_telemetry: {
           functionId: "memory.insights.generate",
           isEnabled: true,
@@ -338,6 +340,7 @@ const getInsights = withApiGuards({
         output: Output.object({ schema: MEMORY_INSIGHTS_RESPONSE_SCHEMA }),
         prompt,
         temperature: 0.3,
+        timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
       });
 
       const structured = result.output;

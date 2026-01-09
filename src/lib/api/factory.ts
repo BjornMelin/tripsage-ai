@@ -39,6 +39,7 @@ import {
   BOT_DETECTED_RESPONSE,
   isBotDetectedError,
 } from "@/lib/security/botid";
+import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
@@ -752,6 +753,7 @@ export function createAgentRoute<
         const timeoutConfig = buildTimeoutConfigFromSeconds(
           agentConfig.parameters?.timeoutSeconds
         );
+        const requestId = secureUuid();
 
         const urlModel = req.nextUrl.searchParams.get("model") ?? undefined;
         const modelHint =
@@ -763,6 +765,7 @@ export function createAgentRoute<
         span.setAttribute("provider", provider);
 
         const deps = {
+          abortSignal: req.signal,
           identifier: userId,
           model,
           modelId,
@@ -785,19 +788,27 @@ export function createAgentRoute<
           consumeSseStream: consumeStream,
           messageMetadata: ({ part }) => {
             if (part.type === "start") {
-              return { agentType: options.agentType, modelId };
+              return {
+                agentType: options.agentType,
+                modelId,
+                requestId,
+                versionId: agentConfig.id,
+              };
             }
             if (part.type === "finish") {
               return {
                 agentType: options.agentType,
-                finishReason: part.finishReason,
+                finishReason: part.finishReason ?? null,
                 modelId,
-                totalUsage: part.totalUsage,
+                requestId,
+                totalUsage: part.totalUsage ?? null,
+                versionId: agentConfig.id,
               };
             }
             return undefined;
           },
           onError: createErrorHandler(),
+          sendSources: true,
           timeout: timeoutConfig,
           uiMessages: defaultMessages,
         });

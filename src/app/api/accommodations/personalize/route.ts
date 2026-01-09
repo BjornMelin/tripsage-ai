@@ -35,7 +35,7 @@ export const POST = withApiGuards({
   rateLimit: "accommodations:personalize",
   schema: hotelPersonalizeRequestSchema,
   telemetry: "accommodations.personalize",
-})(async (_req: NextRequest, { user }, validated: HotelPersonalizeRequest) => {
+})(async (req: NextRequest, { user }, validated: HotelPersonalizeRequest) => {
   const result = requireUserId(user);
   if (!result.ok) return result.error;
   const userId = result.data;
@@ -60,7 +60,8 @@ export const POST = withApiGuards({
     const personalizations = await personalizeHotels(
       userId,
       hotelsForPersonalization,
-      validated.preferences
+      validated.preferences,
+      { abortSignal: req.signal }
     );
 
     // Build response with fallbacks for missing personalizations

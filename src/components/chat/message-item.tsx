@@ -4,6 +4,10 @@
 
 "use client";
 
+import {
+  chatMessageMetadataSchema,
+  type LanguageModelUsageMetadata,
+} from "@schemas/ai";
 import type { UIMessage } from "ai";
 import { FileIcon } from "lucide-react";
 import { BudgetChart } from "@/components/ai-elements/budget-chart";
@@ -178,6 +182,32 @@ function sanitizeValue(value: unknown, depth: number): unknown {
   return value;
 }
 
+function FormatUsage(usage?: LanguageModelUsageMetadata | null): string | null {
+  if (!usage) return null;
+
+  const inputTokens = usage.inputTokens;
+  const outputTokens = usage.outputTokens;
+  const hasInput = typeof inputTokens === "number";
+  const hasOutput = typeof outputTokens === "number";
+  const totalTokens =
+    typeof usage.totalTokens === "number"
+      ? usage.totalTokens
+      : hasInput && hasOutput
+        ? inputTokens + outputTokens
+        : undefined;
+
+  const parts: string[] = [];
+  if (hasInput) parts.push(`${inputTokens} in`);
+  if (hasOutput) parts.push(`${outputTokens} out`);
+
+  if (typeof totalTokens === "number") {
+    const base = parts.length > 0 ? `${parts.join(" / ")} (${totalTokens} total)` : "";
+    return base || `${totalTokens} total`;
+  }
+
+  return parts.length > 0 ? parts.join(" / ") : null;
+}
+
 /** Sanitize tool output for safe display - redacts sensitive keys and truncates long values. */
 // biome-ignore lint/style/useNamingConvention: This is a utility function export, not a React component
 export function sanitizeToolOutput(raw: unknown): unknown {
@@ -200,6 +230,9 @@ export function ChatMessageItem({
   isStreaming = false,
 }: ChatMessageItemProps) {
   const parts = message.parts ?? [];
+  const metadata = chatMessageMetadataSchema.safeParse(message.metadata);
+  const finishReason = metadata.success ? metadata.data.finishReason : undefined;
+  const usageSummary = metadata.success ? FormatUsage(metadata.data.totalUsage) : null;
   // Extract source-url parts for citation display
   const sourceParts: SourceUrlPart[] = (parts as unknown[]).filter(isSourceUrlPart);
   // Only animate the last text part of an assistant message during streaming
@@ -291,6 +324,10 @@ export function ChatMessageItem({
 
             if (partType === "source-url") {
               // Rendered separately in the Sources section below
+              return null;
+            }
+
+            if (partType === "data-status") {
               return null;
             }
 
@@ -548,6 +585,17 @@ export function ChatMessageItem({
                 </div>
               </SourcesContent>
             </Sources>
+          </div>
+        ) : null}
+
+        {message.role === "assistant" && (finishReason || usageSummary) ? (
+          <div className="mt-2 text-[11px] text-muted-foreground">
+            {[
+              finishReason ? `Finish: ${finishReason}` : null,
+              usageSummary ? `Tokens: ${usageSummary}` : null,
+            ]
+              .filter(Boolean)
+              .join(" | ")}
           </div>
         ) : null}
       </MessageContent>

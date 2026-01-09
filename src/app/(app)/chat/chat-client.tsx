@@ -5,8 +5,14 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import {
+  type AiStreamStatus,
+  type ChatMessageMetadata,
+  chatDataPartSchemas,
+  chatMessageMetadataSchema,
+} from "@schemas/ai";
 import { attachmentCreateSignedUploadResponseSchema } from "@schemas/attachments";
-import type { LanguageModelUsage, UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { PaperclipIcon, RefreshCwIcon, StopCircleIcon, XIcon } from "lucide-react";
 import type { ReactElement } from "react";
@@ -37,13 +43,11 @@ const createSessionResponseSchema = z.strictObject({
   id: z.string().trim().min(1),
 });
 
-type ChatMessageMetadata = {
-  finishReason?: string;
-  sessionId?: string;
-  totalUsage?: LanguageModelUsage;
+type ChatUiDataParts = {
+  status: AiStreamStatus;
 };
 
-type ChatUiMessage = UIMessage<ChatMessageMetadata>;
+type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
 
 type PendingAttachment = { file: File; id: string };
 
@@ -56,6 +60,7 @@ export function ChatClient(): ReactElement {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [files, setFiles] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<AiStreamStatus | null>(null);
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingRequestRef = useRef<AbortController | null>(null);
@@ -68,6 +73,13 @@ export function ChatClient(): ReactElement {
 
   const { messages, sendMessage, status, error, stop, regenerate } =
     useChat<ChatUiMessage>({
+      dataPartSchemas: chatDataPartSchemas,
+      messageMetadataSchema: chatMessageMetadataSchema,
+      onData: (dataPart) => {
+        if (dataPart.type === "data-status") {
+          setStreamStatus(dataPart.data);
+        }
+      },
       onFinish: ({ message }) => {
         const maybeSessionId = message.metadata?.sessionId;
         if (typeof maybeSessionId === "string" && maybeSessionId.trim().length > 0) {
@@ -101,6 +113,12 @@ export function ChatClient(): ReactElement {
         },
       }),
     });
+
+  useEffect(() => {
+    if (status === "submitted" || status === "ready" || status === "error") {
+      setStreamStatus(null);
+    }
+  }, [status]);
 
   const isStreaming = status === "streaming";
   const isSubmitting = status === "submitted";
@@ -263,6 +281,7 @@ export function ChatClient(): ReactElement {
     const controller = new AbortController();
     pendingRequestRef.current?.abort();
     pendingRequestRef.current = controller;
+    setStreamStatus(null);
 
     try {
       const activeSessionId = await ensureSessionId(controller.signal);
@@ -321,6 +340,19 @@ export function ChatClient(): ReactElement {
       </Conversation>
 
       <div className="border-t p-2">
+        {streamStatus && isLoading ? (
+          <div
+            className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+            data-testid="chat-stream-status"
+          >
+            <span className="inline-flex size-2 animate-pulse rounded-full bg-emerald-500/70" />
+            <span>
+              {streamStatus.step ? `Step ${streamStatus.step}: ` : ""}
+              {streamStatus.label}
+            </span>
+          </div>
+        ) : null}
+
         <PromptInput onSubmit={({ text }) => handleSubmit(text)}>
           <PromptInputHeader />
           <PromptInputBody>
