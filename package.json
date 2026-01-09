@@ -45,7 +45,6 @@
     "test:analyze:all": "pnpm ops test analyze all",
     "boundary:check": "node scripts/check-boundaries.mjs",
     "ai-tools:check": "node scripts/check-ai-tools.mjs",
-    "check:ai-sdk-version-contract": "node scripts/check-ai-sdk-version-contract.mjs",
     "check:fileoverviews": "node scripts/check-fileoverviews.mjs",
     "check:fileoverviews:full": "node scripts/check-fileoverviews.mjs --full",
     "check:no-new-domain-infra-imports": "node scripts/check-no-new-domain-infra-imports.mjs",

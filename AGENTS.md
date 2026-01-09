@@ -7,7 +7,6 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ## 0. Architecture and Stack
 
 - **Frontend-first:** All features at repository root. Next.js 16, React 19, TypeScript 5.9.
-- **AI SDK v6 (exact versions):** `ai@6.0.14`, `@ai-sdk/react@3.0.14`, `@ai-sdk/openai@3.0.7`, `@ai-sdk/anthropic@3.0.7`, `@ai-sdk/xai@3.0.10`, `@ai-sdk/togetherai@2.0.4`. Use these when researching.
 - **Data/State:** Zod v4, Zustand v5, React Query v5, React Hook Form.
 - **Backend:** Supabase SSR, Upstash (Redis/Ratelimit/QStash), OpenTelemetry.
 - **UI:** Radix UI primitives, Tailwind CSS + CVA + clsx, Lucide icons.

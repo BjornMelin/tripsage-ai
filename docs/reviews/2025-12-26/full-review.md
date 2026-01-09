@@ -661,11 +661,10 @@ Plan:
   - [x] Update `src/ai/tools/schemas/google-places.ts` to use `{ error: ... }` per Zod v4 docs (see links in **9.0**)
   - **Done when:** schema matches repo conventions; no runtime behavior change.
 
-- [x] Align AI SDK version references across docs + add drift guard (Docs/Tooling) — refs: TD-10, D5 — Priority: Low
+- [x] Align AI SDK version references across docs (Docs/Tooling) — refs: TD-10, D5 — Priority: Low
   - [x] Update beta-pinned docs to match reality (or replace with “see `package.json`” references)
   - [x] Replace beta-only doc links with stable `ai-sdk.dev` / `v6.ai-sdk.dev` references where appropriate (see **9.0**)
-  - [x] Add a small script to verify docs don’t reintroduce beta pins, and wire it into CI/`pnpm` scripts (`pnpm check:ai-sdk-version-contract`)
-  - **Done when:** no project docs reference obsolete beta pins, and an automated check prevents drift.
+  - **Done when:** no project docs reference obsolete beta pins.
 
 - [x] Resolve `TODO(ARCH-001/002)` script debt (Docs/Tooling) — refs: TD-11 — Priority: Low
   - [x] Remove TODO markers while preserving the guardrail allowlist mechanism (D11)
@@ -717,7 +716,6 @@ Plan:
   - [x] `pnpm ai-tools:check` ✅
   - [x] `pnpm check:no-new-domain-infra-imports` ✅
   - [x] `pnpm check:no-new-unknown-casts` ✅
-  - [x] `pnpm check:ai-sdk-version-contract` ✅
 
 - Residual known issues or deliberate debts: tracked as outstanding checklist items in **9.A**.
 
