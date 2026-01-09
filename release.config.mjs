@@ -7,6 +7,7 @@
  */
 export default {
   branches: ["main"],
+  repositoryUrl: "https://github.com/BjornMelin/tripsage-ai.git",
   plugins: [
     [
       "@semantic-release/commit-analyzer",
@@ -30,6 +31,11 @@ export default {
         message: "chore(release): ${nextRelease.version} [skip ci]"
       }
     ],
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        successCommentCondition: false
+      }
+    ]
   ]
 };
