@@ -165,6 +165,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.16",
     "babel-plugin-react-compiler": "^1.0.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "jsdom": "^27.4.0",
     "knip": "^5.80.0",
     "madge": "^8.0.0",
