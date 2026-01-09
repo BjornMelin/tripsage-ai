@@ -19,12 +19,36 @@ import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { RagLimitError } from "./errors";
 import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
 
 /** Token to character ratio approximation (conservative). */
 const CHARS_PER_TOKEN = 4;
+/** Max chunks per embedding batch to prevent runaway costs and respect API limits. */
+const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
+
+interface ChunkLimitContext {
+  batchStartIndex: number;
+  chunkOverlap: number;
+  chunkSize: number;
+  documentCount: number;
+}
+
+function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
+  if (count <= MAX_CHUNKS_PER_EMBED_BATCH) return;
+  logger.warn("chunk_limit_exceeded", {
+    ...context,
+    chunkCount: count,
+    limit: MAX_CHUNKS_PER_EMBED_BATCH,
+  });
+  // Hard limit to avoid runaway embedding costs; callers should split batches.
+  throw new RagLimitError("too_many_chunks", {
+    chunkCount: count,
+    limit: MAX_CHUNKS_PER_EMBED_BATCH,
+  });
+}
 
 /**
  * Chunk document text with overlap.
@@ -112,6 +136,10 @@ export interface IndexDocumentsParams {
   supabase: SupabaseClient<Database>;
   /** Authenticated user id (used for RLS-scoped writes). */
   userId: string;
+  /** Optional trip scope for all indexed chunks. */
+  tripId?: number | null;
+  /** Optional chat session scope for all indexed chunks. */
+  chatId?: string | null;
   /** Indexer configuration. */
   config?: Partial<IndexerConfig>;
 }
@@ -141,7 +169,7 @@ export interface IndexDocumentsParams {
 export async function indexDocuments(
   params: IndexDocumentsParams
 ): Promise<RagIndexResponse> {
-  const { documents, supabase, userId } = params;
+  const { chatId, documents, supabase, tripId, userId } = params;
   const config = indexerConfigSchema.parse(params.config ?? {});
 
   return withTelemetrySpan(
@@ -149,10 +177,12 @@ export async function indexDocuments(
     {
       attributes: {
         "rag.indexer.batch_size": config.batchSize,
+        "rag.indexer.chat_id_present": Boolean(chatId),
         "rag.indexer.chunk_overlap": config.chunkOverlap,
         "rag.indexer.chunk_size": config.chunkSize,
         "rag.indexer.document_count": documents.length,
         "rag.indexer.namespace": config.namespace,
+        "rag.indexer.trip_id_present": Boolean(tripId),
       },
     },
     async () => {
@@ -168,8 +198,10 @@ export async function indexDocuments(
           const batchResult = await indexBatch({
             batch,
             batchStartIndex: i,
+            chatId,
             config,
             supabase,
+            tripId,
             userId,
           });
 
@@ -220,8 +252,10 @@ export async function indexDocuments(
 interface IndexBatchParams {
   batch: RagDocument[];
   batchStartIndex: number;
+  chatId?: string | null;
   config: IndexerConfig;
   supabase: SupabaseClient<Database>;
+  tripId?: number | null;
   userId: string;
 }
 
@@ -240,11 +274,16 @@ interface IndexBatchResult {
  * @internal
  */
 async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
-  const { batch, batchStartIndex, config, supabase, userId } = params;
+  const { batch, batchStartIndex, chatId, config, supabase, tripId, userId } = params;
 
   const failed: RagIndexFailedDoc[] = [];
   let indexed = 0;
   let chunksCreated = 0;
+  const estimatedChunkChars = Math.max(
+    1,
+    (config.chunkSize - config.chunkOverlap) * CHARS_PER_TOKEN
+  );
+  let estimatedChunkCount = 0;
 
   // Prepare all chunks with document index tracking
   const allChunks: Array<{
@@ -252,6 +291,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     chunkIndex: number;
     docIndex: number;
     document: RagDocument;
+    documentId: string;
   }> = [];
 
   for (let docIdx = 0; docIdx < batch.length; docIdx++) {
@@ -265,6 +305,14 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       continue;
     }
 
+    const documentId = document.id ?? secureUuid();
+    estimatedChunkCount += Math.ceil(document.content.length / estimatedChunkChars);
+    enforceChunkLimit(estimatedChunkCount, {
+      batchStartIndex,
+      chunkOverlap: config.chunkOverlap,
+      chunkSize: config.chunkSize,
+      documentCount: batch.length,
+    });
     const chunks = chunkText(document.content, config.chunkSize, config.chunkOverlap);
 
     for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
@@ -273,6 +321,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
         chunkIndex: chunkIdx,
         docIndex: batchStartIndex + docIdx,
         document,
+        documentId,
       });
     }
   }
@@ -280,6 +329,13 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   if (allChunks.length === 0) {
     return { chunksCreated: 0, failed, indexed: 0 };
   }
+
+  enforceChunkLimit(allChunks.length, {
+    batchStartIndex,
+    chunkOverlap: config.chunkOverlap,
+    chunkSize: config.chunkSize,
+    documentCount: batch.length,
+  });
 
   // Generate embeddings for all chunks in batch
   const { embeddings } = await embedMany({
@@ -297,15 +353,22 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   const rows: Database["public"]["Tables"]["rag_documents"]["Insert"][] = allChunks.map(
     (item, idx) => ({
       // biome-ignore lint/style/useNamingConvention: Database field name
+      chat_id: chatId ?? null,
+      // biome-ignore lint/style/useNamingConvention: Database field name
       chunk_index: item.chunkIndex,
       content: item.chunk,
       embedding: toPgvector(embeddings[idx]),
-      id: item.document.id ?? secureUuid(),
+      // NOTE: `id` is the document identifier; chunk uniqueness is handled via `chunk_index`.
+      // Changing `id` to include `chunk_index` breaks upsert deduplication on (id, chunk_index)
+      // and violates the RagDocument/RagChunk UUID semantics.
+      id: item.documentId,
       metadata: (item.document.metadata ??
         {}) as Database["public"]["Tables"]["rag_documents"]["Insert"]["metadata"],
       namespace: config.namespace,
       // biome-ignore lint/style/useNamingConvention: Database field name
       source_id: item.document.sourceId ?? null,
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      trip_id: tripId ?? null,
       // biome-ignore lint/style/useNamingConvention: Database field name
       user_id: userId,
     })

@@ -3,6 +3,11 @@
  */
 
 import { z } from "zod";
+import {
+  MAX_RAG_INDEX_TOTAL_CONTENT_CHARS,
+  ragDocumentSchema,
+  ragNamespaceSchema,
+} from "./rag";
 import { primitiveSchemas } from "./registry";
 
 // ===== CORE SCHEMAS =====
@@ -61,3 +66,44 @@ export const memorySyncJobSchema = z.object({
 
 /** TypeScript type for memory sync jobs. */
 export type MemorySyncJob = z.infer<typeof memorySyncJobSchema>;
+
+// ===== JOB SCHEMAS =====
+
+/**
+ * QStash job for ingesting a single uploaded attachment (download + text extraction).
+ */
+export const attachmentsIngestJobSchema = z.strictObject({
+  attachmentId: primitiveSchemas.uuid,
+});
+
+export type AttachmentsIngestJob = z.infer<typeof attachmentsIngestJobSchema>;
+
+/**
+ * QStash job for indexing documents into the RAG store.
+ *
+ * This is a server-side equivalent of the `/api/rag/index` request shape, with explicit
+ * scoping fields for user and optional trip/chat context.
+ */
+export const ragIndexJobSchema = z
+  .strictObject({
+    chatId: primitiveSchemas.uuid.nullable().optional(),
+    chunkOverlap: z.number().int().nonnegative().max(500).default(100),
+    chunkSize: z.number().int().min(100).max(2000).default(512),
+    documents: z.array(ragDocumentSchema).min(1).max(100, {
+      error: "Maximum 100 documents per batch",
+    }),
+    namespace: ragNamespaceSchema.default("user_content"),
+    tripId: z.number().int().nonnegative().nullable().optional(),
+    userId: primitiveSchemas.uuid,
+  })
+  .refine(
+    (value) =>
+      value.documents.reduce((total, doc) => total + doc.content.length, 0) <=
+      MAX_RAG_INDEX_TOTAL_CONTENT_CHARS,
+    {
+      error: `Total document content exceeds ${MAX_RAG_INDEX_TOTAL_CONTENT_CHARS} characters`,
+      path: ["documents"],
+    }
+  );
+
+export type RagIndexJob = z.infer<typeof ragIndexJobSchema>;

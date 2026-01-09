@@ -11,6 +11,14 @@ type TryReserveKey = (
   key: string,
   ttlSecondsOrOptions?: number | ReserveKeyOptions
 ) => Promise<boolean>;
+type TryEnqueueJob = (
+  jobType: string,
+  payload: unknown,
+  path: string,
+  options?: { deduplicationId?: string; delay?: number }
+) => Promise<
+  { success: true; messageId: string } | { success: false; error: Error | null }
+>;
 
 type ParseResult = { ok: boolean; payload?: WebhookPayload };
 type FilesRouteModule = typeof import("../route");
@@ -27,6 +35,12 @@ const buildEventKeyMock = vi.hoisted(() =>
   vi.fn<BuildEventKey>(() => "file-event-key-1")
 );
 const tryReserveKeyMock = vi.hoisted(() => vi.fn<TryReserveKey>(async () => true));
+const releaseKeyMock = vi.hoisted(() =>
+  vi.fn((_key: string, _opts?: unknown) => Promise.resolve(true))
+);
+const tryEnqueueJobMock = vi.hoisted(() =>
+  vi.fn<TryEnqueueJob>(async () => ({ messageId: "job-1", success: true }))
+);
 
 function createSupabaseStub(error: Error | null = null) {
   const single = vi.fn(async () => ({
@@ -54,12 +68,22 @@ vi.mock("@/lib/idempotency/redis", () => ({
       this.name = "IdempotencyServiceUnavailableError";
     }
   },
+  releaseKey: (key: string, opts?: unknown) => releaseKeyMock(key, opts),
   tryReserveKey: (key: string, ttlSecondsOrOptions?: number | ReserveKeyOptions) =>
     tryReserveKeyMock(key, ttlSecondsOrOptions),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
   getAdminSupabase: vi.fn(() => supabaseFactory()),
+}));
+
+vi.mock("@/lib/qstash/client", () => ({
+  tryEnqueueJob: (
+    jobType: string,
+    payload: unknown,
+    path: string,
+    options?: { deduplicationId?: string; delay?: number }
+  ) => tryEnqueueJobMock(jobType, payload, path, options),
 }));
 
 // Mock telemetry span
@@ -116,6 +140,10 @@ describe("POST /api/hooks/files", () => {
     buildEventKeyMock.mockReturnValue("file-event-key-1");
     tryReserveKeyMock.mockReset();
     tryReserveKeyMock.mockResolvedValue(true);
+    releaseKeyMock.mockReset();
+    releaseKeyMock.mockResolvedValue(true);
+    tryEnqueueJobMock.mockReset();
+    tryEnqueueJobMock.mockResolvedValue({ messageId: "job-1", success: true });
     supabaseFactory = () => createSupabaseStub();
   });
 
@@ -269,5 +297,58 @@ describe("POST /api/hooks/files", () => {
     expect(json.ok).toBe(true);
     // select should not be called when status is not "uploading"
     expect(selectSpy).not.toHaveBeenCalled();
+  });
+
+  it("enqueues attachment ingestion when upload completes (UPDATE uploading -> completed)", async () => {
+    parseAndVerifyMock.mockResolvedValue({
+      ok: true,
+      payload: {
+        oldRecord: { id: "file-123", upload_status: "uploading" },
+        record: { id: "file-123", upload_status: "completed" },
+        table: "file_attachments",
+        type: "UPDATE",
+      },
+    });
+
+    tryEnqueueJobMock.mockResolvedValue({ messageId: "job-123", success: true });
+
+    const { POST } = await loadRoute();
+    const res = await POST(makeRequest({}));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.ok).toBe(true);
+    expect(json.enqueued).toBe(true);
+    expect(tryEnqueueJobMock).toHaveBeenCalledWith(
+      "attachments-ingest",
+      { attachmentId: "file-123" },
+      "/api/jobs/attachments-ingest",
+      { deduplicationId: "attachments-ingest:file-123", delay: 0 }
+    );
+  });
+
+  it("returns enqueued=false when QStash is unavailable", async () => {
+    parseAndVerifyMock.mockResolvedValue({
+      ok: true,
+      payload: {
+        oldRecord: { id: "file-123", upload_status: "uploading" },
+        record: { id: "file-123", upload_status: "completed" },
+        table: "file_attachments",
+        type: "UPDATE",
+      },
+    });
+
+    tryEnqueueJobMock.mockResolvedValue({ error: null, success: false });
+
+    const { POST } = await loadRoute();
+    const res = await POST(makeRequest({}));
+    const json = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(json.code).toBe("SERVICE_UNAVAILABLE");
+    expect(json.error).toBe("internal_error");
+    expect(releaseKeyMock).toHaveBeenCalledWith("file-event-key-1", {
+      degradedMode: "fail_open",
+    });
   });
 });

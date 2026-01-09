@@ -39,8 +39,8 @@ const sendCollaboratorNotificationsMock = vi.hoisted(() =>
 const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
   NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   NEXT_PUBLIC_SUPABASE_URL: "https://supabase.test",
-  QSTASH_TOKEN: "qstash-token",
-  SUPABASE_SERVICE_ROLE_KEY: "service-role",
+  QSTASH_TOKEN: "dummy",
+  SUPABASE_SERVICE_ROLE_KEY: "dummy",
 }));
 const afterCallbacks = vi.hoisted<Array<() => unknown>>(() => []);
 
@@ -67,6 +67,7 @@ vi.mock("@/lib/idempotency/redis", () => ({
       this.name = "IdempotencyServiceUnavailableError";
     }
   },
+  releaseKey: vi.fn(async () => true),
   tryReserveKey: (key: string, ttlSecondsOrOptions?: number | TryReserveKeyOptions) =>
     tryReserveKeyMock(key, ttlSecondsOrOptions),
 }));
@@ -198,8 +199,8 @@ describe("POST /api/hooks/trips", () => {
     tryEnqueueJobMock.mockResolvedValue({ messageId: "msg_test", success: true });
     afterCallbacks.length = 0;
     envStore.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
-    envStore.SUPABASE_SERVICE_ROLE_KEY = "service-role";
-    envStore.QSTASH_TOKEN = "qstash-token";
+    envStore.SUPABASE_SERVICE_ROLE_KEY = "dummy";
+    envStore.QSTASH_TOKEN = "dummy";
     supabaseFactory = () => createSupabaseStub();
   });
 

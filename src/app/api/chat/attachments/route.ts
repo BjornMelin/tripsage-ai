@@ -21,7 +21,6 @@ import {
   validateSchema,
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
-import { tryEnqueueJob } from "@/lib/qstash/client";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -239,29 +238,6 @@ export const POST = withApiGuards({
       error: "internal",
       reason: "Invalid response",
       status: 500,
-    });
-  }
-
-  // Trigger ingestion via QStash (thin publish only; receiver lives elsewhere).
-  // This is best-effort and should never block returning the signed URL to the user.
-  const enqueueResult = await tryEnqueueJob(
-    "attachments.ingest",
-    {
-      attachmentIds: uploads.map((u) => u.attachmentId),
-      chatId: body.chatId ?? null,
-      tripId: body.tripId ?? null,
-      userId,
-    },
-    "/api/jobs/attachments-ingest",
-    {
-      deduplicationId: uploads.map((u) => u.attachmentId).join(":"),
-    }
-  );
-
-  if (!enqueueResult.success) {
-    logger.warn("Failed to enqueue attachment ingestion job", {
-      error: enqueueResult.error?.message ?? "unavailable",
-      userId,
     });
   }
 

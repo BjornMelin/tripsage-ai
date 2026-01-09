@@ -303,6 +303,15 @@ Postgres real-time change event payload:
 }
 ```
 
+**Success (QStash enqueued):**
+
+```json
+{
+  "ok": true,
+  "enqueued": true
+}
+```
+
 **Skipped (wrong table):**
 
 ```json
@@ -326,6 +335,7 @@ Postgres real-time change event payload:
 | Field | Type | Description |
 |-------|------|-------------|
 | `ok` | boolean | Indicates if the webhook was processed successfully |
+| `enqueued` | boolean | Indicates if an attachment ingestion job was enqueued (only present when `true` or `false` on completion events) |
 | `skipped` | boolean | Indicates if the event was skipped due to wrong table (only present when `true`) |
 | `duplicate` | boolean | Indicates if the event was a duplicate (only present when `true`) |
 
@@ -363,6 +373,7 @@ This webhook is triggered by Supabase Postgres triggers when `file_attachments` 
 2. Skips events for tables other than `file_attachments`
 3. Enforces idempotency using Upstash Redis (duplicate events return `{duplicate: true, ok: true}`)
 4. Processes INSERT events with `upload_status: "uploading"` to verify file existence in Supabase Storage
+5. Enqueues an attachment ingestion job when `upload_status` transitions to `"completed"` (UPDATE events), via QStash worker `/api/jobs/attachments-ingest`
 
 Events for other tables are silently skipped with `{ok: true, skipped: true}`.
 

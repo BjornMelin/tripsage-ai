@@ -140,16 +140,63 @@ Common attributes:
 - `cache.has_schema`: `true` when a schema is provided (`cache.get_safe`)
 - `cache.validation_failed`: `true` when schema validation fails (`cache.get_safe`)
 
-### QStash + DLQ
+### QStash
 
-QStash helpers emit spans for enqueue and DLQ operations:
+QStash helpers emit spans for enqueue operations:
 
 | Span name | Location |
 | --- | --- |
 | `qstash.enqueue` | `src/lib/qstash/client.ts` |
-| `qstash.dlq.push` | `src/lib/qstash/dlq.ts` |
-| `qstash.dlq.list` | `src/lib/qstash/dlq.ts` |
-| `qstash.dlq.remove` | `src/lib/qstash/dlq.ts` |
+
+Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt`
+(derived from `Upstash-Retried`) for correlation with the Upstash Console.
+
+#### DLQ visibility (Upstash native)
+
+When a job is non-retryable and should be forwarded to the DLQ, return HTTP `489`
+with `Upstash-NonRetryable-Error: true` (use `qstashNonRetryableErrorResponse`).
+In these cases, use the telemetry helpers in `@/lib/telemetry/{span,logger}` to:
+
+- Record that the job is DLQ-eligible (e.g., `qstash.dlq_eligible: true`) and include
+  the HTTP status and failure reason.
+- Add or update `qstash.message_id` and `qstash.attempt` for correlation.
+- Treat `Upstash-NonRetryable-Error` as terminal (no retries); log it as a non-retriable
+  failure so it’s clear why the job moved to the DLQ.
+
+Example (job route, DLQ visibility):
+
+```typescript
+import { qstashNonRetryableErrorResponse, getQstashRequestMeta } from "@/lib/qstash/receiver";
+import { createServerLogger } from "@/lib/telemetry/logger";
+import { withTelemetrySpan } from "@/lib/telemetry/span";
+
+const logger = createServerLogger("jobs.example");
+
+export async function POST(req: Request) {
+  const meta = getQstashRequestMeta(req);
+
+  return await withTelemetrySpan("jobs.example", {}, async (span) => {
+    if (meta) {
+      span.setAttribute("qstash.message_id", meta.messageId);
+      span.setAttribute("qstash.attempt", meta.retried);
+    }
+
+    if (/* non-retryable condition */ false) {
+      span.setAttribute("qstash.dlq_eligible", true);
+      logger.error("job_non_retryable", { reason: "validation_failed" });
+      return qstashNonRetryableErrorResponse({
+        error: "validation_failed",
+        reason: "Payload did not pass validation",
+      });
+    }
+
+    return Response.json({ ok: true });
+  });
+}
+```
+
+In the Upstash Console, use `qstash.message_id` to find the DLQ-forwarded message and
+`qstash.attempt` (from `Upstash-Retried`) to map retry history.
 
 ## Client-side telemetry
 

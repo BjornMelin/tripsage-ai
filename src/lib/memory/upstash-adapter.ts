@@ -4,11 +4,7 @@
 
 import "server-only";
 
-import {
-  enqueueConversationMemorySync,
-  enqueueFullMemorySync,
-  enqueueIncrementalMemorySync,
-} from "@/lib/qstash/memory-sync";
+import { tryEnqueueJob } from "@/lib/qstash/client";
 import { getRedis } from "@/lib/redis";
 import type {
   MemoryAdapter,
@@ -34,7 +30,29 @@ async function handleOnTurnCommitted(
   ];
 
   try {
-    await enqueueConversationMemorySync(intent.sessionId, intent.userId, messages);
+    // Use a time-bucketed component so the same turn can be re-processed after a short window.
+    const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000)); // 5-minute buckets
+    const idempotencyKey = `conv-sync:${intent.sessionId}:${intent.turn.id}:${timeBucket}`;
+    const result = await tryEnqueueJob(
+      "memory-sync",
+      {
+        idempotencyKey,
+        payload: {
+          conversationMessages: messages,
+          sessionId: intent.sessionId,
+          syncType: "conversation",
+          userId: intent.userId,
+        },
+      },
+      "/api/jobs/memory-sync",
+      {
+        deduplicationId: `memory-sync:${idempotencyKey}`,
+        delay: 1,
+      }
+    );
+    if (!result.success) {
+      throw result.error ?? new Error("qstash_unavailable");
+    }
     return { status: "ok" };
   } catch (error) {
     return {
@@ -51,10 +69,27 @@ async function handleSyncSession(
   intent: Extract<MemoryIntent, { type: "syncSession" | "backfillSession" }>
 ): Promise<MemoryAdapterExecutionResult> {
   try {
-    if (intent.type === "syncSession") {
-      await enqueueIncrementalMemorySync(intent.sessionId, intent.userId);
-    } else {
-      await enqueueFullMemorySync(intent.sessionId, intent.userId);
+    const isFull = intent.type === "backfillSession";
+    const idempotencyKey = `${isFull ? "full" : "incr"}-sync:${intent.sessionId}`;
+
+    const result = await tryEnqueueJob(
+      "memory-sync",
+      {
+        idempotencyKey,
+        payload: {
+          sessionId: intent.sessionId,
+          syncType: isFull ? "full" : "incremental",
+          userId: intent.userId,
+        },
+      },
+      "/api/jobs/memory-sync",
+      {
+        delay: isFull ? undefined : 5,
+      }
+    );
+
+    if (!result.success) {
+      throw result.error ?? new Error("qstash_unavailable");
     }
     return { status: "ok" };
   } catch (error) {

@@ -59,9 +59,16 @@ export class RedisMockClient {
   set(
     key: string,
     value: unknown,
-    opts?: { ex?: number; px?: number }
-  ): Promise<string> {
+    opts?: { ex?: number; px?: number; nx?: boolean; xx?: boolean }
+  ): Promise<string | null> {
     const now = Date.now();
+    const existing = touch(this.store, key, now);
+
+    // Match Redis semantics: NX and XX are mutually exclusive.
+    if (opts?.nx && opts?.xx) return Promise.resolve(null);
+    if (opts?.nx && existing) return Promise.resolve(null);
+    if (opts?.xx && !existing) return Promise.resolve(null);
+
     const expiresAt = opts?.px
       ? now + opts.px
       : opts?.ex
@@ -267,6 +274,9 @@ export class RedisMockClient {
     keys: string[],
     args: Array<string | number>
   ): Promise<unknown> {
+    const QstashIdempotencyGetPattern = 'redis.call("GET", KEYS[1]) == "processing"';
+    const QstashIdempotencySetPattern = 'redis.call("SET", KEYS[1], "done"';
+
     // Support circuit-breaker script: INCR + EXPIRE
     if (script.includes("INCR") && script.includes("EXPIRE") && keys.length === 1) {
       const ttl = Number(args[0] ?? 0);
@@ -294,18 +304,55 @@ export class RedisMockClient {
       return 0;
     }
 
+    // Support QStash idempotency commit: GET -> conditional SET done with EX
+    // NOTE: Detects the specific Lua script pattern used by @upstash/qstash >= 2.x
+    // for idempotent job delivery. If the library changes its EVAL script, this
+    // detection may fail and tests should update this mock accordingly.
+    const normalizedScript = script.replace(/\s+/g, " ");
+    const looksLikeQstashIdempotencyScript =
+      normalizedScript.includes('redis.call("GET", KEYS[1])') ||
+      normalizedScript.includes('redis.call("SET", KEYS[1], "done"');
+    const isIdempotencyCommitScript =
+      normalizedScript.includes(QstashIdempotencyGetPattern) &&
+      normalizedScript.includes(QstashIdempotencySetPattern);
+    if (looksLikeQstashIdempotencyScript && !isIdempotencyCommitScript) {
+      throw new Error(
+        "Unsupported QStash idempotency script pattern in RedisMockClient.eval"
+      );
+    }
+    if (isIdempotencyCommitScript && keys.length === 1) {
+      const current = await this.get<string>(keys[0]);
+      if (current === "processing") {
+        const ttlSeconds = Number(args[0] ?? 0);
+        await this.set(keys[0], "done", {
+          ex: Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : undefined,
+        });
+        return 1;
+      }
+      return 0;
+    }
+
     return null;
   }
 }
 
-export class RedisMock {
-  static fromEnv(): RedisMockClient {
-    return new RedisMockClient(sharedUpstashStore);
+type RedisMockConstructorArg =
+  | UpstashMemoryStore
+  | {
+      store?: UpstashMemoryStore;
+      token?: string;
+      url?: string;
+    };
+
+export class RedisMock extends RedisMockClient {
+  static fromEnv(): RedisMock {
+    return new RedisMock(sharedUpstashStore);
   }
 
-  constructor(options?: { store?: UpstashMemoryStore }) {
-    const client = new RedisMockClient(options?.store ?? sharedUpstashStore);
-    Object.assign(this, client);
+  constructor(storeOrOptions?: RedisMockConstructorArg) {
+    const store =
+      storeOrOptions instanceof Map ? storeOrOptions : storeOrOptions?.store;
+    super(store ?? sharedUpstashStore);
   }
 }
 

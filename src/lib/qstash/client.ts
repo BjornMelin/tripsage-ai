@@ -7,7 +7,7 @@ import "server-only";
 import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import { QSTASH_RETRY_CONFIG } from "./config";
+import { QSTASH_CONTENT_BASED_DEDUP_HEADER, QSTASH_RETRY_CONFIG } from "./config";
 
 // ===== TYPES =====
 
@@ -23,6 +23,7 @@ export type QStashClientLike = {
     body: unknown;
     headers?: Record<string, string>;
     retries?: number;
+    retryDelay?: string;
     delay?: number;
     deduplicationId?: string;
     callback?: string;
@@ -128,10 +129,16 @@ function parseDelayToSeconds(delay: string): number {
 export interface EnqueueJobOptions {
   /** Deduplication ID to prevent duplicate jobs (optional) */
   deduplicationId?: string;
+  /** Enable content-based deduplication at publish time (optional) */
+  contentBasedDeduplication?: boolean;
   /** Delay before first delivery in seconds */
   delay?: number;
   /** Override default retry count */
   retries?: number;
+  /** Override retry delay expression (milliseconds expression) */
+  retryDelay?: string;
+  /** Additional headers to pass to QStash publish */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -147,7 +154,7 @@ export interface EnqueueJobResult {
  *
  * Enforces ADR-0048 retry policy:
  * - 5 retries (6 total attempts)
- * - Exponential backoff starting at 10s
+ * - Retry delay expression (see `QSTASH_RETRY_CONFIG.retryDelay`)
  *
  * @param jobType - Type identifier for the job (used in telemetry)
  * @param payload - Job payload to deliver
@@ -212,6 +219,12 @@ export async function enqueueJob(
         span.setAttribute("qstash.dedup_id_missing", true);
       }
 
+      const headers: Record<string, string> = { ...(options.headers ?? {}) };
+      if (options.contentBasedDeduplication) {
+        headers[QSTASH_CONTENT_BASED_DEDUP_HEADER] = "true";
+        span.setAttribute("qstash.content_based_dedup", true);
+      }
+
       // Parse delay from config (e.g., "10s" -> 10)
       const defaultDelay = parseDelayToSeconds(QSTASH_RETRY_CONFIG.delay);
 
@@ -220,7 +233,9 @@ export async function enqueueJob(
         body: payload,
         deduplicationId,
         delay: options.delay ?? defaultDelay,
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
         retries: options.retries ?? QSTASH_RETRY_CONFIG.retries,
+        retryDelay: options.retryDelay ?? QSTASH_RETRY_CONFIG.retryDelay,
         url,
       });
 

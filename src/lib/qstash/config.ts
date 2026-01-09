@@ -1,31 +1,44 @@
 /**
- * @fileoverview QStash configuration constants per ADR-0048.
+ * @fileoverview QStash configuration constants.
  */
 
 import "server-only";
 
 /**
  * QStash retry configuration for webhook job handlers.
- * Max 6 total attempts (1 initial + 5 retries) with exponential backoff.
+ *
+ * Notes:
+ * - `delay` controls the initial delivery delay for the message.
+ * - `retryDelay` controls the retry backoff (in milliseconds) via `Upstash-Retry-Delay`.
+ * - `retried` in the expression is the retry attempt count starting from 0.
  */
 export const QSTASH_RETRY_CONFIG = {
-  /** Initial delay before first retry (QStash uses exponential backoff) */
+  /** Default delay before first delivery (seconds string) */
   delay: "10s",
   /** Number of retry attempts after initial failure */
   retries: 5,
+  /** Exponential backoff starting at 10 seconds (milliseconds expression) */
+  retryDelay: "10000 * pow(2, retried)",
 } as const;
 
-/** Redis key prefix for dead letter queue entries */
-export const DLQ_KEY_PREFIX = "qstash-dlq" as const;
-
-/** TTL for DLQ entries in seconds (7 days) */
-export const DLQ_TTL_SECONDS = 60 * 60 * 24 * 7;
-
-/** Maximum number of DLQ entries to keep per job type */
-export const DLQ_MAX_ENTRIES = 1000;
-
-/** Threshold for DLQ size alerts */
-export const DLQ_ALERT_THRESHOLD = 100;
-
 /** QStash signing key header name */
-export const QSTASH_SIGNATURE_HEADER = "upstash-signature" as const;
+export const QSTASH_SIGNATURE_HEADER = "Upstash-Signature" as const;
+
+/** QStash message identifier header (stable across retries) */
+export const QSTASH_MESSAGE_ID_HEADER = "Upstash-Message-Id" as const;
+
+/** QStash retry counter header (number of retries already performed) */
+export const QSTASH_RETRIED_HEADER = "Upstash-Retried" as const;
+
+/**
+ * QStash non-retryable error header.
+ * When paired with HTTP 489, QStash stops retries and forwards to DLQ (if configured).
+ */
+export const QSTASH_NONRETRYABLE_ERROR_HEADER = "Upstash-NonRetryable-Error" as const;
+
+/** QStash deduplication id header (publishing) */
+export const QSTASH_DEDUPLICATION_ID_HEADER = "Upstash-Deduplication-Id" as const;
+
+/** QStash content-based deduplication toggle header (publishing) */
+export const QSTASH_CONTENT_BASED_DEDUP_HEADER =
+  "Upstash-Content-Based-Deduplication" as const;
