@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { createHmac } from "node:crypto";
+import type { ServerEnv } from "@schemas/env";
 import type { CookieMethodsServer } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
@@ -54,10 +55,14 @@ vi.mock("@/lib/env/server", () => ({
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
     [telemetryHashSecretKey]: telemetryHashSecretValue,
   })),
-  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
-    if (key === telemetryHashSecretKey) return telemetryHashSecretValue;
-    return fallback ?? "";
-  }),
+  getServerEnvVarWithFallback: vi.fn(
+    <T extends keyof ServerEnv>(key: T, fallback: ServerEnv[T]): ServerEnv[T] => {
+      if (key === telemetryHashSecretKey) {
+        return telemetryHashSecretValue as ServerEnv[T];
+      }
+      return fallback;
+    }
+  ),
 }));
 
 vi.mock("@/lib/env/client", () => ({
