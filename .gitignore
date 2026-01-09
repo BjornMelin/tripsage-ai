@@ -31,6 +31,7 @@ Thumbs.db
 .roomodes
 .lovable/
 .claude/
+.codex/
 **/.claude/settings.local.json
 *.local.md
 .cursorindexingignore
@@ -39,8 +40,6 @@ CLAUDE.md
 # repomix and AI-assisted code review artifacts
 repomix-output.*
 context-review*.md
-GEMINI-REVIEW*.md
-IMPLEMENTATION-PROMPTS*.md
 QUICK-START*.md
 CONTEXT-OPTIMIZATION*.md
 COMPREHENSIVE-REVIEW*.md
