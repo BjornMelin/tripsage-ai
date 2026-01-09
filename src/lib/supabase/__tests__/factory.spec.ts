@@ -480,7 +480,7 @@ describe("Supabase Factory", () => {
 
       await callbackFn(mockSpan);
 
-      const expectedUserIdHash = createHmac("sha256", "telemetry-test-secret")
+      const expectedUserIdHash = createHmac("sha256", telemetryHashSecretValue)
         .update("user-123", "utf8")
         .digest("hex");
 
