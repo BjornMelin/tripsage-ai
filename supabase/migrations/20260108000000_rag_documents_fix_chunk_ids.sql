@@ -18,6 +18,8 @@ DECLARE
   v_table regclass;
   v_pk_name text;
 BEGIN
+  SET LOCAL lock_timeout = '30s';
+
   SELECT to_regclass('public.rag_documents')
   INTO v_table;
 
@@ -47,6 +49,17 @@ BEGIN
   END IF;
 
   IF v_pk_cols IS NULL OR v_pk_cols = ARRAY['id'] THEN
+    -- Ensure chunk_index column exists before proceeding.
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'rag_documents'
+        AND column_name = 'chunk_index'
+    ) THEN
+      RAISE NOTICE 'rag_documents.chunk_index column missing, skipping PK migration';
+      RETURN;
+    END IF;
 
     UPDATE public.rag_documents
     SET chunk_index = 0
