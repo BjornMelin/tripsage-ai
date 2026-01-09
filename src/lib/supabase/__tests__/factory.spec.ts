@@ -45,14 +45,16 @@ vi.mock("@opentelemetry/api", () => ({
   },
 }));
 
+const telemetryHashSecretKey = "TELEMETRY_HASH_SECRET";
+
 vi.mock("@/lib/env/server", () => ({
   getServerEnv: vi.fn(() => ({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
-    TELEMETRY_HASH_SECRET: "0123456789abcdef0123456789abcdef",
+    [telemetryHashSecretKey]: "telemetry-test-secret",
   })),
   getServerEnvVarWithFallback: vi.fn((key: string, fallback: string) => {
-    if (key === "TELEMETRY_HASH_SECRET") return "0123456789abcdef0123456789abcdef";
+    if (key === telemetryHashSecretKey) return "telemetry-test-secret";
     return fallback;
   }),
 }));
@@ -477,10 +479,7 @@ describe("Supabase Factory", () => {
 
       await callbackFn(mockSpan);
 
-      const expectedUserIdHash = createHmac(
-        "sha256",
-        "0123456789abcdef0123456789abcdef"
-      )
+      const expectedUserIdHash = createHmac("sha256", "telemetry-test-secret")
         .update("user-123", "utf8")
         .digest("hex");
 
