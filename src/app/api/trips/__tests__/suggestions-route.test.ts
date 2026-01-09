@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { buildTimeoutConfig } from "@ai/timeout";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
@@ -120,6 +121,23 @@ describe("/api/trips/suggestions route", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as unknown[];
     expect(Array.isArray(body)).toBe(true);
+  });
+
+  it("passes AI SDK timeout config to generateText", async () => {
+    stubRateLimitDisabled();
+
+    const { generateText } = await import("ai");
+    vi.mocked(generateText).mockClear();
+
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "http://localhost/api/trips/suggestions",
+    });
+
+    await getSuggestions(req, createRouteParamsContext());
+
+    const call = vi.mocked(generateText).mock.calls[0]?.[0];
+    expect(call?.timeout).toEqual(buildTimeoutConfig(30_000));
   });
 
   it("sanitizes category parameter in prompt", async () => {

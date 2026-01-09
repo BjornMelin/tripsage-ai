@@ -110,11 +110,31 @@ describe("handleChat", () => {
     expect(toUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
     const opts = captured.uiOptions as {
       consumeSseStream?: unknown;
+      messageMetadata?: (options: {
+        part: {
+          type: string;
+          finishReason?: string;
+          totalUsage?: unknown;
+        };
+      }) => unknown;
       onFinish?: (event: unknown) => PromiseLike<void> | void;
     };
     expect(typeof opts.consumeSseStream).toBe("function");
     expect(opts.consumeSseStream).toBe(consumeStream);
+    expect(typeof opts.messageMetadata).toBe("function");
     expect(typeof opts.onFinish).toBe("function");
+
+    const usage = { completionTokens: 2, promptTokens: 1, totalTokens: 3 };
+    expect(opts.messageMetadata?.({ part: { type: "start" } })).toEqual({ sessionId });
+    expect(
+      opts.messageMetadata?.({
+        part: { finishReason: "stop", totalUsage: usage, type: "finish" },
+      })
+    ).toEqual({
+      finishReason: "stop",
+      sessionId,
+      totalUsage: usage,
+    });
 
     await opts.onFinish?.({
       finishReason: undefined,

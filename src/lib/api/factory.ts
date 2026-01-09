@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { AgentDependencies } from "@ai/agents/types";
+import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -748,6 +749,9 @@ export function createAgentRoute<
       async (span) => {
         const resolvedConfig = await resolveAgentConfig(options.agentType);
         const agentConfig = resolvedConfig.config;
+        const timeoutConfig = buildTimeoutConfigFromSeconds(
+          agentConfig.parameters?.timeoutSeconds
+        );
 
         const urlModel = req.nextUrl.searchParams.get("model") ?? undefined;
         const modelHint =
@@ -779,7 +783,22 @@ export function createAgentRoute<
           abortSignal: req.signal,
           agent,
           consumeSseStream: consumeStream,
+          messageMetadata: ({ part }) => {
+            if (part.type === "start") {
+              return { agentType: options.agentType, modelId };
+            }
+            if (part.type === "finish") {
+              return {
+                agentType: options.agentType,
+                finishReason: part.finishReason,
+                modelId,
+                totalUsage: part.totalUsage,
+              };
+            }
+            return undefined;
+          },
           onError: createErrorHandler(),
+          timeout: timeoutConfig,
           uiMessages: defaultMessages,
         });
       }

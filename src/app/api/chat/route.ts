@@ -23,6 +23,7 @@ export const maxDuration = 60;
 
 const DEFAULT_MAX_TOKENS_FALLBACK = 1024;
 const DEFAULT_MAX_STEPS_FALLBACK = 10;
+const DEFAULT_TIMEOUT_SECONDS_FALLBACK = Math.max(10, maxDuration - 5);
 
 function getDefaultMaxTokens(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_TOKENS;
@@ -34,6 +35,14 @@ function getDefaultMaxSteps(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_STEPS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_STEPS_FALLBACK;
+}
+
+function getDefaultTimeoutSeconds(): number {
+  const raw = process.env.CHAT_DEFAULT_TIMEOUT_SECONDS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_TIMEOUT_SECONDS_FALLBACK;
 }
 
 const chatRequestSchema = z.strictObject({
@@ -120,10 +129,11 @@ export const POST = withApiGuards({
   const logger = createServerLogger("chat");
   const defaultMaxTokens = getDefaultMaxTokens();
   const maxSteps = getDefaultMaxSteps();
+  const timeoutSeconds = getDefaultTimeoutSeconds();
   return handleChat(
     {
       clock: { now: () => Date.now() },
-      config: { defaultMaxTokens, maxSteps },
+      config: { defaultMaxTokens, maxSteps, timeoutSeconds },
       logger,
       resolveProvider,
       supabase,

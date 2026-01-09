@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { openai } from "@ai-sdk/openai";
 import { consumeStream, streamText } from "ai";
 import type { NextRequest } from "next/server";
@@ -40,6 +41,7 @@ const STREAM_BODY_SCHEMA = z.strictObject({
 // Allow streaming responses up to 30 seconds
 /** Maximum duration (seconds) to allow for streaming responses. */
 export const maxDuration = 30;
+const STREAM_TIMEOUT_SECONDS = Math.max(5, maxDuration - 5);
 
 /**
  * Handle POST requests by streaming a simple demo message via AI SDK.
@@ -95,6 +97,7 @@ const guardedPOST = withApiGuards({
       },
     },
     model: openai(model),
+    timeout: buildTimeoutConfigFromSeconds(STREAM_TIMEOUT_SECONDS),
     // Prefer messages when available; otherwise prompt.
     ...(messages ? { messages: finalMessages } : { prompt }),
     maxOutputTokens: maxTokens,

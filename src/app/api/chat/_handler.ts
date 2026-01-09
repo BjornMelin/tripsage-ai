@@ -5,6 +5,7 @@
 import "server-only";
 
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
+import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { toolRegistry } from "@ai/tools";
 import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
 import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
@@ -62,6 +63,7 @@ export interface ChatDeps {
   config?: {
     defaultMaxTokens?: number;
     maxSteps?: number;
+    timeoutSeconds?: number;
   };
 }
 
@@ -792,6 +794,7 @@ export async function handleChat(
 
   // Track tool calls already persisted to avoid duplicates across steps.
   const persistedToolCallIds = new Set<string>();
+  const timeoutConfig = buildTimeoutConfigFromSeconds(deps.config?.timeoutSeconds);
 
   const result = streamText({
     abortSignal: payload.abortSignal,
@@ -807,6 +810,7 @@ export async function handleChat(
         model: provider.modelId,
         requestId,
         sessionId,
+        totalUsage: totalUsage ?? null,
         userId,
       });
 
@@ -910,6 +914,7 @@ export async function handleChat(
     },
     stopWhen: stepCountIs(maxSteps),
     system,
+    timeout: timeoutConfig,
     tools: chatTools,
   });
 
@@ -922,6 +927,14 @@ export async function handleChat(
     messageMetadata: ({ part }) => {
       if (part.type === "start") {
         return { sessionId };
+      }
+      if (part.type === "finish") {
+        const metadata: Record<string, Json> = {
+          finishReason: part.finishReason,
+          sessionId,
+          totalUsage: part.totalUsage,
+        };
+        return metadata;
       }
       return undefined;
     },

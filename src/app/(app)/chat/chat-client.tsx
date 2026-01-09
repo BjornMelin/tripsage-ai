@@ -6,7 +6,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { attachmentCreateSignedUploadResponseSchema } from "@schemas/attachments";
-import type { UIMessage } from "ai";
+import type { LanguageModelUsage, UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { PaperclipIcon, RefreshCwIcon, StopCircleIcon, XIcon } from "lucide-react";
 import type { ReactElement } from "react";
@@ -38,7 +38,9 @@ const createSessionResponseSchema = z.strictObject({
 });
 
 type ChatMessageMetadata = {
+  finishReason?: string;
   sessionId?: string;
+  totalUsage?: LanguageModelUsage;
 };
 
 type ChatUiMessage = UIMessage<ChatMessageMetadata>;
