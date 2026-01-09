@@ -45,17 +45,18 @@ vi.mock("@opentelemetry/api", () => ({
   },
 }));
 
-const telemetryHashSecretKey = "TELEMETRY_HASH_SECRET";
+const telemetryHashSecretKey = vi.hoisted(() => "TELEMETRY_HASH_SECRET");
+const telemetryHashSecretValue = vi.hoisted(() => "telemetry-test-secret");
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnv: vi.fn(() => ({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
-    [telemetryHashSecretKey]: "telemetry-test-secret",
+    [telemetryHashSecretKey]: telemetryHashSecretValue,
   })),
-  getServerEnvVarWithFallback: vi.fn((key: string, fallback: string) => {
-    if (key === telemetryHashSecretKey) return "telemetry-test-secret";
-    return fallback;
+  getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
+    if (key === telemetryHashSecretKey) return telemetryHashSecretValue;
+    return fallback ?? "";
   }),
 }));
 

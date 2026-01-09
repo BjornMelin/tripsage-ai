@@ -10,7 +10,7 @@ const envValues = vi.hoisted(() => ({
   RESEND_FROM_EMAIL: "noreply@test.dev",
   RESEND_FROM_NAME: "TripSage QA",
 }));
-const serviceRoleKeyEnv = "SUPABASE_SERVICE_ROLE_KEY";
+const serviceRoleKeyEnv = vi.hoisted(() => "SUPABASE_SERVICE_ROLE_KEY");
 
 function createDefaultAuthAdminGetUserByIdResult() {
   return {
@@ -50,6 +50,7 @@ vi.mock("@/lib/env/server", () => ({
   },
   getServerEnvVarWithFallback: (key: string, fallback?: string) => {
     const store = envValues as Record<string, string | undefined>;
+    if (key === serviceRoleKeyEnv) return "srk-test-key";
     const value = store[key];
     return (value ?? fallback) as string;
   },
