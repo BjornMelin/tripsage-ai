@@ -95,53 +95,62 @@ BEGIN
       WHERE d.chunk_index IS NOT NULL
         AND d.id::text ~ ':([0-9]+)$'
         AND right(d.id::text, length(d.chunk_index::text) + 1) = ':' || d.chunk_index::text
-    )
-    INSERT INTO public.rag_documents (
-      id,
-      chunk_index,
-      content,
-      embedding,
-      metadata,
-      namespace,
-      source_id,
-      user_id,
-      trip_id,
-      chat_id,
-      created_at,
-      updated_at
+    ),
+    upserted AS (
+      INSERT INTO public.rag_documents (
+        id,
+        chunk_index,
+        content,
+        embedding,
+        metadata,
+        namespace,
+        source_id,
+        user_id,
+        trip_id,
+        chat_id,
+        created_at,
+        updated_at
+      )
+      SELECT
+        %s,
+        d.chunk_index,
+        d.content,
+        d.embedding,
+        d.metadata,
+        d.namespace,
+        d.source_id,
+        d.user_id,
+        d.trip_id,
+        d.chat_id,
+        d.created_at,
+        d.updated_at
+      FROM public.rag_documents d
+      JOIN bad b
+        ON b.bad_id = d.id
+       AND b.chunk_index = d.chunk_index
+      ON CONFLICT (id, chunk_index) DO UPDATE
+        SET content = EXCLUDED.content,
+            embedding = EXCLUDED.embedding,
+            metadata = EXCLUDED.metadata,
+            namespace = EXCLUDED.namespace,
+            source_id = EXCLUDED.source_id,
+            user_id = EXCLUDED.user_id,
+            trip_id = EXCLUDED.trip_id,
+            chat_id = EXCLUDED.chat_id,
+            created_at = LEAST(public.rag_documents.created_at, EXCLUDED.created_at),
+            updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at)
+      RETURNING 1
+    ),
+    deleted AS (
+      DELETE FROM public.rag_documents d
+      USING bad b
+      WHERE d.id = b.bad_id
+        AND d.chunk_index = b.chunk_index
+      RETURNING 1
     )
     SELECT
-      %s,
-      d.chunk_index,
-      d.content,
-      d.embedding,
-      d.metadata,
-      d.namespace,
-      d.source_id,
-      d.user_id,
-      d.trip_id,
-      d.chat_id,
-      d.created_at,
-      d.updated_at
-    FROM public.rag_documents d
-    JOIN bad b
-      ON b.bad_id = d.id
-     AND b.chunk_index = d.chunk_index
-    ON CONFLICT (id, chunk_index) DO UPDATE
-      SET content = EXCLUDED.content,
-          embedding = EXCLUDED.embedding,
-          metadata = EXCLUDED.metadata,
-          namespace = EXCLUDED.namespace,
-          source_id = EXCLUDED.source_id,
-          user_id = EXCLUDED.user_id,
-          trip_id = EXCLUDED.trip_id,
-          chat_id = EXCLUDED.chat_id,
-          created_at = LEAST(public.rag_documents.created_at, EXCLUDED.created_at),
-          updated_at = GREATEST(public.rag_documents.updated_at, EXCLUDED.updated_at);
-    DELETE FROM public.rag_documents d
-    USING bad b
-    WHERE d.id = b.bad_id
-      AND d.chunk_index = b.chunk_index;
+      (SELECT count(*) FROM upserted),
+      (SELECT count(*) FROM deleted);
   $sql$, v_id_expr);
 END;
 $do$;

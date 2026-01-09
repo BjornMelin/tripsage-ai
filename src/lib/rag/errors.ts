@@ -2,8 +2,13 @@
  * @fileoverview Error types for RAG indexing operations.
  */
 
+/**
+ * Options for RagLimitError, providing context about chunk-limit violations.
+ */
 export interface RagLimitErrorOptions {
+  /** Number of chunks that exceeded the limit. */
   chunkCount?: number;
+  /** Maximum allowed chunks. */
   limit?: number;
 }
 
