@@ -10,6 +10,7 @@
 -- Safe to rerun: yes (idempotent checks).
 
 BEGIN;
+SET LOCAL lock_timeout = '30s';
 
 -- 1) If the table has an incorrect PRIMARY KEY on `id` only, convert to a composite PK (id, chunk_index).
 DO $do$
@@ -18,8 +19,6 @@ DECLARE
   v_table regclass;
   v_pk_name text;
 BEGIN
-  SET LOCAL lock_timeout = '30s';
-
   SELECT to_regclass('public.rag_documents')
   INTO v_table;
 
