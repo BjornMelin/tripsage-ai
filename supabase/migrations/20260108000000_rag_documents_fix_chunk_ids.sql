@@ -114,7 +114,8 @@ BEGIN
       FROM public.rag_documents d
       WHERE d.chunk_index IS NOT NULL
         AND d.id::text ~ ':([0-9]+)$'
-        AND substring(d.id::text from ':([0-9]+)$')::int = d.chunk_index
+        AND length(substring(d.id::text from ':([0-9]+)$')) <= 9
+        AND substring(d.id::text from ':([0-9]+)$')::bigint = d.chunk_index
     ),
     upserted AS (
       INSERT INTO public.rag_documents (
