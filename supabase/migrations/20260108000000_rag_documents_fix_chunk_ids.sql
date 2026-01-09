@@ -16,6 +16,7 @@ DO $do$
 DECLARE
   v_pk_cols text[];
   v_table regclass;
+  v_pk_name text;
 BEGIN
   SELECT to_regclass('public.rag_documents')
   INTO v_table;
@@ -23,6 +24,12 @@ BEGIN
   IF v_table IS NULL THEN
     RETURN;
   END IF;
+
+  SELECT c.conname
+  INTO v_pk_name
+  FROM pg_constraint c
+  WHERE c.conrelid = v_table
+    AND c.contype = 'p';
 
   SELECT array_agg(a.attname ORDER BY array_position(i.indkey, a.attnum))
   INTO v_pk_cols
@@ -34,7 +41,9 @@ BEGIN
     AND i.indisprimary;
 
   IF v_pk_cols = ARRAY['id'] THEN
-    ALTER TABLE public.rag_documents DROP CONSTRAINT IF EXISTS rag_documents_pkey;
+    IF v_pk_name IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.rag_documents DROP CONSTRAINT IF EXISTS %I', v_pk_name);
+    END IF;
   END IF;
 
   IF v_pk_cols IS NULL OR v_pk_cols = ARRAY['id'] THEN
@@ -47,12 +56,9 @@ BEGIN
       ALTER COLUMN chunk_index SET DEFAULT 0,
       ALTER COLUMN chunk_index SET NOT NULL;
 
-    -- Create unique index and promote it to the primary key.
-    CREATE UNIQUE INDEX IF NOT EXISTS rag_documents_pkey
-      ON public.rag_documents (id, chunk_index);
-
+    -- Add explicit constraint to avoid promoting a mismatched pre-existing index by name.
     ALTER TABLE public.rag_documents
-      ADD PRIMARY KEY USING INDEX rag_documents_pkey;
+      ADD CONSTRAINT rag_documents_pkey PRIMARY KEY (id, chunk_index);
   END IF;
 END;
 $do$;
@@ -96,7 +102,7 @@ BEGIN
       FROM public.rag_documents d
       WHERE d.chunk_index IS NOT NULL
         AND d.id::text ~ ':([0-9]+)$'
-        AND right(d.id::text, length(d.chunk_index::text) + 1) = ':' || d.chunk_index::text
+        AND substring(d.id::text from ':([0-9]+)$')::int = d.chunk_index
     ),
     upserted AS (
       INSERT INTO public.rag_documents (
