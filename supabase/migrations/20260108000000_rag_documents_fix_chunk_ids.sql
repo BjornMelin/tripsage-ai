@@ -114,6 +114,7 @@ BEGIN
       FROM public.rag_documents d
       WHERE d.chunk_index IS NOT NULL
         AND d.id::text ~ ':([0-9]+)$'
+        -- Limit suffix length to 9 digits (max 999,999,999) to avoid unexpected large values.
         AND length(substring(d.id::text from ':([0-9]+)$')) <= 9
         AND substring(d.id::text from ':([0-9]+)$')::bigint = d.chunk_index
     ),
