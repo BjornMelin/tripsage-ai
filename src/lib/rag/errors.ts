@@ -20,7 +20,10 @@ export class RagLimitError extends Error {
   readonly chunkCount?: number;
   readonly limit?: number;
 
-  constructor(message: string = "too_many_chunks", options?: RagLimitErrorOptions) {
+  constructor(
+    message: string = "RAG indexing exceeded chunk limit",
+    options?: RagLimitErrorOptions
+  ) {
     super(message);
     this.name = "RagLimitError";
     Object.setPrototypeOf(this, RagLimitError.prototype);

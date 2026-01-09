@@ -65,6 +65,8 @@ DO $do$
 DECLARE
   v_id_type text;
   v_id_expr text;
+  v_upserted bigint;
+  v_deleted bigint;
 BEGIN
   SELECT c.udt_name
   INTO v_id_type
@@ -151,7 +153,10 @@ BEGIN
     SELECT
       (SELECT count(*) FROM upserted),
       (SELECT count(*) FROM deleted);
-  $sql$, v_id_expr);
+  $sql$, v_id_expr)
+  INTO v_upserted, v_deleted;
+
+  RAISE NOTICE 'rag_documents migration: upserted=%, deleted=%', v_upserted, v_deleted;
 END;
 $do$;
 
