@@ -7,7 +7,6 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 ## 0. Architecture and Stack
 
 - **Frontend-first:** All features at repository root. Next.js 16, React 19, TypeScript 5.9.
-- **AI SDK v6 (exact versions):** `ai@6.0.14`, `@ai-sdk/react@3.0.14`, `@ai-sdk/openai@3.0.7`, `@ai-sdk/anthropic@3.0.7`, `@ai-sdk/xai@3.0.10`, `@ai-sdk/togetherai@2.0.4`. Use these when researching.
 - **Data/State:** Zod v4, Zustand v5, React Query v5, React Hook Form.
 - **Backend:** Supabase SSR, Upstash (Redis/Ratelimit/QStash), OpenTelemetry.
 - **UI:** Radix UI primitives, Tailwind CSS + CVA + clsx, Lucide icons.
@@ -266,7 +265,7 @@ Do not return final response until all gates pass for code changes.
 
 ## Source Code Reference
 
-Source code for dependencies is available in `opensrc/` for comprehensive understanding of implementation details.
+Source code for dependencies is available in `opensrc/` for deeper understanding of implementation details.
 
 See `opensrc/sources.json` for the list of available packages and their versions.
 
@@ -278,6 +277,8 @@ To fetch source code for a package or repository you need to understand, run:
 
 ```bash
 npx opensrc <package>           # npm package (e.g., npx opensrc zod)
+npx opensrc pypi:<package>      # Python package (e.g., npx opensrc pypi:requests)
+npx opensrc crates:<package>    # Rust crate (e.g., npx opensrc crates:serde)
 npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 ```
 

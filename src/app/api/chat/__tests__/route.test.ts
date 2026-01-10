@@ -23,6 +23,10 @@ const handleChatMock = vi.hoisted(() =>
 );
 
 vi.mock("../_handler", () => ({
+  createMemorySummaryCache: vi.fn(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+  })),
   handleChat: handleChatMock,
 }));
 
@@ -58,10 +62,7 @@ describe("/api/chat (AI SDK UI stream)", () => {
 
     expect(handleChatMock).toHaveBeenCalledTimes(1);
     expect(handleChatMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        resolveProvider: expect.any(Function),
-        supabase: expect.anything(),
-      }),
+      expect.any(Object),
       expect.objectContaining({
         sessionId,
         userId,

@@ -54,6 +54,8 @@ function buildConfigPayload(
       description: body.description ?? existing?.parameters.description,
       maxTokens: body.maxTokens ?? existing?.parameters.maxTokens,
       model: effectiveModel,
+      stepTimeoutSeconds:
+        body.stepTimeoutSeconds ?? existing?.parameters.stepTimeoutSeconds,
       temperature: body.temperature ?? existing?.parameters.temperature,
       timeoutSeconds: body.timeoutSeconds ?? existing?.parameters.timeoutSeconds,
       topP: body.topP ?? existing?.parameters.topP,

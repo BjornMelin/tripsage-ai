@@ -5,6 +5,7 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { toolRegistry } from "@ai/tools";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import type { MemoryUpdateRequest } from "@schemas/agents";
@@ -142,6 +143,15 @@ async function persistAndSummarize(
   ];
   const desiredMaxTokens = 512; // Short summary for memory confirmations
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+  const stepTimeoutMs =
+    typeof config.parameters?.stepTimeoutSeconds === "number" &&
+    Number.isFinite(config.parameters.stepTimeoutSeconds)
+      ? config.parameters.stepTimeoutSeconds * 1000
+      : undefined;
+  const timeoutConfig = buildTimeoutConfigFromSeconds(
+    config.parameters?.timeoutSeconds,
+    stepTimeoutMs
+  );
 
   return streamText({
     abortSignal: options?.abortSignal,
@@ -161,6 +171,7 @@ async function persistAndSummarize(
     ],
     model: deps.model,
     temperature: config.parameters.temperature ?? 0.1,
+    timeout: timeoutConfig,
     topP: config.parameters.topP,
   });
 }

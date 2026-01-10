@@ -5,6 +5,7 @@
 import { safeValidateUIMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
+import { isChatEphemeralEnabled } from "@/lib/chat/ephemeral";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle } from "@/lib/supabase/typed-helpers";
@@ -34,6 +35,7 @@ export async function createSession(
   deps: SessionsDeps,
   title?: string
 ): Promise<Response> {
+  const allowEphemeral = isChatEphemeralEnabled();
   const id = secureUuid();
   const now = nowIso();
   const { error } = await insertSingle(deps.supabase, "chat_sessions", {
@@ -46,12 +48,20 @@ export async function createSession(
     // biome-ignore lint/style/useNamingConvention: Database field name
     user_id: deps.userId,
   });
-  if (error)
+  if (error) {
+    if (allowEphemeral) {
+      deps.logger.warn("chat:session_create_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        userId: deps.userId,
+      });
+      return NextResponse.json({ id }, { status: 201 });
+    }
     return errorResponse({
       error: "db_error",
       reason: "Failed to create session",
       status: 500,
     });
+  }
   return NextResponse.json({ id }, { status: 201 });
 }
 
@@ -59,17 +69,26 @@ export async function createSession(
  * List sessions for the authenticated user.
  */
 export async function listSessions(deps: SessionsDeps): Promise<Response> {
+  const allowEphemeral = isChatEphemeralEnabled();
   const { data, error } = await deps.supabase
     .from("chat_sessions")
     .select("id, created_at, updated_at, metadata")
     .eq("user_id", deps.userId)
     .order("updated_at", { ascending: false });
-  if (error)
+  if (error) {
+    if (allowEphemeral) {
+      deps.logger.warn("chat:sessions_list_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        userId: deps.userId,
+      });
+      return NextResponse.json([], { status: 200 });
+    }
     return errorResponse({
       error: "db_error",
       reason: "Failed to list sessions",
       status: 500,
     });
+  }
   return NextResponse.json(data ?? [], { status: 200 });
 }
 

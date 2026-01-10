@@ -137,7 +137,7 @@ export const searchPlaces = createAiTool<SearchPlacesInput, SearchPlacesOutput>(
     },
   },
   inputSchema: searchPlacesToolInputSchema,
-  name: "search.places",
+  name: "searchPlaces",
   outputSchema: searchPlacesToolOutputSchema,
   toModelOutput: (result) => ({
     placeCount: result.places.length,
@@ -189,7 +189,7 @@ export const placeDetails = createAiTool<PlaceDetailsInput, PlaceDetailsOutput>(
     },
   },
   inputSchema: placeDetailsToolInputSchema,
-  name: "search.placeDetails",
+  name: "searchPlaceDetails",
   outputSchema: placeDetailsToolOutputSchema,
   toModelOutput: (result) => ({
     businessStatus: result.businessStatus,

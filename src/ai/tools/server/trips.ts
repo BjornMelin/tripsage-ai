@@ -108,7 +108,7 @@ export const savePlaceToTrip = createAiTool<
     },
   },
   inputSchema: savePlaceToTripToolInputSchema,
-  name: "trips.savePlace",
+  name: "tripsSavePlace",
   outputSchema: savePlaceToTripToolOutputSchema,
   toModelOutput: (result) => ({
     name: result.place.name,

@@ -147,6 +147,7 @@ describe("config routes", () => {
       description: "updated",
       maxTokens: 500,
       model: "gpt-4o-mini",
+      stepTimeoutSeconds: 12,
       temperature: 0.4,
       timeoutSeconds: 30,
       topP: 0.8,
@@ -182,6 +183,7 @@ describe("config routes", () => {
           agentType: "budgetAgent",
           parameters: expect.objectContaining({
             maxTokens: body.maxTokens,
+            stepTimeoutSeconds: body.stepTimeoutSeconds,
             temperature: body.temperature,
             timeoutSeconds: body.timeoutSeconds,
             topP: body.topP,

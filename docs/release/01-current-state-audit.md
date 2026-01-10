@@ -528,15 +528,6 @@ Warnings: 0
 ✅ AI tool guardrails check passed.
 ```
 
-### `pnpm check:ai-sdk-version-contract`
-
-```text
-> tripsage-ai-frontend@1.22.5 check:ai-sdk-version-contract /home/bjorn/repos/agents/tripsage-ai
-> node scripts/check-ai-sdk-version-contract.mjs
-
-✅ AI SDK version contract verified.
-```
-
 ### `pnpm check:no-secrets`
 
 ```text

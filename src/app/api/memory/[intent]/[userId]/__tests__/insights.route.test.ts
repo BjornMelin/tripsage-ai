@@ -279,6 +279,7 @@ describe("/api/memory/insights/[userId] route", () => {
       expect.objectContaining({
         output: expect.anything(),
         temperature: 0.3,
+        timeout: expect.anything(),
       })
     );
     const cached = await getCachedJson<MemoryInsightsResponse>(

@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { buildTimeoutConfig } from "@ai/timeout";
 import type { ProviderResolution } from "@schemas/providers";
 import type { TripSuggestion } from "@schemas/trips";
 import { tripSuggestionSchema } from "@schemas/trips";
@@ -155,21 +156,8 @@ async function generateSuggestionsWithCache(
   const prompt = buildSuggestionPrompt(params);
   const modelHint = deps.config?.modelHint ?? DEFAULT_MODEL_HINT;
   const { model, modelId } = await deps.resolveProvider(userId, modelHint);
-
-  const controller = new AbortController();
   const timeoutMs = deps.config?.timeoutMs ?? 30_000;
-  const timeout =
-    timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
-
-  if (request.abortSignal) {
-    if (request.abortSignal.aborted) {
-      controller.abort();
-    } else {
-      request.abortSignal.addEventListener("abort", () => controller.abort(), {
-        once: true,
-      });
-    }
-  }
+  const timeoutConfig = buildTimeoutConfig(timeoutMs);
 
   let result: Awaited<ReturnType<typeof generateText>> | undefined;
   try {
@@ -177,23 +165,23 @@ async function generateSuggestionsWithCache(
       suggestions: tripSuggestionSchema.array().nullable(),
     });
     result = await generateText({
-      abortSignal: controller.signal,
+      abortSignal: request.abortSignal,
       model,
       output: Output.object({ schema: responseSchema }),
       prompt,
+      timeout: timeoutConfig,
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       deps.logger?.warn("trips_suggestions_generation_timed_out", {
         modelHint,
         modelId,
+        reason: request.abortSignal?.aborted ? "aborted" : "timeout",
         timeoutMs,
       });
       return [];
     }
     throw error;
-  } finally {
-    if (timeout) clearTimeout(timeout);
   }
 
   const suggestions = result?.output?.suggestions;

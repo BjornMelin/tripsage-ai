@@ -34,8 +34,8 @@ import { extractAgentParameters } from "./types";
 const BASE_ITINERARY_TOOLS = {
   createTravelPlan,
   saveTravelPlan,
-  "search.placeDetails": placeDetails,
-  "search.places": searchPlaces,
+  searchPlaceDetails: placeDetails,
+  searchPlaces,
   webSearch,
   webSearchBatch,
 } satisfies ToolSet;
@@ -90,10 +90,10 @@ export function createItineraryAgent(
   const ResearchTools: ToolName[] = [
     "webSearch",
     "webSearchBatch",
-    "search.places",
-    "search.placeDetails",
+    "searchPlaces",
+    "searchPlaceDetails",
   ];
-  const PlanningTools: ToolName[] = ["createTravelPlan", "search.places"];
+  const PlanningTools: ToolName[] = ["createTravelPlan", "searchPlaces"];
   const SaveTools: ToolName[] = ["saveTravelPlan", "createTravelPlan"];
 
   // Compute phase boundaries from maxSteps (40% research, 33% planning, 27% save)

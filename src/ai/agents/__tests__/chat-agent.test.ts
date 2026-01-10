@@ -83,10 +83,10 @@ const mockTools = vi.hoisted(() => {
     geocode: { description: "geocode", execute: vi.fn() },
     getCurrentWeather: { description: "weather", execute: vi.fn() },
     getTravelAdvisory: { description: "advisory", execute: vi.fn() },
-    "search.placeDetails": { description: "place details", execute: vi.fn() },
-    "search.places": { description: "places", execute: vi.fn() },
     searchFlights: { description: "flights", execute: vi.fn() },
-    "trips.savePlace": { description: "save place", execute: vi.fn() },
+    searchPlaceDetails: { description: "place details", execute: vi.fn() },
+    searchPlaces: { description: "places", execute: vi.fn() },
+    tripsSavePlace: { description: "save place", execute: vi.fn() },
     webSearch: { description: "web search", execute: vi.fn() },
     webSearchBatch: { description: "batch search", execute: vi.fn() },
   };

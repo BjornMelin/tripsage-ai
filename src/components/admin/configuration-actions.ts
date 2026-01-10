@@ -8,6 +8,7 @@ import {
 } from "@schemas/configuration";
 import { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import { isE2eBypassEnabled } from "@/lib/config/helpers";
 import {
   err,
   ok,
@@ -15,10 +16,37 @@ import {
   type ResultError,
   zodErrorToFieldErrors,
 } from "@/lib/result";
+import { nowIso, secureId } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
 
 const DEFAULT_SCOPE = "global";
+const DEFAULT_MODEL = "gpt-4o";
+
+const configurationActionsLogger = createServerLogger("admin.configuration");
+
+/**
+ * Format an error for structured logging, truncating message and stack to 500 chars.
+ */
+function formatErrorForLog(error: unknown): {
+  message: string;
+  name: string;
+  stack: string | undefined;
+} {
+  if (error instanceof Error) {
+    return {
+      message: error.message.slice(0, 500),
+      name: error.name,
+      stack: error.stack?.slice(0, 500),
+    };
+  }
+  return {
+    message: String(error).slice(0, 500),
+    name: "unknown_error",
+    stack: undefined,
+  };
+}
 
 export type AgentVersion = {
   id: string;
@@ -61,9 +89,57 @@ export async function fetchAgentBundle(
   try {
     config = await resolveAgentConfig(agentType, { scope: DEFAULT_SCOPE });
   } catch (error) {
+    if (isE2eBypassEnabled()) {
+      const now = nowIso();
+      const timestamp = now.replace(/[-:T.Z]/g, "").slice(0, 14);
+
+      // Construct a fallback config that satisfies schema constraints.
+      // `versionIdSchema` and `agentConfigRequestSchema` expect:
+      // - `id`: `v${timestamp}_${secureId(8)}` (matches /^v\d+_[a-f0-9]{8}$/)
+      // - `model`: `DEFAULT_MODEL` ("gpt-4o") which is currently allowed.
+      // Validation failure is treated as an error on purpose to surface schema changes
+      // early in tests instead of silently returning a mismatched fallback.
+      const fallbackConfigParsed = configurationAgentConfigSchema.safeParse({
+        agentType,
+        createdAt: now,
+        id: `v${timestamp}_${secureId(8)}`,
+        model: DEFAULT_MODEL,
+        parameters: {
+          model: DEFAULT_MODEL,
+        },
+        scope: DEFAULT_SCOPE,
+        updatedAt: now,
+      });
+
+      if (!fallbackConfigParsed.success) {
+        // Intentionally return an error to surface schema mismatches during tests.
+        // Include Zod validation details to help debug schema changes.
+        return err({
+          error: "internal",
+          issues: fallbackConfigParsed.error.issues,
+          reason: "Failed to construct fallback config",
+        });
+      }
+
+      return ok({
+        config: fallbackConfigParsed.data,
+        metrics: { lastUpdatedAt: null, versionCount: 0 },
+        versions: [],
+      });
+    }
+
+    const formattedError = formatErrorForLog(error);
+    configurationActionsLogger.error("agent_bundle_load_failed", {
+      agentType,
+      error: formattedError.message,
+      errorName: formattedError.name,
+      errorStack: formattedError.stack,
+      scope: DEFAULT_SCOPE,
+    });
+
     return err({
       error: "internal",
-      reason: error instanceof Error ? error.message : "Failed to load agent config",
+      reason: "Internal server error",
     });
   }
 
@@ -139,9 +215,16 @@ export async function updateAgentConfigAction(
       method: "PUT",
     });
   } catch (error) {
+    const formattedError = formatErrorForLog(error);
+    configurationActionsLogger.error("agent_config_update_failed", {
+      agentType: parsed.data,
+      error: formattedError.message,
+      errorName: formattedError.name,
+      errorStack: formattedError.stack,
+    });
     return err({
       error: "internal",
-      reason: error instanceof Error ? error.message : "Failed to update configuration",
+      reason: "Internal server error",
     });
   }
   if (!res.ok) {
@@ -153,7 +236,10 @@ export async function updateAgentConfigAction(
     }
 
     const errorBody = z
-      .looseObject({ error: z.string().optional(), reason: z.string().optional() })
+      .looseObject({
+        error: z.string().optional(),
+        reason: z.string().optional(),
+      })
       .safeParse(body);
 
     return err({
@@ -235,10 +321,17 @@ export async function rollbackAgentConfigAction(
       method: "POST",
     });
   } catch (error) {
+    const formattedError = formatErrorForLog(error);
+    configurationActionsLogger.error("agent_config_rollback_failed", {
+      agentType: parsedAgentType.data,
+      error: formattedError.message,
+      errorName: formattedError.name,
+      errorStack: formattedError.stack,
+      versionId: parsedVersionId.data,
+    });
     return err({
       error: "internal",
-      reason:
-        error instanceof Error ? error.message : "Failed to rollback configuration",
+      reason: "Internal server error",
     });
   }
   if (!res.ok) {
@@ -250,7 +343,10 @@ export async function rollbackAgentConfigAction(
     }
 
     const errorBody = z
-      .looseObject({ error: z.string().optional(), reason: z.string().optional() })
+      .looseObject({
+        error: z.string().optional(),
+        reason: z.string().optional(),
+      })
       .safeParse(body);
 
     return err({

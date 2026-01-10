@@ -9,6 +9,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import type { ModelMapper, ProviderId, ProviderResolution } from "@schemas/providers";
 import { createGateway } from "ai";
+import { isE2eBypassEnabled } from "@/lib/config/helpers";
 import {
   getUserAllowGatewayFallback,
   getUserApiKey,
@@ -125,17 +126,23 @@ function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
   try {
     parsed = new URL(rawBaseUrl);
   } catch {
-    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "invalid_url" });
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "invalid_url",
+    });
     return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (parsed.protocol !== "https:") {
-    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "non_https" });
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "non_https",
+    });
     return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (parsed.username || parsed.password) {
-    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "credentials" });
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "credentials",
+    });
     return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
@@ -219,6 +226,68 @@ function toLanguageModel(
 }
 
 /**
+ * Creates a BYOK client for the specified provider.
+ */
+function createByokClient(
+  provider: ProviderId,
+  apiKey: string
+):
+  | ReturnType<typeof createOpenAI>
+  | ReturnType<typeof createAnthropic>
+  | ReturnType<typeof createXai> {
+  switch (provider) {
+    case "openai":
+      return createOpenAI({ apiKey });
+    case "openrouter":
+      return createOpenAI({
+        apiKey,
+        // biome-ignore lint/style/useNamingConvention: provider option name
+        baseURL: "https://openrouter.ai/api/v1",
+      });
+    case "anthropic":
+      return createAnthropic({ apiKey });
+    case "xai":
+      return createXai({ apiKey });
+    default: {
+      const _exhaustiveCheck: never = provider;
+      throw new Error(`Unsupported provider: ${provider}`);
+    }
+  }
+}
+
+/**
+ * Resolves a BYOK provider and returns a ready AI SDK model.
+ */
+async function resolveByokProvider(
+  provider: ProviderId,
+  apiKey: string,
+  modelId: string,
+  userId: string
+): Promise<ProviderResolution> {
+  const client = createByokClient(provider, apiKey);
+
+  // Fire-and-forget: update last used timestamp (ignore errors)
+  touchUserApiKey(userId, provider).catch((error) => {
+    providerRegistryLogger.warn("touch_user_api_key_failed", {
+      errorMessage:
+        error instanceof Error ? error.message.slice(0, 500) : String(error),
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      provider,
+    });
+  });
+
+  return await withTelemetrySpan(
+    "providers.resolve",
+    { attributes: { modelId, path: "user-provider", provider } },
+    async () => ({
+      model: toLanguageModel(client(modelId), provider, modelId),
+      modelId,
+      provider,
+    })
+  );
+}
+
+/**
  * Resolve user's preferred provider and return a ready AI SDK model.
  *
  * @param userId Supabase auth user id; used to fetch BYOK keys server-side.
@@ -230,130 +299,63 @@ export async function resolveProvider(
   userId: string,
   modelHint?: string
 ): Promise<ProviderResolution> {
-  // 0) Per-user Gateway key (if present): highest precedence
-  const userGatewayKey = await getUserApiKey(userId, "gateway");
-  if (userGatewayKey) {
-    const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
-    const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
+  const bypassUserKeys = isE2eBypassEnabled();
 
-    const client = createGateway({
-      apiKey: userGatewayKey,
-      ...(baseUrl
-        ? {
-            // biome-ignore lint/style/useNamingConvention: provider option name
-            baseURL: baseUrl,
-          }
-        : {}),
-    });
+  if (!bypassUserKeys) {
+    // 0) Per-user Gateway key (if present): highest precedence
+    const userGatewayKey = await getUserApiKey(userId, "gateway");
+    if (userGatewayKey) {
+      const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
+      const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
 
-    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
-    return await withTelemetrySpan(
-      "providers.resolve",
-      {
-        attributes: {
-          baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
-          baseUrlSource: source,
-          modelId,
-          path: "user-gateway",
-          provider: "gateway",
+      const client = createGateway({
+        apiKey: userGatewayKey,
+        ...(baseUrl
+          ? {
+              // biome-ignore lint/style/useNamingConvention: provider option name
+              baseURL: baseUrl,
+            }
+          : {}),
+      });
+
+      const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+      const modelId = normalizeGatewayModelId("openai", resolvedModelId);
+      return await withTelemetrySpan(
+        "providers.resolve",
+        {
+          attributes: {
+            baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
+            baseUrlSource: source,
+            modelId,
+            path: "user-gateway",
+            provider: "gateway",
+          },
         },
-      },
-      async () => ({
-        model: toLanguageModel(client(modelId), "openai", modelId),
-        modelId,
-        provider: "openai",
-      })
-    );
-  }
+        async () => ({
+          model: toLanguageModel(client(modelId), "openai", modelId),
+          modelId,
+          provider: "openai",
+        })
+      );
+    }
 
-  // 1) Check for BYOK keys concurrently (OpenAI, OpenRouter, Anthropic, xAI)
-  const providers = PROVIDER_PREFERENCE;
-  const keyResults = await Promise.all(
-    providers.map(async (p) => ({ key: await getUserApiKey(userId, p), p }))
-  );
-  for (const { p: provider, key: apiKey } of keyResults) {
-    if (!apiKey) continue;
-    const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
-    if (provider === "openai") {
-      const openai = createOpenAI({ apiKey });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
+    // 1) Check for BYOK keys in preference order (OpenAI, OpenRouter, Anthropic, xAI)
+    const providers = PROVIDER_PREFERENCE;
+    for (const provider of providers) {
+      try {
+        const apiKey = await getUserApiKey(userId, provider);
+        if (apiKey) {
+          const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
+          return await resolveByokProvider(provider, apiKey, modelId, userId);
+        }
+      } catch (error) {
+        providerRegistryLogger.warn("byok_lookup_failed", {
+          errorMessage:
+            error instanceof Error ? error.message.slice(0, 500) : String(error),
           errorName: error instanceof Error ? error.name : "unknown_error",
           provider,
         });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(openai(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
-    }
-    if (provider === "openrouter") {
-      const openrouter = createOpenAI({
-        apiKey,
-        // biome-ignore lint/style/useNamingConvention: provider option name
-        baseURL: "https://openrouter.ai/api/v1",
-      });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
-        });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(openrouter(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
-    }
-    if (provider === "anthropic") {
-      const a = createAnthropic({ apiKey });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
-        });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(a(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
-    }
-    if (provider === "xai") {
-      const client = createXai({ apiKey });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
-        });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(client(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
+      }
     }
   }
 
@@ -403,7 +405,9 @@ export async function resolveProvider(
 
   // Final fallback: Vercel AI Gateway (if configured)
   // Gateway provides unified routing, budgets, retries, and observability
-  const allowFallback = await getUserAllowGatewayFallback(userId);
+  const allowFallback = bypassUserKeys
+    ? true
+    : await getUserAllowGatewayFallback(userId);
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
   if (gatewayApiKey) {
     const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);

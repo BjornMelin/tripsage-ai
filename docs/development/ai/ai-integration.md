@@ -53,8 +53,44 @@ const result = await streamText({
 
 - Keep `providerOptions` close to route handlers (avoid encoding in the provider registry).
 - Pair routing with per-request token budgets and chat limits.
+- Use AI SDK timeout configuration (`timeout: { totalMs, stepMs }`) to cap total and per-step
+  latency for streaming and tool loops.
 - Prefer Gateway API keys (`AI_GATEWAY_API_KEY`) for multi-provider routing; fall back to BYOK keys when users supply them.
 - Tests: use `MockLanguageModelV3` and assert `providerOptions` on recorded calls.
+
+## Timeouts
+
+AI SDK v6 supports per-call timeouts with optional per-step limits. Prefer `timeout`
+over manual `AbortController` timeouts so the SDK can surface structured aborts and
+step-level cancellation.
+
+```ts
+const result = await streamText({
+  model,
+  messages,
+  timeout: {
+    totalMs: 30_000,
+    stepMs: 15_000,
+  },
+});
+```
+
+Notes:
+
+- Chat defaults use `CHAT_DEFAULT_TIMEOUT_SECONDS` (falls back to `maxDuration - 5`).
+- Agent routes honor `config.parameters.timeoutSeconds` from agent configuration.
+
+## UI Message Metadata & Data Parts
+
+Use AI SDK v6 UI message metadata and data parts to expose model usage, finish
+reason, and transient status updates to the client.
+
+- Schemas live in `src/domain/schemas/ai.ts` (`chatMessageMetadataSchema`,
+  `agentMessageMetadataSchema`, `chatDataPartSchemas`).
+- Client: pass `messageMetadataSchema` + `dataPartSchemas` to `useChat`.
+- Server: attach metadata via `messageMetadata` in `toUIMessageStream`, and
+  stream transient data parts via `createUIMessageStream` + `writer.write`.
+- Enable `sendSources: true` to include `source-url` parts for citations.
 
 ## Related Docs
 

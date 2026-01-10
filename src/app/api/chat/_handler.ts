@@ -5,14 +5,23 @@
 import "server-only";
 
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
+import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { toolRegistry } from "@ai/tools";
 import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
 import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
+import {
+  type AiStreamStatus,
+  type ChatMessageMetadata,
+  chatDataPartSchemas,
+  chatMessageMetadataSchema,
+} from "@schemas/ai";
 import type { ProviderResolution } from "@schemas/providers";
 import type { ModelMessage, ToolSet, UIMessage } from "ai";
 import {
   consumeStream,
   convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
   safeValidateUIMessages,
   stepCountIs,
   streamText,
@@ -20,6 +29,7 @@ import {
 import { z } from "zod";
 import { validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
+import { isChatEphemeralEnabled } from "@/lib/chat/ephemeral";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
   createTextMemoryTurn,
@@ -59,9 +69,12 @@ export interface ChatDeps {
   resolveProvider: ProviderResolver;
   logger?: ServerLogger;
   clock?: { now: () => number };
+  memorySummaryCache?: MemorySummaryCache;
   config?: {
     defaultMaxTokens?: number;
     maxSteps?: number;
+    timeoutSeconds?: number;
+    stepTimeoutSeconds?: number;
   };
 }
 
@@ -96,6 +109,99 @@ const toolResultSchema = z.looseObject({
 type ParsedToolCall = z.infer<typeof toolCallSchema>;
 type ParsedToolResult = z.infer<typeof toolResultSchema>;
 
+type ChatUiDataParts = {
+  status: AiStreamStatus;
+};
+
+export type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
+
+type MemorySummaryCacheEntry = {
+  expiresAt: number;
+  value: string;
+};
+
+type UiMessagePart = NonNullable<UIMessage["parts"]>[number];
+type ChatUiMessagePart = NonNullable<ChatUiMessage["parts"]>[number];
+
+export type MemorySummaryCache = {
+  get: (key: string, now: number) => string | undefined;
+  set: (key: string, value: string, now: number) => void;
+};
+
+function isChatUiMessagePart(part: UiMessagePart): part is ChatUiMessagePart {
+  if (!part || typeof part !== "object") return false;
+  if (part.type === "data-status") {
+    return chatDataPartSchemas.status.safeParse(part.data).success;
+  }
+  return !String(part.type).startsWith("data-");
+}
+
+export function createMemorySummaryCache(options: {
+  ttlMs: number;
+  maxEntries?: number;
+}): MemorySummaryCache {
+  const cache = new Map<string, MemorySummaryCacheEntry>();
+  const maxEntries = options.maxEntries ?? 1000;
+  return {
+    get: (key, now) => {
+      const cached = cache.get(key);
+      if (!cached) return undefined;
+      if (cached.expiresAt <= now) {
+        cache.delete(key);
+        return undefined;
+      }
+      return cached.value;
+    },
+    set: (key, value, now) => {
+      // Evict oldest entries if at capacity
+      if (cache.size >= maxEntries && !cache.has(key)) {
+        const firstKey = cache.keys().next().value;
+        if (firstKey) cache.delete(firstKey);
+      }
+      cache.set(key, {
+        expiresAt: now + options.ttlMs,
+        value,
+      });
+    },
+  };
+}
+
+async function normalizeChatUiMessages(
+  messages: UIMessage[]
+): Promise<ChatUiMessage[]> {
+  const result = await safeValidateUIMessages<ChatUiMessage>({
+    dataSchemas: chatDataPartSchemas,
+    messages,
+    metadataSchema: chatMessageMetadataSchema,
+  });
+  if (!result.success) {
+    const normalized: ChatUiMessage[] = messages.map((message) => {
+      const metadataResult = chatMessageMetadataSchema.safeParse(
+        message.metadata ?? {}
+      );
+      const parts = (message.parts ?? []).filter(isChatUiMessagePart);
+      return {
+        ...message,
+        metadata: metadataResult.success ? metadataResult.data : undefined,
+        parts,
+      };
+    });
+    return normalized;
+  }
+  return result.data;
+}
+
+function normalizeJsonValue(value: unknown, fallback: Json): Json {
+  if (value === undefined) return fallback;
+  try {
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) return fallback;
+    return JSON.parse(serialized) as Json;
+  } catch {
+    return fallback;
+  }
+}
+
 function getLastUserText(messages: UIMessage[]): string | undefined {
   const last = messages.findLast((m) => m.role === "user");
   if (!last) return undefined;
@@ -110,16 +216,22 @@ function getLastUserText(messages: UIMessage[]): string | undefined {
 }
 
 async function ensureChatSession(options: {
+  allowEphemeral?: boolean;
+  logger?: ServerLogger;
   sessionId?: string | null;
   supabase: TypedServerSupabase;
   userId: string;
 }): Promise<
   { ok: true; sessionId: string; created: boolean } | { ok: false; res: Response }
 > {
-  const { sessionId, supabase, userId } = options;
+  const { allowEphemeral, logger, sessionId, supabase, userId } = options;
   const existingId = sessionId?.trim();
+  const allowEphemeralSession = allowEphemeral === true;
 
   if (existingId) {
+    if (allowEphemeralSession) {
+      return { created: false, ok: true, sessionId: existingId };
+    }
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("id")
@@ -157,6 +269,13 @@ async function ensureChatSession(options: {
   });
 
   if (error) {
+    if (allowEphemeralSession) {
+      logger?.warn?.("chat:session_create_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
+      return { created: true, ok: true, sessionId: id };
+    }
     return {
       ok: false,
       res: errorResponse({
@@ -172,14 +291,25 @@ async function ensureChatSession(options: {
 }
 
 async function persistChatMessage(options: {
+  allowEphemeral?: boolean;
   content: string;
+  logger?: ServerLogger;
   metadata: Json;
   role: "assistant" | "system" | "user";
   sessionId: string;
   supabase: TypedServerSupabase;
   userId: string;
 }): Promise<{ ok: true; id: number } | { ok: false; res: Response }> {
-  const { content, metadata, role, sessionId, supabase, userId } = options;
+  const {
+    allowEphemeral,
+    content,
+    logger,
+    metadata,
+    role,
+    sessionId,
+    supabase,
+    userId,
+  } = options;
 
   const { data, error } = await insertSingle(supabase, "chat_messages", {
     content,
@@ -192,6 +322,15 @@ async function persistChatMessage(options: {
   });
 
   if (error) {
+    if (allowEphemeral) {
+      logger?.warn?.("chat:message_persist_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        role,
+        sessionId,
+        userId,
+      });
+      return { id: -1, ok: true };
+    }
     return {
       ok: false,
       res: errorResponse({
@@ -374,13 +513,14 @@ type HydratedChatMessage = {
   isSuperseded: boolean;
   metadata?: Json;
   role: "assistant" | "system" | "user";
-  uiMessage: UIMessage;
+  uiMessage: ChatUiMessage;
   uiMessageId: string;
 };
 
 const HISTORY_LIMIT = 40;
 
 async function loadChatHistory(options: {
+  allowEphemeral?: boolean;
   limit?: number;
   logger?: ServerLogger;
   sessionId: string;
@@ -400,6 +540,14 @@ async function loadChatHistory(options: {
     .limit(limit);
 
   if (error) {
+    if (options.allowEphemeral) {
+      options.logger?.warn?.("chat:history_load_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        sessionId: options.sessionId,
+        userId: options.userId,
+      });
+      return { messages: [], ok: true };
+    }
     return {
       ok: false,
       res: errorResponse({
@@ -428,19 +576,28 @@ async function loadChatHistory(options: {
       : { data: [], error: null };
 
   if (toolError) {
-    return {
-      ok: false,
-      res: errorResponse({
-        err: new Error(toolError.message),
-        error: "db_error",
-        reason: "Failed to load tool calls",
-        status: 500,
-      }),
-    };
+    if (options.allowEphemeral) {
+      options.logger?.warn?.("chat:tool_history_load_skipped", {
+        error: toolError instanceof Error ? toolError.message : String(toolError),
+        sessionId: options.sessionId,
+        userId: options.userId,
+      });
+    } else {
+      return {
+        ok: false,
+        res: errorResponse({
+          err: new Error(toolError.message),
+          error: "db_error",
+          reason: "Failed to load tool calls",
+          status: 500,
+        }),
+      };
+    }
   }
 
-  const toolCallsByMessageId = new Map<number, Array<(typeof toolCalls)[number]>>();
-  for (const toolRow of toolCalls ?? []) {
+  const safeToolCalls = toolError ? [] : (toolCalls ?? []);
+  const toolCallsByMessageId = new Map<number, Array<(typeof safeToolCalls)[number]>>();
+  for (const toolRow of safeToolCalls) {
     const messageId = toolRow.message_id;
     if (typeof messageId !== "number") continue;
     const existing = toolCallsByMessageId.get(messageId) ?? [];
@@ -463,7 +620,10 @@ async function loadChatHistory(options: {
       role = "assistant";
     }
 
-    const uiMessageId = getUiMessageIdFromRow({ id: row.id, metadata: row.metadata });
+    const uiMessageId = getUiMessageIdFromRow({
+      id: row.id,
+      metadata: row.metadata,
+    });
     const metadata =
       row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
         ? row.metadata
@@ -488,8 +648,23 @@ async function loadChatHistory(options: {
     return { messages: [], ok: true };
   }
 
-  const validated = await safeValidateUIMessages({ messages: rawUiMessages });
+  const validated = await safeValidateUIMessages<ChatUiMessage>({
+    dataSchemas: chatDataPartSchemas,
+    messages: rawUiMessages,
+    metadataSchema: chatMessageMetadataSchema,
+  });
   if (!validated.success) {
+    if (options.allowEphemeral) {
+      options.logger?.warn?.("chat:history_validation_skipped", {
+        error:
+          validated.error instanceof Error
+            ? validated.error.message
+            : String(validated.error),
+        sessionId: options.sessionId,
+        userId: options.userId,
+      });
+      return { messages: [], ok: true };
+    }
     const normalizedError =
       validated.error instanceof Error
         ? validated.error
@@ -569,8 +744,11 @@ export async function handleChat(
 
   const sessionIdHint = payload.sessionId?.trim() || null;
   const trigger: ChatTrigger = payload.trigger ?? "submit-message";
+  const allowEphemeral = isChatEphemeralEnabled();
 
   const sessionResult = await ensureChatSession({
+    allowEphemeral,
+    logger: deps.logger,
     sessionId: sessionIdHint,
     supabase: deps.supabase,
     userId,
@@ -578,12 +756,28 @@ export async function handleChat(
   if (!sessionResult.ok) return sessionResult.res;
   const sessionId = sessionResult.sessionId;
 
-  const provider = await deps.resolveProvider(
-    userId,
-    (payload.model || "").trim() || undefined
-  );
+  const modelHint = (payload.model || "").trim() || undefined;
+  let provider: ProviderResolution;
+  try {
+    provider = await deps.resolveProvider(userId, modelHint);
+  } catch (error) {
+    deps.logger?.warn?.("chat:provider_unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      modelHint: modelHint ?? null,
+      requestId,
+      sessionId,
+      userId,
+    });
+    return errorResponse({
+      err: error,
+      error: "provider_unavailable",
+      reason: "AI provider is not configured. Add an API key to enable chat responses.",
+      status: 503,
+    });
+  }
 
   const historyResult = await loadChatHistory({
+    allowEphemeral,
     limit: HISTORY_LIMIT,
     logger: deps.logger,
     sessionId,
@@ -594,12 +788,16 @@ export async function handleChat(
 
   const visibleHistory = historyResult.messages.filter((m) => !m.isSuperseded);
 
-  let promptUiMessages: UIMessage[];
-  let latestUserMessage: UIMessage | null = null;
+  let promptUiMessages: ChatUiMessage[];
+  let latestUserMessage: ChatUiMessage | null = null;
   let regenerationOf: string | null = null;
 
   if (trigger === "submit-message") {
-    const clientMessages = Array.isArray(payload.messages) ? payload.messages : [];
+    const rawClientMessages = Array.isArray(payload.messages) ? payload.messages : [];
+    const clientMessages =
+      rawClientMessages.length === 0
+        ? []
+        : await normalizeChatUiMessages(rawClientMessages);
     const latest = clientMessages.at(-1);
     if (!latest) {
       return errorResponse({
@@ -668,7 +866,9 @@ export async function handleChat(
     });
 
     const userPersist = await persistChatMessage({
+      allowEphemeral,
       content: encodePartsToContent(latestUserMessage.parts),
+      logger: deps.logger,
       metadata: {
         uiMessageId: latestUserMessage.id,
       },
@@ -682,26 +882,34 @@ export async function handleChat(
 
   // Memory hydration: fetch context (semantic when possible).
   let memorySummary: string | undefined;
-  try {
-    const query = getLastUserText(promptUiMessages);
-    const memoryResult = await handleMemoryIntent({
-      limit: 3,
-      query,
-      sessionId,
-      type: "fetchContext",
-      userId,
-    });
-    const items = memoryResult.context ?? [];
-    if (items.length > 0) {
-      memorySummary = items.map((item) => item.context).join("\n");
+  const lastMessageId =
+    latestUserMessage?.id ?? visibleHistory.at(-1)?.uiMessageId ?? "none";
+  const memoryCacheKey = `${userId}:${sessionId}:${lastMessageId}`;
+  const cacheNow = deps.clock?.now?.() ?? Date.now();
+  memorySummary = deps.memorySummaryCache?.get(memoryCacheKey, cacheNow);
+  if (!memorySummary) {
+    try {
+      const query = getLastUserText(promptUiMessages);
+      const memoryResult = await handleMemoryIntent({
+        limit: 3,
+        query,
+        sessionId,
+        type: "fetchContext",
+        userId,
+      });
+      const items = memoryResult.context ?? [];
+      if (items.length > 0) {
+        memorySummary = items.map((item) => item.context).join("\n");
+        deps.memorySummaryCache?.set(memoryCacheKey, memorySummary, cacheNow);
+      }
+    } catch (error) {
+      deps.logger?.error?.("chat:memory_fetch_failed", {
+        error: error instanceof Error ? error.message : String(error),
+        requestId,
+        sessionId,
+        userId,
+      });
     }
-  } catch (error) {
-    deps.logger?.error?.("chat:memory_fetch_failed", {
-      error: error instanceof Error ? error.message : String(error),
-      requestId,
-      sessionId,
-      userId,
-    });
   }
 
   const assistantUiMessageId = secureUuid();
@@ -748,7 +956,9 @@ export async function handleChat(
   };
 
   const assistantPersist = await persistChatMessage({
+    allowEphemeral,
     content: "[]",
+    logger: deps.logger,
     metadata: assistantBaseMetadata,
     role: "assistant",
     sessionId,
@@ -757,6 +967,7 @@ export async function handleChat(
   });
   if (!assistantPersist.ok) return assistantPersist.res;
   const assistantMessageId = assistantPersist.id;
+  const canPersistAssistantMessage = assistantMessageId !== -1;
 
   const system = buildSystemPrompt({ memorySummary });
 
@@ -792,155 +1003,259 @@ export async function handleChat(
 
   // Track tool calls already persisted to avoid duplicates across steps.
   const persistedToolCallIds = new Set<string>();
+  const stepTimeoutMs =
+    typeof deps.config?.stepTimeoutSeconds === "number" &&
+    Number.isFinite(deps.config.stepTimeoutSeconds)
+      ? deps.config.stepTimeoutSeconds * 1000
+      : undefined;
+  const timeoutConfig = buildTimeoutConfigFromSeconds(
+    deps.config?.timeoutSeconds,
+    stepTimeoutMs
+  );
 
-  const result = streamText({
-    abortSignal: payload.abortSignal,
-    maxOutputTokens: tokenBudget.maxOutputTokens,
-    messages: modelMessages,
-    model: provider.model,
-    onFinish: async ({ finishReason, text, totalUsage }) => {
-      const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
-
-      deps.logger?.info?.("chat:finish", {
-        durationMs,
-        finishReason,
-        model: provider.modelId,
-        requestId,
-        sessionId,
-        userId,
-      });
-
-      if (trigger === "submit-message") {
-        await persistMemoryTurn({
-          logger: deps.logger,
-          sessionId,
-          turn: createTextMemoryTurn("assistant", text),
-          userId,
+  const stream = createUIMessageStream<ChatUiMessage>({
+    execute: ({ writer }) => {
+      const writeStatus = (status: AiStreamStatus) => {
+        writer.write({
+          data: status,
+          transient: true,
+          type: "data-status",
         });
-      }
+      };
 
-      const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
-        durationMs,
-        finishReason,
-        isAborted: false,
-        status: "completed",
-        totalUsage: totalUsage ?? null,
-      });
+      writeStatus({ kind: "start", label: "Thinking..." });
 
-      const content = encodePartsToContent([{ text, type: "text" }]);
+      let stepCount = 0;
 
-      const { error } = await updateSingle(
-        deps.supabase,
-        "chat_messages",
-        { content, metadata: updatedMeta },
-        (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
-      );
+      const result = streamText({
+        abortSignal: payload.abortSignal,
+        maxOutputTokens: tokenBudget.maxOutputTokens,
+        messages: modelMessages,
+        model: provider.model,
+        onFinish: async ({ finishReason, text, totalUsage }) => {
+          const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
 
-      if (error) {
-        deps.logger?.warn?.("chat:message_update_failed", {
-          error: error instanceof Error ? error.message : String(error),
-          requestId,
-          sessionId,
-          userId,
-        });
-      }
-    },
-    onStepFinish: async ({ toolCalls, toolResults }) => {
-      if (!toolCalls?.length && !toolResults?.length) {
-        return;
-      }
-
-      const resultsById = new Map<string, ParsedToolResult>();
-      for (const toolResult of toolResults ?? []) {
-        const parsed = parseToolResult(toolResult);
-        if (parsed) resultsById.set(parsed.toolCallId, parsed);
-      }
-
-      const now = nowIso();
-
-      for (const toolCall of toolCalls ?? []) {
-        const parsed = parseToolCall(toolCall);
-        if (!parsed) continue;
-        if (persistedToolCallIds.has(parsed.toolCallId)) continue;
-
-        persistedToolCallIds.add(parsed.toolCallId);
-        const maybeResult = resultsById.get(parsed.toolCallId);
-
-        const args = (parsed.args ?? parsed.input ?? {}) as Json;
-        const status = maybeResult?.isError ? "failed" : "completed";
-        const errorMessage =
-          maybeResult?.isError && typeof maybeResult.result === "string"
-            ? maybeResult.result
-            : null;
-
-        const toolRow = {
-          arguments: args,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          completed_at: now,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          created_at: now,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          error_message: errorMessage,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          message_id: assistantMessageId,
-          result: (maybeResult?.result ?? null) as Json | null,
-          status,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          tool_id: parsed.toolCallId,
-          // biome-ignore lint/style/useNamingConvention: Database field name
-          tool_name: parsed.toolName,
-        };
-
-        const { error } = await insertSingle(deps.supabase, "chat_tool_calls", toolRow);
-        if (error) {
-          const persistErrorMessage =
-            error instanceof Error
-              ? error.message
-              : String((error as { message?: unknown }).message ?? error);
-          deps.logger?.warn?.("chat:tool_persist_failed", {
-            error: persistErrorMessage,
+          deps.logger?.info?.("chat:finish", {
+            durationMs,
+            finishReason,
+            model: provider.modelId,
             requestId,
             sessionId,
-            toolCallId: parsed.toolCallId,
-            toolName: parsed.toolName,
+            totalUsage: totalUsage ?? null,
             userId,
           });
-        }
-      }
-    },
-    stopWhen: stepCountIs(maxSteps),
-    system,
-    tools: chatTools,
-  });
 
-  return result.toUIMessageStreamResponse({
-    consumeSseStream: consumeStream,
-    generateMessageId: () => assistantUiMessageId,
-    headers: {
-      "x-tripsage-session-id": sessionId,
-    },
-    messageMetadata: ({ part }) => {
-      if (part.type === "start") {
-        return { sessionId };
-      }
-      return undefined;
-    },
-    onError: (error) => {
-      deps.logger?.error?.("chat:stream_error", {
-        error: error instanceof Error ? error.message : String(error),
-        requestId,
-        sessionId,
-        userId,
+          if (trigger === "submit-message") {
+            await persistMemoryTurn({
+              logger: deps.logger,
+              sessionId,
+              turn: createTextMemoryTurn("assistant", text),
+              userId,
+            });
+          }
+
+          const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
+            durationMs,
+            finishReason,
+            isAborted: false,
+            status: "completed",
+            totalUsage: totalUsage ?? null,
+          });
+
+          const content = encodePartsToContent([{ text, type: "text" }]);
+
+          if (!canPersistAssistantMessage) {
+            return;
+          }
+
+          const { error } = await updateSingle(
+            deps.supabase,
+            "chat_messages",
+            { content, metadata: updatedMeta },
+            (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+          );
+
+          if (error) {
+            deps.logger?.warn?.("chat:message_update_failed", {
+              error: error instanceof Error ? error.message : String(error),
+              requestId,
+              sessionId,
+              userId,
+            });
+          }
+        },
+        onStepFinish: async ({ toolCalls, toolResults }) => {
+          if (!toolCalls?.length && !toolResults?.length) {
+            return;
+          }
+
+          const resultsById = new Map<string, ParsedToolResult>();
+          for (const toolResult of toolResults ?? []) {
+            const parsed = parseToolResult(toolResult);
+            if (parsed) resultsById.set(parsed.toolCallId, parsed);
+          }
+
+          const now = nowIso();
+          const parsedToolCalls: ParsedToolCall[] = [];
+
+          for (const toolCall of toolCalls ?? []) {
+            const parsed = parseToolCall(toolCall);
+            if (!parsed) continue;
+            parsedToolCalls.push(parsed);
+            if (persistedToolCallIds.has(parsed.toolCallId)) continue;
+
+            persistedToolCallIds.add(parsed.toolCallId);
+            const maybeResult = resultsById.get(parsed.toolCallId);
+
+            const args = normalizeJsonValue(parsed.args ?? parsed.input ?? {}, {});
+            const status = maybeResult?.isError ? "failed" : "completed";
+            const errorMessage =
+              maybeResult?.isError && typeof maybeResult.result === "string"
+                ? maybeResult.result
+                : null;
+
+            const toolRow = {
+              arguments: args,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              completed_at: now,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              created_at: now,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              error_message: errorMessage,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              message_id: assistantMessageId,
+              result: normalizeJsonValue(maybeResult?.result ?? null, null),
+              status,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              tool_id: parsed.toolCallId,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              tool_name: parsed.toolName,
+            };
+
+            if (canPersistAssistantMessage) {
+              const { error } = await insertSingle(
+                deps.supabase,
+                "chat_tool_calls",
+                toolRow
+              );
+              if (error) {
+                const persistErrorMessage =
+                  error instanceof Error
+                    ? error.message
+                    : String((error as { message?: unknown }).message ?? error);
+                deps.logger?.warn?.("chat:tool_persist_failed", {
+                  error: persistErrorMessage,
+                  requestId,
+                  sessionId,
+                  toolCallId: parsed.toolCallId,
+                  toolName: parsed.toolName,
+                  userId,
+                });
+              }
+            }
+          }
+
+          if (parsedToolCalls.length > 0) {
+            const toolNames = Array.from(
+              new Set(parsedToolCalls.map((call) => call.toolName))
+            );
+            if (toolNames.length > 0) {
+              stepCount += 1;
+              const rawLabel =
+                toolNames.length === 1
+                  ? `Running tool: ${toolNames[0]}`
+                  : `Running tools: ${toolNames.join(", ")}`;
+              const label =
+                rawLabel.length > 200 ? `${rawLabel.slice(0, 197)}...` : rawLabel;
+              writeStatus({ kind: "tool", label, step: stepCount });
+
+              const stepMetadata = mergeAssistantMetadata(assistantBaseMetadata, {
+                // Preserve checkpoint info if a request ends mid-tool loop.
+                lastToolNames: toolNames,
+                lastToolStepAt: now,
+                toolStepCount: stepCount,
+              });
+
+              if (canPersistAssistantMessage) {
+                const { error: stepError } = await updateSingle(
+                  deps.supabase,
+                  "chat_messages",
+                  { metadata: stepMetadata },
+                  (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+                );
+
+                if (stepError) {
+                  deps.logger?.warn?.("chat:tool_step_update_failed", {
+                    error:
+                      stepError instanceof Error
+                        ? stepError.message
+                        : String(stepError),
+                    requestId,
+                    sessionId,
+                    userId,
+                  });
+                }
+              }
+            }
+          }
+        },
+        stopWhen: stepCountIs(maxSteps),
+        system,
+        timeout: timeoutConfig,
+        tools: chatTools,
       });
-      return "An error occurred while processing your request.";
+
+      writer.merge(
+        result.toUIMessageStream<ChatUiMessage>({
+          generateMessageId: () => assistantUiMessageId,
+          messageMetadata: ({ part }) => {
+            if (part.type === "start") {
+              return { requestId, sessionId };
+            }
+            if (part.type === "finish") {
+              return {
+                finishReason: part.finishReason ?? null,
+                requestId,
+                sessionId,
+                totalUsage: part.totalUsage ?? null,
+              };
+            }
+            if (part.type === "abort") {
+              return {
+                abortReason: part.reason ?? null,
+                requestId,
+                sessionId,
+              };
+            }
+            return undefined;
+          },
+          onError: (error) => {
+            deps.logger?.error?.("chat:stream_error", {
+              error: error instanceof Error ? error.message : String(error),
+              requestId,
+              sessionId,
+              userId,
+            });
+            return "An error occurred while processing your request.";
+          },
+          sendSources: true,
+        })
+      );
     },
     onFinish: async ({ finishReason, isAborted, responseMessage }) => {
       if (!isAborted) return;
 
       const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
       const text = getTextFromUiMessage(responseMessage);
+      const metadataResult = chatMessageMetadataSchema.safeParse(
+        responseMessage.metadata
+      );
+      const abortReason = metadataResult.success
+        ? (metadataResult.data.abortReason ?? null)
+        : null;
 
       const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
+        abortReason,
         durationMs,
         finishReason: finishReason ?? null,
         isAborted: true,
@@ -951,6 +1266,10 @@ export async function handleChat(
       const content = text
         ? encodePartsToContent([{ text, type: "text" }])
         : encodePartsToContent([]);
+
+      if (!canPersistAssistantMessage) {
+        return;
+      }
 
       const { error } = await updateSingle(
         deps.supabase,
@@ -968,5 +1287,14 @@ export async function handleChat(
         });
       }
     },
+    originalMessages: promptUiMessages,
+  });
+
+  return createUIMessageStreamResponse({
+    consumeSseStream: consumeStream,
+    headers: {
+      "x-tripsage-session-id": sessionId,
+    },
+    stream,
   });
 }

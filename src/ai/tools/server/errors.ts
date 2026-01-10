@@ -52,6 +52,12 @@ const FLIGHT_ERROR_CODES = {
   flightOfferFailed: "flight_offer_failed",
 } as const;
 
+// Calendar errors
+const CALENDAR_ERROR_CODES = {
+  calendarInvalidDate: "calendar_invalid_date",
+  calendarMissingDatetime: "calendar_missing_datetime",
+} as const;
+
 // General tool errors
 const GENERAL_TOOL_ERROR_CODES = {
   invalidOutput: "invalid_output",
@@ -88,6 +94,7 @@ const WEB_SEARCH_ERROR_CODES = {
 export const TOOL_ERROR_CODES = {
   ...ACCOMMODATION_ERROR_CODES,
   ...APPROVAL_ERROR_CODES,
+  ...CALENDAR_ERROR_CODES,
   ...FLIGHT_ERROR_CODES,
   ...GENERAL_TOOL_ERROR_CODES,
   ...PLACES_ERROR_CODES,

@@ -235,6 +235,8 @@ const securityEnvSchema = z.object({
 const developmentEnvSchema = z.object({
   ANALYZE: z.coerce.boolean().default(false),
   DEBUG: z.coerce.boolean().default(false),
+  // Allow Playwright/E2E runs to bypass rate limiting when Upstash is unavailable.
+  E2E_BYPASS_RATE_LIMIT: z.coerce.boolean().default(false),
 });
 
 // Complete environment schema

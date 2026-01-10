@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import type { LanguageModel, StopCondition, SystemModelMessage, ToolSet } from "ai";
 import {
   asSchema,
@@ -355,9 +356,22 @@ export function createTripSageAgent<
 
         const attemptModelRepair = async (modelId: string, model: LanguageModel) => {
           const { output: repaired } = await generateText({
+            abortSignal: deps.abortSignal,
+            // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
+            experimental_telemetry: {
+              functionId: "agent.tool_repair",
+              isEnabled: true,
+              metadata: {
+                agentType,
+                modelId,
+                requestId,
+                toolName: toolCall.toolName,
+              },
+            },
             model,
             output: Output.object({ schema: tool.inputSchema }),
             prompt,
+            timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
           });
           const schema = asSchema(tool.inputSchema);
           if (schema?.validate) {

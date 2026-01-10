@@ -67,7 +67,11 @@ import {
 } from "./configuration-actions";
 
 const AGENTS: Array<{ label: string; value: AgentType; description: string }> = [
-  { description: "Budget optimization", label: "Budget Agent", value: "budgetAgent" },
+  {
+    description: "Budget optimization",
+    label: "Budget Agent",
+    value: "budgetAgent",
+  },
   {
     description: "Research destinations and attractions",
     label: "Destination Research Agent",
@@ -78,13 +82,21 @@ const AGENTS: Array<{ label: string; value: AgentType; description: string }> = 
     label: "Itinerary Agent",
     value: "itineraryAgent",
   },
-  { description: "Search flights", label: "Flight Agent", value: "flightAgent" },
+  {
+    description: "Search flights",
+    label: "Flight Agent",
+    value: "flightAgent",
+  },
   {
     description: "Find stays",
     label: "Accommodation Agent",
     value: "accommodationAgent",
   },
-  { description: "Persist memories", label: "Memory Agent", value: "memoryAgent" },
+  {
+    description: "Persist memories",
+    label: "Memory Agent",
+    value: "memoryAgent",
+  },
 ];
 
 export type ConfigurationManagerProps = {
@@ -226,7 +238,38 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
     setHasUnsavedChanges(true);
   };
 
+  /**
+   * Converts an input string into an optional base-10 integer.
+   *
+   * @param raw - Raw input string from a controlled `<input>`.
+   * @returns `null` for `""` (empty), otherwise a finite integer; returns `null` for
+   * non-finite parse results.
+   */
+  const parseOptionalInt = (raw: string): number | null => {
+    const trimmed = raw.trim();
+    if (trimmed === "") return null;
+    if (!/^[+-]?\d+$/.test(trimmed)) return null;
+
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  };
+
+  /**
+   * Renders a finite number or an empty string for controlled inputs.
+   *
+   * @param value - Candidate value.
+   * @returns Finite number when `value` is a finite `number`; otherwise `""`.
+   */
+  const renderFiniteNumberOrEmpty = (value: unknown): number | "" =>
+    typeof value === "number" && Number.isFinite(value) ? value : "";
+
   const currentParams = { ...config.parameters, ...edited };
+  const isStepTimeoutInvalid =
+    typeof currentParams.stepTimeoutSeconds === "number" &&
+    Number.isFinite(currentParams.stepTimeoutSeconds) &&
+    typeof currentParams.timeoutSeconds === "number" &&
+    Number.isFinite(currentParams.timeoutSeconds) &&
+    currentParams.stepTimeoutSeconds > currentParams.timeoutSeconds;
 
   return (
     <div className="space-y-6">
@@ -298,7 +341,10 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   <RotateCcwIcon className="h-4 w-4 mr-2" />
                   Reset
                 </Button>
-                <Button onClick={handleSave} disabled={!hasUnsavedChanges || saving}>
+                <Button
+                  onClick={handleSave}
+                  disabled={!hasUnsavedChanges || saving || isStepTimeoutInvalid}
+                >
                   {saving ? (
                     <LoadingSpinner size="sm" className="mr-2" />
                   ) : (
@@ -342,12 +388,13 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <Input
                   id="maxTokens"
                   type="number"
-                  value={currentParams.maxTokens ?? ""}
+                  value={renderFiniteNumberOrEmpty(currentParams.maxTokens)}
                   onChange={(e) =>
-                    onParamChange("maxTokens", Number.parseInt(e.target.value, 10))
+                    onParamChange("maxTokens", parseOptionalInt(e.target.value))
                   }
                   min={1}
                   max={8000}
+                  step={1}
                 />
               </div>
 
@@ -374,13 +421,55 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <Input
                   id="timeoutSeconds"
                   type="number"
-                  value={currentParams.timeoutSeconds ?? ""}
+                  value={renderFiniteNumberOrEmpty(currentParams.timeoutSeconds)}
                   onChange={(e) =>
-                    onParamChange("timeoutSeconds", Number.parseInt(e.target.value, 10))
+                    onParamChange("timeoutSeconds", parseOptionalInt(e.target.value))
                   }
                   min={5}
                   max={300}
+                  step={1}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stepTimeoutSeconds">Step Timeout (seconds)</Label>
+                <Input
+                  id="stepTimeoutSeconds"
+                  type="number"
+                  value={renderFiniteNumberOrEmpty(currentParams.stepTimeoutSeconds)}
+                  onChange={(e) =>
+                    onParamChange(
+                      "stepTimeoutSeconds",
+                      parseOptionalInt(e.target.value)
+                    )
+                  }
+                  min={5}
+                  max={
+                    typeof currentParams.timeoutSeconds === "number" &&
+                    Number.isFinite(currentParams.timeoutSeconds)
+                      ? currentParams.timeoutSeconds
+                      : 300
+                  }
+                  step={1}
+                  aria-invalid={isStepTimeoutInvalid}
+                  aria-describedby={
+                    isStepTimeoutInvalid
+                      ? "stepTimeout-help stepTimeout-error"
+                      : "stepTimeout-help"
+                  }
+                />
+                <p id="stepTimeout-help" className="text-sm text-muted-foreground">
+                  Must be less than or equal to total timeout when both are provided.
+                </p>
+                {isStepTimeoutInvalid && (
+                  <p
+                    id="stepTimeout-error"
+                    role="alert"
+                    className="text-sm text-destructive"
+                  >
+                    Step timeout cannot exceed total timeout.
+                  </p>
+                )}
               </div>
 
               {hasUnsavedChanges && (
@@ -450,7 +539,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               <CardDescription>Recent versions for {selectedAgent}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px]">
+              <ScrollArea className="h-96">
                 <Table>
                   <TableHeader>
                     <TableRow>

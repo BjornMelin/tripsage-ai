@@ -27,10 +27,10 @@ export const attachmentsList = createAiTool({
     "Use to see what files are available for the current chat.",
   execute: ({ chatId, limit }) =>
     withTelemetrySpan(
-      "tools.attachments.list",
+      "tools.attachmentsList",
       { attributes: { chatId, limit } },
       async () => {
-        const logger = createServerLogger("tools.attachments.list");
+        const logger = createServerLogger("tools.attachmentsList");
         const supabase = await createServerSupabase();
 
         const { data: rows, error } = await supabase
@@ -131,7 +131,7 @@ export const attachmentsList = createAiTool({
       }
     ),
   inputSchema: attachmentsListToolInputSchema,
-  name: "attachments.list",
+  name: "attachmentsList",
   outputSchema: attachmentsListToolOutputSchema,
   validateOutput: true,
 });

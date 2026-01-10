@@ -5,6 +5,12 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import {
+  type AiStreamStatus,
+  type ChatMessageMetadata,
+  chatDataPartSchemas,
+  chatMessageMetadataSchema,
+} from "@schemas/ai";
 import { attachmentCreateSignedUploadResponseSchema } from "@schemas/attachments";
 import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
@@ -37,13 +43,52 @@ const createSessionResponseSchema = z.strictObject({
   id: z.string().trim().min(1),
 });
 
-type ChatMessageMetadata = {
-  sessionId?: string;
+type ChatUiDataParts = {
+  status: AiStreamStatus;
 };
 
-type ChatUiMessage = UIMessage<ChatMessageMetadata>;
+type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
 
 type PendingAttachment = { file: File; id: string };
+
+const CHAT_ERROR_FALLBACK = "An error occurred";
+const CHAT_ERROR_REASON_MAP = new Map<string, string>([
+  [
+    "provider_unavailable",
+    "AI provider is not configured yet. Add an API key in settings to enable chat.",
+  ],
+  [
+    "rate_limit_unavailable",
+    "Rate limiting is temporarily unavailable. Please try again shortly.",
+  ],
+]);
+
+const chatErrorPayloadSchema = z
+  .strictObject({
+    error: z.string().optional(),
+    reason: z.string().optional(),
+  })
+  .passthrough();
+
+function resolveChatErrorMessage(error?: Error): string {
+  if (!error?.message) return CHAT_ERROR_FALLBACK;
+
+  try {
+    const parsed = chatErrorPayloadSchema.safeParse(JSON.parse(error.message));
+    if (!parsed.success) return error.message || CHAT_ERROR_FALLBACK;
+    if (parsed.data.error) {
+      const mappedReason = CHAT_ERROR_REASON_MAP.get(parsed.data.error);
+      if (mappedReason) return mappedReason;
+    }
+    if (parsed.data.reason?.trim()) {
+      return parsed.data.reason;
+    }
+  } catch {
+    // ignore JSON parse failures
+  }
+
+  return error.message || CHAT_ERROR_FALLBACK;
+}
 
 /**
  * Client-side chat container using AI SDK v6 useChat hook.
@@ -54,6 +99,7 @@ export function ChatClient(): ReactElement {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [files, setFiles] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<AiStreamStatus | null>(null);
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingRequestRef = useRef<AbortController | null>(null);
@@ -66,6 +112,13 @@ export function ChatClient(): ReactElement {
 
   const { messages, sendMessage, status, error, stop, regenerate } =
     useChat<ChatUiMessage>({
+      dataPartSchemas: chatDataPartSchemas,
+      messageMetadataSchema: chatMessageMetadataSchema,
+      onData: (dataPart) => {
+        if (dataPart.type === "data-status") {
+          setStreamStatus(dataPart.data);
+        }
+      },
       onFinish: ({ message }) => {
         const maybeSessionId = message.metadata?.sessionId;
         if (typeof maybeSessionId === "string" && maybeSessionId.trim().length > 0) {
@@ -99,6 +152,12 @@ export function ChatClient(): ReactElement {
         },
       }),
     });
+
+  useEffect(() => {
+    if (status === "submitted" || status === "ready" || status === "error") {
+      setStreamStatus(null);
+    }
+  }, [status]);
 
   const isStreaming = status === "streaming";
   const isSubmitting = status === "submitted";
@@ -261,6 +320,7 @@ export function ChatClient(): ReactElement {
     const controller = new AbortController();
     pendingRequestRef.current?.abort();
     pendingRequestRef.current = controller;
+    setStreamStatus(null);
 
     try {
       const activeSessionId = await ensureSessionId(controller.signal);
@@ -319,6 +379,19 @@ export function ChatClient(): ReactElement {
       </Conversation>
 
       <div className="border-t p-2">
+        {streamStatus && isLoading ? (
+          <div
+            className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
+            data-testid="chat-stream-status"
+          >
+            <span className="inline-flex size-2 animate-pulse rounded-full bg-emerald-500/70" />
+            <span>
+              {streamStatus.step ? `Step ${streamStatus.step}: ` : ""}
+              {streamStatus.label}
+            </span>
+          </div>
+        ) : null}
+
         <PromptInput onSubmit={({ text }) => handleSubmit(text)}>
           <PromptInputHeader />
           <PromptInputBody>
@@ -435,9 +508,7 @@ export function ChatClient(): ReactElement {
             className="mt-2 flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2"
             data-testid="chat-error"
           >
-            <p className="text-sm text-destructive">
-              {error.message || "An error occurred"}
-            </p>
+            <p className="text-sm text-destructive">{resolveChatErrorMessage(error)}</p>
             <Button
               type="button"
               variant="link"

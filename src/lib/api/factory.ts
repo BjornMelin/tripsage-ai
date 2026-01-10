@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { AgentDependencies } from "@ai/agents/types";
+import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -38,6 +39,7 @@ import {
   BOT_DETECTED_RESPONSE,
   isBotDetectedError,
 } from "@/lib/security/botid";
+import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
@@ -550,8 +552,13 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           const ipHash = getTrustedRateLimitIdentifier(req);
           identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
         }
-        const degradedMode =
+        const configuredDegradedMode =
           config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
+        const bypassRateLimit =
+          (process.env.E2E_BYPASS_RATE_LIMIT === "1" ||
+            process.env.E2E_BYPASS_RATE_LIMIT === "true") &&
+          process.env.NODE_ENV !== "production";
+        const degradedMode = bypassRateLimit ? "fail_open" : configuredDegradedMode;
         const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
           degradedMode,
         });
@@ -748,6 +755,16 @@ export function createAgentRoute<
       async (span) => {
         const resolvedConfig = await resolveAgentConfig(options.agentType);
         const agentConfig = resolvedConfig.config;
+        const stepTimeoutMs =
+          typeof agentConfig.parameters?.stepTimeoutSeconds === "number" &&
+          Number.isFinite(agentConfig.parameters.stepTimeoutSeconds)
+            ? agentConfig.parameters.stepTimeoutSeconds * 1000
+            : undefined;
+        const timeoutConfig = buildTimeoutConfigFromSeconds(
+          agentConfig.parameters?.timeoutSeconds,
+          stepTimeoutMs
+        );
+        const requestId = secureUuid();
 
         const urlModel = req.nextUrl.searchParams.get("model") ?? undefined;
         const modelHint =
@@ -759,6 +776,7 @@ export function createAgentRoute<
         span.setAttribute("provider", provider);
 
         const deps = {
+          abortSignal: req.signal,
           identifier: userId,
           model,
           modelId,
@@ -779,7 +797,39 @@ export function createAgentRoute<
           abortSignal: req.signal,
           agent,
           consumeSseStream: consumeStream,
+          messageMetadata: ({ part }) => {
+            if (part.type === "start") {
+              return {
+                agentType: options.agentType,
+                modelId,
+                requestId,
+                versionId: agentConfig.id,
+              };
+            }
+            if (part.type === "finish") {
+              return {
+                agentType: options.agentType,
+                finishReason: part.finishReason ?? null,
+                modelId,
+                requestId,
+                totalUsage: part.totalUsage ?? null,
+                versionId: agentConfig.id,
+              };
+            }
+            if (part.type === "abort") {
+              return {
+                abortReason: part.reason ?? null,
+                agentType: options.agentType,
+                modelId,
+                requestId,
+                versionId: agentConfig.id,
+              };
+            }
+            return undefined;
+          },
           onError: createErrorHandler(),
+          sendSources: true,
+          timeout: timeoutConfig,
           uiMessages: defaultMessages,
         });
       }

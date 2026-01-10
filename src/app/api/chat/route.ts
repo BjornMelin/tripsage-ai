@@ -16,13 +16,15 @@ import {
   requireUserId,
 } from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { handleChat } from "./_handler";
+import { createMemorySummaryCache, handleChat } from "./_handler";
 
 // Allow streaming responses for up to 60 seconds.
 export const maxDuration = 60;
 
 const DEFAULT_MAX_TOKENS_FALLBACK = 1024;
 const DEFAULT_MAX_STEPS_FALLBACK = 10;
+const DEFAULT_TIMEOUT_SECONDS_FALLBACK = Math.max(5, maxDuration - 5);
+const MEMORY_SUMMARY_TTL_MS = 2 * 60 * 1000;
 
 function getDefaultMaxTokens(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_TOKENS;
@@ -34,6 +36,26 @@ function getDefaultMaxSteps(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_STEPS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_STEPS_FALLBACK;
+}
+
+function getDefaultTimeoutSeconds(): number {
+  const raw = process.env.CHAT_DEFAULT_TIMEOUT_SECONDS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  // Enforce minimum of 5 seconds per schema constraint
+  return Number.isFinite(parsed) && parsed >= 5
+    ? parsed
+    : DEFAULT_TIMEOUT_SECONDS_FALLBACK;
+}
+
+function getDefaultStepTimeoutSeconds(totalSeconds: number): number | undefined {
+  const raw = process.env.CHAT_DEFAULT_STEP_TIMEOUT_SECONDS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  // Enforce minimum of 5 seconds per schema constraint.
+  return Math.min(Math.max(5, parsed), totalSeconds);
 }
 
 const chatRequestSchema = z.strictObject({
@@ -118,13 +140,24 @@ export const POST = withApiGuards({
 
   const ip = getClientIpFromHeaders(req);
   const logger = createServerLogger("chat");
+  const memorySummaryCache = createMemorySummaryCache({
+    ttlMs: MEMORY_SUMMARY_TTL_MS,
+  });
   const defaultMaxTokens = getDefaultMaxTokens();
   const maxSteps = getDefaultMaxSteps();
+  const timeoutSeconds = getDefaultTimeoutSeconds();
+  const stepTimeoutSeconds = getDefaultStepTimeoutSeconds(timeoutSeconds);
   return handleChat(
     {
       clock: { now: () => Date.now() },
-      config: { defaultMaxTokens, maxSteps },
+      config: {
+        defaultMaxTokens,
+        maxSteps,
+        stepTimeoutSeconds,
+        timeoutSeconds,
+      },
       logger,
+      memorySummaryCache,
       resolveProvider,
       supabase,
     },
