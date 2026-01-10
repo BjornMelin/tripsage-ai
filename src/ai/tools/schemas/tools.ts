@@ -90,6 +90,8 @@ export const toolErrorCodeSchema = z.enum([
   "approval_backend_unavailable",
   "approval_missing_session",
   "approval_required",
+  "calendar_invalid_date",
+  "calendar_missing_datetime",
   "flight_not_configured",
   "flight_offer_failed",
   "invalid_output",

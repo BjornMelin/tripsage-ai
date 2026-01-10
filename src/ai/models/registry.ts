@@ -230,6 +230,62 @@ function toLanguageModel(
 }
 
 /**
+ * Creates a BYOK client for the specified provider.
+ */
+function createByokClient(
+  provider: ProviderId,
+  apiKey: string
+):
+  | ReturnType<typeof createOpenAI>
+  | ReturnType<typeof createAnthropic>
+  | ReturnType<typeof createXai> {
+  switch (provider) {
+    case "openai":
+      return createOpenAI({ apiKey });
+    case "openrouter":
+      return createOpenAI({
+        apiKey,
+        // biome-ignore lint/style/useNamingConvention: provider option name
+        baseURL: "https://openrouter.ai/api/v1",
+      });
+    case "anthropic":
+      return createAnthropic({ apiKey });
+    case "xai":
+      return createXai({ apiKey });
+  }
+}
+
+/**
+ * Resolves a BYOK provider and returns a ready AI SDK model.
+ */
+async function resolveByokProvider(
+  provider: ProviderId,
+  apiKey: string,
+  modelId: string,
+  userId: string
+): Promise<ProviderResolution> {
+  const client = createByokClient(provider, apiKey);
+
+  // Fire-and-forget: update last used timestamp (ignore errors)
+  touchUserApiKey(userId, provider).catch((error) => {
+    providerRegistryLogger.warn("touch_user_api_key_failed", {
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      provider,
+    });
+  });
+
+  return await withTelemetrySpan(
+    "providers.resolve",
+    { attributes: { modelId, path: "user-provider", provider } },
+    async () => ({
+      model: toLanguageModel(client(modelId), provider, modelId),
+      modelId,
+      provider,
+    })
+  );
+}
+
+/**
  * Resolve user's preferred provider and return a ready AI SDK model.
  *
  * @param userId Supabase auth user id; used to fetch BYOK keys server-side.
@@ -289,86 +345,7 @@ export async function resolveProvider(
     for (const { p: provider, key: apiKey } of keyResults) {
       if (!apiKey) continue;
       const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
-      if (provider === "openai") {
-        const openai = createOpenAI({ apiKey });
-        // Fire-and-forget: update last used timestamp (ignore errors)
-        touchUserApiKey(userId, provider).catch((error) => {
-          providerRegistryLogger.warn("touch_user_api_key_failed", {
-            errorName: error instanceof Error ? error.name : "unknown_error",
-            provider,
-          });
-        });
-        return await withTelemetrySpan(
-          "providers.resolve",
-          { attributes: { modelId, path: "user-provider", provider } },
-          async () => ({
-            model: toLanguageModel(openai(modelId), provider, modelId),
-            modelId,
-            provider,
-          })
-        );
-      }
-      if (provider === "openrouter") {
-        const openrouter = createOpenAI({
-          apiKey,
-          // biome-ignore lint/style/useNamingConvention: provider option name
-          baseURL: "https://openrouter.ai/api/v1",
-        });
-        // Fire-and-forget: update last used timestamp (ignore errors)
-        touchUserApiKey(userId, provider).catch((error) => {
-          providerRegistryLogger.warn("touch_user_api_key_failed", {
-            errorName: error instanceof Error ? error.name : "unknown_error",
-            provider,
-          });
-        });
-        return await withTelemetrySpan(
-          "providers.resolve",
-          { attributes: { modelId, path: "user-provider", provider } },
-          async () => ({
-            model: toLanguageModel(openrouter(modelId), provider, modelId),
-            modelId,
-            provider,
-          })
-        );
-      }
-      if (provider === "anthropic") {
-        const a = createAnthropic({ apiKey });
-        // Fire-and-forget: update last used timestamp (ignore errors)
-        touchUserApiKey(userId, provider).catch((error) => {
-          providerRegistryLogger.warn("touch_user_api_key_failed", {
-            errorName: error instanceof Error ? error.name : "unknown_error",
-            provider,
-          });
-        });
-        return await withTelemetrySpan(
-          "providers.resolve",
-          { attributes: { modelId, path: "user-provider", provider } },
-          async () => ({
-            model: toLanguageModel(a(modelId), provider, modelId),
-            modelId,
-            provider,
-          })
-        );
-      }
-      if (provider === "xai") {
-        const client = createXai({ apiKey });
-        // Fire-and-forget: update last used timestamp (ignore errors)
-        touchUserApiKey(userId, provider).catch((error) => {
-          providerRegistryLogger.warn("touch_user_api_key_failed", {
-            errorName: error instanceof Error ? error.name : "unknown_error",
-            provider,
-          });
-        });
-        return await withTelemetrySpan(
-          "providers.resolve",
-          { attributes: { modelId, path: "user-provider", provider } },
-          async () => ({
-            model: toLanguageModel(client(modelId), provider, modelId),
-            modelId,
-            provider,
-          })
-        );
-      }
+      return await resolveByokProvider(provider, apiKey, modelId, userId);
     }
   }
 

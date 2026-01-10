@@ -23,7 +23,9 @@ const DEFAULT_SCOPE = "global";
 const DEFAULT_MODEL = "gpt-4o";
 
 const isE2eBypassEnabled = () =>
-  process.env.E2E_BYPASS_RATE_LIMIT === "1" && process.env.NODE_ENV !== "production";
+  (process.env.E2E_BYPASS_RATE_LIMIT === "1" ||
+    process.env.E2E_BYPASS_RATE_LIMIT === "true") &&
+  process.env.NODE_ENV !== "production";
 
 export type AgentVersion = {
   id: string;

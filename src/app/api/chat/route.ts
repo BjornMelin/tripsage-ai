@@ -49,7 +49,8 @@ function getDefaultTimeoutSeconds(): number {
 function getDefaultStepTimeoutSeconds(totalSeconds: number): number | undefined {
   const raw = process.env.CHAT_DEFAULT_STEP_TIMEOUT_SECONDS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  // Enforce minimum of 5 seconds per schema constraint
+  if (!Number.isFinite(parsed) || parsed < 5) {
     return undefined;
   }
   return Math.min(parsed, totalSeconds);

@@ -67,7 +67,11 @@ import {
 } from "./configuration-actions";
 
 const AGENTS: Array<{ label: string; value: AgentType; description: string }> = [
-  { description: "Budget optimization", label: "Budget Agent", value: "budgetAgent" },
+  {
+    description: "Budget optimization",
+    label: "Budget Agent",
+    value: "budgetAgent",
+  },
   {
     description: "Research destinations and attractions",
     label: "Destination Research Agent",
@@ -78,13 +82,21 @@ const AGENTS: Array<{ label: string; value: AgentType; description: string }> = 
     label: "Itinerary Agent",
     value: "itineraryAgent",
   },
-  { description: "Search flights", label: "Flight Agent", value: "flightAgent" },
+  {
+    description: "Search flights",
+    label: "Flight Agent",
+    value: "flightAgent",
+  },
   {
     description: "Find stays",
     label: "Accommodation Agent",
     value: "accommodationAgent",
   },
-  { description: "Persist memories", label: "Memory Agent", value: "memoryAgent" },
+  {
+    description: "Persist memories",
+    label: "Memory Agent",
+    value: "memoryAgent",
+  },
 ];
 
 export type ConfigurationManagerProps = {
@@ -228,8 +240,8 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
 
   const currentParams = { ...config.parameters, ...edited };
   const isStepTimeoutInvalid =
-    typeof currentParams.stepTimeoutSeconds === "number" &&
-    typeof currentParams.timeoutSeconds === "number" &&
+    currentParams.stepTimeoutSeconds !== undefined &&
+    currentParams.timeoutSeconds !== undefined &&
     currentParams.stepTimeoutSeconds > currentParams.timeoutSeconds;
 
   return (
@@ -479,7 +491,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               <CardDescription>Recent versions for {selectedAgent}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px]">
+              <ScrollArea className="h-100">
                 <Table>
                   <TableHeader>
                     <TableRow>

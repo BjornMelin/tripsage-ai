@@ -358,11 +358,16 @@ export interface CalendarStatusResponse {
  * Tool-safe schema for event date/time inputs.
  * Uses ISO strings only to keep JSON Schema compatible with AI SDK tools.
  */
-const toolEventDateTimeSchema = z.strictObject({
-  date: ISO_DATE_STRING.optional(),
-  dateTime: primitiveSchemas.isoDateTime.optional(),
-  timeZone: z.string().optional(),
-});
+const toolEventDateTimeSchema = z
+  .strictObject({
+    date: ISO_DATE_STRING.optional(),
+    dateTime: primitiveSchemas.isoDateTime.optional(),
+    timeZone: z.string().optional(),
+  })
+  .refine((v) => Boolean(v.date || v.dateTime), {
+    error: "Either date or dateTime is required",
+    path: ["dateTime"],
+  });
 
 /**
  * Tool-safe schema for calendar events.
@@ -409,7 +414,7 @@ export const createCalendarEventInputSchema = createEventRequestSchema.extend({
  * Uses ISO strings for date boundaries to keep JSON Schema compatible.
  */
 export const freeBusyToolInputSchema = z
-  .object({
+  .strictObject({
     calendarExpansionMax: z.number().int().min(1).max(50).default(50),
     groupExpansionMax: z.number().int().min(1).max(100).default(50),
     items: z.array(freeBusyCalendarItemSchema).min(1),

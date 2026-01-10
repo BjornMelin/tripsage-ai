@@ -5,7 +5,7 @@
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
-import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import {
   calendarEventSchema,
   createCalendarEventInputSchema,
@@ -24,7 +24,11 @@ function parseDateOrUndefined(value?: string): Date | undefined {
   if (!value) return undefined;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`Invalid date string: ${value}`);
+    throw createToolError(
+      TOOL_ERROR_CODES.calendarInvalidDate,
+      `Invalid date string: ${value}`,
+      { value }
+    );
   }
   return parsed;
 }

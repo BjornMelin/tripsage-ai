@@ -138,8 +138,10 @@ function isChatUiMessagePart(part: UiMessagePart): part is ChatUiMessagePart {
 
 export function createMemorySummaryCache(options: {
   ttlMs: number;
+  maxEntries?: number;
 }): MemorySummaryCache {
   const cache = new Map<string, MemorySummaryCacheEntry>();
+  const maxEntries = options.maxEntries ?? 1000;
   return {
     get: (key, now) => {
       const cached = cache.get(key);
@@ -151,6 +153,11 @@ export function createMemorySummaryCache(options: {
       return cached.value;
     },
     set: (key, value, now) => {
+      // Evict oldest entries if at capacity
+      if (cache.size >= maxEntries && !cache.has(key)) {
+        const firstKey = cache.keys().next().value;
+        if (firstKey) cache.delete(firstKey);
+      }
       cache.set(key, {
         expiresAt: now + options.ttlMs,
         value,
