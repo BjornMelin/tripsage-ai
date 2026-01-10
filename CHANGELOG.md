@@ -1,3 +1,22 @@
+## [1.25.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.24.0...v1.25.0) (2026-01-10)
+
+### Features
+
+* **security:** harden bot protection and auth ([bff0467](https://github.com/BjornMelin/tripsage-ai/commit/bff0467aa47ba277ae1bd0308a6a18e0a9b3516a))
+
+### Bug Fixes
+
+* **ci:** expand CSP trigger files and update README for biome:fix ([374988a](https://github.com/BjornMelin/tripsage-ai/commit/374988a34d76e610c99732dbae7a5efe6c9c1651)), closes [#631](https://github.com/BjornMelin/tripsage-ai/issues/631)
+* **pr-631:** address new CodeRabbit notes ([810c371](https://github.com/BjornMelin/tripsage-ai/commit/810c371a14308afc7734e1abc5b882fdb84f7ec4))
+* **pr-631:** address review feedback ([9e566e9](https://github.com/BjornMelin/tripsage-ai/commit/9e566e90babc96e4a5a1990961711e9d03d0a411))
+* **pr-631:** resolve follow-up review comments ([79edc44](https://github.com/BjornMelin/tripsage-ai/commit/79edc44eddf72350c63fe355b839e2fa41632a64))
+* **security,proxy,config:** address pr review comments for security hardening ([2d474fa](https://github.com/BjornMelin/tripsage-ai/commit/2d474fad6075ffa245f95e0f8bf0edef6a5a21cd)), closes [#631](https://github.com/BjornMelin/tripsage-ai/issues/631)
+* **test,env:** fix biome async lint and add missing base_url env var ([bd2f9ff](https://github.com/BjornMelin/tripsage-ai/commit/bd2f9ffb3ace569d7073d999c706b90da20f3d0b)), closes [#631](https://github.com/BjornMelin/tripsage-ai/issues/631)
+* **test:** add vitest node env and remove redundant type guards in proxy CSP test ([404e8c7](https://github.com/BjornMelin/tripsage-ai/commit/404e8c7d22bbfdead3cfcb5a0f15b17c4626d249)), closes [#631](https://github.com/BjornMelin/tripsage-ai/issues/631)
+* **test:** set bypassed=false in botid mock for accurate verification ([95c4dbd](https://github.com/BjornMelin/tripsage-ai/commit/95c4dbd0e91e0917e581cc2a2968e6985a67ae68)), closes [#631](https://github.com/BjornMelin/tripsage-ai/issues/631)
+* **ui:** stabilize Motion shimmer ([555f0ca](https://github.com/BjornMelin/tripsage-ai/commit/555f0ca8220c90091d49042e2610d1eb3dc6e897))
+* **url:** normalize configured server origin ([b9ac958](https://github.com/BjornMelin/tripsage-ai/commit/b9ac9584a80f917c5f82229a00d690d59df4c874))
+
 ## [1.24.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.23.0...v1.24.0) (2026-01-10)
 
 ### Features
