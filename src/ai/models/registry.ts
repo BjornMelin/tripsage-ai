@@ -9,7 +9,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import type { ModelMapper, ProviderId, ProviderResolution } from "@schemas/providers";
 import { createGateway } from "ai";
-import { isE2eBypassEnabled } from "@/lib/config/helpers";
 import {
   getUserAllowGatewayFallback,
   getUserApiKey,
@@ -299,10 +298,8 @@ export async function resolveProvider(
   userId: string,
   modelHint?: string
 ): Promise<ProviderResolution> {
-  const bypassUserKeys = isE2eBypassEnabled();
-
-  if (!bypassUserKeys) {
-    // 0) Per-user Gateway key (if present): highest precedence
+  // 0) Per-user Gateway key (if present): highest precedence
+  try {
     const userGatewayKey = await getUserApiKey(userId, "gateway");
     if (userGatewayKey) {
       const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
@@ -338,24 +335,30 @@ export async function resolveProvider(
         })
       );
     }
+  } catch (error) {
+    providerRegistryLogger.warn("gateway_lookup_failed", {
+      errorMessage:
+        error instanceof Error ? error.message.slice(0, 500) : String(error),
+      errorName: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
 
-    // 1) Check for BYOK keys in preference order (OpenAI, OpenRouter, Anthropic, xAI)
-    const providers = PROVIDER_PREFERENCE;
-    for (const provider of providers) {
-      try {
-        const apiKey = await getUserApiKey(userId, provider);
-        if (apiKey) {
-          const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
-          return await resolveByokProvider(provider, apiKey, modelId, userId);
-        }
-      } catch (error) {
-        providerRegistryLogger.warn("byok_lookup_failed", {
-          errorMessage:
-            error instanceof Error ? error.message.slice(0, 500) : String(error),
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
-        });
+  // 1) Check for BYOK keys in preference order (OpenAI, OpenRouter, Anthropic, xAI)
+  const providers = PROVIDER_PREFERENCE;
+  for (const provider of providers) {
+    try {
+      const apiKey = await getUserApiKey(userId, provider);
+      if (apiKey) {
+        const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
+        return await resolveByokProvider(provider, apiKey, modelId, userId);
       }
+    } catch (error) {
+      providerRegistryLogger.warn("byok_lookup_failed", {
+        errorMessage:
+          error instanceof Error ? error.message.slice(0, 500) : String(error),
+        errorName: error instanceof Error ? error.name : "unknown_error",
+        provider,
+      });
     }
   }
 
@@ -405,11 +408,20 @@ export async function resolveProvider(
 
   // Final fallback: Vercel AI Gateway (if configured)
   // Gateway provides unified routing, budgets, retries, and observability
-  const allowFallback = bypassUserKeys
-    ? true
-    : await getUserAllowGatewayFallback(userId);
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
   if (gatewayApiKey) {
+    let allowFallback: boolean | null = null;
+    try {
+      allowFallback = await getUserAllowGatewayFallback(userId);
+    } catch (error) {
+      providerRegistryLogger.warn("gateway_fallback_preference_lookup_failed", {
+        errorMessage:
+          error instanceof Error ? error.message.slice(0, 500) : String(error),
+        errorName: error instanceof Error ? error.name : "unknown_error",
+      });
+      allowFallback = null;
+    }
+
     const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);
     const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
     const modelId = normalizeGatewayModelId("openai", resolvedModelId);

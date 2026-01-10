@@ -74,9 +74,22 @@ function resolveConfiguredOrigin(): string | null {
     // NEXT_PUBLIC_SITE_URL not available, continue to next option
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  if (baseUrl && typeof baseUrl === "string" && baseUrl.trim().length > 0) {
-    return baseUrl;
+  try {
+    const baseUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_BASE_URL", "");
+    if (baseUrl && typeof baseUrl === "string" && baseUrl.trim().length > 0) {
+      return baseUrl;
+    }
+  } catch {
+    // NEXT_PUBLIC_BASE_URL not available, continue to next option
+  }
+
+  try {
+    const appUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_APP_URL", "");
+    if (appUrl && typeof appUrl === "string" && appUrl.trim().length > 0) {
+      return appUrl;
+    }
+  } catch {
+    // NEXT_PUBLIC_APP_URL not available, continue to next option
   }
 
   return null;

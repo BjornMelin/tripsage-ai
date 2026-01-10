@@ -11,6 +11,15 @@ import { createRouteParamsContext } from "@/test/helpers/route";
 import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
 import { getSupabaseMockState } from "@/test/mocks/supabase";
 
+vi.mock("server-only", () => ({}));
+
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 // Mock cache functions to skip caching in tests
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: vi.fn(() => Promise.resolve(null)),

@@ -53,6 +53,7 @@ export const ROUTE_RATE_LIMITS = {
   "auth:mfa:setup": { limit: 3, window: "1 m" },
   "auth:mfa:verify": { limit: 3, window: "1 m" },
   "auth:password:reset-request": { limit: 5, window: "10 m" },
+  "auth:register": { limit: 3, window: "10 m" },
 
   // Calendar routes
   "calendar:events:create": { limit: 10, window: "1 m" },

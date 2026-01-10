@@ -11,6 +11,15 @@ import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";
 import { DELETE as SESS_ID_DELETE, GET as SESS_ID_GET } from "../[id]/route";
 import { GET as SESS_GET, POST as SESS_POST } from "../route";
 
+vi.mock("server-only", () => ({}));
+
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 // Mock next/headers cookies() BEFORE any imports that use it
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() =>

@@ -56,7 +56,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.20.0
+          npm install -g pnpm@10.27.0
           pnpm install --frozen-lockfile
 
       - name: Validate infrastructure (optional)

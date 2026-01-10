@@ -6,15 +6,21 @@ import "server-only";
 
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import type { TelemetrySpanAttributes } from "@/lib/telemetry/span";
-import type { RateLimitResult } from "./_rate-limiter";
 
 type Operation = "insert" | "delete";
 type IdentifierType = "user" | "ip";
 
+export type RateLimitMetadata = {
+  limit: number;
+  remaining: number;
+  reset: number;
+  success: boolean;
+};
+
 export type BuildKeySpanAttributesInput = {
   identifierType: IdentifierType;
   operation: Operation;
-  rateLimit?: RateLimitResult;
+  rateLimit?: RateLimitMetadata;
   service: string;
   userId?: string;
 };

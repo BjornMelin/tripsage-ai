@@ -293,7 +293,7 @@ function handleRateLimitTimeout(
  * @param identifier User ID or IP address for rate limiting.
  * @returns Error response if limit exceeded, null otherwise.
  */
-async function enforceRateLimit(
+export async function enforceRateLimit(
   rateLimitKey: RouteRateLimitKey,
   identifier: string,
   options: { degradedMode: DegradedMode }
@@ -529,6 +529,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
             }),
             {
               allowVerifiedAiAssistants: botIdConfig.allowVerifiedAiAssistants,
+              headers: req.headers,
               level: botIdConfig.mode === "deep" ? "deep" : "basic",
             }
           );
@@ -554,13 +555,8 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         }
         const configuredDegradedMode =
           config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
-        const bypassRateLimit =
-          (process.env.E2E_BYPASS_RATE_LIMIT === "1" ||
-            process.env.E2E_BYPASS_RATE_LIMIT === "true") &&
-          process.env.NODE_ENV !== "production";
-        const degradedMode = bypassRateLimit ? "fail_open" : configuredDegradedMode;
         const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
-          degradedMode,
+          degradedMode: configuredDegradedMode,
         });
         if (rateLimitError) {
           return rateLimitError;
@@ -664,11 +660,12 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 /**
  * Represents the output specification for an AI SDK Agent.
  *
- * This mirrors the AI SDK `Output<OUTPUT, PARTIAL>` interface. The `ai` package
- * exports `Output` as a runtime namespace (factory functions) rather than a
- * directly importable type, so we use a structural type compatible with the SDK.
+ * The `ai` package exports `Output` as a runtime namespace (factory functions)
+ * rather than a directly importable type. We therefore use a structural type
+ * that matches the SDK's internal `Output<OUTPUT, PARTIAL, ELEMENT>` interface.
  */
-type AgentOutput<OutputType = unknown, PartialType = unknown> = {
+type AgentOutput<OutputType = unknown, PartialType = unknown, ElementType = unknown> = {
+  name: string;
   responseFormat: PromiseLike<
     { type: "text" } | { type: "json"; schema?: unknown } | undefined
   >;
@@ -680,9 +677,18 @@ type AgentOutput<OutputType = unknown, PartialType = unknown> = {
       finishReason: FinishReason;
     }
   ) => Promise<OutputType>;
-  parsePartialOutput: (options: {
-    text: string;
-  }) => Promise<{ partial: PartialType } | undefined>;
+  parsePartialOutput: (options: { text: string }) => Promise<
+    | {
+        partial: PartialType;
+      }
+    | undefined
+  >;
+  createElementStreamTransform: () =>
+    | TransformStream<
+        { part: unknown; partialOutput: PartialType | undefined },
+        ElementType
+      >
+    | undefined;
 };
 
 type AgentRouteFactoryResult<
@@ -734,7 +740,7 @@ export function createAgentRoute<
 ): (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
   return withApiGuards({
     auth: true,
-    botId: options.botId,
+    botId: options.botId ?? true,
     rateLimit: options.rateLimit,
     schema: options.schema,
     telemetry: options.telemetry,

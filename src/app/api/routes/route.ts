@@ -26,6 +26,7 @@ import { postComputeRoutes } from "@/lib/google/client";
  */
 export const POST = withApiGuards({
   auth: false,
+  botId: true,
   rateLimit: "routes",
   schema: computeRoutesRequestSchema,
   telemetry: "routes.compute",

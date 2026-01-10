@@ -20,6 +20,7 @@ import { isMfaRequiredError } from "@/lib/auth/supabase-errors";
  */
 export const POST = withApiGuards({
   auth: false,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:login",
   schema: loginFormSchema,
   telemetry: "auth.login",

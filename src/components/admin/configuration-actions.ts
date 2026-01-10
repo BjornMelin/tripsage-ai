@@ -8,7 +8,6 @@ import {
 } from "@schemas/configuration";
 import { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
-import { isE2eBypassEnabled } from "@/lib/config/helpers";
 import {
   err,
   ok,
@@ -16,13 +15,11 @@ import {
   type ResultError,
   zodErrorToFieldErrors,
 } from "@/lib/result";
-import { nowIso, secureId } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
 
 const DEFAULT_SCOPE = "global";
-const DEFAULT_MODEL = "gpt-4o";
 
 const configurationActionsLogger = createServerLogger("admin.configuration");
 
@@ -89,45 +86,6 @@ export async function fetchAgentBundle(
   try {
     config = await resolveAgentConfig(agentType, { scope: DEFAULT_SCOPE });
   } catch (error) {
-    if (isE2eBypassEnabled()) {
-      const now = nowIso();
-      const timestamp = now.replace(/[-:T.Z]/g, "").slice(0, 14);
-
-      // Construct a fallback config that satisfies schema constraints.
-      // `versionIdSchema` and `agentConfigRequestSchema` expect:
-      // - `id`: `v${timestamp}_${secureId(8)}` (matches /^v\d+_[a-f0-9]{8}$/)
-      // - `model`: `DEFAULT_MODEL` ("gpt-4o") which is currently allowed.
-      // Validation failure is treated as an error on purpose to surface schema changes
-      // early in tests instead of silently returning a mismatched fallback.
-      const fallbackConfigParsed = configurationAgentConfigSchema.safeParse({
-        agentType,
-        createdAt: now,
-        id: `v${timestamp}_${secureId(8)}`,
-        model: DEFAULT_MODEL,
-        parameters: {
-          model: DEFAULT_MODEL,
-        },
-        scope: DEFAULT_SCOPE,
-        updatedAt: now,
-      });
-
-      if (!fallbackConfigParsed.success) {
-        // Intentionally return an error to surface schema mismatches during tests.
-        // Include Zod validation details to help debug schema changes.
-        return err({
-          error: "internal",
-          issues: fallbackConfigParsed.error.issues,
-          reason: "Failed to construct fallback config",
-        });
-      }
-
-      return ok({
-        config: fallbackConfigParsed.data,
-        metrics: { lastUpdatedAt: null, versionCount: 0 },
-        versions: [],
-      });
-    }
-
     const formattedError = formatErrorForLog(error);
     configurationActionsLogger.error("agent_bundle_load_failed", {
       agentType,

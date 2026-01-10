@@ -37,7 +37,7 @@ BotID runs after auth (need user context for logging) but before rate limiting (
 ### Configuration
 
 - **Mode**: Basic (free tier) — validates browser sessions
-- **Verified AI assistants**: Allowed (ChatGPT, Perplexity, Claude web search, etc.)
+- **Verified AI assistants**: Allowed by default for chat/agent routes (ChatGPT, Perplexity, Claude web search, etc.)
 - **Non-AI bots**: Blocked (search crawlers, monitors, scrapers)
 
 ### Response on Bot Detection
@@ -75,7 +75,7 @@ Content-Type: application/json
 - Requires Vercel deployment (BotID is Vercel-only)
 - Local development always returns `isBot: false` (cannot test detection locally)
 - Deep Analysis mode costs $1/1000 calls if enabled
-- Client-side `BotIdClient` component required in root layout
+- Requires client-side BotID initialization (`initBotId`) to provide browser signals for server checks
 
 ### Neutral
 
@@ -88,8 +88,9 @@ Key files:
 
 - `src/lib/security/botid.ts` — `assertHumanOrThrow()` helper and `BotDetectedError`
 - `src/lib/api/factory.ts` — `GuardsConfig.botId` option
-- `src/app/layout.tsx` — `<BotIdClient>` component with protected routes
-- `next.config.ts` — Proxy rewrites to prevent ad-blocker interference
+- `src/instrumentation-client.ts` — `initBotId({ protect })` client init
+- `src/config/botid-protect.ts` — Canonical `protect` rules for BotID client init
+- `next.config.ts` — `withBotId(nextConfig)` wrapper to enable BotID rewrites
 
 ## References
 
@@ -98,4 +99,4 @@ Key files:
 - [Verified Bots Directory](https://vercel.com/docs/botid/verified-bots)
 - [bots.fyi](https://bots.fyi) — Vercel's verified bot directory
 - ADR-0032: Centralized Rate Limiting
-- SPEC-0038: BotID Integration Specification
+- SPEC-0038: BotID Integration Specification (archived; superseded by SPEC-0108)

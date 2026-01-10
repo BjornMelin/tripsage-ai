@@ -6,7 +6,6 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
@@ -44,6 +43,7 @@ export function DELETE(
 ): Promise<Response> {
   return withApiGuards({
     auth: true,
+    botId: true,
     rateLimit: "keys:delete",
     // Custom telemetry handled below
   })(async (_req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
@@ -53,8 +53,6 @@ export function DELETE(
       if (!result.ok) return result.error;
       const userId = result.data;
       const identifierType: IdentifierType = "user";
-      // Rate limit metadata not available from factory, using undefined for custom telemetry
-      const rateLimitMeta: RateLimitResult | undefined = undefined;
 
       const serviceResult = await parseStringId(routeContext, "service");
       if (!serviceResult.ok) return serviceResult.error;
@@ -75,7 +73,6 @@ export function DELETE(
           attributes: buildKeySpanAttributes({
             identifierType,
             operation: "delete",
-            rateLimit: rateLimitMeta,
             service: normalizedService,
             userId,
           }),

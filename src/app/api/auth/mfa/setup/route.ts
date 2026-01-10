@@ -19,6 +19,7 @@ const logger = createServerLogger("api.auth.mfa.setup", {
 /** The POST handler for the MFA setup API. */
 export const POST = withApiGuards({
   auth: true,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:mfa:setup",
   telemetry: "api.auth.mfa.setup",
 })(async (_req, { supabase }) => {

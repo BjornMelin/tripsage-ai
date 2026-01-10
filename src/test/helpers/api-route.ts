@@ -21,6 +21,13 @@ import { getMockCookiesForTest } from "./route";
 
 registerUpstashMocksWithVitest();
 
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 // ---- REQUEST FACTORIES ------------------------------------------------------
 
 /**

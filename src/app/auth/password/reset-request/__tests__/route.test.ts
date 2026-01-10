@@ -5,6 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 describe("POST /auth/password/reset-request", () => {
   afterEach(async () => {
     const { setRateLimitFactoryForTests, setSupabaseFactoryForTests } = await import(

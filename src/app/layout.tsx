@@ -2,16 +2,17 @@
  * @fileoverview Next.js root layout component with theme, query, and performance providers.
  */
 
-import { BotIdClient } from "botid/client";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
+import { Suspense } from "react";
 import "./globals.css";
+import { BotIdClientProvider } from "@/components/providers/botid-client";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
 import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
 import { TelemetryProvider } from "@/components/providers/telemetry-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { BOTID_PROTECT, SHOULD_ENABLE_BOT_ID } from "@/config/bot-protection";
 
 /**
  * Primary sans-serif font configuration.
@@ -65,6 +66,32 @@ export const viewport = {
  * @param props.children - Child components to render in the main content area
  * @returns The root layout JSX element
  */
+async function AppShell({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
+  return (
+    <>
+      {/* Initialize client-side OpenTelemetry tracing */}
+      <TelemetryProvider />
+      <BotIdClientProvider />
+      <PerformanceMonitor>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          nonce={nonce}
+        >
+          {/* Keep Supabase Realtime authorized with the current access token */}
+          <RealtimeAuthProvider />
+          <div className="flex flex-col min-h-screen">{children}</div>
+          <Toaster />
+        </ThemeProvider>
+      </PerformanceMonitor>
+    </>
+  );
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -75,22 +102,9 @@ export default function RootLayout({
       <body
         className={`${GEIST_SANS.variable} ${GEIST_MONO.variable} font-sans antialiased min-h-screen`}
       >
-        {/* Initialize client-side OpenTelemetry tracing */}
-        <TelemetryProvider />
-        {SHOULD_ENABLE_BOT_ID && <BotIdClient protect={BOTID_PROTECT} />}
-        <PerformanceMonitor>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {/* Keep Supabase Realtime authorized with the current access token */}
-            <RealtimeAuthProvider />
-            <div className="flex flex-col min-h-screen">{children}</div>
-            <Toaster />
-          </ThemeProvider>
-        </PerformanceMonitor>
+        <Suspense fallback={<div className="min-h-screen bg-background" />}>
+          <AppShell>{children}</AppShell>
+        </Suspense>
       </body>
     </html>
   );

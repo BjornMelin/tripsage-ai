@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import type { IncomingHttpHeaders } from "node:http";
 import { checkBotId } from "botid/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -107,6 +108,23 @@ export interface AssertHumanOptions {
    * @default true
    */
   allowVerifiedAiAssistants?: boolean;
+
+  /**
+   * Request headers to pass to BotID verification.
+   *
+   * BotID's server SDK can attempt to infer headers from the platform runtime.
+   * Passing headers explicitly makes verification deterministic across local,
+   * CI, and non-Vercel environments.
+   */
+  headers?: Headers | IncomingHttpHeaders;
+}
+
+function toIncomingHttpHeaders(headers: Headers): IncomingHttpHeaders {
+  const result: IncomingHttpHeaders = {};
+  headers.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
 }
 
 /**
@@ -134,13 +152,17 @@ export async function assertHumanOrThrow(
   routeName: string,
   options: AssertHumanOptions = {}
 ): Promise<void> {
-  const { level = "basic", allowVerifiedAiAssistants = true } = options;
+  const { level = "basic", allowVerifiedAiAssistants = true, headers } = options;
 
   const result = await (async () => {
     try {
       return await checkBotId({
         advancedOptions: {
           checkLevel: level === "deep" ? "deepAnalysis" : "basic",
+          headers:
+            headers instanceof Headers
+              ? toIncomingHttpHeaders(headers)
+              : (headers ?? undefined),
         },
       });
     } catch (error) {

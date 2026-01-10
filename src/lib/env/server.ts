@@ -36,11 +36,17 @@ function isPlaceholderValue(value: string): boolean {
     lower.startsWith("your-") ||
     lower.startsWith("your_") ||
     lower.startsWith("changeme") ||
+    lower.startsWith("replace-") ||
+    lower.startsWith("replace_") ||
     lower.includes("placeholder") ||
     lower.includes("example") ||
     lower === "your-publishable-key" ||
     lower === "your-anon-key"
   ) {
+    return true;
+  }
+
+  if (lower.length >= 16 && /^0+$/.test(lower)) {
     return true;
   }
   return false;

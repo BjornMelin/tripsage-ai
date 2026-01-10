@@ -31,7 +31,7 @@ export default defineConfig({
       use: { ...devices["Desktop Safari"] },
     },
   ],
-  reporter: "html",
+  reporter: [["html", { open: "never" }]],
   retries: process.env.CI ? 2 : 0,
   testDir: "./e2e",
   use: {
@@ -42,6 +42,7 @@ export default defineConfig({
     command: "node scripts/e2e-webserver.mjs",
     env: {
       ...process.env,
+      E2E: process.env.E2E ?? "1",
       PORT: `${e2ePort}`,
       // Allow dev server to boot in local/e2e without real Supabase credentials.
       NEXT_PUBLIC_SUPABASE_URL:
@@ -52,7 +53,6 @@ export default defineConfig({
       NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? baseURL,
       NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? baseURL,
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ?? baseURL,
-      E2E_BYPASS_RATE_LIMIT: process.env.E2E_BYPASS_RATE_LIMIT ?? "1",
       NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED ?? "1",
     },
     reuseExistingServer: false,

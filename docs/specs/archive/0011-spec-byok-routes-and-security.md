@@ -29,7 +29,7 @@ Move BYOK key CRUD and validation to Next.js route handlers using Supabase Vault
 - SQL guard: `coalesce((current_setting('request.jwt.claims', true)::json->>'role'),'') = 'service_role'` in RPCs.
 - Server-only env usage; no secrets serialized to client.
 - Logs redact `api_key`.
-- Each Next.js route imports `"server-only"` and exports `dynamic = "force-dynamic"` / `revalidate = 0` so responses are evaluated per request and never cached or served to clients.
+- Each Next.js route imports `"server-only"`. **Note:** With Cache Components enabled, Route Segment config exports like `dynamic` and `revalidate` are disabled, so request-time behavior is enforced by auth-scoped Request APIs (`cookies()`, `headers()`) and by avoiding `use cache` on user-scoped handlers.
 - Handlers normalize service identifiers (trim/lowercase) once before calling Vault RPCs to prevent mismatched deletes.
 
 ## Rate Limiting

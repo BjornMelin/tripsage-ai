@@ -24,6 +24,7 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
   - Supabase integration (env vars)
   - Upstash integration (env vars)
   - BotID (Vercel's bot detection) enabled for configured routes (see [ADR-0059](../../architecture/decisions/adr-0059-botid-chat-and-agents.md))
+  - Proxy enabled via `src/proxy.ts` (CSP nonce + baseline security headers + Supabase SSR cookie refresh)
 
 - Environment validation at runtime using Zod:
   - Schema: `src/domain/schemas/env.ts`
@@ -32,7 +33,7 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
 - Required environment variables:
   - Supabase:
     - NEXT_PUBLIC_SUPABASE_URL
-    - NEXT_PUBLIC_SUPABASE_ANON_KEY
+    - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (preferred) or NEXT_PUBLIC_SUPABASE_ANON_KEY (legacy)
     - SUPABASE_SERVICE_ROLE_KEY
   - Upstash:
     - UPSTASH_REDIS_REST_URL
@@ -44,6 +45,11 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
 2) Configure Supabase and Upstash integrations (or set the required env vars manually).
 3) Enable BotID for the routes described in ADR-0059.
 4) Trigger a deployment and verify the build and runtime logs are free of env validation errors.
+
+Notes:
+
+- Nonce-based CSP (via Proxy) requires request-time values for inline scripts/styles. With Cache Components enabled, keep Dynamic API access (e.g. `headers()`) inside `<Suspense>` boundaries so PPR can stream dynamic content without blocking the build.
+- Many sensitive routes fail-closed when Upstash is unavailable; ensure Upstash env vars are configured for preview + production.
 
 ## References
 

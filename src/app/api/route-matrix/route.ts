@@ -27,6 +27,7 @@ import { parseNdjsonResponse, postComputeRouteMatrix } from "@/lib/google/client
  */
 export const POST = withApiGuards({
   auth: false,
+  botId: true,
   rateLimit: "route-matrix",
   schema: routeMatrixRequestSchema,
   telemetry: "route-matrix.compute",

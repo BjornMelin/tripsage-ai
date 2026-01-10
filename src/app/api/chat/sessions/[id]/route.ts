@@ -28,6 +28,7 @@ export function GET(
 ): Promise<Response> {
   return withApiGuards({
     auth: true,
+    botId: true,
     rateLimit: "chat:sessions:get",
     telemetry: "chat.sessions.get",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
@@ -54,6 +55,7 @@ export function DELETE(
 ): Promise<Response> {
   return withApiGuards({
     auth: true,
+    botId: true,
     rateLimit: "chat:sessions:delete",
     telemetry: "chat.sessions.delete",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {

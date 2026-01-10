@@ -39,7 +39,9 @@ Recommended stages:
   - `pnpm type-check`
   - `pnpm test:affected`
 - PR CI:
-  - run typecheck + Biome + `pnpm test:affected`
+  - run `pnpm biome:fix` and fail if it introduces diffs (`git diff --exit-code`)
+  - run `pnpm type-check`
+  - run `pnpm test:affected`
 - Main branch / merge CI:
   - run the full suite (`pnpm test:ci`) + E2E (`pnpm test:e2e` or `pnpm test:e2e:chromium`)
 

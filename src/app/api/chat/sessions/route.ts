@@ -36,6 +36,7 @@ const createSessionBodySchema = z.looseObject({
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "chat:sessions:create",
   telemetry: "chat.sessions.create",
 })(async (req: NextRequest, { supabase, user }) => {
@@ -75,6 +76,7 @@ export const POST = withApiGuards({
  */
 export const GET = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "chat:sessions:list",
   telemetry: "chat.sessions.list",
 })((_req, { supabase, user }) => {

@@ -8,16 +8,69 @@ import "server-only";
 
 import { loginFormSchema, registerFormSchema } from "@schemas/auth";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { enforceRateLimit } from "@/lib/api/factory";
 import { safeNextPath } from "@/lib/auth/redirect-server";
+import { getTrustedRateLimitIdentifierFromHeaders } from "@/lib/ratelimit/identifier";
+import type { RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { type FieldErrors, zodErrorToFieldErrors } from "@/lib/result";
+import { assertHumanOrThrow, isBotDetectedError } from "@/lib/security/botid";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
 import { isMfaRequiredError } from "./supabase-errors";
 
 const logger = createServerLogger("auth.actions");
+
+async function enforceBotIdForAuthAction(
+  actionName: string
+): Promise<{ status: "error"; error: string } | null> {
+  try {
+    const requestHeaders = await headers();
+    await assertHumanOrThrow(actionName, {
+      allowVerifiedAiAssistants: false,
+      headers: requestHeaders,
+    });
+    return null;
+  } catch (error) {
+    if (isBotDetectedError(error)) {
+      return { error: "Automated access is not allowed.", status: "error" };
+    }
+    logger.error("botid_check_failed", {
+      actionName,
+      error: error instanceof Error ? error.message : String(error ?? "unknown_error"),
+    });
+    return {
+      error: "Security verification failed. Please try again.",
+      status: "error",
+    };
+  }
+}
+
+async function enforceRateLimitForAuthAction(
+  rateLimitKey: RouteRateLimitKey
+): Promise<{ status: "error"; error: string } | null> {
+  const requestHeaders = await headers();
+  const ipHash = getTrustedRateLimitIdentifierFromHeaders(requestHeaders);
+  const identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
+
+  const result = await enforceRateLimit(rateLimitKey, identifier, {
+    degradedMode: "fail_closed",
+  });
+  if (!result) return null;
+
+  if (result.status === 429) {
+    return { error: "Too many requests. Please try again later.", status: "error" };
+  }
+
+  logger.error("auth_rate_limit_unavailable", { rateLimitKey, status: result.status });
+  return {
+    error: "Service temporarily unavailable. Please try again.",
+    status: "error",
+  };
+}
 
 export type LoginActionState =
   | { status: "idle" }
@@ -164,6 +217,12 @@ export async function loginWithPasswordAction(
   _prevState: LoginActionState,
   formData: FormData
 ): Promise<LoginActionState | never> {
+  const rateLimitResult = await enforceRateLimitForAuthAction("auth:login");
+  if (rateLimitResult) return rateLimitResult;
+
+  const botIdResult = await enforceBotIdForAuthAction("auth.login.action");
+  if (botIdResult) return botIdResult;
+
   const nextPath = safeNextPath(getFormString(formData, "next"));
 
   const parsed = loginFormSchema.safeParse({
@@ -277,6 +336,12 @@ export async function verifyMfaAction(
   _prevState: VerifyMfaActionState,
   formData: FormData
 ): Promise<VerifyMfaActionState | never> {
+  const rateLimitResult = await enforceRateLimitForAuthAction("auth:mfa:verify");
+  if (rateLimitResult) return rateLimitResult;
+
+  const botIdResult = await enforceBotIdForAuthAction("auth.mfa.verify.action");
+  if (botIdResult) return botIdResult;
+
   const parsed = mfaVerificationSchema.safeParse({
     challengeId: getFormString(formData, "challengeId"),
     code: getFormString(formData, "code"),
@@ -318,6 +383,12 @@ export async function registerWithPasswordAction(
   _prevState: RegisterActionState,
   formData: FormData
 ): Promise<RegisterActionState | never> {
+  const rateLimitResult = await enforceRateLimitForAuthAction("auth:register");
+  if (rateLimitResult) return rateLimitResult;
+
+  const botIdResult = await enforceBotIdForAuthAction("auth.register.action");
+  if (botIdResult) return botIdResult;
+
   const nextParam = getFormString(formData, "next");
   const nextPath = safeNextPath(nextParam);
 

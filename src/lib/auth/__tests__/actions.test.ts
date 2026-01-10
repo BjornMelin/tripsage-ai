@@ -8,6 +8,25 @@ import {
   verifyMfaAction,
 } from "../actions";
 
+vi.mock("server-only", () => ({}));
+
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
+const enforceRateLimitMock = vi.hoisted(() => vi.fn(async () => null));
+
+vi.mock("@/lib/api/factory", () => ({
+  enforceRateLimit: enforceRateLimitMock,
+}));
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn(async () => new Headers({ "x-real-ip": "203.0.113.10" })),
+}));
+
 // Mock dependencies (hoisted for vi.mock)
 const {
   loggerErrorMock,
@@ -63,6 +82,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/telemetry/logger", () => ({
   createServerLogger: () => ({
     error: loggerErrorMock,
+    info: loggerWarnMock,
     warn: loggerWarnMock,
   }),
 }));

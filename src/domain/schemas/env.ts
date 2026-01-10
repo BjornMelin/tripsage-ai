@@ -130,7 +130,9 @@ const nextEnvSchema = z.object({
   APP_BASE_URL: z.url().optional(),
   NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+  NEXT_PUBLIC_BASE_URL: z.url().optional(),
   NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
 });
@@ -235,8 +237,6 @@ const securityEnvSchema = z.object({
 const developmentEnvSchema = z.object({
   ANALYZE: z.coerce.boolean().default(false),
   DEBUG: z.coerce.boolean().default(false),
-  // Allow Playwright/E2E runs to bypass rate limiting when Upstash is unavailable.
-  E2E_BYPASS_RATE_LIMIT: z.coerce.boolean().default(false),
 });
 
 // Complete environment schema
@@ -289,7 +289,9 @@ export const envSchema = z
 export const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+  NEXT_PUBLIC_BASE_URL: z.url().optional(),
   NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
   NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),

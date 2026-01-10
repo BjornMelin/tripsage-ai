@@ -27,21 +27,6 @@ describe("fetchAgentBundle", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns fallback bundle when E2E bypass is enabled", async () => {
-    vi.stubEnv("E2E_BYPASS_RATE_LIMIT", "1");
-    vi.stubEnv("NODE_ENV", "development");
-    resolveAgentConfigMock.mockRejectedValue(new Error("DB unavailable"));
-
-    const result = await fetchAgentBundle("budgetAgent");
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.config.agentType).toBe("budgetAgent");
-      expect(result.data.metrics.versionCount).toBe(0);
-      expect(result.data.versions).toHaveLength(0);
-    }
-  });
-
   it("returns agent bundle when resolution succeeds", async () => {
     const { createServerSupabase } = await import("@/lib/supabase/server");
     const config = {
@@ -86,9 +71,7 @@ describe("fetchAgentBundle", () => {
     }
   });
 
-  it("returns error when bypass is disabled and resolution fails", async () => {
-    vi.stubEnv("E2E_BYPASS_RATE_LIMIT", "0");
-    vi.stubEnv("NODE_ENV", "development");
+  it("returns error when resolution fails", async () => {
     resolveAgentConfigMock.mockRejectedValue(new Error("DB unavailable"));
 
     const result = await fetchAgentBundle("budgetAgent");

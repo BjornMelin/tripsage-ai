@@ -84,14 +84,17 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.20.0
+          npm install -g pnpm@10.27.0
           pnpm install --frozen-lockfile
 
       - name: Cache Vite/Vitest/TS caches
         uses: ./.github/actions/cache-vite-vitest
 
-      - name: Biome check (src + e2e + scripts)
-        run: pnpm biome:check -- --reporter=github
+      - name: Biome fix (must be clean)
+        run: pnpm biome:fix
+
+      - name: Fail if Biome introduced diffs
+        run: git diff --exit-code
 
       - name: TypeScript type check
         run: pnpm type-check
@@ -133,10 +136,29 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: 'https://abcd1234.supabase.co'
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_dummy'
 
-      - name: Unit tests (quick, no coverage)
+      - name: Unit tests (affected)
         env:
           VITEST_POOL: threads
-        run: pnpm test:quick
+        run: pnpm test:affected
+
+      - name: Determine if prod CSP check needed
+        id: prod_csp
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -Eq '^(src/proxy\\.ts|playwright\\.prod\\.config\\.ts|scripts/e2e-webserver-prod\\.mjs|package\\.json|pnpm-lock\\.yaml|next\\.config\\.ts)$'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Playwright Chromium (prod CSP)
+        if: steps.prod_csp.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Prod CSP E2E (chromium)
+        if: steps.prod_csp.outputs.run == 'true'
+        run: pnpm exec playwright test -c playwright.prod.config.ts
+        env:
+          E2E_SKIP_BUILD: "1"
 
       - name: Performance benchmarks
         continue-on-error: true
@@ -212,7 +234,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.20.0
+          npm install -g pnpm@10.27.0
           pnpm install --frozen-lockfile
 
       - name: Cache Vite/Vitest/TS caches
@@ -250,7 +272,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install -g pnpm@10.20.0
+          npm install -g pnpm@10.27.0
           pnpm install --frozen-lockfile
 
       - name: Download shard artifacts
