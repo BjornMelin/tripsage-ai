@@ -1,3 +1,18 @@
+## [1.24.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.23.0...v1.24.0) (2026-01-10)
+
+### Features
+
+* **ai:** add timeout helpers and metadata tests ([960e1ef](https://github.com/BjornMelin/tripsage-ai/commit/960e1efbf206328faabb359a2679e87889304213))
+* **ai:** enrich streaming metadata and timeouts ([d9253d9](https://github.com/BjornMelin/tripsage-ai/commit/d9253d9d5fd6c7d3b7ac91288939c4a3d78f0b6f))
+* **ai:** harden chat tools and streaming ([a298851](https://github.com/BjornMelin/tripsage-ai/commit/a298851efaea068c0338682e9ab8b5fe9f3b5c38))
+* **registry:** implement BYOK client creation and provider resolution ([efdefed](https://github.com/BjornMelin/tripsage-ai/commit/efdefedd85308d91cd4573a8980615478fbf5736))
+
+### Bug Fixes
+
+* **admin:** address CodeRabbit review nits ([0e0cdcf](https://github.com/BjornMelin/tripsage-ai/commit/0e0cdcf4a60cd633b29b1560b1f50b2f7455eb39))
+* **ai:** address review feedback ([f3ff087](https://github.com/BjornMelin/tripsage-ai/commit/f3ff087c88c88324b5bffe89382ecbd18b364aa4))
+* **review:** address PR feedback ([7703ee7](https://github.com/BjornMelin/tripsage-ai/commit/7703ee7492ddcdd0ad7db9e064c8ae17e6085b5d))
+
 ## [1.23.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.22.5...v1.23.0) (2026-01-09)
 
 ### ⚠ BREAKING CHANGES
