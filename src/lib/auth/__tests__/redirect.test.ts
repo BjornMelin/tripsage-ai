@@ -8,44 +8,49 @@ async function loadResolver() {
   return module.resolveRedirectUrl;
 }
 
+const emptyOriginEnv = {
+  APP_BASE_URL: undefined,
+  NEXT_PUBLIC_SITE_URL: undefined,
+};
+
 describe("resolveRedirectUrl", () => {
   it("returns fallback when redirect is missing", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl()).toBe("/dashboard");
     });
   });
 
   it("returns fallback when redirect is an empty string", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("")).toBe("/dashboard");
     });
   });
 
   it("returns fallback when redirect is only whitespace", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("   \t  ")).toBe("/dashboard");
     });
   });
 
   it("allows relative redirects on the same origin", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("/welcome")).toBe("/welcome");
     });
   });
 
   it("rejects external hosts not on the allowlist", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("https://evil.example.com")).toBe("/dashboard");
     });
   });
 
   it("rejects protocol-relative redirects", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("//evil.example.com/path")).toBe("/dashboard");
     });
@@ -99,7 +104,7 @@ describe("resolveRedirectUrl", () => {
   });
 
   it("returns fallback for malformed URLs", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("http://[::1")).toBe("/dashboard");
       expect(resolveRedirectUrl("http://")).toBe("/dashboard");
@@ -107,7 +112,7 @@ describe("resolveRedirectUrl", () => {
   });
 
   it("rejects non-http protocols", async () => {
-    await withEnv({}, async () => {
+    await withEnv(emptyOriginEnv, async () => {
       const resolveRedirectUrl = await loadResolver();
       expect(resolveRedirectUrl("javascript:alert(1)")).toBe("/dashboard");
       expect(resolveRedirectUrl("data:text/plain,hello")).toBe("/dashboard");

@@ -64,7 +64,7 @@ function resolveConfiguredOrigin(): string | null {
       | "NEXT_PUBLIC_APP_URL"
   ): string | null => {
     const value = getServerEnvVarWithFallback(key, "");
-    if (value && typeof value === "string" && value.trim().length > 0) {
+    if (value && value.trim().length > 0) {
       return value;
     }
     return null;
