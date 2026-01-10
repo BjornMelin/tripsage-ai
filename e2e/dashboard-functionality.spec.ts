@@ -14,12 +14,16 @@ async function openUserMenu(page: Page): Promise<Locator> {
   const trigger = getUserMenuTrigger(page);
   await expect(trigger).toBeVisible({ timeout: visibilityTimeoutMs });
 
-  const popoverContent = page.getByRole("dialog").filter({ hasText: "Log out" });
+  const logoutButton = page.getByRole("button", { name: "Log out" });
+  const popoverContent = page.getByRole("dialog").filter({ has: logoutButton });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     await trigger.click();
     try {
       await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
+      await expect(popoverContent).toHaveAttribute("data-state", "open", {
+        timeout: visibilityTimeoutMs,
+      });
       return popoverContent;
     } catch (error) {
       if (attempt === 1) throw error;
@@ -41,7 +45,7 @@ async function clickAndWaitForUrl(
   const timeoutMs = options.timeoutMs ?? navigationTimeoutMs;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
-    await locator.click();
+    await locator.click({ force: attempt > 0, timeout: timeoutMs });
     try {
       await expect(page).toHaveURL(url, { timeout: timeoutMs });
       return;

@@ -127,11 +127,27 @@ const baseEnvSchema = z.object({
 
 // Next.js specific environment variables
 const nextEnvSchema = z.object({
+  /**
+   * Origin resolution fallbacks:
+   * - Server: APP_BASE_URL → NEXT_PUBLIC_SITE_URL → NEXT_PUBLIC_BASE_URL → NEXT_PUBLIC_APP_URL
+   * - Client: NEXT_PUBLIC_SITE_URL → NEXT_PUBLIC_BASE_URL → NEXT_PUBLIC_APP_URL
+   * See docs/development/core/env-setup.md for origin configuration guidance.
+   */
+  /** Server-only canonical origin used for SSR + trusted-host checks (highest priority). */
   APP_BASE_URL: z.url().optional(),
+  /** Optional CSP report-uri endpoint (production only). */
+  CSP_REPORT_URI: z.url().optional(),
+  /** Public API base URL for client-side fetches (optional). */
   NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  /** Public app origin fallback when SITE/BASE URLs are not provided. */
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
+  /** Base path when the app is hosted under a subpath (e.g. "/app"). */
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+  /** Public base origin fallback (used by server/client origin resolvers). */
+  NEXT_PUBLIC_BASE_URL: z.url().optional(),
   NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
+  /** Primary public site origin (preferred client/server origin when set). */
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
 });
 
@@ -235,8 +251,6 @@ const securityEnvSchema = z.object({
 const developmentEnvSchema = z.object({
   ANALYZE: z.coerce.boolean().default(false),
   DEBUG: z.coerce.boolean().default(false),
-  // Allow Playwright/E2E runs to bypass rate limiting when Upstash is unavailable.
-  E2E_BYPASS_RATE_LIMIT: z.coerce.boolean().default(false),
 });
 
 // Complete environment schema
@@ -259,6 +273,15 @@ export const envSchema = z
     (data) => {
       // Validation rules that depend on NODE_ENV
       if (data.NODE_ENV === "production") {
+        const hasOrigin =
+          data.APP_BASE_URL ||
+          data.NEXT_PUBLIC_SITE_URL ||
+          data.NEXT_PUBLIC_BASE_URL ||
+          data.NEXT_PUBLIC_APP_URL;
+        if (!hasOrigin) {
+          return false;
+        }
+
         // Required variables in production
         const requiredInProduction = [
           "NEXT_PUBLIC_SUPABASE_URL",
@@ -289,7 +312,9 @@ export const envSchema = z
 export const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.url().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+  NEXT_PUBLIC_BASE_URL: z.url().optional(),
   NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
   NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),

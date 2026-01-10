@@ -22,6 +22,7 @@ import { handlePlacesPhoto } from "./_handler";
  */
 export const GET = withApiGuards({
   auth: false,
+  botId: true,
   rateLimit: "places:photo",
   telemetry: "places.photo",
 })(async (req: NextRequest) => {

@@ -11,6 +11,15 @@ import { createRouteParamsContext } from "@/test/helpers/route";
 import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
 import { getSupabaseMockState } from "@/test/mocks/supabase";
 
+vi.mock("server-only", () => ({}));
+
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 // Mock cache functions to skip caching in tests
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: vi.fn(() => Promise.resolve(null)),
@@ -297,6 +306,24 @@ describe("/api/attachments/files", () => {
 
     const res = await mod.GET(req, createRouteParamsContext());
     expect(res.status).toBe(401);
+  });
+
+  it("should reject bot traffic", async () => {
+    const { checkBotId } = await import("botid/server");
+    vi.mocked(checkBotId).mockResolvedValueOnce({
+      bypassed: false,
+      isBot: true,
+      isHuman: false,
+      isVerifiedBot: false,
+    });
+
+    const mod = await import("../route");
+    const req = new NextRequest("http://localhost/api/attachments/files", {
+      method: "GET",
+    });
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(403);
   });
 
   it("should use default pagination values", async () => {

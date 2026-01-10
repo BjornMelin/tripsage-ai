@@ -25,6 +25,7 @@ const RequestSchema = agentSchemas.memoryUpdateRequestSchema;
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "agents:memory",
   telemetry: "agent.memoryUpdate",
 })(async (req: NextRequest, { user }) => {

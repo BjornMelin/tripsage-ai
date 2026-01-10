@@ -58,6 +58,7 @@ function buildCacheKey(userId: string, params: AttachmentListQuery): string {
  */
 export const GET = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "attachments:files",
   telemetry: "attachments.files.read",
 })(async (req: NextRequest, { user, supabase }) => {

@@ -31,6 +31,7 @@ import { createMessage, listMessages } from "../../_handlers";
 export function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return withApiGuards({
     auth: true,
+    botId: true,
     rateLimit: "chat:sessions:messages:list",
     telemetry: "chat.sessions.messages.list",
   })(async (_req, { supabase, user }, _data, routeContext: RouteParamsContext) => {
@@ -57,6 +58,7 @@ export function GET(req: NextRequest, context: { params: Promise<{ id: string }>
 export function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return withApiGuards({
     auth: true,
+    botId: true,
     rateLimit: "chat:sessions:messages:create",
     telemetry: "chat.sessions.messages.create",
   })(async (request, { supabase, user }, _data, routeContext: RouteParamsContext) => {

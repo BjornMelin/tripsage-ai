@@ -16,7 +16,7 @@ graph TB
     subgraph "Application Layer"
         API[Next.js Route Handlers]
         FE[Next.js Frontend]
-        MW[Middleware - Edge Runtime]
+        PX[Proxy - Node Runtime]
     end
 
     subgraph "Supabase PostgreSQL"
@@ -40,7 +40,7 @@ graph TB
 
     API --> DB
     FE --> RT
-    MW --> AUTH
+    PX --> AUTH
     API --> ST
     API --> AUTH
     API --> VAULT
@@ -53,7 +53,7 @@ graph TB
 
 ## Integration Patterns
 
-- **SSR clients (Next.js 16)**: `createServerSupabase()` wraps `@supabase/ssr.createServerClient` with `cookies()`; used in Server Components and route handlers. Middleware refreshes sessions; BYOK/BYOR routes import `"server-only"` and stay dynamic (`dynamic = "force-dynamic"` when needed).
+- **SSR clients (Next.js 16)**: `createServerSupabase()` wraps `@supabase/ssr.createServerClient` with `cookies()`; used in Server Components and route handlers. `src/proxy.ts` refreshes sessions and propagates updated cookies. With Cache Components enabled, Route Segment config directives (for example `dynamic = "force-dynamic"`) are disabled; rely on request-bound APIs (`cookies()`, `headers()`, `connection()`) and avoid `'use cache'` on auth-scoped paths.
 - **Browser client**: `getBrowserClient()` + `useSupabase()` provide the singleton; always call `supabase.realtime.setAuth(access_token)` on login/refresh before joining channels.
 - **Route handlers**: `withApiGuards` builds an authenticated Supabase client plus user context per request; keep auth/zod validation at the edge of each handler:
 
@@ -62,15 +62,15 @@ import { withApiGuards } from '@/lib/api/factory';
 
 export const GET = withApiGuards({
   auth: true,
-  rateLimit: { limit: 100, window: '1m' },
-})(async ({ supabase, user }) => {
+  rateLimit: "trips:list",
+})(async (_req, { supabase, user }) => {
   const { data } = await supabase.from('trips').select('*').eq('user_id', user.id);
   return Response.json(data);
 });
 ```
 
 - **Telemetry**: wrap service-layer DB calls with `withTelemetrySpan`; never use `console.*` in server paths.
-- **Middleware client (Edge)**: `createMiddlewareSupabase()` from `@/lib/supabase/factory` uses client-only env vars for Edge runtime; tracing disabled by default.
+- **Proxy client**: `createMiddlewareSupabase()` from `@/lib/supabase/factory` is used in `src/proxy.ts` for session refresh; tracing disabled by default.
 
 ## Schema & Domains
 
@@ -93,7 +93,7 @@ export const GET = withApiGuards({
 - **RLS-first**: All user-owned tables enable Row Level Security with owner policies (e.g., `auth.uid() = user_id`).
 - **Collaboration**: `trip_collaborators` policies permit shared access on trip-scoped rows; realtime topic helpers enforce the same audience.
 - **BYOK**: API keys live in Vault; access only via SECURITY DEFINER RPCs (`insert/get/delete/touch_user_api_key`, gateway config helpers) running under service role with validated ownership.
-- **Server-only use**: Sensitive operations stay in route handlers/Server Components; BYOK routes import `"server-only"` and export `dynamic = "force-dynamic"` when required.
+- **Server-only use**: Sensitive operations stay in route handlers/Server Components; BYOK routes import `"server-only"` and avoid cache directives on auth-scoped paths.
 
 ### API Key Security
 

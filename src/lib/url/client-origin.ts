@@ -17,16 +17,19 @@ export function getClientOrigin(): string {
     return window.location.origin;
   }
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    getClientEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
+  const siteUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
   if (siteUrl) {
     return siteUrl;
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL as string | undefined;
+  const baseUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_BASE_URL", "");
   if (baseUrl) {
     return baseUrl;
+  }
+
+  const appUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_APP_URL", "");
+  if (appUrl) {
+    return appUrl;
   }
 
   if (!isProduction && typeof window !== "undefined") {

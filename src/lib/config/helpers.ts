@@ -40,18 +40,3 @@ export function ensureAdmin(
     throw Object.assign(new Error("forbidden"), { status: 403 });
   }
 }
-
-/**
- * Checks if E2E bypass mode is enabled for testing.
- * Always returns false in production.
- */
-export function isE2eBypassEnabled(): boolean {
-  if (process.env.NODE_ENV === "production") return false;
-
-  const synthConfig = process.env.E2E_BYPASS_SYNTH_CONFIG;
-  const rateLimit = process.env.E2E_BYPASS_RATE_LIMIT;
-
-  const isEnabled = (value: string | undefined) => value === "1" || value === "true";
-
-  return isEnabled(synthConfig) || isEnabled(rateLimit);
-}

@@ -56,28 +56,43 @@ function isValidHost(host: string): boolean {
 }
 
 function resolveConfiguredOrigin(): string | null {
-  try {
-    const appBaseUrl = getServerEnvVarWithFallback("APP_BASE_URL", "");
-    if (appBaseUrl && typeof appBaseUrl === "string" && appBaseUrl.trim().length > 0) {
-      return appBaseUrl;
+  const normalizeOrigin = (raw: string, key: string): string | null => {
+    try {
+      const url = new URL(raw.trim());
+      if (url.username || url.password) return null;
+      if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+      return url.origin;
+    } catch {
+      logger.warn("invalid configured origin env var", { key });
+      return null;
     }
-  } catch {
-    // APP_BASE_URL not available, continue to next option
-  }
+  };
 
-  try {
-    const siteUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
-    if (siteUrl && typeof siteUrl === "string" && siteUrl.trim().length > 0) {
-      return siteUrl;
+  const getNonEmptyEnvVar = (
+    key:
+      | "APP_BASE_URL"
+      | "NEXT_PUBLIC_SITE_URL"
+      | "NEXT_PUBLIC_BASE_URL"
+      | "NEXT_PUBLIC_APP_URL"
+  ): string | null => {
+    const value = getServerEnvVarWithFallback(key, "");
+    if (value && value.trim().length > 0) {
+      return normalizeOrigin(value, key);
     }
-  } catch {
-    // NEXT_PUBLIC_SITE_URL not available, continue to next option
-  }
+    return null;
+  };
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  if (baseUrl && typeof baseUrl === "string" && baseUrl.trim().length > 0) {
-    return baseUrl;
-  }
+  const appBaseUrl = getNonEmptyEnvVar("APP_BASE_URL");
+  if (appBaseUrl) return appBaseUrl;
+
+  const siteUrl = getNonEmptyEnvVar("NEXT_PUBLIC_SITE_URL");
+  if (siteUrl) return siteUrl;
+
+  const baseUrl = getNonEmptyEnvVar("NEXT_PUBLIC_BASE_URL");
+  if (baseUrl) return baseUrl;
+
+  const appUrl = getNonEmptyEnvVar("NEXT_PUBLIC_APP_URL");
+  if (appUrl) return appUrl;
 
   return null;
 }
@@ -94,7 +109,7 @@ export function getServerOrigin(): string {
 
   logger.warn("server origin not configured - using localhost:3000 fallback", {
     environment: process.env.NODE_ENV,
-    hint: "Set APP_BASE_URL or NEXT_PUBLIC_SITE_URL",
+    hint: "Set APP_BASE_URL, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_BASE_URL, or NEXT_PUBLIC_APP_URL",
   });
 
   return DEFAULT_LOCALHOST_ORIGIN;
@@ -115,7 +130,7 @@ export function getRequiredServerOrigin(): string {
   if (origin) return origin;
 
   logger.error("required server origin missing", {
-    hint: "Set APP_BASE_URL or NEXT_PUBLIC_SITE_URL",
+    hint: "Set APP_BASE_URL, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_BASE_URL, or NEXT_PUBLIC_APP_URL",
   });
 
   if (isProduction) {

@@ -186,13 +186,12 @@ describe("resolveProvider", () => {
     process.env = originalEnv;
   });
 
-  it("bypasses user key lookup when E2E_BYPASS_RATE_LIMIT=true", async () => {
+  it("falls back to team Gateway when configured and user has no keys", async () => {
     const originalEnv = process.env;
     process.env = {
       ...process.env,
       AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
       ANTHROPIC_API_KEY: undefined,
-      E2E_BYPASS_RATE_LIMIT: "true",
       // Minimal required vars so server env parsing doesn't fail.
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
@@ -207,12 +206,47 @@ describe("resolveProvider", () => {
       );
       const { resolveProvider } = await import("@ai/models/registry");
 
+      vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(true);
+      vi.mocked(getUserApiKey).mockResolvedValue(null);
+
       const result = await resolveProvider("user-bypass", "gpt-4o-mini");
 
-      expect(vi.mocked(getUserApiKey)).not.toHaveBeenCalled();
-      expect(vi.mocked(getUserAllowGatewayFallback)).not.toHaveBeenCalled();
+      expect(vi.mocked(getUserApiKey)).toHaveBeenCalled();
+      expect(vi.mocked(getUserAllowGatewayFallback)).toHaveBeenCalled();
       expect(result.provider).toBe("openai");
       expect(String(result.model)).toContain("gateway(");
+      expect(result.modelId).toBe("openai/gpt-4o-mini");
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  it("throws when user disables Gateway fallback", async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+      ANTHROPIC_API_KEY: undefined,
+      // Minimal required vars so server env parsing doesn't fail.
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: undefined,
+    };
+
+    try {
+      const { getUserAllowGatewayFallback, getUserApiKey } = await import(
+        "@/lib/supabase/rpc"
+      );
+      const { resolveProvider } = await import("@ai/models/registry");
+
+      vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(false);
+      vi.mocked(getUserApiKey).mockResolvedValue(null);
+
+      await expect(resolveProvider("user-no-fallback", "gpt-4o-mini")).rejects.toThrow(
+        /disabled Gateway fallback/
+      );
     } finally {
       process.env = originalEnv;
     }

@@ -54,6 +54,7 @@ const STREAM_TIMEOUT_SECONDS = Math.max(5, maxDuration - 5);
 // Compare with /api/telemetry/ai-demo which uses internal-key auth for backend telemetry.
 const guardedPOST = withApiGuards({
   auth: true,
+  botId: true,
   degradedMode: "fail_closed",
   rateLimit: "ai:stream",
   schema: STREAM_BODY_SCHEMA,

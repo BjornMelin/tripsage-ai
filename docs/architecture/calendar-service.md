@@ -50,7 +50,7 @@ secrets.
 
 ### API Routes (`src/app/api/calendar/`)
 
-All routes are server-only with `dynamic = "force-dynamic"`:
+All routes are server-only (import `server-only`) and are request-scoped via `withApiGuards` (Route Segment config directives like `dynamic` are disabled when Cache Components is enabled):
 
 - **`/api/calendar/status`** (GET)
   - Returns connection status and list of calendars

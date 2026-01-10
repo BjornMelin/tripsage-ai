@@ -15,6 +15,8 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import type { BotIdVerification } from "@/lib/security/botid";
+import { mockBotIdHumanResponse } from "@/test/mocks/botid";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
 import { getMockCookiesForTest } from "./route";
@@ -124,6 +126,17 @@ const LIMIT_SPY = vi.hoisted(() =>
   vi.fn(async (_key: string, _identifier: string) => ({ ...DEFAULT_RATE_LIMIT }))
 );
 
+const BOT_ID_SPY = vi.hoisted(() =>
+  vi.fn(async (): Promise<BotIdVerification> => ({ ...mockBotIdHumanResponse }))
+);
+
+// Mock botid/server to route checkBotId calls through BOT_ID_SPY (mockApiRouteBotIdOnce).
+vi.mock("botid/server", () => {
+  return {
+    checkBotId: BOT_ID_SPY,
+  };
+});
+
 // Create a lazily-initialized Supabase client holder
 // The actual client is created after imports are resolved
 let supabaseClient: ReturnType<typeof createMockSupabaseClient> | null = null;
@@ -192,6 +205,8 @@ export function resetApiRouteMocks(): void {
   setSupabaseFactoryForTests(async () => client);
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });
+  BOT_ID_SPY.mockReset();
+  BOT_ID_SPY.mockResolvedValue({ ...mockBotIdHumanResponse });
   // Most API route tests should not depend on Redis/Upstash availability.
   // Default to a deterministic allow response unless a test overrides this.
   setRateLimitFactoryForTests(LIMIT_SPY);
@@ -338,6 +353,15 @@ export function disableApiRouteRateLimit(): void {
  */
 export function mockApiRouteRateLimitOnce(overrides: Partial<RateLimitResult>): void {
   LIMIT_SPY.mockResolvedValueOnce({ ...DEFAULT_RATE_LIMIT, ...overrides });
+}
+
+/**
+ * Override the BotID response returned by `checkBotId()` for a single request.
+ *
+ * @param overrides - BotID response fields to override (merged with mockBotIdHumanResponse defaults)
+ */
+export function mockApiRouteBotIdOnce(overrides: Partial<BotIdVerification>): void {
+  BOT_ID_SPY.mockResolvedValueOnce({ ...mockBotIdHumanResponse, ...overrides });
 }
 
 /** Replace the cookie jar returned by mocked `cookies()`. */

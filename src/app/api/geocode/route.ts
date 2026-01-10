@@ -61,6 +61,7 @@ async function parseAndValidateGeocodeResponse(
  */
 export const POST = withApiGuards({
   auth: false,
+  botId: true,
   rateLimit: "geocode",
   schema: geocodeRequestSchema,
   telemetry: "geocode.lookup",

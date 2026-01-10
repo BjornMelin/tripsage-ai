@@ -43,7 +43,9 @@ function validateClientEnv(): ClientEnv {
   const clientVars = {
     NEXT_PUBLIC_API_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_API_URL),
     NEXT_PUBLIC_APP_NAME: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_APP_NAME),
+    NEXT_PUBLIC_APP_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_APP_URL),
     NEXT_PUBLIC_BASE_PATH: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_BASE_PATH),
+    NEXT_PUBLIC_BASE_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_BASE_URL),
     NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: normalizeOptionalEnvVar(
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY
     ),

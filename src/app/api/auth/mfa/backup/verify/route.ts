@@ -18,6 +18,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 /** The POST handler for the MFA backup code verify API. */
 export const POST = withApiGuards({
   auth: true,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:mfa:backup:verify",
   schema: backupCodeVerifyInputSchema,
   telemetry: "api.auth.mfa.backup.verify",

@@ -25,6 +25,7 @@ import { handlePlaceDetails } from "./_handler";
 export function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return withApiGuards({
     auth: false,
+    botId: true,
     rateLimit: "places:details",
     telemetry: "places.details",
   })(async (req: NextRequest, _context, _data, routeContext: RouteParamsContext) => {

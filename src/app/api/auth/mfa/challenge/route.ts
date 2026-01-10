@@ -19,6 +19,7 @@ const logger = createServerLogger("api.auth.mfa.challenge", {
 /** The POST handler for the MFA challenge API. */
 export const POST = withApiGuards({
   auth: true,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:mfa:challenge",
   schema: mfaChallengeInputSchema,
   telemetry: "api.auth.mfa.challenge",

@@ -22,6 +22,7 @@ import { handlePlacesSearch } from "./_handler";
  */
 export const POST = withApiGuards({
   auth: false,
+  botId: true,
   rateLimit: "places:search",
   schema: placesSearchRequestSchema,
   telemetry: "places.search",

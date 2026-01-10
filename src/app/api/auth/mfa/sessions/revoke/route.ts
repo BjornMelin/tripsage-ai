@@ -20,6 +20,7 @@ const logger = createServerLogger("api.auth.mfa.sessions.revoke", {
 /** The POST handler for the MFA sessions revoke API. */
 export const POST = withApiGuards({
   auth: true,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:mfa:sessions:revoke",
   schema: mfaSessionRevokeInputSchema,
   telemetry: "api.auth.mfa.sessions.revoke",

@@ -15,10 +15,9 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
   - `POST /api/keys` → upsert via `insert_user_api_key`
   - `DELETE /api/keys/[service]` → delete via `delete_user_api_key`
   - `POST /api/keys/validate` → provider metadata check (no persist)
-- Mark each route module with `import "server-only"` plus `export const dynamic = "force-dynamic"` / `revalidate = 0`
-  so BYOK responses are never cached or executed on the client.
+- Mark each route module with `import "server-only"`. With Cache Components enabled, Route Segment config options like `dynamic` and `revalidate` are disabled, so request-time behavior is enforced by auth-scoped Request APIs (`cookies()`, `headers()`) and by avoiding `use cache` on BYOK/user-scoped handlers.
   **Note:** Routes accessing `cookies()` or `headers()` (required for Supabase SSR auth) cannot use `"use cache"` directives per Next.js Cache Components restrictions; they are automatically dynamic.
-  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
+  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../../specs/archive/0011-spec-byok-routes-and-security.md).
 - Add server-only Supabase admin client using `SUPABASE_SERVICE_ROLE_KEY`.
 - Centralize Vault RPC helpers in `src/lib/supabase/rpc.ts`.
 - Enforce PostgREST claims guard in SQL: `request.jwt.claims->>'role'='service_role'`.
@@ -28,9 +27,9 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
 ### Failure modes & environment guardrails
 
 - **Vault availability:** Production must have `vault`/`supabase_vault` installed; migrations fail fast if missing (see `supabase/migrations/20251122000000_base_schema.sql`). Local/CI may use the stubbed `vault.secrets` table but must never ship to prod.
-- **Error surfaces:** Distinguish infrastructure errors (`VAULT_UNAVAILABLE`) from user errors (`INVALID_KEY`) and transport errors (`NETWORK_ERROR`). Codes are documented in [SPEC-0011](../specs/archive/0011-spec-byok-routes-and-security.md) and returned by `/api/keys/*` handlers.
-- **Rotation/readiness checks (design):** A health check endpoint (service-role) will ping `vault.decrypted_secrets` and integrate with Sentry + Datadog monitors (HTTP 5xx or latency >5s triggers pager). **Status: not yet implemented**—see follow-up tasks below for delivery plan.
-- **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only. Deployment validation should fail if the stub schema exists in production (`app.environment=prod` guard in migration).
+- **Error surfaces:** Distinguish infrastructure errors (`VAULT_UNAVAILABLE`) from user errors (`INVALID_KEY`) and transport errors (`NETWORK_ERROR`). Codes are documented in [SPEC-0011](../../specs/archive/0011-spec-byok-routes-and-security.md) and returned by `/api/keys/*` handlers.
+- **Rotation/readiness checks (design):** A health check endpoint (service-role) will ping `vault.decrypted_secrets` and integrate with Sentry + Datadog monitors (HTTP 5xx or latency >5s triggers pager). **Status: not yet implemented**—see follow-up tasks below for delivery plan. Tracking: [#632](https://github.com/BjornMelin/tripsage-ai/issues/632)
+- **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only. Deployment validation should fail if the stub schema exists in production (`app.environment=prod` guard in migration). Tracking: [#633](https://github.com/BjornMelin/tripsage-ai/issues/633)
 
 ### Monitoring and operational follow-ups (deferred)
 

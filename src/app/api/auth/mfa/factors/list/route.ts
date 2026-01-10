@@ -18,6 +18,7 @@ const logger = createServerLogger("api.auth.mfa.factors.list", {
 /** The GET handler for the MFA factors list API. */
 export const GET = withApiGuards({
   auth: true,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:mfa:factors:list",
   telemetry: "api.auth.mfa.factors.list",
 })(async (_req, { supabase }) => {

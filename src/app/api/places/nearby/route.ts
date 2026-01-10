@@ -22,6 +22,7 @@ import { handlePlacesNearby } from "./_handler";
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "places:nearby",
   schema: placesNearbyRequestSchema,
   telemetry: "places.nearby",

@@ -28,6 +28,7 @@ const logger = createServerLogger("api.auth.mfa.verify", {
 /** The POST handler for the MFA verify API. */
 export const POST = withApiGuards({
   auth: true,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   rateLimit: "auth:mfa:verify",
   schema: mfaVerificationInputSchema,
   telemetry: "api.auth.mfa.verify",

@@ -31,6 +31,7 @@ import { handleRagSearch } from "./_handler";
  */
 export const POST = withApiGuards({
   auth: true, // Authentication required for search
+  botId: true,
   rateLimit: "rag:search",
   schema: ragSearchRequestSchema,
   telemetry: "rag.search",

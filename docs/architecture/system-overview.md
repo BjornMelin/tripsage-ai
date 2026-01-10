@@ -51,7 +51,7 @@ graph TD
 
 ### Identity and Security
 
-- Supabase Auth with SSR cookie handling via `src/lib/supabase/server.ts` and middleware; browser client only for Realtime/subscriptions.
+- Supabase Auth uses `src/lib/supabase/server.ts` for SSR client creation and server-side session access; `src/proxy.ts` forwards requests and propagates/refreshes auth cookies between browser and server (no duplicated SSR client logic). Browser client is only for Realtime/subscriptions.
 - Vault stores BYOK keys; provider resolution happens server-side through `src/ai/models/registry.ts`. BYOK routes import `"server-only"`.
 - Randomness/timestamps come from `@/lib/security/random`; no `Math.random` or `crypto.randomUUID`.
 - Key precedence (highest → lowest): user gateway key, user provider key (OpenAI/Anthropic/xAI/OpenRouter), team gateway key fallback (requires user consent flag).

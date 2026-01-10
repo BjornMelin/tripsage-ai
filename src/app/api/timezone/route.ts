@@ -26,6 +26,7 @@ import { getTimezone } from "@/lib/google/client";
  */
 export const POST = withApiGuards({
   auth: false,
+  botId: true,
   rateLimit: "timezone",
   schema: timezoneRequestSchema,
   telemetry: "timezone.lookup",

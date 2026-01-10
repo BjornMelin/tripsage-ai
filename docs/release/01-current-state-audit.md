@@ -542,7 +542,7 @@ OK: no secrets detected in changed files.
 - App route roots: `src/app/(marketing)`, `src/app/(auth)`, `src/app/dashboard`, `src/app/chat`, `src/app/auth` (misc auth utility routes)
 - API route handlers: `src/app/api/**` (see `pnpm build` route table above for full list)
 - Server Actions (`"use server"`): `src/lib/auth/actions.ts`, `src/app/dashboard/settings/api-keys/actions.ts`, `src/app/dashboard/search/*/actions.ts`
-- Middleware: no `middleware.ts` file found via `rg --files`, but `pnpm build` reports `Proxy (Middleware)`; likely injected by BotId config (`withBotId(...)`) in `next.config.ts` (`UNVERIFIED`)
+- Proxy: `src/proxy.ts` (CSP nonce + baseline security headers + Supabase SSR cookie refresh)
 
 ## Python / uv Project
 

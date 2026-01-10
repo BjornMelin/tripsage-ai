@@ -5,6 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 describe("POST /auth/password/reset-request", () => {
   afterEach(async () => {
     const { setRateLimitFactoryForTests, setSupabaseFactoryForTests } = await import(
@@ -76,6 +83,44 @@ describe("POST /auth/password/reset-request", () => {
     expect(ResetPassword).toHaveBeenCalledWith("test@example.com", {
       redirectTo: "https://app.example.com/auth/reset-password",
     });
+  });
+
+  it("rejects bot traffic", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://example.com");
+    __resetServerEnvCacheForTest();
+    const ResetPassword = vi.fn(async () => ({ error: null }));
+    const { setRateLimitFactoryForTests, setSupabaseFactoryForTests } = await import(
+      "@/lib/api/factory"
+    );
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast({ auth: { resetPasswordForEmail: ResetPassword } })
+    );
+    setRateLimitFactoryForTests(async () => ({
+      limit: 5,
+      remaining: 4,
+      reset: 0,
+      success: true,
+    }));
+
+    const { checkBotId } = await import("botid/server");
+    vi.mocked(checkBotId).mockResolvedValueOnce({
+      bypassed: false,
+      isBot: true,
+      isHuman: false,
+      isVerifiedBot: false,
+    });
+
+    const { POST } = await import("../route");
+    const req = new NextRequest("https://example.com/auth/password/reset-request", {
+      body: JSON.stringify({ email: "test@example.com" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: "bot_detected" });
+    expect(ResetPassword).not.toHaveBeenCalled();
   });
 
   it("rejects requests from untrusted origins", async () => {

@@ -104,7 +104,7 @@ Secure third-party API key management:
 
 - **Encryption**: Vault extension with service-role-only access
 - **Storage**: Encrypted in Supabase Vault with RLS protection
-- **Access**: Users can only access their own keys via server-side checks; there are no `dynamic = "force-dynamic"` API route files/exports under `src/app/api`, so enforcement relies on backend logic and Supabase RLS rather than Next.js route caching directives.
+- **Access**: Users can only access their own keys via server-side checks; enforcement relies on backend logic and Supabase RLS rather than Next.js route caching directives (Route Segment config options are disabled when Cache Components is enabled).
 - **Audit**: Telemetry infrastructure exists, but BYOK RPCs (`insertUserApiKey`, `deleteUserApiKey`, `getUserApiKey` in `src/lib/supabase/rpc.ts`) are not currently wrapped in OpenTelemetry spans. To enable tracing, wrap these calls with `withTelemetrySpan` in a shared helper before invoking the RPCs.
 
 ## Security Testing

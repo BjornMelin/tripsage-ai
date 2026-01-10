@@ -32,6 +32,7 @@ import { handleRagIndex } from "./_handler";
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "rag:index",
   schema: ragIndexRequestSchema,
   telemetry: "rag.index",

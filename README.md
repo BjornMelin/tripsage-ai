@@ -109,7 +109,7 @@ Single-runtime, server-first stack optimized for edge deployment:
 pnpm install --frozen-lockfile
 pnpm dev            # Next.js dev server (includes API routes)
 pnpm type-check
-pnpm biome:check
+pnpm biome:fix      # Format/lint (CI enforces clean diffs)
 pnpm test           # Vitest
 pnpm exec playwright install chromium  # one-time browser install (fresh machine)
 pnpm test:e2e:chromium                # Playwright (Chromium-only; recommended local default)
@@ -119,6 +119,10 @@ pnpm test:e2e                         # Playwright (all configured browsers)
 make supa.link PROJECT_REF=...
 make supa.db.push
 ```
+
+### Formatting enforcement
+
+Run `pnpm biome:fix` before committing. CI runs `pnpm biome:fix` and then checks for a clean working tree with `git diff --exit-code`, so any formatting changes produced locally will fail CI if not committed.
 
 ## Project Structure
 

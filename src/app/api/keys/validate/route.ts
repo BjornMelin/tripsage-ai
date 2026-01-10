@@ -190,6 +190,7 @@ async function validateProviderKey(
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "keys:validate",
   // Custom telemetry handled below
 })(async (req: NextRequest) => {

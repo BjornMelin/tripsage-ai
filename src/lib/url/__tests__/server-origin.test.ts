@@ -12,6 +12,10 @@ vi.mock("@/lib/env/server", () => ({
     if (key === "APP_BASE_URL") return process.env.APP_BASE_URL || fallback;
     if (key === "NEXT_PUBLIC_SITE_URL")
       return process.env.NEXT_PUBLIC_SITE_URL || fallback;
+    if (key === "NEXT_PUBLIC_BASE_URL")
+      return process.env.NEXT_PUBLIC_BASE_URL || fallback;
+    if (key === "NEXT_PUBLIC_APP_URL")
+      return process.env.NEXT_PUBLIC_APP_URL || fallback;
     return fallback;
   }),
 }));
@@ -32,6 +36,7 @@ describe("getOriginFromRequest", () => {
     process.env.APP_BASE_URL = undefined;
     process.env.NEXT_PUBLIC_SITE_URL = undefined;
     process.env.NEXT_PUBLIC_BASE_URL = undefined;
+    process.env.NEXT_PUBLIC_APP_URL = undefined;
   });
 
   afterEach(() => {
@@ -162,6 +167,24 @@ describe("getOriginFromRequest", () => {
         "x-forwarded-proto": "https",
       });
       expect(getOriginFromRequest(request)).toBe("https://site.com");
+    });
+
+    it("prefers NEXT_PUBLIC_BASE_URL over x-forwarded-host", () => {
+      process.env.NEXT_PUBLIC_BASE_URL = "https://base.com";
+      const request = createMockRequest("http://localhost:3000/callback", {
+        "x-forwarded-host": "attacker.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://base.com");
+    });
+
+    it("prefers NEXT_PUBLIC_APP_URL over x-forwarded-host", () => {
+      process.env.NEXT_PUBLIC_APP_URL = "https://appurl.com";
+      const request = createMockRequest("http://localhost:3000/callback", {
+        "x-forwarded-host": "attacker.com",
+        "x-forwarded-proto": "https",
+      });
+      expect(getOriginFromRequest(request)).toBe("https://appurl.com");
     });
   });
 

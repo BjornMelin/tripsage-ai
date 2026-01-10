@@ -34,9 +34,10 @@ function getAllowedOrigins(primaryOrigin: string): Set<string> {
   const allowed = new Set<string>();
   const candidates = [
     primaryOrigin,
-    process.env.APP_BASE_URL,
-    process.env.NEXT_PUBLIC_SITE_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
+    getServerEnvVarWithFallback("APP_BASE_URL", ""),
+    getServerEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", ""),
+    getServerEnvVarWithFallback("NEXT_PUBLIC_BASE_URL", ""),
+    getServerEnvVarWithFallback("NEXT_PUBLIC_APP_URL", ""),
   ];
 
   for (const candidate of candidates) {
@@ -67,6 +68,7 @@ function normalizeBasePath(path: string | undefined): string {
  */
 const guardedPOST = withApiGuards({
   auth: false,
+  botId: { allowVerifiedAiAssistants: false, mode: true },
   degradedMode: "fail_closed",
   rateLimit: "auth:password:reset-request",
   telemetry: "auth.password.reset-request",

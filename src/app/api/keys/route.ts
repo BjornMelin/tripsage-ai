@@ -6,7 +6,6 @@ import "server-only";
 
 import { type PostKeyBody, postKeyBodySchema } from "@schemas/api";
 import type { NextRequest } from "next/server";
-import type { RateLimitResult } from "@/app/api/keys/_rate-limiter";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import { withApiGuards } from "@/lib/api/factory";
 import { requireUserId } from "@/lib/api/route-helpers";
@@ -25,6 +24,7 @@ type IdentifierType = "user" | "ip";
  */
 export const POST = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "keys:create",
   schema: postKeyBodySchema,
   // Custom telemetry handled below, factory telemetry disabled
@@ -33,8 +33,6 @@ export const POST = withApiGuards({
   if (!userResult.ok) return userResult.error;
   const userId = userResult.data;
   const identifierType: IdentifierType = "user";
-  // Rate limit metadata not available from factory, using undefined for custom telemetry
-  const rateLimitMeta: RateLimitResult | undefined = undefined;
 
   const instrumentedInsert = (u: string, s: string, k: string) =>
     withTelemetrySpan(
@@ -43,7 +41,6 @@ export const POST = withApiGuards({
         attributes: buildKeySpanAttributes({
           identifierType,
           operation: "insert",
-          rateLimit: rateLimitMeta,
           service: s,
           userId: u,
         }),
@@ -72,7 +69,6 @@ export const POST = withApiGuards({
             attributes: buildKeySpanAttributes({
               identifierType,
               operation: "insert",
-              rateLimit: rateLimitMeta,
               service: "gateway",
               userId: u,
             }),
@@ -105,6 +101,7 @@ export const POST = withApiGuards({
  */
 export const GET = withApiGuards({
   auth: true,
+  botId: true,
   rateLimit: "keys:create", // Reuse create limit for GET
   // Custom telemetry handled in handler
 })((_req: NextRequest, { supabase, user }) => {

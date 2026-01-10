@@ -6,6 +6,8 @@
 - Supabase project
 - Upstash Redis and QStash
 - BotID enabled in Vercel project
+- Vercel OIDC enabled for the project (required by `botid/server` checks)
+- Node.js 24.x (per repo engines) and pnpm (per `packageManager`)
 
 ## Step 1: Configure integrations
 
@@ -14,7 +16,7 @@
 - Link Supabase project to Vercel project
 - Ensure env vars are injected:
   - NEXT_PUBLIC_SUPABASE_URL
-  - NEXT_PUBLIC_SUPABASE_ANON_KEY
+  - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (preferred) or NEXT_PUBLIC_SUPABASE_ANON_KEY (legacy)
   - SUPABASE_SERVICE_ROLE_KEY (server-only)
 
 2) Upstash integration
@@ -33,24 +35,34 @@
 
 ## Step 2: Configure build and runtime
 
-- Node version: 20+
-- pnpm version per repo standard
+- Node version: 24.x
+- pnpm version per repo `packageManager`
 - Ensure `pnpm install --frozen-lockfile` works
 
-## Step 3: DB migrations
+## Step 3: Proxy, CSP, and security headers
+
+- `src/proxy.ts` is the single canonical place for CSP + baseline security headers.
+- Proxy generates a per-request nonce, sets `x-nonce` on the request, and mirrors the CSP header onto the response.
+- With Cache Components enabled, ensure all request-bound Dynamic APIs (like `headers()`) are only awaited under `<Suspense>` boundaries. The nonce is read in `src/app/layout.tsx` inside `AppShell` under `<Suspense fallback={null}>`.
+- Production CSP is intentionally compatible with Partial Prerendering (PPR): it does **not** rely on `strict-dynamic` for framework scripts, and it allowlists only the minimal Next.js inline bootstrap snippet hash needed for runtime.
+
+## Step 4: DB migrations
 
 - Use Supabase migrations in `supabase/migrations`
 - Apply via Supabase CI or manual:
   - supabase db push (local)
   - or Supabase dashboard migrations (prod)
 
-## Step 4: Verify production
+## Step 5: Verify production
 
 - Hit /api/health
 - Verify auth login works
 - Verify chat streaming works
-- Verify BotID protected endpoints reject bots
+- Verify BotID-protected endpoints reject bots
 - Verify rate limit responses work
+- Verify CSP is present on HTML responses
+- Verify third-party scripts include a nonce
+- If a Next.js upgrade changes an internal inline bootstrap snippet, update the allowlisted hash in `src/proxy.ts` and confirm `pnpm exec playwright test -c playwright.prod.config.ts` passes before deploying.
 
 ```text
 Vercel Next.js deployment docs: https://vercel.com/docs/frameworks/full-stack/nextjs

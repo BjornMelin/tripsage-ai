@@ -44,6 +44,7 @@ export default defineConfig({
       ),
       "rehype-harden": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
       "rehype-harden/dist/index.js": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
+      "botid/server": path.resolve(__dirname, "./src/test/mocks/botid-server.ts"),
       "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
     },
   },
