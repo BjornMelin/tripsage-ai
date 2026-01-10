@@ -3,7 +3,9 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
+import { COMMON_SECURITY_HEADERS, HSTS_HEADER } from "@/lib/security/headers";
 import { createMiddlewareSupabase, getCurrentUser } from "@/lib/supabase/factory";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 function base64EncodeBytes(value: Uint8Array): string {
   if (typeof Buffer !== "undefined") {
@@ -91,21 +93,14 @@ function buildCsp(options: { nonce: string; isDev: boolean }): string {
   }
 }
 
-// NOTE: These headers are intentionally duplicated with next.config.ts.
-// next.config.ts provides global/static headers; this function applies them to dynamic/proxied routes.
-// Keep both in sync. Canonical config lives in next.config.ts.
+// Shared with next.config.ts to keep static and dynamic headers in sync.
 function applySecurityHeaders(headers: Headers, options: { isProd: boolean }): void {
-  headers.set("X-DNS-Prefetch-Control", "on");
-  headers.set("X-Frame-Options", "SAMEORIGIN");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("Referrer-Policy", "origin-when-cross-origin");
-  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  for (const header of COMMON_SECURITY_HEADERS) {
+    headers.set(header.key, header.value);
+  }
 
   if (options.isProd) {
-    headers.set(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains; preload"
-    );
+    headers.set(HSTS_HEADER.key, HSTS_HEADER.value);
   }
 }
 
@@ -165,8 +160,13 @@ export async function proxy(request: NextRequest) {
       enableTracing: false,
       spanName: "proxy.supabase",
     });
-  } catch {
+  } catch (error) {
     // Ignore auth refresh failures in Proxy; downstream auth guards handle redirects/401s.
+    const logger = createServerLogger("proxy.supabase");
+    logger.warn("supabase_auth_refresh_failed", {
+      error,
+      path: request.nextUrl.pathname,
+    });
   }
 
   response.headers.set("Content-Security-Policy", contentSecurityPolicyHeaderValue);

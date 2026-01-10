@@ -7,6 +7,7 @@ import { dirname, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
+import { COMMON_SECURITY_HEADERS, HSTS_HEADER } from "./src/lib/security/headers";
 
 const TURBOPACK_ROOT = dirname(fileURLToPath(import.meta.url));
 
@@ -72,19 +73,8 @@ const nextConfig: NextConfig = {
     const isProd = process.env.NODE_ENV === "production";
 
     const securityHeaders = [
-      { key: "X-DNS-Prefetch-Control", value: "on" },
-      { key: "X-Frame-Options", value: "SAMEORIGIN" },
-      { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "Referrer-Policy", value: "origin-when-cross-origin" },
-      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-      ...(isProd
-        ? [
-            {
-              key: "Strict-Transport-Security",
-              value: "max-age=31536000; includeSubDomains; preload",
-            },
-          ]
-        : []),
+      ...COMMON_SECURITY_HEADERS,
+      ...(isProd ? [HSTS_HEADER] : []),
     ];
 
     return [

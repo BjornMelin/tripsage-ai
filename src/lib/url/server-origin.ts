@@ -97,7 +97,7 @@ export function getServerOrigin(): string {
 
   logger.warn("server origin not configured - using localhost:3000 fallback", {
     environment: process.env.NODE_ENV,
-    hint: "Set APP_BASE_URL or NEXT_PUBLIC_SITE_URL",
+    hint: "Set APP_BASE_URL, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_BASE_URL, or NEXT_PUBLIC_APP_URL",
   });
 
   return DEFAULT_LOCALHOST_ORIGIN;
@@ -118,7 +118,7 @@ export function getRequiredServerOrigin(): string {
   if (origin) return origin;
 
   logger.error("required server origin missing", {
-    hint: "Set APP_BASE_URL or NEXT_PUBLIC_SITE_URL",
+    hint: "Set APP_BASE_URL, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_BASE_URL, or NEXT_PUBLIC_APP_URL",
   });
 
   if (isProduction) {

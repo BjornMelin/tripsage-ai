@@ -131,6 +131,7 @@ const nextEnvSchema = z.object({
    * Origin resolution fallbacks:
    * - Server: APP_BASE_URL → NEXT_PUBLIC_SITE_URL → NEXT_PUBLIC_BASE_URL → NEXT_PUBLIC_APP_URL
    * - Client: NEXT_PUBLIC_SITE_URL → NEXT_PUBLIC_BASE_URL → NEXT_PUBLIC_APP_URL
+   * See docs/development/core/env-setup.md for origin configuration guidance.
    */
   /** Server-only canonical origin used for SSR + trusted-host checks (highest priority). */
   APP_BASE_URL: z.url().optional(),
@@ -272,6 +273,15 @@ export const envSchema = z
     (data) => {
       // Validation rules that depend on NODE_ENV
       if (data.NODE_ENV === "production") {
+        const hasOrigin =
+          data.APP_BASE_URL ||
+          data.NEXT_PUBLIC_SITE_URL ||
+          data.NEXT_PUBLIC_BASE_URL ||
+          data.NEXT_PUBLIC_APP_URL;
+        if (!hasOrigin) {
+          return false;
+        }
+
         // Required variables in production
         const requiredInProduction = [
           "NEXT_PUBLIC_SUPABASE_URL",
