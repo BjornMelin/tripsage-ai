@@ -85,6 +85,44 @@ describe("POST /auth/password/reset-request", () => {
     });
   });
 
+  it("rejects bot traffic", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://example.com");
+    __resetServerEnvCacheForTest();
+    const ResetPassword = vi.fn(async () => ({ error: null }));
+    const { setRateLimitFactoryForTests, setSupabaseFactoryForTests } = await import(
+      "@/lib/api/factory"
+    );
+    setSupabaseFactoryForTests(async () =>
+      unsafeCast({ auth: { resetPasswordForEmail: ResetPassword } })
+    );
+    setRateLimitFactoryForTests(async () => ({
+      limit: 5,
+      remaining: 4,
+      reset: 0,
+      success: true,
+    }));
+
+    const { checkBotId } = await import("botid/server");
+    vi.mocked(checkBotId).mockResolvedValueOnce({
+      bypassed: false,
+      isBot: true,
+      isHuman: false,
+      isVerifiedBot: false,
+    });
+
+    const { POST } = await import("../route");
+    const req = new NextRequest("https://example.com/auth/password/reset-request", {
+      body: JSON.stringify({ email: "test@example.com" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: "bot_detected" });
+    expect(ResetPassword).not.toHaveBeenCalled();
+  });
+
   it("rejects requests from untrusted origins", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.com");
     __resetServerEnvCacheForTest();

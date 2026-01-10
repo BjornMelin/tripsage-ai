@@ -29,7 +29,7 @@
 
 - Use Next.js Proxy to refresh Supabase session cookies for Server Components:
   - `src/proxy.ts` (`proxy()`), built on `createMiddlewareSupabase()` + `getCurrentUser()`.
-- Proxy is also the canonical location for CSP nonce + baseline security headers (see SPEC-0108).
+- Proxy is also the canonical location for CSP + security headers (see SPEC-0108).
 
 ### Auth flows
 

@@ -308,6 +308,24 @@ describe("/api/attachments/files", () => {
     expect(res.status).toBe(401);
   });
 
+  it("should reject bot traffic", async () => {
+    const { checkBotId } = await import("botid/server");
+    vi.mocked(checkBotId).mockResolvedValueOnce({
+      bypassed: false,
+      isBot: true,
+      isHuman: false,
+      isVerifiedBot: false,
+    });
+
+    const mod = await import("../route");
+    const req = new NextRequest("http://localhost/api/attachments/files", {
+      method: "GET",
+    });
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(403);
+  });
+
   it("should use default pagination values", async () => {
     const supabase = getApiRouteSupabaseMock();
     const state = getSupabaseMockState(supabase);

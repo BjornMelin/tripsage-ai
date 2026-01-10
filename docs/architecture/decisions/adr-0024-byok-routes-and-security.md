@@ -17,7 +17,7 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
   - `POST /api/keys/validate` → provider metadata check (no persist)
 - Mark each route module with `import "server-only"`. With Cache Components enabled, Route Segment config options like `dynamic` and `revalidate` are disabled, so request-time behavior is enforced by auth-scoped Request APIs (`cookies()`, `headers()`) and by avoiding `use cache` on BYOK/user-scoped handlers.
   **Note:** Routes accessing `cookies()` or `headers()` (required for Supabase SSR auth) cannot use `"use cache"` directives per Next.js Cache Components restrictions; they are automatically dynamic.
-  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/archive/0011-spec-byok-routes-and-security.md).
+  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../../specs/archive/0011-spec-byok-routes-and-security.md).
 - Add server-only Supabase admin client using `SUPABASE_SERVICE_ROLE_KEY`.
 - Centralize Vault RPC helpers in `src/lib/supabase/rpc.ts`.
 - Enforce PostgREST claims guard in SQL: `request.jwt.claims->>'role'='service_role'`.

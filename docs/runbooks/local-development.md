@@ -27,7 +27,7 @@ pnpm dev
   - baseline security headers
   - Supabase SSR cookie refresh (session maintenance)
 - Nonce-based CSP requires **request-time rendering** (nonces are per-request).
-- With Cache Components enabled, `src/app/layout.tsx` enforces request-time rendering via `await connection()` inside a `<Suspense>` boundary so prerendering cannot emit nonce-dependent output.
+- With Cache Components enabled, `src/app/layout.tsx` enforces request-time rendering via `await headers()` (reading `x-nonce`) inside a `<Suspense>` boundary so prerendering cannot emit nonce-dependent output.
 - If adding third-party scripts/components, pass the nonce from the request header:
   - read `x-nonce` via `headers()` (inside a `<Suspense>` boundary) and forward it to components that support a `nonce` prop.
 

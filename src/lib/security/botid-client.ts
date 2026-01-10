@@ -19,22 +19,24 @@ export function ensureBotIdClientInitialized(): void {
   if (process.env.NODE_ENV === "test") return;
   if (globalThis.tripsageBotIdClientInitialized) return;
 
-  // A public, global flag is not a security boundary; server-side BotID
-  // verification still enforces protection. This only prevents double init.
-  if (process.env.NODE_ENV === "production") {
-    Object.defineProperty(globalThis, "tripsageBotIdClientInitialized", {
-      configurable: true,
-      value: true,
-      writable: false,
-    });
-  } else {
-    globalThis.tripsageBotIdClientInitialized = true;
-  }
-
   try {
     initBotId({ protect: getBotIdProtectRules() });
+    globalThis.tripsageBotIdClientInitFailed = false;
+    // A public, global flag is not a security boundary; server-side BotID
+    // verification still enforces protection. This only prevents double init.
+    if (process.env.NODE_ENV === "production") {
+      Object.defineProperty(globalThis, "tripsageBotIdClientInitialized", {
+        configurable: true,
+        value: true,
+        writable: false,
+      });
+    } else {
+      globalThis.tripsageBotIdClientInitialized = true;
+    }
   } catch (error) {
     // BotID client init failed; server-side verification remains enforced.
+    globalThis.tripsageBotIdClientInitFailed = true;
+    globalThis.tripsageBotIdClientInitialized = false;
     if (process.env.NODE_ENV !== "production") {
       console.warn("[BotID] Client initialization failed:", error);
     }

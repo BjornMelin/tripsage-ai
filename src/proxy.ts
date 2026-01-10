@@ -49,6 +49,9 @@ function buildCsp(options: { nonce: string; isDev: boolean }): string {
 
     return cspHeader.replace(/\s{2,}/g, " ").trim();
   } else {
+    const reportUri =
+      typeof process !== "undefined" ? process.env.CSP_REPORT_URI : undefined;
+    const reportDirective = reportUri ? `report-uri ${reportUri};` : "";
     // Next.js currently emits a small amount of inline bootstrap JS without a nonce.
     // Allow only that exact inline snippet via hash (no 'unsafe-inline').
     const allowlistedInlineScriptHashes = [
@@ -81,6 +84,7 @@ function buildCsp(options: { nonce: string; isDev: boolean }): string {
       form-action 'self';
       frame-ancestors 'none';
       ${upgradeInsecureRequests};
+      ${reportDirective}
     `;
 
     return cspHeader.replace(/\s{2,}/g, " ").trim();

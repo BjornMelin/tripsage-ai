@@ -58,9 +58,10 @@
 - Hit /api/health
 - Verify auth login works
 - Verify chat streaming works
-- Verify BotID protected endpoints reject bots
+- Verify BotID-protected endpoints reject bots
 - Verify rate limit responses work
-- Verify CSP is present on HTML responses (and that third-party scripts include a nonce)
+- Verify CSP is present on HTML responses
+- Verify third-party scripts include a nonce
 - If a Next.js upgrade changes an internal inline bootstrap snippet, update the allowlisted hash in `src/proxy.ts` and confirm `pnpm exec playwright test -c playwright.prod.config.ts` passes before deploying.
 
 ```text

@@ -73,8 +73,8 @@ describe("resolveRedirectUrl", () => {
     });
   });
 
-  it("allows hosts on the APP_BASE_URL allowlist", () => {
-    return withEnv(
+  it("allows hosts on the APP_BASE_URL allowlist", async () => {
+    await withEnv(
       {
         APP_BASE_URL: "https://app.example.com",
         NEXT_PUBLIC_SITE_URL: "https://primary.example.com",
@@ -90,8 +90,8 @@ describe("resolveRedirectUrl", () => {
     );
   });
 
-  it("allows hosts on the allowlist", () => {
-    return withEnv(
+  it("allows hosts on the allowlist", async () => {
+    await withEnv(
       {
         NEXT_PUBLIC_SITE_URL: "https://app.example.com",
       },
@@ -104,8 +104,8 @@ describe("resolveRedirectUrl", () => {
     );
   });
 
-  it("returns absolute when requested for relative inputs", () => {
-    return withEnv(
+  it("returns absolute when requested for relative inputs", async () => {
+    await withEnv(
       {
         NEXT_PUBLIC_SITE_URL: "https://app.example.com",
       },
@@ -117,15 +117,15 @@ describe("resolveRedirectUrl", () => {
     );
   });
 
-  it("returns fallback for malformed URLs", () => {
-    return withEnv({}, (resolveRedirectUrl) => {
+  it("returns fallback for malformed URLs", async () => {
+    await withEnv({}, (resolveRedirectUrl) => {
       expect(resolveRedirectUrl("http://[::1")).toBe("/dashboard");
       expect(resolveRedirectUrl("http://")).toBe("/dashboard");
     });
   });
 
-  it("rejects non-http protocols", () => {
-    return withEnv({}, (resolveRedirectUrl) => {
+  it("rejects non-http protocols", async () => {
+    await withEnv({}, (resolveRedirectUrl) => {
       expect(resolveRedirectUrl("javascript:alert(1)")).toBe("/dashboard");
       expect(resolveRedirectUrl("data:text/plain,hello")).toBe("/dashboard");
     });

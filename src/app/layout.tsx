@@ -92,6 +92,17 @@ async function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AppShellFallback() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <output className="flex items-center gap-3" aria-live="polite">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </output>
+    </div>
+  );
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -102,7 +113,7 @@ export default function RootLayout({
       <body
         className={`${GEIST_SANS.variable} ${GEIST_MONO.variable} font-sans antialiased min-h-screen`}
       >
-        <Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <Suspense fallback={<AppShellFallback />}>
           <AppShell>{children}</AppShell>
         </Suspense>
       </body>

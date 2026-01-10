@@ -28,6 +28,13 @@ vi.mock("@ai-sdk/openai", () => ({
   openai: vi.fn(() => "openai/gpt-4o"),
 }));
 
+vi.mock("botid/server", async () => {
+  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
+  return {
+    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
+  };
+});
+
 // Stub heavy token math to speed up tests while preserving behavior coverage elsewhere
 vi.mock("@/lib/tokens/budget", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/tokens/budget")>();
@@ -153,6 +160,27 @@ describe("ai stream route", () => {
     const response = await POST(request, createRouteParamsContext());
 
     expect(response.status).toBe(401);
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when bot is detected", async () => {
+    const { checkBotId } = await import("botid/server");
+    vi.mocked(checkBotId).mockResolvedValueOnce({
+      bypassed: false,
+      isBot: true,
+      isHuman: false,
+      isVerifiedBot: false,
+    });
+
+    const request = createMockNextRequest({
+      body: { prompt: "Hello world" },
+      method: "POST",
+      url: "http://localhost",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+
+    expect(response.status).toBe(403);
     expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
   });
 

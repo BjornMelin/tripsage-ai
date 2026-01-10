@@ -130,7 +130,7 @@ const BOT_ID_SPY = vi.hoisted(() =>
   vi.fn(async (): Promise<BotIdVerification> => ({ ...mockBotIdHumanResponse }))
 );
 
-// Alias vitest's resolved "botid/server" to allow mockApiRouteBotIdOnce to intercept
+// Mock botid/server to route checkBotId calls through BOT_ID_SPY (mockApiRouteBotIdOnce).
 vi.mock("botid/server", () => {
   return {
     checkBotId: BOT_ID_SPY,
@@ -205,6 +205,8 @@ export function resetApiRouteMocks(): void {
   setSupabaseFactoryForTests(async () => client);
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });
+  BOT_ID_SPY.mockReset();
+  BOT_ID_SPY.mockResolvedValue({ ...mockBotIdHumanResponse });
   // Most API route tests should not depend on Redis/Upstash availability.
   // Default to a deterministic allow response unless a test overrides this.
   setRateLimitFactoryForTests(LIMIT_SPY);
