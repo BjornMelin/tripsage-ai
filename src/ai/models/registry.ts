@@ -339,7 +339,7 @@ export async function resolveProvider(
       );
     }
 
-    // 1) Check for BYOK keys concurrently (OpenAI, OpenRouter, Anthropic, xAI)
+    // 1) Check for BYOK keys in preference order (OpenAI, OpenRouter, Anthropic, xAI)
     const providers = PROVIDER_PREFERENCE;
     for (const provider of providers) {
       try {

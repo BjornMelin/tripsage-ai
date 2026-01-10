@@ -76,7 +76,14 @@ export const createCalendarEvent = createAiTool({
         }
         if (value.date) {
           const parsed = parseDateOrUndefined(value.date);
-          return parsed?.toISOString() ?? "";
+          if (!parsed) {
+            throw createToolError(
+              TOOL_ERROR_CODES.calendarInvalidDate,
+              "Invalid date string",
+              { value: value.date }
+            );
+          }
+          return parsed.toISOString();
         }
         throw createToolError(
           TOOL_ERROR_CODES.calendarMissingDatetime,

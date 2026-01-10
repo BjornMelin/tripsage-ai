@@ -256,17 +256,17 @@ export const freeBusyRequestSchema = z
 export type FreeBusyRequest = z.infer<typeof freeBusyRequestSchema>;
 
 /** Zod schema for Google Calendar free/busy responses. */
-export const freeBusyEventRangeSchema = z.object({
-  end: z.string(),
-  start: z.string(),
+export const freeBusyEventRangeSchema = z.looseObject({
+  end: primitiveSchemas.isoDateTime,
+  start: primitiveSchemas.isoDateTime,
 });
 export type FreeBusyEventRange = z.infer<typeof freeBusyEventRangeSchema>;
 
-export const freeBusyCalendarSchema = z.object({
+export const freeBusyCalendarSchema = z.looseObject({
   busy: z.array(freeBusyEventRangeSchema).default([]),
   errors: z
     .array(
-      z.object({
+      z.looseObject({
         domain: z.string(),
         reason: z.string(),
       })

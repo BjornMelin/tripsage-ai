@@ -106,9 +106,12 @@ export async function fetchAgentBundle(
 
     configurationActionsLogger.error("agent_bundle_load_failed", {
       agentType,
-      error: error instanceof Error ? error.message : String(error),
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : String(error).slice(0, 500),
       errorName: error instanceof Error ? error.name : "unknown_error",
-      errorStack: error instanceof Error ? error.stack : undefined,
+      errorStack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
     });
 
     return err({

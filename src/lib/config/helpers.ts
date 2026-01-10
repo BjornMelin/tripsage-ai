@@ -47,7 +47,11 @@ export function ensureAdmin(
  */
 export function isE2eBypassEnabled(): boolean {
   if (process.env.NODE_ENV === "production") return false;
-  const bypass =
-    process.env.E2E_BYPASS_SYNTH_CONFIG || process.env.E2E_BYPASS_RATE_LIMIT;
-  return bypass === "1" || bypass === "true";
+
+  const synthConfig = process.env.E2E_BYPASS_SYNTH_CONFIG;
+  const rateLimit = process.env.E2E_BYPASS_RATE_LIMIT;
+
+  const isEnabled = (value: string | undefined) => value === "1" || value === "true";
+
+  return isEnabled(synthConfig) || isEnabled(rateLimit);
 }

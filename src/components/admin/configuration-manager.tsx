@@ -246,9 +246,12 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
    * non-finite parse results.
    */
   const parseOptionalInt = (raw: string): number | null => {
-    if (raw === "") return null;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) ? parsed : null;
+    const trimmed = raw.trim();
+    if (trimmed === "") return null;
+    if (!/^[+-]?\d+$/.test(trimmed)) return null;
+
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed : null;
   };
 
   /**
@@ -391,6 +394,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   }
                   min={1}
                   max={8000}
+                  step={1}
                 />
               </div>
 
@@ -423,6 +427,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   }
                   min={5}
                   max={300}
+                  step={1}
                 />
               </div>
 
@@ -439,9 +444,19 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                     )
                   }
                   min={5}
-                  max={300}
+                  max={
+                    typeof currentParams.timeoutSeconds === "number" &&
+                    Number.isFinite(currentParams.timeoutSeconds)
+                      ? currentParams.timeoutSeconds
+                      : 300
+                  }
+                  step={1}
                   aria-invalid={isStepTimeoutInvalid}
-                  aria-describedby="stepTimeout-help stepTimeout-error"
+                  aria-describedby={
+                    isStepTimeoutInvalid
+                      ? "stepTimeout-help stepTimeout-error"
+                      : "stepTimeout-help"
+                  }
                 />
                 <p id="stepTimeout-help" className="text-sm text-muted-foreground">
                   Must be less than or equal to total timeout when both are provided.
