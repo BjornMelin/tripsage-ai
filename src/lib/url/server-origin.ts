@@ -56,6 +56,18 @@ function isValidHost(host: string): boolean {
 }
 
 function resolveConfiguredOrigin(): string | null {
+  const normalizeOrigin = (raw: string, key: string): string | null => {
+    try {
+      const url = new URL(raw.trim());
+      if (url.username || url.password) return null;
+      if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+      return url.origin;
+    } catch {
+      logger.warn("invalid configured origin env var", { key });
+      return null;
+    }
+  };
+
   const getNonEmptyEnvVar = (
     key:
       | "APP_BASE_URL"
@@ -65,7 +77,7 @@ function resolveConfiguredOrigin(): string | null {
   ): string | null => {
     const value = getServerEnvVarWithFallback(key, "");
     if (value && value.trim().length > 0) {
-      return value;
+      return normalizeOrigin(value, key);
     }
     return null;
   };
