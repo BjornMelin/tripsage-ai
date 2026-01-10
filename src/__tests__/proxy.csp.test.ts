@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -83,11 +85,8 @@ describe("src/proxy.ts CSP nonce", () => {
       const cspHeader = response.headers.get("Content-Security-Policy");
 
       expect(cspHeader).toBeTypeOf("string");
-      if (typeof cspHeader !== "string") {
-        throw new Error("Expected CSP header to be present");
-      }
 
-      const nonce = extractNonceFromCsp(cspHeader);
+      const nonce = extractNonceFromCsp(cspHeader as string);
 
       // Next.js extracts the nonce from the CSP header present on the request during SSR.
       // NextResponse.next({ request: { headers } }) encodes request header overrides via
@@ -115,9 +114,6 @@ describe("src/proxy.ts CSP nonce", () => {
       const cspHeader = response.headers.get("Content-Security-Policy");
 
       expect(cspHeader).toBeTypeOf("string");
-      if (typeof cspHeader !== "string") {
-        throw new Error("Expected CSP header to be present");
-      }
 
       expect(cspHeader).toContain("script-src");
       expect(cspHeader).toContain("'unsafe-eval'");
