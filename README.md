@@ -109,7 +109,7 @@ Single-runtime, server-first stack optimized for edge deployment:
 pnpm install --frozen-lockfile
 pnpm dev            # Next.js dev server (includes API routes)
 pnpm type-check
-pnpm biome:check
+pnpm biome:fix      # Format/lint (CI enforces clean diffs)
 pnpm test           # Vitest
 pnpm exec playwright install chromium  # one-time browser install (fresh machine)
 pnpm test:e2e:chromium                # Playwright (Chromium-only; recommended local default)
