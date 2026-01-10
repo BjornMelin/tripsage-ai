@@ -26,6 +26,28 @@ const DEFAULT_MODEL = "gpt-4o";
 
 const configurationActionsLogger = createServerLogger("admin.configuration");
 
+/**
+ * Format an error for structured logging, truncating message and stack to 500 chars.
+ */
+function formatErrorForLog(error: unknown): {
+  message: string;
+  name: string;
+  stack: string | undefined;
+} {
+  if (error instanceof Error) {
+    return {
+      message: error.message.slice(0, 500),
+      name: error.name,
+      stack: error.stack?.slice(0, 500),
+    };
+  }
+  return {
+    message: String(error).slice(0, 500),
+    name: "unknown_error",
+    stack: undefined,
+  };
+}
+
 export type AgentVersion = {
   id: string;
   createdAt: string;
@@ -91,8 +113,10 @@ export async function fetchAgentBundle(
 
       if (!fallbackConfigParsed.success) {
         // Intentionally return an error to surface schema mismatches during tests.
+        // Include Zod validation details to help debug schema changes.
         return err({
           error: "internal",
+          issues: fallbackConfigParsed.error.issues,
           reason: "Failed to construct fallback config",
         });
       }
@@ -104,14 +128,13 @@ export async function fetchAgentBundle(
       });
     }
 
+    const formattedError = formatErrorForLog(error);
     configurationActionsLogger.error("agent_bundle_load_failed", {
       agentType,
-      error:
-        error instanceof Error
-          ? error.message.slice(0, 500)
-          : String(error).slice(0, 500),
-      errorName: error instanceof Error ? error.name : "unknown_error",
-      errorStack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+      error: formattedError.message,
+      errorName: formattedError.name,
+      errorStack: formattedError.stack,
+      scope: DEFAULT_SCOPE,
     });
 
     return err({
@@ -192,14 +215,12 @@ export async function updateAgentConfigAction(
       method: "PUT",
     });
   } catch (error) {
+    const formattedError = formatErrorForLog(error);
     configurationActionsLogger.error("agent_config_update_failed", {
       agentType: parsed.data,
-      error:
-        error instanceof Error
-          ? error.message.slice(0, 500)
-          : String(error).slice(0, 500),
-      errorName: error instanceof Error ? error.name : "unknown_error",
-      errorStack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+      error: formattedError.message,
+      errorName: formattedError.name,
+      errorStack: formattedError.stack,
     });
     return err({
       error: "internal",
@@ -300,14 +321,12 @@ export async function rollbackAgentConfigAction(
       method: "POST",
     });
   } catch (error) {
+    const formattedError = formatErrorForLog(error);
     configurationActionsLogger.error("agent_config_rollback_failed", {
       agentType: parsedAgentType.data,
-      error:
-        error instanceof Error
-          ? error.message.slice(0, 500)
-          : String(error).slice(0, 500),
-      errorName: error instanceof Error ? error.name : "unknown_error",
-      errorStack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+      error: formattedError.message,
+      errorName: formattedError.name,
+      errorStack: formattedError.stack,
       versionId: parsedVersionId.data,
     });
     return err({
