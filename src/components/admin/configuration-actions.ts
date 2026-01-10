@@ -22,6 +22,8 @@ import { toAbsoluteUrl } from "@/lib/url/server-origin";
 const DEFAULT_SCOPE = "global";
 const DEFAULT_MODEL = "gpt-4o";
 
+// Returns true if E2E bypass is enabled (for synthetic config generation in tests).
+// Only active in non-production environments as a safety guard.
 const isE2eBypassEnabled = () =>
   (process.env.E2E_BYPASS_RATE_LIMIT === "1" ||
     process.env.E2E_BYPASS_RATE_LIMIT === "true") &&
@@ -71,7 +73,7 @@ export async function fetchAgentBundle(
     if (isE2eBypassEnabled()) {
       const now = nowIso();
       const timestamp = now.replace(/[-:T.Z]/g, "").slice(0, 14);
-      const fallbackConfig = configurationAgentConfigSchema.parse({
+      const fallbackConfigParsed = configurationAgentConfigSchema.safeParse({
         agentType,
         createdAt: now,
         id: `v${timestamp}_${secureId(8)}`,
@@ -83,8 +85,15 @@ export async function fetchAgentBundle(
         updatedAt: now,
       });
 
+      if (!fallbackConfigParsed.success) {
+        return err({
+          error: "internal",
+          reason: "Failed to construct fallback config",
+        });
+      }
+
       return ok({
-        config: fallbackConfig,
+        config: fallbackConfigParsed.data,
         metrics: { lastUpdatedAt: null, versionCount: 0 },
         versions: [],
       });

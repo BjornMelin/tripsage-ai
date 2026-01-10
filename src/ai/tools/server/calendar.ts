@@ -69,11 +69,18 @@ export const createCalendarEvent = createAiTool({
         if (value.date) {
           const parsed = parseDateOrUndefined(value.date);
           if (!parsed) {
-            throw new Error("calendar_event_missing_datetime");
+            throw createToolError(
+              TOOL_ERROR_CODES.calendarMissingDatetime,
+              "Calendar event missing valid date/dateTime",
+              { date: value.date }
+            );
           }
           return parsed.toISOString();
         }
-        throw new Error("calendar_event_missing_datetime");
+        throw createToolError(
+          TOOL_ERROR_CODES.calendarMissingDatetime,
+          "Calendar event missing date/dateTime fields"
+        );
       };
       const { calendarId, ...eventData } = payload;
       const parsedEventData = createEventRequestSchema.parse(eventData);
@@ -116,10 +123,19 @@ export const getAvailability = createAiTool({
   description: "Check calendar availability (free/busy) for specified calendars.",
   execute: async (params) => {
     try {
+      const timeMax = parseDateOrUndefined(params.timeMax);
+      const timeMin = parseDateOrUndefined(params.timeMin);
+      if (!timeMax || !timeMin) {
+        throw createToolError(
+          TOOL_ERROR_CODES.calendarInvalidDate,
+          "Invalid timeMax or timeMin",
+          { timeMax: params.timeMax, timeMin: params.timeMin }
+        );
+      }
       const result = await queryFreeBusy({
         ...params,
-        timeMax: new Date(params.timeMax),
-        timeMin: new Date(params.timeMin),
+        timeMax,
+        timeMin,
       });
       return {
         calendars: Object.entries(result.calendars).map(([id, data]) => ({

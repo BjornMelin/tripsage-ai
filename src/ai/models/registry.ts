@@ -269,7 +269,9 @@ async function resolveByokProvider(
   // Fire-and-forget: update last used timestamp (ignore errors)
   touchUserApiKey(userId, provider).catch((error) => {
     providerRegistryLogger.warn("touch_user_api_key_failed", {
+      errorMessage: error instanceof Error ? error.message : String(error),
       errorName: error instanceof Error ? error.name : "unknown_error",
+      errorStack: error instanceof Error ? error.stack : undefined,
       provider,
     });
   });
@@ -340,9 +342,12 @@ export async function resolveProvider(
     // 1) Check for BYOK keys concurrently (OpenAI, OpenRouter, Anthropic, xAI)
     const providers = PROVIDER_PREFERENCE;
     const keyResults = await Promise.all(
-      providers.map(async (p) => ({ key: await getUserApiKey(userId, p), p }))
+      providers.map(async (provider) => ({
+        key: await getUserApiKey(userId, provider),
+        provider,
+      }))
     );
-    for (const { p: provider, key: apiKey } of keyResults) {
+    for (const { provider, key: apiKey } of keyResults) {
       if (!apiKey) continue;
       const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
       return await resolveByokProvider(provider, apiKey, modelId, userId);

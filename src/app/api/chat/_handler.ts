@@ -168,9 +168,7 @@ export function createMemorySummaryCache(options: {
 
 async function normalizeChatUiMessages(
   messages: UIMessage[]
-): Promise<
-  { data: ChatUiMessage[]; success: true } | { error: unknown; success: false }
-> {
+): Promise<ChatUiMessage[]> {
   const result = await safeValidateUIMessages<ChatUiMessage>({
     dataSchemas: chatDataPartSchemas,
     messages,
@@ -188,9 +186,9 @@ async function normalizeChatUiMessages(
         parts,
       };
     });
-    return { data: normalized, success: true };
+    return normalized;
   }
-  return { data: result.data, success: true };
+  return result.data;
 }
 
 function normalizeJsonValue(value: unknown, fallback: Json): Json {
@@ -792,24 +790,11 @@ export async function handleChat(
   let regenerationOf: string | null = null;
 
   if (trigger === "submit-message") {
-    const rawClientMessages = payload.messages;
-    const clientMessagesResult =
+    const rawClientMessages = Array.isArray(payload.messages) ? payload.messages : [];
+    const clientMessages =
       rawClientMessages.length === 0
-        ? { data: [], success: true as const }
+        ? []
         : await normalizeChatUiMessages(rawClientMessages);
-    if (!clientMessagesResult.success) {
-      const normalizedError =
-        clientMessagesResult.error instanceof Error
-          ? clientMessagesResult.error
-          : new Error(String(clientMessagesResult.error ?? "Invalid messages payload"));
-      return errorResponse({
-        err: normalizedError,
-        error: "invalid_request",
-        reason: "Invalid messages payload",
-        status: 400,
-      });
-    }
-    const clientMessages = clientMessagesResult.data;
     const latest = clientMessages.at(-1);
     if (!latest) {
       return errorResponse({
@@ -979,6 +964,7 @@ export async function handleChat(
   });
   if (!assistantPersist.ok) return assistantPersist.res;
   const assistantMessageId = assistantPersist.id;
+  const canPersistAssistantMessage = assistantMessageId !== -1;
 
   const system = buildSystemPrompt({ memorySummary });
 
@@ -1075,6 +1061,10 @@ export async function handleChat(
 
           const content = encodePartsToContent([{ text, type: "text" }]);
 
+          if (!canPersistAssistantMessage) {
+            return;
+          }
+
           const { error } = await updateSingle(
             deps.supabase,
             "chat_messages",
@@ -1139,24 +1129,26 @@ export async function handleChat(
               tool_name: parsed.toolName,
             };
 
-            const { error } = await insertSingle(
-              deps.supabase,
-              "chat_tool_calls",
-              toolRow
-            );
-            if (error) {
-              const persistErrorMessage =
-                error instanceof Error
-                  ? error.message
-                  : String((error as { message?: unknown }).message ?? error);
-              deps.logger?.warn?.("chat:tool_persist_failed", {
-                error: persistErrorMessage,
-                requestId,
-                sessionId,
-                toolCallId: parsed.toolCallId,
-                toolName: parsed.toolName,
-                userId,
-              });
+            if (canPersistAssistantMessage) {
+              const { error } = await insertSingle(
+                deps.supabase,
+                "chat_tool_calls",
+                toolRow
+              );
+              if (error) {
+                const persistErrorMessage =
+                  error instanceof Error
+                    ? error.message
+                    : String((error as { message?: unknown }).message ?? error);
+                deps.logger?.warn?.("chat:tool_persist_failed", {
+                  error: persistErrorMessage,
+                  requestId,
+                  sessionId,
+                  toolCallId: parsed.toolCallId,
+                  toolName: parsed.toolName,
+                  userId,
+                });
+              }
             }
           }
 
@@ -1181,21 +1173,25 @@ export async function handleChat(
                 toolStepCount: stepCount,
               });
 
-              const { error: stepError } = await updateSingle(
-                deps.supabase,
-                "chat_messages",
-                { metadata: stepMetadata },
-                (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
-              );
+              if (canPersistAssistantMessage) {
+                const { error: stepError } = await updateSingle(
+                  deps.supabase,
+                  "chat_messages",
+                  { metadata: stepMetadata },
+                  (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+                );
 
-              if (stepError) {
-                deps.logger?.warn?.("chat:tool_step_update_failed", {
-                  error:
-                    stepError instanceof Error ? stepError.message : String(stepError),
-                  requestId,
-                  sessionId,
-                  userId,
-                });
+                if (stepError) {
+                  deps.logger?.warn?.("chat:tool_step_update_failed", {
+                    error:
+                      stepError instanceof Error
+                        ? stepError.message
+                        : String(stepError),
+                    requestId,
+                    sessionId,
+                    userId,
+                  });
+                }
               }
             }
           }
@@ -1267,6 +1263,10 @@ export async function handleChat(
       const content = text
         ? encodePartsToContent([{ text, type: "text" }])
         : encodePartsToContent([]);
+
+      if (!canPersistAssistantMessage) {
+        return;
+      }
 
       const { error } = await updateSingle(
         deps.supabase,

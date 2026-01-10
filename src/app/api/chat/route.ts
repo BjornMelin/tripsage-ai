@@ -23,7 +23,7 @@ export const maxDuration = 60;
 
 const DEFAULT_MAX_TOKENS_FALLBACK = 1024;
 const DEFAULT_MAX_STEPS_FALLBACK = 10;
-const DEFAULT_TIMEOUT_SECONDS_FALLBACK = Math.max(10, maxDuration - 5);
+const DEFAULT_TIMEOUT_SECONDS_FALLBACK = Math.max(5, maxDuration - 5);
 const MEMORY_SUMMARY_TTL_MS = 2 * 60 * 1000;
 
 function getDefaultMaxTokens(): number {
@@ -41,7 +41,8 @@ function getDefaultMaxSteps(): number {
 function getDefaultTimeoutSeconds(): number {
   const raw = process.env.CHAT_DEFAULT_TIMEOUT_SECONDS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0
+  // Enforce minimum of 5 seconds per schema constraint
+  return Number.isFinite(parsed) && parsed >= 5
     ? parsed
     : DEFAULT_TIMEOUT_SECONDS_FALLBACK;
 }
@@ -49,11 +50,12 @@ function getDefaultTimeoutSeconds(): number {
 function getDefaultStepTimeoutSeconds(totalSeconds: number): number | undefined {
   const raw = process.env.CHAT_DEFAULT_STEP_TIMEOUT_SECONDS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  // Enforce minimum of 5 seconds per schema constraint
-  if (!Number.isFinite(parsed) || parsed < 5) {
+  if (!Number.isFinite(parsed) || parsed <= 0) {
     return undefined;
   }
-  return Math.min(parsed, totalSeconds);
+
+  // Enforce minimum of 5 seconds per schema constraint.
+  return Math.min(Math.max(5, parsed), totalSeconds);
 }
 
 const chatRequestSchema = z.strictObject({

@@ -238,10 +238,21 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
     setHasUnsavedChanges(true);
   };
 
+  const parseOptionalInt = (raw: string): number | null => {
+    if (raw === "") return null;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const renderFiniteNumberOrEmpty = (value: unknown): number | "" =>
+    typeof value === "number" && Number.isFinite(value) ? value : "";
+
   const currentParams = { ...config.parameters, ...edited };
   const isStepTimeoutInvalid =
-    currentParams.stepTimeoutSeconds !== undefined &&
-    currentParams.timeoutSeconds !== undefined &&
+    typeof currentParams.stepTimeoutSeconds === "number" &&
+    Number.isFinite(currentParams.stepTimeoutSeconds) &&
+    typeof currentParams.timeoutSeconds === "number" &&
+    Number.isFinite(currentParams.timeoutSeconds) &&
     currentParams.stepTimeoutSeconds > currentParams.timeoutSeconds;
 
   return (
@@ -358,9 +369,9 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <Input
                   id="maxTokens"
                   type="number"
-                  value={currentParams.maxTokens ?? ""}
+                  value={renderFiniteNumberOrEmpty(currentParams.maxTokens)}
                   onChange={(e) =>
-                    onParamChange("maxTokens", Number.parseInt(e.target.value, 10))
+                    onParamChange("maxTokens", parseOptionalInt(e.target.value))
                   }
                   min={1}
                   max={8000}
@@ -390,9 +401,9 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <Input
                   id="timeoutSeconds"
                   type="number"
-                  value={currentParams.timeoutSeconds ?? ""}
+                  value={renderFiniteNumberOrEmpty(currentParams.timeoutSeconds)}
                   onChange={(e) =>
-                    onParamChange("timeoutSeconds", Number.parseInt(e.target.value, 10))
+                    onParamChange("timeoutSeconds", parseOptionalInt(e.target.value))
                   }
                   min={5}
                   max={300}
@@ -404,11 +415,11 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <Input
                   id="stepTimeoutSeconds"
                   type="number"
-                  value={currentParams.stepTimeoutSeconds ?? ""}
+                  value={renderFiniteNumberOrEmpty(currentParams.stepTimeoutSeconds)}
                   onChange={(e) =>
                     onParamChange(
                       "stepTimeoutSeconds",
-                      Number.parseInt(e.target.value, 10)
+                      parseOptionalInt(e.target.value)
                     )
                   }
                   min={5}
@@ -491,7 +502,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               <CardDescription>Recent versions for {selectedAgent}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-100">
+              <ScrollArea className="h-96">
                 <Table>
                   <TableHeader>
                     <TableRow>
