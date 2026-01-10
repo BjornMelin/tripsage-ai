@@ -131,7 +131,7 @@ const BOT_ID_SPY = vi.hoisted(() =>
 );
 
 // Alias vitest's resolved "botid/server" to allow mockApiRouteBotIdOnce to intercept
-vi.mock("botid/server", async () => {
+vi.mock("botid/server", () => {
   return {
     checkBotId: BOT_ID_SPY,
   };
