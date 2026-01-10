@@ -15,18 +15,13 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import type { BotIdVerification } from "@/lib/security/botid";
+import { mockBotIdHumanResponse } from "@/test/mocks/botid";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
 import { getMockCookiesForTest } from "./route";
 
 registerUpstashMocksWithVitest();
-
-vi.mock("botid/server", async () => {
-  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
-  return {
-    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
-  };
-});
 
 // ---- REQUEST FACTORIES ------------------------------------------------------
 
@@ -130,6 +125,17 @@ vi.mock("@/lib/redis", () => ({
 const LIMIT_SPY = vi.hoisted(() =>
   vi.fn(async (_key: string, _identifier: string) => ({ ...DEFAULT_RATE_LIMIT }))
 );
+
+const BOT_ID_SPY = vi.hoisted(() =>
+  vi.fn(async (): Promise<BotIdVerification> => ({ ...mockBotIdHumanResponse }))
+);
+
+// Alias vitest's resolved "botid/server" to allow mockApiRouteBotIdOnce to intercept
+vi.mock("botid/server", async () => {
+  return {
+    checkBotId: BOT_ID_SPY,
+  };
+});
 
 // Create a lazily-initialized Supabase client holder
 // The actual client is created after imports are resolved
@@ -345,6 +351,15 @@ export function disableApiRouteRateLimit(): void {
  */
 export function mockApiRouteRateLimitOnce(overrides: Partial<RateLimitResult>): void {
   LIMIT_SPY.mockResolvedValueOnce({ ...DEFAULT_RATE_LIMIT, ...overrides });
+}
+
+/**
+ * Override the BotID response returned by `checkBotId()` for a single request.
+ *
+ * @param overrides - BotID response fields to override (merged with mockBotIdHumanResponse defaults)
+ */
+export function mockApiRouteBotIdOnce(overrides: Partial<BotIdVerification>): void {
+  BOT_ID_SPY.mockResolvedValueOnce({ ...mockBotIdHumanResponse, ...overrides });
 }
 
 /** Replace the cookie jar returned by mocked `cookies()`. */
