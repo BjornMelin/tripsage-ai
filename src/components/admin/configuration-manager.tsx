@@ -66,39 +66,38 @@ import {
   updateAgentConfigAction,
 } from "./configuration-actions";
 
-const AGENTS: Array<{ label: string; value: AgentType; description: string }> =
-  [
-    {
-      description: "Budget optimization",
-      label: "Budget Agent",
-      value: "budgetAgent",
-    },
-    {
-      description: "Research destinations and attractions",
-      label: "Destination Research Agent",
-      value: "destinationResearchAgent",
-    },
-    {
-      description: "Plan itineraries",
-      label: "Itinerary Agent",
-      value: "itineraryAgent",
-    },
-    {
-      description: "Search flights",
-      label: "Flight Agent",
-      value: "flightAgent",
-    },
-    {
-      description: "Find stays",
-      label: "Accommodation Agent",
-      value: "accommodationAgent",
-    },
-    {
-      description: "Persist memories",
-      label: "Memory Agent",
-      value: "memoryAgent",
-    },
-  ];
+const AGENTS: Array<{ label: string; value: AgentType; description: string }> = [
+  {
+    description: "Budget optimization",
+    label: "Budget Agent",
+    value: "budgetAgent",
+  },
+  {
+    description: "Research destinations and attractions",
+    label: "Destination Research Agent",
+    value: "destinationResearchAgent",
+  },
+  {
+    description: "Plan itineraries",
+    label: "Itinerary Agent",
+    value: "itineraryAgent",
+  },
+  {
+    description: "Search flights",
+    label: "Flight Agent",
+    value: "flightAgent",
+  },
+  {
+    description: "Find stays",
+    label: "Accommodation Agent",
+    value: "accommodationAgent",
+  },
+  {
+    description: "Persist memories",
+    label: "Memory Agent",
+    value: "memoryAgent",
+  },
+];
 
 export type ConfigurationManagerProps = {
   initialAgent: AgentType;
@@ -109,16 +108,12 @@ export type ConfigurationManagerProps = {
 
 export default function ConfigurationManager(props: ConfigurationManagerProps) {
   const { toast } = useToast();
-  const [selectedAgent, setSelectedAgent] = useState<AgentType>(
-    props.initialAgent
-  );
+  const [selectedAgent, setSelectedAgent] = useState<AgentType>(props.initialAgent);
   const [config, setConfig] = useState<AgentConfig>(props.initialConfig);
   const [edited, setEdited] = useState<Partial<AgentConfig["parameters"]>>({
     ...props.initialConfig.parameters,
   });
-  const [versions, setVersions] = useState<AgentVersion[]>(
-    props.initialVersions
-  );
+  const [versions, setVersions] = useState<AgentVersion[]>(props.initialVersions);
   const [metrics, setMetrics] = useState<AgentMetrics>(props.initialMetrics);
   const [saving, startSaving] = useTransition();
   const [loading, startLoading] = useTransition();
@@ -148,8 +143,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
         applyAgentData(bundle.data);
       } catch (error) {
         toast({
-          description:
-            error instanceof Error ? error.message : "Failed to load agent",
+          description: error instanceof Error ? error.message : "Failed to load agent",
           title: "Load failed",
           variant: "destructive",
         });
@@ -190,8 +184,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
         });
       } catch (error) {
         toast({
-          description:
-            error instanceof Error ? error.message : "Failed to save",
+          description: error instanceof Error ? error.message : "Failed to save",
           title: "Save failed",
           variant: "destructive",
         });
@@ -202,10 +195,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
   const handleRollback = (versionId: string) => {
     startSaving(async () => {
       try {
-        const rollback = await rollbackAgentConfigAction(
-          selectedAgent,
-          versionId
-        );
+        const rollback = await rollbackAgentConfigAction(selectedAgent, versionId);
         if (!rollback.ok) {
           toast({
             description: rollback.error.reason || "Failed to rollback",
@@ -232,8 +222,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
         });
       } catch (error) {
         toast({
-          description:
-            error instanceof Error ? error.message : "Failed to rollback",
+          description: error instanceof Error ? error.message : "Failed to rollback",
           title: "Rollback failed",
           variant: "destructive",
         });
@@ -249,12 +238,22 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
     setHasUnsavedChanges(true);
   };
 
+  /**
+   * Parse optional integer from input string.
+   * @param raw - The raw input string
+   * @returns Parsed integer or null if empty/invalid.
+   */
   const parseOptionalInt = (raw: string): number | null => {
     if (raw === "") return null;
     const parsed = Number.parseInt(raw, 10);
     return Number.isFinite(parsed) ? parsed : null;
   };
 
+  /**
+   * Render finite number or empty string for controlled input.
+   * @param value - The value to render
+   * @returns Finite number or an empty string.
+   */
   const renderFiniteNumberOrEmpty = (value: unknown): number | "" =>
     typeof value === "number" && Number.isFinite(value) ? value : "";
 
@@ -338,7 +337,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={!hasUnsavedChanges || saving}
+                  disabled={!hasUnsavedChanges || saving || isStepTimeoutInvalid}
                 >
                   {saving ? (
                     <LoadingSpinner size="sm" className="mr-2" />
@@ -415,14 +414,9 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <Input
                   id="timeoutSeconds"
                   type="number"
-                  value={renderFiniteNumberOrEmpty(
-                    currentParams.timeoutSeconds
-                  )}
+                  value={renderFiniteNumberOrEmpty(currentParams.timeoutSeconds)}
                   onChange={(e) =>
-                    onParamChange(
-                      "timeoutSeconds",
-                      parseOptionalInt(e.target.value)
-                    )
+                    onParamChange("timeoutSeconds", parseOptionalInt(e.target.value))
                   }
                   min={5}
                   max={300}
@@ -430,15 +424,11 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stepTimeoutSeconds">
-                  Step Timeout (seconds)
-                </Label>
+                <Label htmlFor="stepTimeoutSeconds">Step Timeout (seconds)</Label>
                 <Input
                   id="stepTimeoutSeconds"
                   type="number"
-                  value={renderFiniteNumberOrEmpty(
-                    currentParams.stepTimeoutSeconds
-                  )}
+                  value={renderFiniteNumberOrEmpty(currentParams.stepTimeoutSeconds)}
                   onChange={(e) =>
                     onParamChange(
                       "stepTimeoutSeconds",
@@ -447,13 +437,18 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   }
                   min={5}
                   max={300}
+                  aria-invalid={isStepTimeoutInvalid}
+                  aria-describedby="stepTimeout-help stepTimeout-error"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Must be less than or equal to total timeout when both are
-                  provided.
+                <p id="stepTimeout-help" className="text-sm text-muted-foreground">
+                  Must be less than or equal to total timeout when both are provided.
                 </p>
                 {isStepTimeoutInvalid && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id="stepTimeout-error"
+                    role="alert"
+                    className="text-sm text-destructive"
+                  >
                     Step timeout cannot exceed total timeout.
                   </p>
                 )}
@@ -484,16 +479,12 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{metrics.versionCount}</div>
-                <p className="text-xs text-muted-foreground">
-                  Total versions stored
-                </p>
+                <p className="text-xs text-muted-foreground">Total versions stored</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Last Updated
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
                 <ClockIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -509,16 +500,12 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Config Health
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Config Health</CardTitle>
                 <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">OK</div>
-                <p className="text-xs text-muted-foreground">
-                  Schema validated
-                </p>
+                <p className="text-xs text-muted-foreground">Schema validated</p>
               </CardContent>
             </Card>
           </div>
@@ -531,9 +518,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 <HistoryIcon className="h-5 w-5" />
                 Version History
               </CardTitle>
-              <CardDescription>
-                Recent versions for {selectedAgent}
-              </CardDescription>
+              <CardDescription>Recent versions for {selectedAgent}</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-96">
@@ -560,9 +545,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                         <TableCell>{version.createdBy ?? "—"}</TableCell>
                         <TableCell>{version.summary ?? "-"}</TableCell>
                         <TableCell>
-                          {index === 0 && (
-                            <Badge variant="default">Current</Badge>
-                          )}
+                          {index === 0 && <Badge variant="default">Current</Badge>}
                         </TableCell>
                         <TableCell>
                           {index !== 0 && (
@@ -578,8 +561,8 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                                     Rollback Configuration
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Roll back to version {version.id}? A new
-                                    head version will be created.
+                                    Roll back to version {version.id}? A new head
+                                    version will be created.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

@@ -20,6 +20,13 @@ import {
 import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
 import { generateIcsFromEvents } from "@/lib/calendar/ics";
 
+/**
+ * Parses an optional ISO date string into a Date object.
+ *
+ * @param value - The date string to parse.
+ * @returns A Date object if the string is valid, or undefined if value is falsy.
+ * @throws {ToolError} with calendarInvalidDate if the string is non-falsy but invalid.
+ */
 function parseDateOrUndefined(value?: string): Date | undefined {
   if (!value) return undefined;
   const parsed = new Date(value);
@@ -68,14 +75,7 @@ export const createCalendarEvent = createAiTool({
         }
         if (value.date) {
           const parsed = parseDateOrUndefined(value.date);
-          if (!parsed) {
-            throw createToolError(
-              TOOL_ERROR_CODES.calendarMissingDatetime,
-              "Calendar event missing valid date/dateTime",
-              { date: value.date }
-            );
-          }
-          return parsed.toISOString();
+          return parsed?.toISOString() ?? "";
         }
         throw createToolError(
           TOOL_ERROR_CODES.calendarMissingDatetime,
@@ -120,8 +120,7 @@ export const createCalendarEvent = createAiTool({
  * Checks calendar availability and free/busy status.
  */
 export const getAvailability = createAiTool({
-  description:
-    "Check calendar availability (free/busy) for specified calendars.",
+  description: "Check calendar availability (free/busy) for specified calendars.",
   execute: async (params) => {
     try {
       const timeMax = parseDateOrUndefined(params.timeMax);
@@ -140,9 +139,7 @@ export const getAvailability = createAiTool({
       });
       return {
         calendars: Object.entries(result.calendars).map(([id, data]) => ({
-          busy:
-            (data as { busy?: Array<{ start: string; end: string }> }).busy ||
-            [],
+          busy: (data.busy || []) as { start: string; end: string }[],
           calendarId: id,
         })),
         success: true,

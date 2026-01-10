@@ -8,6 +8,7 @@ import {
 } from "@schemas/configuration";
 import { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import { isE2eBypassEnabled } from "@/lib/config/helpers";
 import {
   err,
   ok,
@@ -17,17 +18,13 @@ import {
 } from "@/lib/result";
 import { nowIso, secureId } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
 
 const DEFAULT_SCOPE = "global";
 const DEFAULT_MODEL = "gpt-4o";
 
-// Returns true if E2E bypass is enabled (for synthetic config generation in tests).
-// Only active in non-production environments as a safety guard.
-const isE2eBypassEnabled = () =>
-  (process.env.E2E_BYPASS_RATE_LIMIT === "1" ||
-    process.env.E2E_BYPASS_RATE_LIMIT === "true") &&
-  process.env.NODE_ENV !== "production";
+const configurationActionsLogger = createServerLogger("admin.configuration");
 
 export type AgentVersion = {
   id: string;
@@ -73,6 +70,11 @@ export async function fetchAgentBundle(
     if (isE2eBypassEnabled()) {
       const now = nowIso();
       const timestamp = now.replace(/[-:T.Z]/g, "").slice(0, 14);
+
+      // Construct a fallback config that satisfies schema constraints.
+      // id: matches versionIdSchema regex /^v\d+_[a-f0-9]{8}$/
+      // model: matches modelNameSchema allowed values (e.g., "gpt-4o")
+      // parameters: matches agentConfigRequestSchema
       const fallbackConfigParsed = configurationAgentConfigSchema.safeParse({
         agentType,
         createdAt: now,
@@ -86,6 +88,7 @@ export async function fetchAgentBundle(
       });
 
       if (!fallbackConfigParsed.success) {
+        // Intentionally return an error to surface schema mismatches during tests.
         return err({
           error: "internal",
           reason: "Failed to construct fallback config",
@@ -98,10 +101,17 @@ export async function fetchAgentBundle(
         versions: [],
       });
     }
+
+    configurationActionsLogger.error("agent_bundle_load_failed", {
+      agentType,
+      error: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+
     return err({
       error: "internal",
-      reason:
-        error instanceof Error ? error.message : "Failed to load agent config",
+      reason: "Failed to load agent config",
     });
   }
 
@@ -136,7 +146,7 @@ export async function fetchAgentBundle(
           createdBy: v.created_by,
           id: v.id,
           summary: v.summary,
-        } satisfies AgentVersion)
+        }) satisfies AgentVersion
     ),
   });
 }
@@ -177,12 +187,15 @@ export async function updateAgentConfigAction(
       method: "PUT",
     });
   } catch (error) {
+    configurationActionsLogger.error("agent_config_update_failed", {
+      agentType: parsed.data,
+      error: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     return err({
       error: "internal",
-      reason:
-        error instanceof Error
-          ? error.message
-          : "Failed to update configuration",
+      reason: "Failed to update configuration",
     });
   }
   if (!res.ok) {
@@ -206,8 +219,8 @@ export async function updateAgentConfigAction(
         (res.status === 403
           ? "forbidden"
           : res.status === 401
-          ? "unauthorized"
-          : "internal"),
+            ? "unauthorized"
+            : "internal"),
       reason:
         (errorBody.success ? errorBody.data.reason : undefined) ??
         "Failed to update configuration",
@@ -279,12 +292,16 @@ export async function rollbackAgentConfigAction(
       method: "POST",
     });
   } catch (error) {
+    configurationActionsLogger.error("agent_config_rollback_failed", {
+      agentType: parsedAgentType.data,
+      error: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      errorStack: error instanceof Error ? error.stack : undefined,
+      versionId: parsedVersionId.data,
+    });
     return err({
       error: "internal",
-      reason:
-        error instanceof Error
-          ? error.message
-          : "Failed to rollback configuration",
+      reason: "Failed to rollback configuration",
     });
   }
   if (!res.ok) {
@@ -308,10 +325,10 @@ export async function rollbackAgentConfigAction(
         (res.status === 403
           ? "forbidden"
           : res.status === 401
-          ? "unauthorized"
-          : res.status === 404
-          ? "not_found"
-          : "internal"),
+            ? "unauthorized"
+            : res.status === 404
+              ? "not_found"
+              : "internal"),
       reason:
         (errorBody.success ? errorBody.data.reason : undefined) ??
         "Failed to rollback configuration",
