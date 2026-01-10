@@ -51,9 +51,9 @@
 
 Agent tools:
 
-- search.places
-- search.placeDetails
-- trips.savePlace(tripId, place)
+- searchPlaces
+- searchPlaceDetails
+- tripsSavePlace(tripId, place)
 
 ## Notes
 

@@ -12,17 +12,17 @@ import { wrapToolsWithChatId, wrapToolsWithUserId } from "../injection";
 describe("wrapToolsWithChatId", () => {
   it("returns the original tools when chatId is missing", () => {
     const tools = {
-      "attachments.list": { execute: vi.fn() },
+      attachmentsList: { execute: vi.fn() },
     };
 
-    const wrapped = wrapToolsWithChatId(tools, undefined, ["attachments.list"]);
+    const wrapped = wrapToolsWithChatId(tools, undefined, ["attachmentsList"]);
 
     expect(wrapped).toBe(tools);
   });
 
   it("returns the original tools when onlyKeys is empty", () => {
     const tools = {
-      "attachments.list": { execute: vi.fn() },
+      attachmentsList: { execute: vi.fn() },
     };
 
     const wrapped = wrapToolsWithChatId(tools, "chat-123", []);
@@ -33,12 +33,12 @@ describe("wrapToolsWithChatId", () => {
   it("injects chatId into tool input", async () => {
     const execute = vi.fn(async (input: unknown) => input);
     const tools = {
-      "attachments.list": { execute },
+      attachmentsList: { execute },
     };
 
-    const wrapped = wrapToolsWithChatId(tools, "chat-123", ["attachments.list"]);
+    const wrapped = wrapToolsWithChatId(tools, "chat-123", ["attachmentsList"]);
     const tool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["attachments.list"]
+      wrapped.attachmentsList
     );
 
     await tool.execute({ limit: 5 });
@@ -53,17 +53,17 @@ describe("wrapToolsWithChatId", () => {
     const wrappedExecute = vi.fn(async (input: unknown) => input);
     const untouchedExecute = vi.fn(async (input: unknown) => input);
     const tools = {
-      "attachments.list": { execute: wrappedExecute },
-      "other.tool": { execute: untouchedExecute },
+      attachmentsList: { execute: wrappedExecute },
+      otherTool: { execute: untouchedExecute },
     };
 
-    const wrapped = wrapToolsWithChatId(tools, "chat-123", ["attachments.list"]);
+    const wrapped = wrapToolsWithChatId(tools, "chat-123", ["attachmentsList"]);
 
     const listedTool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["attachments.list"]
+      wrapped.attachmentsList
     );
     const otherTool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["other.tool"]
+      wrapped.otherTool
     );
 
     await listedTool.execute({ limit: 1 });
@@ -80,20 +80,20 @@ describe("wrapToolsWithChatId", () => {
     const execA = vi.fn(async (input: unknown) => input);
     const execB = vi.fn(async (input: unknown) => input);
     const tools = {
-      "attachments.list": { execute: execA },
-      "attachments.other": { execute: execB },
+      attachmentsList: { execute: execA },
+      attachmentsOther: { execute: execB },
     };
 
     const wrapped = wrapToolsWithChatId(tools, "chat-123", [
-      "attachments.list",
-      "attachments.other",
+      "attachmentsList",
+      "attachmentsOther",
     ]);
 
     const toolA = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["attachments.list"]
+      wrapped.attachmentsList
     );
     const toolB = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["attachments.other"]
+      wrapped.attachmentsOther
     );
 
     await toolA.execute({ limit: 2 });
@@ -114,17 +114,17 @@ describe("wrapToolsWithUserId", () => {
   it("injects userId and sessionId into tool input", async () => {
     const execute = vi.fn(async (input: unknown) => input);
     const tools = {
-      "trips.savePlace": { execute },
+      tripsSavePlace: { execute },
     };
 
     const wrapped = wrapToolsWithUserId(
       tools,
       "user-abc",
-      ["trips.savePlace"],
+      ["tripsSavePlace"],
       "session-xyz"
     );
     const tool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["trips.savePlace"]
+      wrapped.tripsSavePlace
     );
 
     await tool.execute({ placeId: "place-1" });
@@ -142,12 +142,12 @@ describe("wrapToolsWithUserId", () => {
   it("injects only userId when sessionId is missing", async () => {
     const execute = vi.fn(async (input: unknown) => input);
     const tools = {
-      "trips.savePlace": { execute },
+      tripsSavePlace: { execute },
     };
 
-    const wrapped = wrapToolsWithUserId(tools, "user-abc", ["trips.savePlace"]);
+    const wrapped = wrapToolsWithUserId(tools, "user-abc", ["tripsSavePlace"]);
     const tool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["trips.savePlace"]
+      wrapped.tripsSavePlace
     );
 
     await tool.execute({ placeId: "place-1" });
@@ -169,17 +169,17 @@ describe("wrapToolsWithUserId", () => {
     const wrappedExecute = vi.fn(async (input: unknown) => input);
     const untouchedExecute = vi.fn(async (input: unknown) => input);
     const tools = {
-      "other.tool": { execute: untouchedExecute },
-      "trips.savePlace": { execute: wrappedExecute },
+      otherTool: { execute: untouchedExecute },
+      tripsSavePlace: { execute: wrappedExecute },
     };
 
-    const wrapped = wrapToolsWithUserId(tools, "user-abc", ["trips.savePlace"]);
+    const wrapped = wrapToolsWithUserId(tools, "user-abc", ["tripsSavePlace"]);
 
     const listedTool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["trips.savePlace"]
+      wrapped.tripsSavePlace
     );
     const otherTool = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["other.tool"]
+      wrapped.otherTool
     );
 
     await listedTool.execute({ placeId: "place-2" });
@@ -196,20 +196,20 @@ describe("wrapToolsWithUserId", () => {
     const execA = vi.fn(async (input: unknown) => input);
     const execB = vi.fn(async (input: unknown) => input);
     const tools = {
-      "trips.saveAnother": { execute: execB },
-      "trips.savePlace": { execute: execA },
+      tripsSaveAnother: { execute: execB },
+      tripsSavePlace: { execute: execA },
     };
 
     const wrapped = wrapToolsWithUserId(tools, "user-abc", [
-      "trips.savePlace",
-      "trips.saveAnother",
+      "tripsSavePlace",
+      "tripsSaveAnother",
     ]);
 
     const toolA = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["trips.savePlace"]
+      wrapped.tripsSavePlace
     );
     const toolB = unsafeCast<{ execute: (input: unknown) => unknown }>(
-      wrapped["trips.saveAnother"]
+      wrapped.tripsSaveAnother
     );
 
     await toolA.execute({ placeId: "place-1" });
@@ -227,7 +227,7 @@ describe("wrapToolsWithUserId", () => {
 
   it("returns the original tools when onlyKeys is empty", () => {
     const tools = {
-      "trips.savePlace": { execute: vi.fn() },
+      tripsSavePlace: { execute: vi.fn() },
     };
 
     const wrapped = wrapToolsWithUserId(tools, "user-abc", []);

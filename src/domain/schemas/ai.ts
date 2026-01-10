@@ -32,6 +32,7 @@ export const languageModelUsageSchema = z.looseObject({
 export type LanguageModelUsageMetadata = z.infer<typeof languageModelUsageSchema>;
 
 export const chatMessageMetadataSchema = z.looseObject({
+  abortReason: z.string().nullable().optional(),
   finishReason: z.string().nullable().optional(),
   requestId: z.string().optional(),
   sessionId: z.string().optional(),
@@ -41,6 +42,7 @@ export const chatMessageMetadataSchema = z.looseObject({
 export type ChatMessageMetadata = z.infer<typeof chatMessageMetadataSchema>;
 
 export const agentMessageMetadataSchema = z.looseObject({
+  abortReason: z.string().nullable().optional(),
   agentType: agentTypeSchema,
   finishReason: z.string().nullable().optional(),
   modelId: z.string().min(1),

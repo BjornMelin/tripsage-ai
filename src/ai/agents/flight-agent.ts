@@ -29,9 +29,9 @@ import { extractAgentParameters } from "./types";
 const FLIGHT_TOOLS = {
   distanceMatrix,
   geocode,
-  "search.placeDetails": placeDetails,
-  "search.places": searchPlaces,
   searchFlights,
+  searchPlaceDetails: placeDetails,
+  searchPlaces,
 } satisfies ToolSet;
 
 /**
@@ -94,7 +94,7 @@ export function createFlightAgent(
       // Phase 1 (steps 0-2): Resolve locations
       if (stepNumber <= 2) {
         return {
-          activeTools: ["geocode", "search.places", "search.placeDetails"],
+          activeTools: ["geocode", "searchPlaces", "searchPlaceDetails"],
         };
       }
       // Phase 2 (steps 3+): Search flights

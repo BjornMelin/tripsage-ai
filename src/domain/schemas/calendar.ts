@@ -355,6 +355,43 @@ export interface CalendarStatusResponse {
 // Schemas for calendar tool input validation and processing
 
 /**
+ * Tool-safe schema for event date/time inputs.
+ * Uses ISO strings only to keep JSON Schema compatible with AI SDK tools.
+ */
+const toolEventDateTimeSchema = z.strictObject({
+  date: ISO_DATE_STRING.optional(),
+  dateTime: primitiveSchemas.isoDateTime.optional(),
+  timeZone: z.string().optional(),
+});
+
+/**
+ * Tool-safe schema for calendar events.
+ * Mirrors core event fields but keeps dates as ISO strings.
+ */
+const toolCalendarEventSchema = z.strictObject({
+  attendees: z.array(eventAttendeeSchema).default([]),
+  created: primitiveSchemas.isoDateTime.optional(),
+  description: z.string().max(8192).optional(),
+  end: toolEventDateTimeSchema,
+  iCalUID: z.string().optional(),
+  location: z.string().max(1024).optional(),
+  recurrence: z.array(z.string()).optional(),
+  reminders: z
+    .object({
+      overrides: z.array(eventReminderSchema).optional(),
+      useDefault: z.boolean().optional(),
+    })
+    .default({ useDefault: true }),
+  start: toolEventDateTimeSchema,
+  summary: z.string().min(1).max(1024),
+  timeZone: z.string().optional(),
+  transparency: z.enum(["opaque", "transparent"]).default("opaque"),
+  travelMetadata: z.looseRecord(z.string(), z.unknown()).optional(),
+  updated: primitiveSchemas.isoDateTime.optional(),
+  visibility: eventVisibilitySchema.default("default"),
+});
+
+/**
  * Schema for creating calendar events with Google Calendar.
  * Validates calendar event creation parameters for AI tools.
  */
@@ -363,7 +400,27 @@ export const createCalendarEventInputSchema = createEventRequestSchema.extend({
     .string()
     .default("primary")
     .describe("Google Calendar ID to create event in"),
+  end: toolEventDateTimeSchema,
+  start: toolEventDateTimeSchema,
 });
+
+/**
+ * Schema for free/busy tool input.
+ * Uses ISO strings for date boundaries to keep JSON Schema compatible.
+ */
+export const freeBusyToolInputSchema = z
+  .object({
+    calendarExpansionMax: z.number().int().min(1).max(50).default(50),
+    groupExpansionMax: z.number().int().min(1).max(100).default(50),
+    items: z.array(freeBusyCalendarItemSchema).min(1),
+    timeMax: primitiveSchemas.isoDateTime,
+    timeMin: primitiveSchemas.isoDateTime,
+    timeZone: z.string().optional(),
+  })
+  .refine((data) => data.timeMax > data.timeMin, {
+    error: "timeMax must be after timeMin",
+    path: ["timeMax"],
+  });
 
 /**
  * Schema for exporting calendar events to ICS format.
@@ -375,7 +432,7 @@ export const exportItineraryToIcsInputSchema = z.strictObject({
     .default("TripSage Itinerary")
     .describe("Name for the calendar in ICS export"),
   events: z
-    .array(calendarEventSchema)
+    .array(toolCalendarEventSchema)
     .min(1, { error: "At least one event is required" })
     .describe("List of calendar events to export"),
   timezone: z.string().nullable().describe("Timezone for the exported calendar"),

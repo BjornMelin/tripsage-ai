@@ -29,8 +29,8 @@ import { extractAgentParameters } from "./types";
 const BUDGET_TOOLS = {
   combineSearchResults,
   getTravelAdvisory,
-  "search.placeDetails": placeDetails,
-  "search.places": searchPlaces,
+  searchPlaceDetails: placeDetails,
+  searchPlaces,
   webSearchBatch,
 } satisfies ToolSet;
 
@@ -92,14 +92,14 @@ export function createBudgetAgent(
           activeTools: [
             "webSearchBatch",
             "getTravelAdvisory",
-            "search.places",
-            "search.placeDetails",
+            "searchPlaces",
+            "searchPlaceDetails",
           ],
         };
       }
       // Phase 2 (steps 4+): Combine and finalize budget allocation
       return {
-        activeTools: ["combineSearchResults", "search.places", "search.placeDetails"],
+        activeTools: ["combineSearchResults", "searchPlaces", "searchPlaceDetails"],
       };
     },
     temperature: params.temperature,

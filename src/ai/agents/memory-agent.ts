@@ -143,8 +143,14 @@ async function persistAndSummarize(
   ];
   const desiredMaxTokens = 512; // Short summary for memory confirmations
   const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+  const stepTimeoutMs =
+    typeof config.parameters?.stepTimeoutSeconds === "number" &&
+    Number.isFinite(config.parameters.stepTimeoutSeconds)
+      ? config.parameters.stepTimeoutSeconds * 1000
+      : undefined;
   const timeoutConfig = buildTimeoutConfigFromSeconds(
-    config.parameters?.timeoutSeconds
+    config.parameters?.timeoutSeconds,
+    stepTimeoutMs
   );
 
   return streamText({

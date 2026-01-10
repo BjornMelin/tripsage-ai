@@ -231,6 +231,7 @@ export function ChatMessageItem({
 }: ChatMessageItemProps) {
   const parts = message.parts ?? [];
   const metadata = chatMessageMetadataSchema.safeParse(message.metadata);
+  const abortReason = metadata.success ? metadata.data.abortReason : undefined;
   const finishReason = metadata.success ? metadata.data.finishReason : undefined;
   const usageSummary = metadata.success ? FormatUsage(metadata.data.totalUsage) : null;
   // Extract source-url parts for citation display
@@ -241,7 +242,7 @@ export function ChatMessageItem({
   return (
     <Message from={message.role} data-testid={`msg-${message.id}`}>
       <MessageAvatar
-        src={message.role === "user" ? "/avatar-user.png" : "/avatar-ai.png"}
+        src={message.role === "user" ? "/avatar-user.svg" : "/avatar-ai.svg"}
         name={message.role === "user" ? "You" : "AI"}
       />
       <MessageContent>
@@ -588,9 +589,11 @@ export function ChatMessageItem({
           </div>
         ) : null}
 
-        {message.role === "assistant" && (finishReason || usageSummary) ? (
+        {message.role === "assistant" &&
+        (abortReason || finishReason || usageSummary) ? (
           <div className="mt-2 text-[11px] text-muted-foreground">
             {[
+              abortReason ? `Abort: ${abortReason}` : null,
               finishReason ? `Finish: ${finishReason}` : null,
               usageSummary ? `Tokens: ${usageSummary}` : null,
             ]

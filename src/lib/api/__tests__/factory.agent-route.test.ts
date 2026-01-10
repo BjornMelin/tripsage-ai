@@ -94,7 +94,7 @@ describe("createAgentRoute", () => {
         createdAt: "2024-01-01T00:00:00.000Z",
         id: "v1700000000_deadbeef",
         model: "gpt-4o",
-        parameters: { timeoutSeconds: 42 },
+        parameters: { stepTimeoutSeconds: 10, timeoutSeconds: 42 },
         scope: "global",
         updatedAt: "2024-01-01T00:00:00.000Z",
       },
@@ -136,7 +136,7 @@ describe("createAgentRoute", () => {
       timeout?: unknown;
     };
 
-    expect(opts.timeout).toEqual(buildTimeoutConfigFromSeconds(42));
+    expect(opts.timeout).toEqual(buildTimeoutConfigFromSeconds(42, 10_000));
     expect(opts.sendSources).toBe(true);
 
     const usage = { completionTokens: 2, promptTokens: 1, totalTokens: 3 };

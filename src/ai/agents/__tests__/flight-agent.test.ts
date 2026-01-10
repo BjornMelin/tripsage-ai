@@ -126,9 +126,9 @@ describe("createFlightAgent", () => {
         tools: expect.objectContaining({
           distanceMatrix: expect.anything(),
           geocode: expect.anything(),
-          "search.placeDetails": expect.anything(),
-          "search.places": expect.anything(),
           searchFlights: expect.anything(),
+          searchPlaceDetails: expect.anything(),
+          searchPlaces: expect.anything(),
         }),
       })
     );
@@ -144,8 +144,8 @@ describe("createFlightAgent", () => {
     // Phase 1: steps 0-2 should have geocode and POI tools
     const phase1 = config.prepareStep({ stepNumber: 0 });
     expect(phase1.activeTools).toContain("geocode");
-    expect(phase1.activeTools).toContain("search.places");
-    expect(phase1.activeTools).toContain("search.placeDetails");
+    expect(phase1.activeTools).toContain("searchPlaces");
+    expect(phase1.activeTools).toContain("searchPlaceDetails");
 
     // Phase 2: steps 3+ should have search and distance tools
     const phase2 = config.prepareStep({ stepNumber: 3 });

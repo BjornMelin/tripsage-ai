@@ -93,19 +93,29 @@ test.describe("Dashboard Functionality", () => {
   test("dashboard navigation works correctly", async ({ page }) => {
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    const navigation = page.getByRole("navigation");
 
     // Test sidebar navigation
-    await page.getByRole("navigation").getByRole("link", { name: "My Trips" }).click();
-    await expect(page).toHaveURL("/dashboard/trips", { timeout: navigationTimeoutMs });
+    await clickAndWaitForUrl(
+      page,
+      navigation.getByRole("link", { name: "My Trips" }),
+      "/dashboard/trips"
+    );
 
-    await page.getByRole("navigation").getByRole("link", { name: "Search" }).click();
-    await expect(page).toHaveURL("/dashboard/search", { timeout: navigationTimeoutMs });
+    await clickAndWaitForUrl(
+      page,
+      navigation.getByRole("link", { name: "Search" }),
+      "/dashboard/search"
+    );
+    await expect(page.getByRole("heading", { level: 1, name: "Search" })).toBeVisible({
+      timeout: navigationTimeoutMs,
+    });
 
-    await page
-      .getByRole("navigation")
-      .getByRole("link", { name: "AI Assistant" })
-      .click();
-    await expect(page).toHaveURL("/chat", { timeout: navigationTimeoutMs });
+    await clickAndWaitForUrl(
+      page,
+      navigation.getByRole("link", { name: "AI Assistant" }),
+      "/chat"
+    );
 
     // Return to dashboard home from /chat
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -136,10 +146,11 @@ test.describe("Dashboard Functionality", () => {
     });
 
     // Test profile navigation
-    await popoverContent.getByRole("link", { name: "Profile" }).click();
-    await expect(page).toHaveURL("/dashboard/profile", {
-      timeout: navigationTimeoutMs,
-    });
+    await clickAndWaitForUrl(
+      page,
+      popoverContent.getByRole("link", { name: "Profile" }),
+      "/dashboard/profile"
+    );
     await page.waitForLoadState("domcontentloaded");
 
     // Navigate back and test settings
@@ -149,11 +160,12 @@ test.describe("Dashboard Functionality", () => {
       page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
     ).toBeVisible({ timeout: visibilityTimeoutMs });
 
-    await openUserMenu(page);
-    await popoverContent.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL("/dashboard/settings", {
-      timeout: navigationTimeoutMs,
-    });
+    const settingsPopover = await openUserMenu(page);
+    await clickAndWaitForUrl(
+      page,
+      settingsPopover.getByRole("link", { name: "Settings" }),
+      "/dashboard/settings"
+    );
   });
 
   test("logout functionality works", async ({ page }) => {

@@ -11,6 +11,7 @@ describe("ChatMessageItem metadata", () => {
     const message = unsafeCast<UIMessage>({
       id: "m-meta",
       metadata: {
+        abortReason: "timeout",
         finishReason: "stop",
         totalUsage: {
           inputTokens: 10,
@@ -24,6 +25,7 @@ describe("ChatMessageItem metadata", () => {
 
     render(<ChatMessageItem message={message} />);
 
+    expect(screen.getByText(/Abort: timeout/)).toBeInTheDocument();
     expect(screen.getByText(/Finish: stop/)).toBeInTheDocument();
     expect(screen.getByText(/Tokens: 10 in/)).toBeInTheDocument();
   });

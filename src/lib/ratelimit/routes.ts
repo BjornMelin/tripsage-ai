@@ -90,6 +90,7 @@ export const ROUTE_RATE_LIMITS = {
   "flights:popular-destinations": { limit: 60, window: "1 m" },
   "flights:popular-routes": { limit: 60, window: "1 m" },
   "flights:search": { limit: 20, window: "1 m" },
+  "flights:upcoming": { limit: 30, window: "1 m" },
   geocode: { limit: 60, window: "1 m" },
 
   // Itineraries

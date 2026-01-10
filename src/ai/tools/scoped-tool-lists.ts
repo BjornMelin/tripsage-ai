@@ -4,9 +4,9 @@ export const USER_SCOPED_TOOLS = [
   "saveTravelPlan",
   "deleteTravelPlan",
   "bookAccommodation",
-  "trips.savePlace",
+  "tripsSavePlace",
   "webSearch",
   "webSearchBatch",
 ] as const;
 
-export const CHAT_SCOPED_TOOLS = ["attachments.list"] as const;
+export const CHAT_SCOPED_TOOLS = ["attachmentsList"] as const;

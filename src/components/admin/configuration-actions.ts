@@ -15,10 +15,15 @@ import {
   type ResultError,
   zodErrorToFieldErrors,
 } from "@/lib/result";
+import { nowIso, secureId } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
 
 const DEFAULT_SCOPE = "global";
+const DEFAULT_MODEL = "gpt-4o";
+
+const isE2eBypassEnabled = () =>
+  process.env.E2E_BYPASS_RATE_LIMIT === "1" && process.env.NODE_ENV !== "production";
 
 export type AgentVersion = {
   id: string;
@@ -61,6 +66,26 @@ export async function fetchAgentBundle(
   try {
     config = await resolveAgentConfig(agentType, { scope: DEFAULT_SCOPE });
   } catch (error) {
+    if (isE2eBypassEnabled()) {
+      const now = nowIso();
+      const fallbackConfig = configurationAgentConfigSchema.parse({
+        agentType,
+        createdAt: now,
+        id: `v${Math.floor(Date.now() / 1000)}_${secureId(8)}`,
+        model: DEFAULT_MODEL,
+        parameters: {
+          model: DEFAULT_MODEL,
+        },
+        scope: DEFAULT_SCOPE,
+        updatedAt: now,
+      });
+
+      return ok({
+        config: fallbackConfig,
+        metrics: { lastUpdatedAt: null, versionCount: 0 },
+        versions: [],
+      });
+    }
     return err({
       error: "internal",
       reason: error instanceof Error ? error.message : "Failed to load agent config",

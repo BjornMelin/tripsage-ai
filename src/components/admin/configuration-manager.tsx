@@ -383,6 +383,23 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="stepTimeoutSeconds">Step Timeout (seconds)</Label>
+                <Input
+                  id="stepTimeoutSeconds"
+                  type="number"
+                  value={currentParams.stepTimeoutSeconds ?? ""}
+                  onChange={(e) =>
+                    onParamChange(
+                      "stepTimeoutSeconds",
+                      Number.parseInt(e.target.value, 10)
+                    )
+                  }
+                  min={5}
+                  max={300}
+                />
+              </div>
+
               {hasUnsavedChanges && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center gap-2 text-yellow-800">

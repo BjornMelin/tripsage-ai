@@ -198,7 +198,7 @@ export const attachmentsListToolInputSchema = z.strictObject({
 
 export type AttachmentsListToolInput = z.infer<typeof attachmentsListToolInputSchema>;
 
-/** Tool output schema for attachments.list. */
+/** Tool output schema for attachmentsList. */
 export const attachmentsListToolOutputSchema = z.strictObject({
   items: z.array(
     z.strictObject({

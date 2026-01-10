@@ -29,6 +29,7 @@ import {
 import { z } from "zod";
 import { validateImageAttachments } from "@/app/api/_helpers/attachments";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
+import { isChatEphemeralEnabled } from "@/lib/chat/ephemeral";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
 import {
   createTextMemoryTurn,
@@ -72,6 +73,7 @@ export interface ChatDeps {
     defaultMaxTokens?: number;
     maxSteps?: number;
     timeoutSeconds?: number;
+    stepTimeoutSeconds?: number;
   };
 }
 
@@ -110,7 +112,37 @@ type ChatUiDataParts = {
   status: AiStreamStatus;
 };
 
-type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
+export type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
+
+const MEMORY_SUMMARY_TTL_MS = 2 * 60 * 1000;
+const MEMORY_SUMMARY_CACHE = new Map<string, { expiresAt: number; value: string }>();
+
+function normalizeChatUiMessages(messages: UIMessage[]): ChatUiMessage[] {
+  return messages.map((message) => {
+    const metadataResult = chatMessageMetadataSchema.safeParse(message.metadata ?? {});
+    return {
+      ...message,
+      metadata: metadataResult.success ? metadataResult.data : undefined,
+    };
+  }) as ChatUiMessage[];
+}
+
+function getCachedMemorySummary(key: string): string | undefined {
+  const cached = MEMORY_SUMMARY_CACHE.get(key);
+  if (!cached) return undefined;
+  if (cached.expiresAt <= Date.now()) {
+    MEMORY_SUMMARY_CACHE.delete(key);
+    return undefined;
+  }
+  return cached.value;
+}
+
+function setCachedMemorySummary(key: string, value: string): void {
+  MEMORY_SUMMARY_CACHE.set(key, {
+    expiresAt: Date.now() + MEMORY_SUMMARY_TTL_MS,
+    value,
+  });
+}
 
 function getLastUserText(messages: UIMessage[]): string | undefined {
   const last = messages.findLast((m) => m.role === "user");
@@ -126,16 +158,22 @@ function getLastUserText(messages: UIMessage[]): string | undefined {
 }
 
 async function ensureChatSession(options: {
+  allowEphemeral?: boolean;
+  logger?: ServerLogger;
   sessionId?: string | null;
   supabase: TypedServerSupabase;
   userId: string;
 }): Promise<
   { ok: true; sessionId: string; created: boolean } | { ok: false; res: Response }
 > {
-  const { sessionId, supabase, userId } = options;
+  const { allowEphemeral, logger, sessionId, supabase, userId } = options;
   const existingId = sessionId?.trim();
+  const allowEphemeralSession = allowEphemeral === true;
 
   if (existingId) {
+    if (allowEphemeralSession) {
+      return { created: false, ok: true, sessionId: existingId };
+    }
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("id")
@@ -173,6 +211,13 @@ async function ensureChatSession(options: {
   });
 
   if (error) {
+    if (allowEphemeralSession) {
+      logger?.warn?.("chat:session_create_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
+      return { created: true, ok: true, sessionId: id };
+    }
     return {
       ok: false,
       res: errorResponse({
@@ -188,14 +233,25 @@ async function ensureChatSession(options: {
 }
 
 async function persistChatMessage(options: {
+  allowEphemeral?: boolean;
   content: string;
+  logger?: ServerLogger;
   metadata: Json;
   role: "assistant" | "system" | "user";
   sessionId: string;
   supabase: TypedServerSupabase;
   userId: string;
 }): Promise<{ ok: true; id: number } | { ok: false; res: Response }> {
-  const { content, metadata, role, sessionId, supabase, userId } = options;
+  const {
+    allowEphemeral,
+    content,
+    logger,
+    metadata,
+    role,
+    sessionId,
+    supabase,
+    userId,
+  } = options;
 
   const { data, error } = await insertSingle(supabase, "chat_messages", {
     content,
@@ -208,6 +264,15 @@ async function persistChatMessage(options: {
   });
 
   if (error) {
+    if (allowEphemeral) {
+      logger?.warn?.("chat:message_persist_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        role,
+        sessionId,
+        userId,
+      });
+      return { id: -1, ok: true };
+    }
     return {
       ok: false,
       res: errorResponse({
@@ -390,13 +455,14 @@ type HydratedChatMessage = {
   isSuperseded: boolean;
   metadata?: Json;
   role: "assistant" | "system" | "user";
-  uiMessage: UIMessage;
+  uiMessage: ChatUiMessage;
   uiMessageId: string;
 };
 
 const HISTORY_LIMIT = 40;
 
 async function loadChatHistory(options: {
+  allowEphemeral?: boolean;
   limit?: number;
   logger?: ServerLogger;
   sessionId: string;
@@ -416,6 +482,14 @@ async function loadChatHistory(options: {
     .limit(limit);
 
   if (error) {
+    if (options.allowEphemeral) {
+      options.logger?.warn?.("chat:history_load_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+        sessionId: options.sessionId,
+        userId: options.userId,
+      });
+      return { messages: [], ok: true };
+    }
     return {
       ok: false,
       res: errorResponse({
@@ -444,19 +518,28 @@ async function loadChatHistory(options: {
       : { data: [], error: null };
 
   if (toolError) {
-    return {
-      ok: false,
-      res: errorResponse({
-        err: new Error(toolError.message),
-        error: "db_error",
-        reason: "Failed to load tool calls",
-        status: 500,
-      }),
-    };
+    if (options.allowEphemeral) {
+      options.logger?.warn?.("chat:tool_history_load_skipped", {
+        error: toolError instanceof Error ? toolError.message : String(toolError),
+        sessionId: options.sessionId,
+        userId: options.userId,
+      });
+    } else {
+      return {
+        ok: false,
+        res: errorResponse({
+          err: new Error(toolError.message),
+          error: "db_error",
+          reason: "Failed to load tool calls",
+          status: 500,
+        }),
+      };
+    }
   }
 
-  const toolCallsByMessageId = new Map<number, Array<(typeof toolCalls)[number]>>();
-  for (const toolRow of toolCalls ?? []) {
+  const safeToolCalls = toolError ? [] : (toolCalls ?? []);
+  const toolCallsByMessageId = new Map<number, Array<(typeof safeToolCalls)[number]>>();
+  for (const toolRow of safeToolCalls) {
     const messageId = toolRow.message_id;
     if (typeof messageId !== "number") continue;
     const existing = toolCallsByMessageId.get(messageId) ?? [];
@@ -510,6 +593,17 @@ async function loadChatHistory(options: {
     metadataSchema: chatMessageMetadataSchema,
   });
   if (!validated.success) {
+    if (options.allowEphemeral) {
+      options.logger?.warn?.("chat:history_validation_skipped", {
+        error:
+          validated.error instanceof Error
+            ? validated.error.message
+            : String(validated.error),
+        sessionId: options.sessionId,
+        userId: options.userId,
+      });
+      return { messages: [], ok: true };
+    }
     const normalizedError =
       validated.error instanceof Error
         ? validated.error
@@ -589,8 +683,11 @@ export async function handleChat(
 
   const sessionIdHint = payload.sessionId?.trim() || null;
   const trigger: ChatTrigger = payload.trigger ?? "submit-message";
+  const allowEphemeral = isChatEphemeralEnabled();
 
   const sessionResult = await ensureChatSession({
+    allowEphemeral,
+    logger: deps.logger,
     sessionId: sessionIdHint,
     supabase: deps.supabase,
     userId,
@@ -598,12 +695,28 @@ export async function handleChat(
   if (!sessionResult.ok) return sessionResult.res;
   const sessionId = sessionResult.sessionId;
 
-  const provider = await deps.resolveProvider(
-    userId,
-    (payload.model || "").trim() || undefined
-  );
+  const modelHint = (payload.model || "").trim() || undefined;
+  let provider: ProviderResolution;
+  try {
+    provider = await deps.resolveProvider(userId, modelHint);
+  } catch (error) {
+    deps.logger?.warn?.("chat:provider_unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      modelHint: modelHint ?? null,
+      requestId,
+      sessionId,
+      userId,
+    });
+    return errorResponse({
+      err: error,
+      error: "provider_unavailable",
+      reason: "AI provider is not configured. Add an API key to enable chat responses.",
+      status: 503,
+    });
+  }
 
   const historyResult = await loadChatHistory({
+    allowEphemeral,
     limit: HISTORY_LIMIT,
     logger: deps.logger,
     sessionId,
@@ -614,12 +727,29 @@ export async function handleChat(
 
   const visibleHistory = historyResult.messages.filter((m) => !m.isSuperseded);
 
-  let promptUiMessages: UIMessage[];
-  let latestUserMessage: UIMessage | null = null;
+  let promptUiMessages: ChatUiMessage[];
+  let latestUserMessage: ChatUiMessage | null = null;
   let regenerationOf: string | null = null;
 
   if (trigger === "submit-message") {
-    const clientMessages = Array.isArray(payload.messages) ? payload.messages : [];
+    const rawClientMessages = payload.messages;
+    const clientMessagesResult =
+      rawClientMessages.length === 0
+        ? { data: [], success: true as const }
+        : await safeValidateUIMessages({ messages: rawClientMessages });
+    if (!clientMessagesResult.success) {
+      const normalizedError =
+        clientMessagesResult.error instanceof Error
+          ? clientMessagesResult.error
+          : new Error(String(clientMessagesResult.error ?? "Invalid messages payload"));
+      return errorResponse({
+        err: normalizedError,
+        error: "invalid_request",
+        reason: "Invalid messages payload",
+        status: 400,
+      });
+    }
+    const clientMessages = normalizeChatUiMessages(clientMessagesResult.data);
     const latest = clientMessages.at(-1);
     if (!latest) {
       return errorResponse({
@@ -688,7 +818,9 @@ export async function handleChat(
     });
 
     const userPersist = await persistChatMessage({
+      allowEphemeral,
       content: encodePartsToContent(latestUserMessage.parts),
+      logger: deps.logger,
       metadata: {
         uiMessageId: latestUserMessage.id,
       },
@@ -702,26 +834,33 @@ export async function handleChat(
 
   // Memory hydration: fetch context (semantic when possible).
   let memorySummary: string | undefined;
-  try {
-    const query = getLastUserText(promptUiMessages);
-    const memoryResult = await handleMemoryIntent({
-      limit: 3,
-      query,
-      sessionId,
-      type: "fetchContext",
-      userId,
-    });
-    const items = memoryResult.context ?? [];
-    if (items.length > 0) {
-      memorySummary = items.map((item) => item.context).join("\n");
+  const lastMessageId =
+    latestUserMessage?.id ?? visibleHistory.at(-1)?.uiMessageId ?? "none";
+  const memoryCacheKey = `${userId}:${sessionId}:${lastMessageId}`;
+  memorySummary = getCachedMemorySummary(memoryCacheKey);
+  if (!memorySummary) {
+    try {
+      const query = getLastUserText(promptUiMessages);
+      const memoryResult = await handleMemoryIntent({
+        limit: 3,
+        query,
+        sessionId,
+        type: "fetchContext",
+        userId,
+      });
+      const items = memoryResult.context ?? [];
+      if (items.length > 0) {
+        memorySummary = items.map((item) => item.context).join("\n");
+        setCachedMemorySummary(memoryCacheKey, memorySummary);
+      }
+    } catch (error) {
+      deps.logger?.error?.("chat:memory_fetch_failed", {
+        error: error instanceof Error ? error.message : String(error),
+        requestId,
+        sessionId,
+        userId,
+      });
     }
-  } catch (error) {
-    deps.logger?.error?.("chat:memory_fetch_failed", {
-      error: error instanceof Error ? error.message : String(error),
-      requestId,
-      sessionId,
-      userId,
-    });
   }
 
   const assistantUiMessageId = secureUuid();
@@ -768,7 +907,9 @@ export async function handleChat(
   };
 
   const assistantPersist = await persistChatMessage({
+    allowEphemeral,
     content: "[]",
+    logger: deps.logger,
     metadata: assistantBaseMetadata,
     role: "assistant",
     sessionId,
@@ -812,7 +953,15 @@ export async function handleChat(
 
   // Track tool calls already persisted to avoid duplicates across steps.
   const persistedToolCallIds = new Set<string>();
-  const timeoutConfig = buildTimeoutConfigFromSeconds(deps.config?.timeoutSeconds);
+  const stepTimeoutMs =
+    typeof deps.config?.stepTimeoutSeconds === "number" &&
+    Number.isFinite(deps.config.stepTimeoutSeconds)
+      ? deps.config.stepTimeoutSeconds * 1000
+      : undefined;
+  const timeoutConfig = buildTimeoutConfigFromSeconds(
+    deps.config?.timeoutSeconds,
+    stepTimeoutMs
+  );
 
   const stream = createUIMessageStream<ChatUiMessage>({
     execute: ({ writer }) => {
@@ -963,6 +1112,30 @@ export async function handleChat(
               const label =
                 rawLabel.length > 200 ? `${rawLabel.slice(0, 197)}...` : rawLabel;
               writeStatus({ kind: "tool", label, step: stepCount });
+
+              const stepMetadata = mergeAssistantMetadata(assistantBaseMetadata, {
+                // Preserve checkpoint info if a request ends mid-tool loop.
+                lastToolNames: toolNames,
+                lastToolStepAt: now,
+                toolStepCount: stepCount,
+              });
+
+              const { error: stepError } = await updateSingle(
+                deps.supabase,
+                "chat_messages",
+                { metadata: stepMetadata },
+                (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+              );
+
+              if (stepError) {
+                deps.logger?.warn?.("chat:tool_step_update_failed", {
+                  error:
+                    stepError instanceof Error ? stepError.message : String(stepError),
+                  requestId,
+                  sessionId,
+                  userId,
+                });
+              }
             }
           }
         },
@@ -987,6 +1160,13 @@ export async function handleChat(
                 totalUsage: part.totalUsage ?? null,
               };
             }
+            if (part.type === "abort") {
+              return {
+                abortReason: part.reason ?? null,
+                requestId,
+                sessionId,
+              };
+            }
             return undefined;
           },
           onError: (error) => {
@@ -1007,8 +1187,15 @@ export async function handleChat(
 
       const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
       const text = getTextFromUiMessage(responseMessage);
+      const metadataResult = chatMessageMetadataSchema.safeParse(
+        responseMessage.metadata
+      );
+      const abortReason = metadataResult.success
+        ? (metadataResult.data.abortReason ?? null)
+        : null;
 
       const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
+        abortReason,
         durationMs,
         finishReason: finishReason ?? null,
         isAborted: true,
@@ -1036,6 +1223,7 @@ export async function handleChat(
         });
       }
     },
+    originalMessages: promptUiMessages,
   });
 
   return createUIMessageStreamResponse({

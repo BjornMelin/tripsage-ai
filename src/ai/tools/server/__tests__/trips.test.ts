@@ -77,7 +77,7 @@ vi.mock("@/lib/telemetry/logger", () => ({
   }),
 }));
 
-describe("trips.savePlace tool", () => {
+describe("tripsSavePlace tool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     supabaseState.sessionUserId = "user-123";

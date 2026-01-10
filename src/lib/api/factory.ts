@@ -552,8 +552,13 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           const ipHash = getTrustedRateLimitIdentifier(req);
           identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
         }
-        const degradedMode =
+        const configuredDegradedMode =
           config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
+        const bypassRateLimit =
+          (process.env.E2E_BYPASS_RATE_LIMIT === "1" ||
+            process.env.E2E_BYPASS_RATE_LIMIT === "true") &&
+          process.env.NODE_ENV !== "production";
+        const degradedMode = bypassRateLimit ? "fail_open" : configuredDegradedMode;
         const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
           degradedMode,
         });
@@ -750,8 +755,14 @@ export function createAgentRoute<
       async (span) => {
         const resolvedConfig = await resolveAgentConfig(options.agentType);
         const agentConfig = resolvedConfig.config;
+        const stepTimeoutMs =
+          typeof agentConfig.parameters?.stepTimeoutSeconds === "number" &&
+          Number.isFinite(agentConfig.parameters.stepTimeoutSeconds)
+            ? agentConfig.parameters.stepTimeoutSeconds * 1000
+            : undefined;
         const timeoutConfig = buildTimeoutConfigFromSeconds(
-          agentConfig.parameters?.timeoutSeconds
+          agentConfig.parameters?.timeoutSeconds,
+          stepTimeoutMs
         );
         const requestId = secureUuid();
 
@@ -802,6 +813,15 @@ export function createAgentRoute<
                 modelId,
                 requestId,
                 totalUsage: part.totalUsage ?? null,
+                versionId: agentConfig.id,
+              };
+            }
+            if (part.type === "abort") {
+              return {
+                abortReason: part.reason ?? null,
+                agentType: options.agentType,
+                modelId,
+                requestId,
                 versionId: agentConfig.id,
               };
             }

@@ -7,12 +7,14 @@ import "server-only";
 import { createAiTool } from "@ai/lib/tool-factory";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import {
+  calendarEventSchema,
   createCalendarEventInputSchema,
   createCalendarEventOutputSchema,
+  createEventRequestSchema,
   type EventDateTime,
   exportItineraryToIcsInputSchema,
   exportItineraryToIcsOutputSchema,
-  freeBusyRequestSchema,
+  freeBusyToolInputSchema,
   getAvailabilityOutputSchema,
 } from "@schemas/calendar";
 import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
@@ -25,6 +27,21 @@ export const createCalendarEvent = createAiTool({
   description: "Create a calendar event in the user's Google Calendar.",
   execute: async (params) => {
     try {
+      const normalizeEventDateTime = (value: {
+        date?: string;
+        dateTime?: string;
+        timeZone?: string;
+      }): EventDateTime => ({
+        date: value.date,
+        dateTime: value.dateTime ? new Date(value.dateTime) : undefined,
+        timeZone: value.timeZone,
+      });
+
+      const payload = {
+        ...params,
+        end: normalizeEventDateTime(params.end),
+        start: normalizeEventDateTime(params.start),
+      };
       const toIsoDateTime = (value: EventDateTime): string => {
         if (value.dateTime) {
           return value.dateTime instanceof Date
@@ -36,8 +53,9 @@ export const createCalendarEvent = createAiTool({
         }
         throw new Error("calendar_event_missing_datetime");
       };
-      const { calendarId, ...eventData } = params;
-      const result = await createEvent(eventData, calendarId);
+      const { calendarId, ...eventData } = payload;
+      const parsedEventData = createEventRequestSchema.parse(eventData);
+      const result = await createEvent(parsedEventData, calendarId);
       if (!result.id) {
         return { error: "calendar_event_missing_id", success: false } as const;
       }
@@ -76,7 +94,11 @@ export const getAvailability = createAiTool({
   description: "Check calendar availability (free/busy) for specified calendars.",
   execute: async (params) => {
     try {
-      const result = await queryFreeBusy(params);
+      const result = await queryFreeBusy({
+        ...params,
+        timeMax: new Date(params.timeMax),
+        timeMin: new Date(params.timeMin),
+      });
       return {
         calendars: Object.entries(result.calendars).map(([id, data]) => ({
           busy: (data as { busy?: Array<{ start: string; end: string }> }).busy || [],
@@ -100,7 +122,7 @@ export const getAvailability = createAiTool({
       window: "1 m",
     },
   },
-  inputSchema: freeBusyRequestSchema,
+  inputSchema: freeBusyToolInputSchema,
   name: "getAvailability",
   outputSchema: getAvailabilityOutputSchema,
   validateOutput: true,
@@ -114,9 +136,29 @@ export const exportItineraryToIcs = createAiTool({
   // biome-ignore lint/suspicious/useAwait: createAiTool requires Promise return type
   execute: async (params) => {
     try {
+      const normalizeEventDateTime = (value: {
+        date?: string;
+        dateTime?: string;
+        timeZone?: string;
+      }): EventDateTime => ({
+        date: value.date,
+        dateTime: value.dateTime ? new Date(value.dateTime) : undefined,
+        timeZone: value.timeZone,
+      });
+
+      const normalizedEvents = params.events.map((event) =>
+        calendarEventSchema.parse({
+          ...event,
+          created: event.created ? new Date(event.created) : undefined,
+          end: normalizeEventDateTime(event.end),
+          start: normalizeEventDateTime(event.start),
+          updated: event.updated ? new Date(event.updated) : undefined,
+        })
+      );
+
       const { icsString, eventCount } = generateIcsFromEvents({
         calendarName: params.calendarName,
-        events: params.events,
+        events: normalizedEvents,
         timezone: params.timezone ?? undefined,
       });
 

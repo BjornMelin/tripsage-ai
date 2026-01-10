@@ -25,6 +25,8 @@ const providerRegistryLogger = createServerLogger("ai.providers");
  * Earlier providers in this array take precedence when multiple keys are available.
  */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
+const isE2eBypassEnabled = () =>
+  process.env.E2E_BYPASS_RATE_LIMIT === "1" && process.env.NODE_ENV !== "production";
 
 /**
  * Extracts the host from a URL string.
@@ -230,130 +232,134 @@ export async function resolveProvider(
   userId: string,
   modelHint?: string
 ): Promise<ProviderResolution> {
-  // 0) Per-user Gateway key (if present): highest precedence
-  const userGatewayKey = await getUserApiKey(userId, "gateway");
-  if (userGatewayKey) {
-    const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
-    const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
+  const bypassUserKeys = isE2eBypassEnabled();
 
-    const client = createGateway({
-      apiKey: userGatewayKey,
-      ...(baseUrl
-        ? {
-            // biome-ignore lint/style/useNamingConvention: provider option name
-            baseURL: baseUrl,
-          }
-        : {}),
-    });
+  if (!bypassUserKeys) {
+    // 0) Per-user Gateway key (if present): highest precedence
+    const userGatewayKey = await getUserApiKey(userId, "gateway");
+    if (userGatewayKey) {
+      const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
+      const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
 
-    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
-    return await withTelemetrySpan(
-      "providers.resolve",
-      {
-        attributes: {
-          baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
-          baseUrlSource: source,
-          modelId,
-          path: "user-gateway",
-          provider: "gateway",
+      const client = createGateway({
+        apiKey: userGatewayKey,
+        ...(baseUrl
+          ? {
+              // biome-ignore lint/style/useNamingConvention: provider option name
+              baseURL: baseUrl,
+            }
+          : {}),
+      });
+
+      const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+      const modelId = normalizeGatewayModelId("openai", resolvedModelId);
+      return await withTelemetrySpan(
+        "providers.resolve",
+        {
+          attributes: {
+            baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
+            baseUrlSource: source,
+            modelId,
+            path: "user-gateway",
+            provider: "gateway",
+          },
         },
-      },
-      async () => ({
-        model: toLanguageModel(client(modelId), "openai", modelId),
-        modelId,
-        provider: "openai",
-      })
-    );
-  }
+        async () => ({
+          model: toLanguageModel(client(modelId), "openai", modelId),
+          modelId,
+          provider: "openai",
+        })
+      );
+    }
 
-  // 1) Check for BYOK keys concurrently (OpenAI, OpenRouter, Anthropic, xAI)
-  const providers = PROVIDER_PREFERENCE;
-  const keyResults = await Promise.all(
-    providers.map(async (p) => ({ key: await getUserApiKey(userId, p), p }))
-  );
-  for (const { p: provider, key: apiKey } of keyResults) {
-    if (!apiKey) continue;
-    const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
-    if (provider === "openai") {
-      const openai = createOpenAI({ apiKey });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
+    // 1) Check for BYOK keys concurrently (OpenAI, OpenRouter, Anthropic, xAI)
+    const providers = PROVIDER_PREFERENCE;
+    const keyResults = await Promise.all(
+      providers.map(async (p) => ({ key: await getUserApiKey(userId, p), p }))
+    );
+    for (const { p: provider, key: apiKey } of keyResults) {
+      if (!apiKey) continue;
+      const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
+      if (provider === "openai") {
+        const openai = createOpenAI({ apiKey });
+        // Fire-and-forget: update last used timestamp (ignore errors)
+        touchUserApiKey(userId, provider).catch((error) => {
+          providerRegistryLogger.warn("touch_user_api_key_failed", {
+            errorName: error instanceof Error ? error.name : "unknown_error",
+            provider,
+          });
         });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(openai(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
-    }
-    if (provider === "openrouter") {
-      const openrouter = createOpenAI({
-        apiKey,
-        // biome-ignore lint/style/useNamingConvention: provider option name
-        baseURL: "https://openrouter.ai/api/v1",
-      });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
+        return await withTelemetrySpan(
+          "providers.resolve",
+          { attributes: { modelId, path: "user-provider", provider } },
+          async () => ({
+            model: toLanguageModel(openai(modelId), provider, modelId),
+            modelId,
+            provider,
+          })
+        );
+      }
+      if (provider === "openrouter") {
+        const openrouter = createOpenAI({
+          apiKey,
+          // biome-ignore lint/style/useNamingConvention: provider option name
+          baseURL: "https://openrouter.ai/api/v1",
         });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(openrouter(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
-    }
-    if (provider === "anthropic") {
-      const a = createAnthropic({ apiKey });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
+        // Fire-and-forget: update last used timestamp (ignore errors)
+        touchUserApiKey(userId, provider).catch((error) => {
+          providerRegistryLogger.warn("touch_user_api_key_failed", {
+            errorName: error instanceof Error ? error.name : "unknown_error",
+            provider,
+          });
         });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(a(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
-    }
-    if (provider === "xai") {
-      const client = createXai({ apiKey });
-      // Fire-and-forget: update last used timestamp (ignore errors)
-      touchUserApiKey(userId, provider).catch((error) => {
-        providerRegistryLogger.warn("touch_user_api_key_failed", {
-          errorName: error instanceof Error ? error.name : "unknown_error",
-          provider,
+        return await withTelemetrySpan(
+          "providers.resolve",
+          { attributes: { modelId, path: "user-provider", provider } },
+          async () => ({
+            model: toLanguageModel(openrouter(modelId), provider, modelId),
+            modelId,
+            provider,
+          })
+        );
+      }
+      if (provider === "anthropic") {
+        const a = createAnthropic({ apiKey });
+        // Fire-and-forget: update last used timestamp (ignore errors)
+        touchUserApiKey(userId, provider).catch((error) => {
+          providerRegistryLogger.warn("touch_user_api_key_failed", {
+            errorName: error instanceof Error ? error.name : "unknown_error",
+            provider,
+          });
         });
-      });
-      return await withTelemetrySpan(
-        "providers.resolve",
-        { attributes: { modelId, path: "user-provider", provider } },
-        async () => ({
-          model: toLanguageModel(client(modelId), provider, modelId),
-          modelId,
-          provider,
-        })
-      );
+        return await withTelemetrySpan(
+          "providers.resolve",
+          { attributes: { modelId, path: "user-provider", provider } },
+          async () => ({
+            model: toLanguageModel(a(modelId), provider, modelId),
+            modelId,
+            provider,
+          })
+        );
+      }
+      if (provider === "xai") {
+        const client = createXai({ apiKey });
+        // Fire-and-forget: update last used timestamp (ignore errors)
+        touchUserApiKey(userId, provider).catch((error) => {
+          providerRegistryLogger.warn("touch_user_api_key_failed", {
+            errorName: error instanceof Error ? error.name : "unknown_error",
+            provider,
+          });
+        });
+        return await withTelemetrySpan(
+          "providers.resolve",
+          { attributes: { modelId, path: "user-provider", provider } },
+          async () => ({
+            model: toLanguageModel(client(modelId), provider, modelId),
+            modelId,
+            provider,
+          })
+        );
+      }
     }
   }
 
@@ -403,7 +409,9 @@ export async function resolveProvider(
 
   // Final fallback: Vercel AI Gateway (if configured)
   // Gateway provides unified routing, budgets, retries, and observability
-  const allowFallback = await getUserAllowGatewayFallback(userId);
+  const allowFallback = bypassUserKeys
+    ? true
+    : await getUserAllowGatewayFallback(userId);
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
   if (gatewayApiKey) {
     const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);

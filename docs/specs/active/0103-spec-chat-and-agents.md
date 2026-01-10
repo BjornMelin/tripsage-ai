@@ -25,9 +25,9 @@ Required tools (initial set):
 
 - trips.getTrip(tripId)
 - trips.updateTripPreferences(tripId, patch)
-- search.places(query, near, filters)
+- searchPlaces(query, near, filters)
 - memory.search(query, namespace)
-- attachments.list(chatId)
+- attachmentsList(chatId)
 - rag.search(query, tripId, chatId)
 
 Tool constraints:

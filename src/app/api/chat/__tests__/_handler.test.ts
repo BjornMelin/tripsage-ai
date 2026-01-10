@@ -50,6 +50,7 @@ const createUIMessageStreamMock = vi.hoisted(() =>
     (options: {
       execute: (input: { writer: unknown }) => void;
       onFinish?: unknown;
+      originalMessages?: unknown;
     }) => {
       const writer = {
         merge: vi.fn(),
@@ -207,6 +208,52 @@ describe("handleChat", () => {
     expect(update.content).toContain("partial answer");
     expect(update.metadata).toEqual(
       expect.objectContaining({ isAborted: true, status: "aborted" })
+    );
+  });
+
+  it("returns provider_unavailable when provider resolution fails", async () => {
+    const { handleChat } = await import("../_handler");
+
+    const userId = "99999999-9999-4999-8999-999999999999";
+    const sessionId = "88888888-8888-4888-8888-888888888888";
+
+    const supabase = createMockSupabaseClient({
+      selectResults: {
+        chat_sessions: {
+          data: { id: sessionId, user_id: userId },
+          error: null,
+        },
+      },
+      user: { id: userId },
+    });
+
+    const response = await handleChat(
+      {
+        resolveProvider: () => {
+          throw new Error("No provider keys configured.");
+        },
+        supabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
+      },
+      {
+        messages: [
+          {
+            id: "msg-1",
+            parts: [{ text: "Hello", type: "text" }],
+            role: "user",
+          },
+        ],
+        sessionId,
+        userId,
+      }
+    );
+
+    expect(response.status).toBe(503);
+    const json = await response.json();
+    expect(json).toEqual(
+      expect.objectContaining({
+        error: "provider_unavailable",
+      })
     );
   });
 

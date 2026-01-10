@@ -43,7 +43,7 @@ describe("places tools", () => {
     server.resetHandlers();
   });
 
-  it("search.places maps upstream Places responses into canonical summaries", async () => {
+  it("searchPlaces maps upstream Places responses into canonical summaries", async () => {
     const captured = { body: null as unknown };
 
     server.use(
@@ -91,7 +91,7 @@ describe("places tools", () => {
     });
   });
 
-  it("search.placeDetails maps upstream details into canonical details", async () => {
+  it("searchPlaceDetails maps upstream details into canonical details", async () => {
     server.use(
       http.get("https://places.googleapis.com/v1/places/:placeId", ({ params }) => {
         return HttpResponse.json({

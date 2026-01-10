@@ -51,6 +51,39 @@ type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
 
 type PendingAttachment = { file: File; id: string };
 
+const CHAT_ERROR_FALLBACK = "An error occurred";
+const CHAT_ERROR_REASON_MAP = new Map<string, string>([
+  [
+    "provider_unavailable",
+    "AI provider is not configured yet. Add an API key in settings to enable chat.",
+  ],
+  [
+    "rate_limit_unavailable",
+    "Rate limiting is temporarily unavailable. Please try again shortly.",
+  ],
+]);
+
+function resolveChatErrorMessage(error?: Error): string {
+  if (!error?.message) return CHAT_ERROR_FALLBACK;
+
+  try {
+    const parsed = JSON.parse(error.message) as
+      | { error?: string; reason?: string }
+      | undefined;
+    if (parsed?.error) {
+      const mappedReason = CHAT_ERROR_REASON_MAP.get(parsed.error);
+      if (mappedReason) return mappedReason;
+    }
+    if (typeof parsed?.reason === "string" && parsed.reason.trim().length > 0) {
+      return parsed.reason;
+    }
+  } catch {
+    // ignore JSON parse failures
+  }
+
+  return error.message || CHAT_ERROR_FALLBACK;
+}
+
 /**
  * Client-side chat container using AI SDK v6 useChat hook.
  * Connects to /api/chat for real-time UI message streaming responses.
@@ -469,9 +502,7 @@ export function ChatClient(): ReactElement {
             className="mt-2 flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2"
             data-testid="chat-error"
           >
-            <p className="text-sm text-destructive">
-              {error.message || "An error occurred"}
-            </p>
+            <p className="text-sm text-destructive">{resolveChatErrorMessage(error)}</p>
             <Button
               type="button"
               variant="link"
