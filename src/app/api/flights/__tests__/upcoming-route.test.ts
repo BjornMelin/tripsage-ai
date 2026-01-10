@@ -22,6 +22,15 @@ vi.mock("next/headers", () => ({
 import { GET as getUpcomingFlights } from "../upcoming/route";
 
 describe("/api/flights/upcoming", () => {
+  type FlightQueryBuilder = {
+    select: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    gte: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+    returns: ReturnType<typeof vi.fn>;
+  };
+
   const supabaseClient = {
     auth: {
       getUser: vi.fn(),
@@ -55,15 +64,6 @@ describe("/api/flights/upcoming", () => {
   });
 
   it("maps upcoming flights from Supabase rows", async () => {
-    type FlightQueryBuilder = {
-      select: ReturnType<typeof vi.fn>;
-      eq: ReturnType<typeof vi.fn>;
-      gte: ReturnType<typeof vi.fn>;
-      order: ReturnType<typeof vi.fn>;
-      limit: ReturnType<typeof vi.fn>;
-      returns: ReturnType<typeof vi.fn>;
-    };
-
     const builder: FlightQueryBuilder = (() => {
       const returns = vi.fn(async () => ({
         data: [
@@ -143,15 +143,6 @@ describe("/api/flights/upcoming", () => {
   });
 
   it("returns 500 when Supabase query fails", async () => {
-    type FlightQueryBuilder = {
-      select: ReturnType<typeof vi.fn>;
-      eq: ReturnType<typeof vi.fn>;
-      gte: ReturnType<typeof vi.fn>;
-      order: ReturnType<typeof vi.fn>;
-      limit: ReturnType<typeof vi.fn>;
-      returns: ReturnType<typeof vi.fn>;
-    };
-
     const builder: FlightQueryBuilder = (() => {
       const returns = vi.fn(async () => ({
         data: null,

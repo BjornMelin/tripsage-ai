@@ -82,10 +82,7 @@ function toUpcomingFlight(row: FlightRow): UpcomingFlight {
     typeof metadata?.airlineName === "string" && metadata.airlineName.trim().length > 0
       ? metadata.airlineName.trim()
       : airline;
-  const flightNumber =
-    row.flight_number?.trim().length && row.flight_number.trim().length > 0
-      ? row.flight_number.trim()
-      : "TBD";
+  const flightNumber = row.flight_number?.trim() ? row.flight_number.trim() : "TBD";
   const arrivalTime =
     typeof metadata?.arrivalTime === "string" && metadata.arrivalTime.trim().length > 0
       ? metadata.arrivalTime

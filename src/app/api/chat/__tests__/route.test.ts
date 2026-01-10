@@ -23,6 +23,10 @@ const handleChatMock = vi.hoisted(() =>
 );
 
 vi.mock("../_handler", () => ({
+  createMemorySummaryCache: vi.fn(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+  })),
   handleChat: handleChatMock,
 }));
 

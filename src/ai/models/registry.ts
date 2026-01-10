@@ -25,6 +25,11 @@ const providerRegistryLogger = createServerLogger("ai.providers");
  * Earlier providers in this array take precedence when multiple keys are available.
  */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
+/**
+ * Checks if E2E bypass mode is enabled for testing.
+ * Always returns false in production.
+ * @internal
+ */
 const isE2eBypassEnabled = () => {
   if (process.env.NODE_ENV === "production") return false;
   const raw = process.env.E2E_BYPASS_RATE_LIMIT;

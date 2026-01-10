@@ -16,7 +16,7 @@ import {
   requireUserId,
 } from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { handleChat } from "./_handler";
+import { createMemorySummaryCache, handleChat } from "./_handler";
 
 // Allow streaming responses for up to 60 seconds.
 export const maxDuration = 60;
@@ -24,6 +24,7 @@ export const maxDuration = 60;
 const DEFAULT_MAX_TOKENS_FALLBACK = 1024;
 const DEFAULT_MAX_STEPS_FALLBACK = 10;
 const DEFAULT_TIMEOUT_SECONDS_FALLBACK = Math.max(10, maxDuration - 5);
+const MEMORY_SUMMARY_TTL_MS = 2 * 60 * 1000;
 
 function getDefaultMaxTokens(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_TOKENS;
@@ -136,6 +137,7 @@ export const POST = withApiGuards({
 
   const ip = getClientIpFromHeaders(req);
   const logger = createServerLogger("chat");
+  const memorySummaryCache = createMemorySummaryCache({ ttlMs: MEMORY_SUMMARY_TTL_MS });
   const defaultMaxTokens = getDefaultMaxTokens();
   const maxSteps = getDefaultMaxSteps();
   const timeoutSeconds = getDefaultTimeoutSeconds();
@@ -145,6 +147,7 @@ export const POST = withApiGuards({
       clock: { now: () => Date.now() },
       config: { defaultMaxTokens, maxSteps, stepTimeoutSeconds, timeoutSeconds },
       logger,
+      memorySummaryCache,
       resolveProvider,
       supabase,
     },

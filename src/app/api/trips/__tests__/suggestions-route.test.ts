@@ -136,6 +136,7 @@ describe("/api/trips/suggestions route", () => {
 
     await getSuggestions(req, createRouteParamsContext());
 
+    expect(generateText).toHaveBeenCalledTimes(1);
     const call = vi.mocked(generateText).mock.calls[0]?.[0];
     expect(call?.timeout).toEqual(buildTimeoutConfig(30_000));
   });

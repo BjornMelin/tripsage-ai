@@ -69,6 +69,7 @@ export interface ChatDeps {
   resolveProvider: ProviderResolver;
   logger?: ServerLogger;
   clock?: { now: () => number };
+  memorySummaryCache?: MemorySummaryCache;
   config?: {
     defaultMaxTokens?: number;
     maxSteps?: number;
@@ -114,34 +115,86 @@ type ChatUiDataParts = {
 
 export type ChatUiMessage = UIMessage<ChatMessageMetadata, ChatUiDataParts>;
 
-const MEMORY_SUMMARY_TTL_MS = 2 * 60 * 1000;
-const MEMORY_SUMMARY_CACHE = new Map<string, { expiresAt: number; value: string }>();
+type MemorySummaryCacheEntry = {
+  expiresAt: number;
+  value: string;
+};
 
-function normalizeChatUiMessages(messages: UIMessage[]): ChatUiMessage[] {
-  return messages.map((message) => {
-    const metadataResult = chatMessageMetadataSchema.safeParse(message.metadata ?? {});
-    return {
-      ...message,
-      metadata: metadataResult.success ? metadataResult.data : undefined,
-    };
-  }) as ChatUiMessage[];
-}
+type UiMessagePart = NonNullable<UIMessage["parts"]>[number];
+type ChatUiMessagePart = NonNullable<ChatUiMessage["parts"]>[number];
 
-function getCachedMemorySummary(key: string): string | undefined {
-  const cached = MEMORY_SUMMARY_CACHE.get(key);
-  if (!cached) return undefined;
-  if (cached.expiresAt <= Date.now()) {
-    MEMORY_SUMMARY_CACHE.delete(key);
-    return undefined;
+export type MemorySummaryCache = {
+  get: (key: string, now: number) => string | undefined;
+  set: (key: string, value: string, now: number) => void;
+};
+
+function isChatUiMessagePart(part: UiMessagePart): part is ChatUiMessagePart {
+  if (!part || typeof part !== "object") return false;
+  if (part.type === "data-status") {
+    return chatDataPartSchemas.status.safeParse(part.data).success;
   }
-  return cached.value;
+  return !String(part.type).startsWith("data-");
 }
 
-function setCachedMemorySummary(key: string, value: string): void {
-  MEMORY_SUMMARY_CACHE.set(key, {
-    expiresAt: Date.now() + MEMORY_SUMMARY_TTL_MS,
-    value,
+export function createMemorySummaryCache(options: {
+  ttlMs: number;
+}): MemorySummaryCache {
+  const cache = new Map<string, MemorySummaryCacheEntry>();
+  return {
+    get: (key, now) => {
+      const cached = cache.get(key);
+      if (!cached) return undefined;
+      if (cached.expiresAt <= now) {
+        cache.delete(key);
+        return undefined;
+      }
+      return cached.value;
+    },
+    set: (key, value, now) => {
+      cache.set(key, {
+        expiresAt: now + options.ttlMs,
+        value,
+      });
+    },
+  };
+}
+
+async function normalizeChatUiMessages(
+  messages: UIMessage[]
+): Promise<
+  { data: ChatUiMessage[]; success: true } | { error: unknown; success: false }
+> {
+  const result = await safeValidateUIMessages<ChatUiMessage>({
+    dataSchemas: chatDataPartSchemas,
+    messages,
+    metadataSchema: chatMessageMetadataSchema,
   });
+  if (!result.success) {
+    const normalized: ChatUiMessage[] = messages.map((message) => {
+      const metadataResult = chatMessageMetadataSchema.safeParse(
+        message.metadata ?? {}
+      );
+      const parts = (message.parts ?? []).filter(isChatUiMessagePart);
+      return {
+        ...message,
+        metadata: metadataResult.success ? metadataResult.data : undefined,
+        parts,
+      };
+    });
+    return { data: normalized, success: true };
+  }
+  return { data: result.data, success: true };
+}
+
+function normalizeJsonValue(value: unknown, fallback: Json): Json {
+  if (value === undefined) return fallback;
+  try {
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) return fallback;
+    return JSON.parse(serialized) as Json;
+  } catch {
+    return fallback;
+  }
 }
 
 function getLastUserText(messages: UIMessage[]): string | undefined {
@@ -736,7 +789,7 @@ export async function handleChat(
     const clientMessagesResult =
       rawClientMessages.length === 0
         ? { data: [], success: true as const }
-        : await safeValidateUIMessages({ messages: rawClientMessages });
+        : await normalizeChatUiMessages(rawClientMessages);
     if (!clientMessagesResult.success) {
       const normalizedError =
         clientMessagesResult.error instanceof Error
@@ -749,7 +802,7 @@ export async function handleChat(
         status: 400,
       });
     }
-    const clientMessages = normalizeChatUiMessages(clientMessagesResult.data);
+    const clientMessages = clientMessagesResult.data;
     const latest = clientMessages.at(-1);
     if (!latest) {
       return errorResponse({
@@ -837,7 +890,8 @@ export async function handleChat(
   const lastMessageId =
     latestUserMessage?.id ?? visibleHistory.at(-1)?.uiMessageId ?? "none";
   const memoryCacheKey = `${userId}:${sessionId}:${lastMessageId}`;
-  memorySummary = getCachedMemorySummary(memoryCacheKey);
+  const cacheNow = deps.clock?.now?.() ?? Date.now();
+  memorySummary = deps.memorySummaryCache?.get(memoryCacheKey, cacheNow);
   if (!memorySummary) {
     try {
       const query = getLastUserText(promptUiMessages);
@@ -851,7 +905,7 @@ export async function handleChat(
       const items = memoryResult.context ?? [];
       if (items.length > 0) {
         memorySummary = items.map((item) => item.context).join("\n");
-        setCachedMemorySummary(memoryCacheKey, memorySummary);
+        deps.memorySummaryCache?.set(memoryCacheKey, memorySummary, cacheNow);
       }
     } catch (error) {
       deps.logger?.error?.("chat:memory_fetch_failed", {
@@ -1053,7 +1107,7 @@ export async function handleChat(
             persistedToolCallIds.add(parsed.toolCallId);
             const maybeResult = resultsById.get(parsed.toolCallId);
 
-            const args = (parsed.args ?? parsed.input ?? {}) as Json;
+            const args = normalizeJsonValue(parsed.args ?? parsed.input ?? {}, {});
             const status = maybeResult?.isError ? "failed" : "completed";
             const errorMessage =
               maybeResult?.isError && typeof maybeResult.result === "string"
@@ -1070,7 +1124,7 @@ export async function handleChat(
               error_message: errorMessage,
               // biome-ignore lint/style/useNamingConvention: Database field name
               message_id: assistantMessageId,
-              result: (maybeResult?.result ?? null) as Json | null,
+              result: normalizeJsonValue(maybeResult?.result ?? null, null),
               status,
               // biome-ignore lint/style/useNamingConvention: Database field name
               tool_id: parsed.toolCallId,

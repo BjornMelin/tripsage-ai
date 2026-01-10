@@ -68,10 +68,11 @@ export async function fetchAgentBundle(
   } catch (error) {
     if (isE2eBypassEnabled()) {
       const now = nowIso();
+      const timestamp = now.replace(/[-:T.Z]/g, "").slice(0, 14);
       const fallbackConfig = configurationAgentConfigSchema.parse({
         agentType,
         createdAt: now,
-        id: `v${Math.floor(Date.now() / 1000)}_${secureId(8)}`,
+        id: `v${timestamp}_${secureId(8)}`,
         model: DEFAULT_MODEL,
         parameters: {
           model: DEFAULT_MODEL,

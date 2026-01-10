@@ -20,6 +20,30 @@ import {
 import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
 import { generateIcsFromEvents } from "@/lib/calendar/ics";
 
+function parseDateOrUndefined(value?: string): Date | undefined {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid date string: ${value}`);
+  }
+  return parsed;
+}
+
+/**
+ * Normalizes tool input date/time to EventDateTime format.
+ */
+function normalizeEventDateTime(value: {
+  date?: string;
+  dateTime?: string;
+  timeZone?: string;
+}): EventDateTime {
+  return {
+    date: value.date,
+    dateTime: parseDateOrUndefined(value.dateTime),
+    timeZone: value.timeZone,
+  };
+}
+
 /**
  * Creates calendar events in Google Calendar.
  */
@@ -27,16 +51,6 @@ export const createCalendarEvent = createAiTool({
   description: "Create a calendar event in the user's Google Calendar.",
   execute: async (params) => {
     try {
-      const normalizeEventDateTime = (value: {
-        date?: string;
-        dateTime?: string;
-        timeZone?: string;
-      }): EventDateTime => ({
-        date: value.date,
-        dateTime: value.dateTime ? new Date(value.dateTime) : undefined,
-        timeZone: value.timeZone,
-      });
-
       const payload = {
         ...params,
         end: normalizeEventDateTime(params.end),
@@ -49,7 +63,11 @@ export const createCalendarEvent = createAiTool({
             : value.dateTime;
         }
         if (value.date) {
-          return new Date(value.date).toISOString();
+          const parsed = parseDateOrUndefined(value.date);
+          if (!parsed) {
+            throw new Error("calendar_event_missing_datetime");
+          }
+          return parsed.toISOString();
         }
         throw new Error("calendar_event_missing_datetime");
       };
@@ -136,23 +154,13 @@ export const exportItineraryToIcs = createAiTool({
   // biome-ignore lint/suspicious/useAwait: createAiTool requires Promise return type
   execute: async (params) => {
     try {
-      const normalizeEventDateTime = (value: {
-        date?: string;
-        dateTime?: string;
-        timeZone?: string;
-      }): EventDateTime => ({
-        date: value.date,
-        dateTime: value.dateTime ? new Date(value.dateTime) : undefined,
-        timeZone: value.timeZone,
-      });
-
       const normalizedEvents = params.events.map((event) =>
         calendarEventSchema.parse({
           ...event,
-          created: event.created ? new Date(event.created) : undefined,
+          created: parseDateOrUndefined(event.created),
           end: normalizeEventDateTime(event.end),
           start: normalizeEventDateTime(event.start),
-          updated: event.updated ? new Date(event.updated) : undefined,
+          updated: parseDateOrUndefined(event.updated),
         })
       );
 

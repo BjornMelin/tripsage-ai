@@ -227,6 +227,10 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
   };
 
   const currentParams = { ...config.parameters, ...edited };
+  const isStepTimeoutInvalid =
+    typeof currentParams.stepTimeoutSeconds === "number" &&
+    typeof currentParams.timeoutSeconds === "number" &&
+    currentParams.stepTimeoutSeconds > currentParams.timeoutSeconds;
 
   return (
     <div className="space-y-6">
@@ -398,6 +402,14 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   min={5}
                   max={300}
                 />
+                <p className="text-sm text-muted-foreground">
+                  Must be less than or equal to total timeout when both are provided.
+                </p>
+                {isStepTimeoutInvalid && (
+                  <p className="text-sm text-destructive">
+                    Step timeout cannot exceed total timeout.
+                  </p>
+                )}
               </div>
 
               {hasUnsavedChanges && (

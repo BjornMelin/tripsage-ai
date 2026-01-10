@@ -229,9 +229,8 @@ describe("handleChat", () => {
 
     const response = await handleChat(
       {
-        resolveProvider: () => {
-          throw new Error("No provider keys configured.");
-        },
+        resolveProvider: async () =>
+          await Promise.reject(new Error("No provider keys configured.")),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },

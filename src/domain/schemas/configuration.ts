@@ -78,6 +78,7 @@ export const agentConfigRequestSchema = z
     description: z.string().max(500).trim().optional().nullable(),
     maxTokens: z.number().int().min(1).max(8000).optional(),
     model: modelNameSchema.optional(),
+    /** Per-step timeout in seconds. Must be ≤ timeoutSeconds when both are provided. */
     stepTimeoutSeconds: z.number().int().min(5).max(300).optional(),
     temperature: z.number().min(0.0).max(2.0).multipleOf(0.01).optional(),
     timeoutSeconds: z.number().int().min(5).max(300).optional(),

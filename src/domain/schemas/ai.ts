@@ -2,8 +2,8 @@
  * @fileoverview AI SDK UI stream metadata and data-part schemas.
  */
 
+import { agentTypeSchema } from "@schemas/configuration";
 import { z } from "zod";
-import { agentTypeSchema } from "./configuration";
 
 // ===== CORE SCHEMAS =====
 
@@ -34,8 +34,8 @@ export type LanguageModelUsageMetadata = z.infer<typeof languageModelUsageSchema
 export const chatMessageMetadataSchema = z.looseObject({
   abortReason: z.string().nullable().optional(),
   finishReason: z.string().nullable().optional(),
-  requestId: z.string().optional(),
-  sessionId: z.string().optional(),
+  requestId: z.uuid().optional(),
+  sessionId: z.uuid().optional(),
   totalUsage: languageModelUsageSchema.nullable().optional(),
 });
 
@@ -46,9 +46,9 @@ export const agentMessageMetadataSchema = z.looseObject({
   agentType: agentTypeSchema,
   finishReason: z.string().nullable().optional(),
   modelId: z.string().min(1),
-  requestId: z.string().optional(),
+  requestId: z.uuid().optional(),
   totalUsage: languageModelUsageSchema.nullable().optional(),
-  versionId: z.string().optional(),
+  versionId: z.uuid().optional(),
 });
 
 export type AgentMessageMetadata = z.infer<typeof agentMessageMetadataSchema>;

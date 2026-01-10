@@ -187,6 +187,7 @@ describe("resolveProvider", () => {
   });
 
   it("bypasses user key lookup when E2E_BYPASS_RATE_LIMIT=true", async () => {
+    const originalEnv = process.env;
     process.env = {
       ...process.env,
       AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
@@ -200,16 +201,20 @@ describe("resolveProvider", () => {
       XAI_API_KEY: undefined,
     };
 
-    const { getUserAllowGatewayFallback, getUserApiKey } = await import(
-      "@/lib/supabase/rpc"
-    );
-    const { resolveProvider } = await import("@ai/models/registry");
+    try {
+      const { getUserAllowGatewayFallback, getUserApiKey } = await import(
+        "@/lib/supabase/rpc"
+      );
+      const { resolveProvider } = await import("@ai/models/registry");
 
-    const result = await resolveProvider("user-bypass", "gpt-4o-mini");
+      const result = await resolveProvider("user-bypass", "gpt-4o-mini");
 
-    expect(vi.mocked(getUserApiKey)).not.toHaveBeenCalled();
-    expect(vi.mocked(getUserAllowGatewayFallback)).not.toHaveBeenCalled();
-    expect(result.provider).toBe("openai");
-    expect(String(result.model)).toContain("gateway(");
+      expect(vi.mocked(getUserApiKey)).not.toHaveBeenCalled();
+      expect(vi.mocked(getUserAllowGatewayFallback)).not.toHaveBeenCalled();
+      expect(result.provider).toBe("openai");
+      expect(String(result.model)).toContain("gateway(");
+    } finally {
+      process.env = originalEnv;
+    }
   });
 });

@@ -5,10 +5,19 @@
 import type { TimeoutConfiguration } from "ai";
 
 const MIN_TIMEOUT_MS = 5_000;
-const DEFAULT_STEP_TIMEOUT_MS = 20_000;
+const DEFAULT_STEP_TIMEOUT_MS = parseTimeoutEnv("AI_DEFAULT_STEP_TIMEOUT_MS", 20_000);
 
 /** Default total timeout for AI SDK calls (milliseconds). */
-export const DEFAULT_AI_TIMEOUT_MS = 30_000;
+export const DEFAULT_AI_TIMEOUT_MS = parseTimeoutEnv("AI_DEFAULT_TIMEOUT_MS", 30_000);
+
+function parseTimeoutEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  const parsed = raw ? Number(raw) : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return Math.max(MIN_TIMEOUT_MS, fallback);
+  }
+  return Math.max(MIN_TIMEOUT_MS, Math.round(parsed));
+}
 
 function normalizeTimeoutMs(value: number): number {
   if (!Number.isFinite(value) || value <= 0) {

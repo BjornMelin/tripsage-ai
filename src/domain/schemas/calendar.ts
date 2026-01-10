@@ -417,10 +417,18 @@ export const freeBusyToolInputSchema = z
     timeMin: primitiveSchemas.isoDateTime,
     timeZone: z.string().optional(),
   })
-  .refine((data) => data.timeMax > data.timeMin, {
-    error: "timeMax must be after timeMin",
-    path: ["timeMax"],
-  });
+  .refine(
+    (data) => {
+      const max = Date.parse(data.timeMax);
+      const min = Date.parse(data.timeMin);
+      if (!Number.isFinite(max) || !Number.isFinite(min)) return false;
+      return max > min;
+    },
+    {
+      error: "timeMax must be after timeMin",
+      path: ["timeMax"],
+    }
+  );
 
 /**
  * Schema for exporting calendar events to ICS format.

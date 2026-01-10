@@ -63,19 +63,25 @@ const CHAT_ERROR_REASON_MAP = new Map<string, string>([
   ],
 ]);
 
+const chatErrorPayloadSchema = z
+  .strictObject({
+    error: z.string().optional(),
+    reason: z.string().optional(),
+  })
+  .passthrough();
+
 function resolveChatErrorMessage(error?: Error): string {
   if (!error?.message) return CHAT_ERROR_FALLBACK;
 
   try {
-    const parsed = JSON.parse(error.message) as
-      | { error?: string; reason?: string }
-      | undefined;
-    if (parsed?.error) {
-      const mappedReason = CHAT_ERROR_REASON_MAP.get(parsed.error);
+    const parsed = chatErrorPayloadSchema.safeParse(JSON.parse(error.message));
+    if (!parsed.success) return error.message || CHAT_ERROR_FALLBACK;
+    if (parsed.data.error) {
+      const mappedReason = CHAT_ERROR_REASON_MAP.get(parsed.data.error);
       if (mappedReason) return mappedReason;
     }
-    if (typeof parsed?.reason === "string" && parsed.reason.trim().length > 0) {
-      return parsed.reason;
+    if (parsed.data.reason?.trim()) {
+      return parsed.data.reason;
     }
   } catch {
     // ignore JSON parse failures

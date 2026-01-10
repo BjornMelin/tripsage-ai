@@ -119,13 +119,13 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
     return (
       <Card className={className}>
         <CardHeader>
-          <div className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Skeleton className="h-5 w-5 rounded" />
             <Skeleton className="h-6 w-48" />
-          </div>
-          <div className="text-sm text-muted-foreground">
+          </CardTitle>
+          <CardDescription>
             <Skeleton className="h-4 w-64" />
-          </div>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-4 w-full" />
