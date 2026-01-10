@@ -14,7 +14,7 @@ export function checkBotId(): Promise<{
   verifiedBotName?: string;
 }> {
   return Promise.resolve({
-    bypassed: true,
+    bypassed: false,
     isBot: false,
     isHuman: true,
     isVerifiedBot: false,
