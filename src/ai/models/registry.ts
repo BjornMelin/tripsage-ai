@@ -25,8 +25,12 @@ const providerRegistryLogger = createServerLogger("ai.providers");
  * Earlier providers in this array take precedence when multiple keys are available.
  */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
-const isE2eBypassEnabled = () =>
-  process.env.E2E_BYPASS_RATE_LIMIT === "1" && process.env.NODE_ENV !== "production";
+const isE2eBypassEnabled = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  const raw = process.env.E2E_BYPASS_RATE_LIMIT;
+  const normalized = raw?.trim().toLowerCase();
+  return normalized === "1" || normalized === "true";
+};
 
 /**
  * Extracts the host from a URL string.

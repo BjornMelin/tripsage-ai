@@ -185,4 +185,31 @@ describe("resolveProvider", () => {
     // Restore original environment
     process.env = originalEnv;
   });
+
+  it("bypasses user key lookup when E2E_BYPASS_RATE_LIMIT=true", async () => {
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+      ANTHROPIC_API_KEY: undefined,
+      E2E_BYPASS_RATE_LIMIT: "true",
+      // Minimal required vars so server env parsing doesn't fail.
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: undefined,
+    };
+
+    const { getUserAllowGatewayFallback, getUserApiKey } = await import(
+      "@/lib/supabase/rpc"
+    );
+    const { resolveProvider } = await import("@ai/models/registry");
+
+    const result = await resolveProvider("user-bypass", "gpt-4o-mini");
+
+    expect(vi.mocked(getUserApiKey)).not.toHaveBeenCalled();
+    expect(vi.mocked(getUserAllowGatewayFallback)).not.toHaveBeenCalled();
+    expect(result.provider).toBe("openai");
+    expect(String(result.model)).toContain("gateway(");
+  });
 });
