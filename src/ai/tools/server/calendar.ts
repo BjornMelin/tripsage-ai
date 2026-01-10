@@ -10,7 +10,6 @@ import {
   calendarEventSchema,
   createCalendarEventInputSchema,
   createCalendarEventOutputSchema,
-  createEventRequestSchema,
   type EventDateTime,
   exportItineraryToIcsInputSchema,
   exportItineraryToIcsOutputSchema,
@@ -91,8 +90,7 @@ export const createCalendarEvent = createAiTool({
         );
       };
       const { calendarId, ...eventData } = payload;
-      const parsedEventData = createEventRequestSchema.parse(eventData);
-      const result = await createEvent(parsedEventData, calendarId);
+      const result = await createEvent(eventData, calendarId);
       if (!result.id) {
         return { error: "calendar_event_missing_id", success: false } as const;
       }

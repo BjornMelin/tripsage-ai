@@ -194,9 +194,12 @@ export async function updateAgentConfigAction(
   } catch (error) {
     configurationActionsLogger.error("agent_config_update_failed", {
       agentType: parsed.data,
-      error: error instanceof Error ? error.message : String(error),
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : String(error).slice(0, 500),
       errorName: error instanceof Error ? error.name : "unknown_error",
-      errorStack: error instanceof Error ? error.stack : undefined,
+      errorStack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
     });
     return err({
       error: "internal",
@@ -299,9 +302,12 @@ export async function rollbackAgentConfigAction(
   } catch (error) {
     configurationActionsLogger.error("agent_config_rollback_failed", {
       agentType: parsedAgentType.data,
-      error: error instanceof Error ? error.message : String(error),
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : String(error).slice(0, 500),
       errorName: error instanceof Error ? error.name : "unknown_error",
-      errorStack: error instanceof Error ? error.stack : undefined,
+      errorStack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
       versionId: parsedVersionId.data,
     });
     return err({
