@@ -29,13 +29,17 @@ const MEMORY_SUMMARY_TTL_MS = 2 * 60 * 1000;
 function getDefaultMaxTokens(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_TOKENS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_TOKENS_FALLBACK;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_MAX_TOKENS_FALLBACK;
 }
 
 function getDefaultMaxSteps(): number {
   const raw = process.env.CHAT_DEFAULT_MAX_STEPS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_STEPS_FALLBACK;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_MAX_STEPS_FALLBACK;
 }
 
 function getDefaultTimeoutSeconds(): number {
@@ -47,7 +51,9 @@ function getDefaultTimeoutSeconds(): number {
     : DEFAULT_TIMEOUT_SECONDS_FALLBACK;
 }
 
-function getDefaultStepTimeoutSeconds(totalSeconds: number): number | undefined {
+function getDefaultStepTimeoutSeconds(
+  totalSeconds: number
+): number | undefined {
   const raw = process.env.CHAT_DEFAULT_STEP_TIMEOUT_SECONDS;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -110,8 +116,8 @@ export const POST = withApiGuards({
     rawMessage !== undefined
       ? [rawMessage]
       : Array.isArray(rawMessages)
-        ? rawMessages
-        : [];
+      ? rawMessages
+      : [];
   const safeMessagesResult =
     rawMessagesArray.length === 0
       ? { data: [], success: true as const }
@@ -120,7 +126,9 @@ export const POST = withApiGuards({
     const normalizedError =
       safeMessagesResult.error instanceof Error
         ? safeMessagesResult.error
-        : new Error(String(safeMessagesResult.error ?? "Invalid messages payload"));
+        : new Error(
+            String(safeMessagesResult.error ?? "Invalid messages payload")
+          );
     return errorResponse({
       err: normalizedError,
       error: "invalid_request",
@@ -140,7 +148,9 @@ export const POST = withApiGuards({
 
   const ip = getClientIpFromHeaders(req);
   const logger = createServerLogger("chat");
-  const memorySummaryCache = createMemorySummaryCache({ ttlMs: MEMORY_SUMMARY_TTL_MS });
+  const memorySummaryCache = createMemorySummaryCache({
+    ttlMs: MEMORY_SUMMARY_TTL_MS,
+  });
   const defaultMaxTokens = getDefaultMaxTokens();
   const maxSteps = getDefaultMaxSteps();
   const timeoutSeconds = getDefaultTimeoutSeconds();
@@ -148,7 +158,12 @@ export const POST = withApiGuards({
   return handleChat(
     {
       clock: { now: () => Date.now() },
-      config: { defaultMaxTokens, maxSteps, stepTimeoutSeconds, timeoutSeconds },
+      config: {
+        defaultMaxTokens,
+        maxSteps,
+        stepTimeoutSeconds,
+        timeoutSeconds,
+      },
       logger,
       memorySummaryCache,
       resolveProvider,

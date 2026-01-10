@@ -100,7 +100,8 @@ export async function fetchAgentBundle(
     }
     return err({
       error: "internal",
-      reason: error instanceof Error ? error.message : "Failed to load agent config",
+      reason:
+        error instanceof Error ? error.message : "Failed to load agent config",
     });
   }
 
@@ -135,7 +136,7 @@ export async function fetchAgentBundle(
           createdBy: v.created_by,
           id: v.id,
           summary: v.summary,
-        }) satisfies AgentVersion
+        } satisfies AgentVersion)
     ),
   });
 }
@@ -178,7 +179,10 @@ export async function updateAgentConfigAction(
   } catch (error) {
     return err({
       error: "internal",
-      reason: error instanceof Error ? error.message : "Failed to update configuration",
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Failed to update configuration",
     });
   }
   if (!res.ok) {
@@ -190,7 +194,10 @@ export async function updateAgentConfigAction(
     }
 
     const errorBody = z
-      .looseObject({ error: z.string().optional(), reason: z.string().optional() })
+      .looseObject({
+        error: z.string().optional(),
+        reason: z.string().optional(),
+      })
       .safeParse(body);
 
     return err({
@@ -199,8 +206,8 @@ export async function updateAgentConfigAction(
         (res.status === 403
           ? "forbidden"
           : res.status === 401
-            ? "unauthorized"
-            : "internal"),
+          ? "unauthorized"
+          : "internal"),
       reason:
         (errorBody.success ? errorBody.data.reason : undefined) ??
         "Failed to update configuration",
@@ -275,7 +282,9 @@ export async function rollbackAgentConfigAction(
     return err({
       error: "internal",
       reason:
-        error instanceof Error ? error.message : "Failed to rollback configuration",
+        error instanceof Error
+          ? error.message
+          : "Failed to rollback configuration",
     });
   }
   if (!res.ok) {
@@ -287,7 +296,10 @@ export async function rollbackAgentConfigAction(
     }
 
     const errorBody = z
-      .looseObject({ error: z.string().optional(), reason: z.string().optional() })
+      .looseObject({
+        error: z.string().optional(),
+        reason: z.string().optional(),
+      })
       .safeParse(body);
 
     return err({
@@ -296,10 +308,10 @@ export async function rollbackAgentConfigAction(
         (res.status === 403
           ? "forbidden"
           : res.status === 401
-            ? "unauthorized"
-            : res.status === 404
-              ? "not_found"
-              : "internal"),
+          ? "unauthorized"
+          : res.status === 404
+          ? "not_found"
+          : "internal"),
       reason:
         (errorBody.success ? errorBody.data.reason : undefined) ??
         "Failed to rollback configuration",

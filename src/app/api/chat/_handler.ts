@@ -7,8 +7,14 @@ import "server-only";
 import { CHAT_DEFAULT_SYSTEM_PROMPT } from "@ai/constants";
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { toolRegistry } from "@ai/tools";
-import { CHAT_SCOPED_TOOLS, USER_SCOPED_TOOLS } from "@ai/tools/scoped-tool-lists";
-import { wrapToolsWithChatId, wrapToolsWithUserId } from "@ai/tools/server/injection";
+import {
+  CHAT_SCOPED_TOOLS,
+  USER_SCOPED_TOOLS,
+} from "@ai/tools/scoped-tool-lists";
+import {
+  wrapToolsWithChatId,
+  wrapToolsWithUserId,
+} from "@ai/tools/server/injection";
 import {
   type AiStreamStatus,
   type ChatMessageMetadata,
@@ -45,7 +51,10 @@ import type { ServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
 import { getModelContextLimit } from "@/lib/tokens/limits";
-import { getUiMessageIdFromRow, isSupersededMessage } from "./_metadata-helpers";
+import {
+  getUiMessageIdFromRow,
+  isSupersededMessage,
+} from "./_metadata-helpers";
 import {
   ensureNonEmptyParts,
   parsePersistedUiParts,
@@ -209,7 +218,8 @@ function getLastUserText(messages: UIMessage[]): string | undefined {
   const chunks = parts
     .map((part) => (part?.type === "text" ? part.text : undefined))
     .filter(
-      (text): text is string => typeof text === "string" && text.trim().length > 0
+      (text): text is string =>
+        typeof text === "string" && text.trim().length > 0
     );
   if (chunks.length === 0) return undefined;
   return chunks.join("\n").trim();
@@ -222,7 +232,8 @@ async function ensureChatSession(options: {
   supabase: TypedServerSupabase;
   userId: string;
 }): Promise<
-  { ok: true; sessionId: string; created: boolean } | { ok: false; res: Response }
+  | { ok: true; sessionId: string; created: boolean }
+  | { ok: false; res: Response }
 > {
   const { allowEphemeral, logger, sessionId, supabase, userId } = options;
   const existingId = sessionId?.trim();
@@ -370,7 +381,9 @@ function buildSystemPrompt(options: {
   return `${systemPrompt}\n\n<user_memory role="context">\n${sanitizedMemory}\n</user_memory>`;
 }
 
-function extractTokenTextsFromModelMessages(messages: ModelMessage[]): string[] {
+function extractTokenTextsFromModelMessages(
+  messages: ModelMessage[]
+): string[] {
   const texts: string[] = [];
 
   for (const message of messages) {
@@ -447,7 +460,10 @@ function buildTokenBudget(options: {
       : 1024;
 
   const tokenTexts = extractTokenTextsFromModelMessages(options.modelMessages);
-  const promptCount = countTokens([options.system, ...tokenTexts], options.modelId);
+  const promptCount = countTokens(
+    [options.system, ...tokenTexts],
+    options.modelId
+  );
   const modelLimit = getModelContextLimit(options.modelId);
   const available = Math.max(0, modelLimit - promptCount);
   // Apply a safety margin for tokenizer variance across providers.
@@ -501,7 +517,9 @@ function getTextFromUiMessage(message: UIMessage): string {
   const parts = Array.isArray(message.parts) ? message.parts : [];
   const chunks = parts
     .map((part) => (part?.type === "text" ? part.text : undefined))
-    .filter((text): text is string => typeof text === "string" && text.length > 0);
+    .filter(
+      (text): text is string => typeof text === "string" && text.length > 0
+    );
   if (chunks.length === 0) return "";
   return chunks.join("").trim();
 }
@@ -578,7 +596,8 @@ async function loadChatHistory(options: {
   if (toolError) {
     if (options.allowEphemeral) {
       options.logger?.warn?.("chat:tool_history_load_skipped", {
-        error: toolError instanceof Error ? toolError.message : String(toolError),
+        error:
+          toolError instanceof Error ? toolError.message : String(toolError),
         sessionId: options.sessionId,
         userId: options.userId,
       });
@@ -595,8 +614,11 @@ async function loadChatHistory(options: {
     }
   }
 
-  const safeToolCalls = toolError ? [] : (toolCalls ?? []);
-  const toolCallsByMessageId = new Map<number, Array<(typeof safeToolCalls)[number]>>();
+  const safeToolCalls = toolError ? [] : toolCalls ?? [];
+  const toolCallsByMessageId = new Map<
+    number,
+    Array<(typeof safeToolCalls)[number]>
+  >();
   for (const toolRow of safeToolCalls) {
     const messageId = toolRow.message_id;
     if (typeof messageId !== "number") continue;
@@ -614,15 +636,24 @@ async function loadChatHistory(options: {
     });
 
     let role: "assistant" | "system" | "user";
-    if (row.role === "user" || row.role === "assistant" || row.role === "system") {
+    if (
+      row.role === "user" ||
+      row.role === "assistant" ||
+      row.role === "system"
+    ) {
       role = row.role;
     } else {
       role = "assistant";
     }
 
-    const uiMessageId = getUiMessageIdFromRow({ id: row.id, metadata: row.metadata });
+    const uiMessageId = getUiMessageIdFromRow({
+      id: row.id,
+      metadata: row.metadata,
+    });
     const metadata =
-      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      row.metadata &&
+      typeof row.metadata === "object" &&
+      !Array.isArray(row.metadata)
         ? row.metadata
         : undefined;
 
@@ -683,31 +714,33 @@ async function loadChatHistory(options: {
     };
   }
 
-  const hydrated: HydratedChatMessage[] = validated.data.map((uiMessage, index) => {
-    const row = ordered[index];
-    const uiMessageId = uiMessage.id;
-    const isSuperseded = isSupersededMessage(row?.metadata);
+  const hydrated: HydratedChatMessage[] = validated.data.map(
+    (uiMessage, index) => {
+      const row = ordered[index];
+      const uiMessageId = uiMessage.id;
+      const isSuperseded = isSupersededMessage(row?.metadata);
 
-    let role: "assistant" | "system" | "user";
-    if (
-      uiMessage.role === "user" ||
-      uiMessage.role === "assistant" ||
-      uiMessage.role === "system"
-    ) {
-      role = uiMessage.role;
-    } else {
-      role = "assistant";
+      let role: "assistant" | "system" | "user";
+      if (
+        uiMessage.role === "user" ||
+        uiMessage.role === "assistant" ||
+        uiMessage.role === "system"
+      ) {
+        role = uiMessage.role;
+      } else {
+        role = "assistant";
+      }
+
+      return {
+        dbId: row?.id ?? 0,
+        isSuperseded,
+        metadata: uiMessage.metadata as Json | undefined,
+        role,
+        uiMessage,
+        uiMessageId,
+      };
     }
-
-    return {
-      dbId: row?.id ?? 0,
-      isSuperseded,
-      metadata: uiMessage.metadata as Json | undefined,
-      role,
-      uiMessage,
-      uiMessageId,
-    };
-  });
+  );
 
   return { messages: hydrated.filter((m) => m.dbId !== 0), ok: true };
 }
@@ -768,7 +801,8 @@ export async function handleChat(
     return errorResponse({
       err: error,
       error: "provider_unavailable",
-      reason: "AI provider is not configured. Add an API key to enable chat responses.",
+      reason:
+        "AI provider is not configured. Add an API key to enable chat responses.",
       status: 503,
     });
   }
@@ -790,7 +824,9 @@ export async function handleChat(
   let regenerationOf: string | null = null;
 
   if (trigger === "submit-message") {
-    const rawClientMessages = Array.isArray(payload.messages) ? payload.messages : [];
+    const rawClientMessages = Array.isArray(payload.messages)
+      ? payload.messages
+      : [];
     const clientMessages =
       rawClientMessages.length === 0
         ? []
@@ -832,7 +868,9 @@ export async function handleChat(
     const target = visibleHistory[targetIndex];
     regenerationOf = target.uiMessageId;
 
-    promptUiMessages = visibleHistory.slice(0, targetIndex).map((m) => m.uiMessage);
+    promptUiMessages = visibleHistory
+      .slice(0, targetIndex)
+      .map((m) => m.uiMessage);
 
     const lastPrompt = promptUiMessages.at(-1);
     if (!lastPrompt || lastPrompt.role !== "user") {
@@ -1051,13 +1089,16 @@ export async function handleChat(
             });
           }
 
-          const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {
-            durationMs,
-            finishReason,
-            isAborted: false,
-            status: "completed",
-            totalUsage: totalUsage ?? null,
-          });
+          const updatedMeta: Json = mergeAssistantMetadata(
+            assistantBaseMetadata,
+            {
+              durationMs,
+              finishReason,
+              isAborted: false,
+              status: "completed",
+              totalUsage: totalUsage ?? null,
+            }
+          );
 
           const content = encodePartsToContent([{ text, type: "text" }]);
 
@@ -1104,7 +1145,10 @@ export async function handleChat(
             persistedToolCallIds.add(parsed.toolCallId);
             const maybeResult = resultsById.get(parsed.toolCallId);
 
-            const args = normalizeJsonValue(parsed.args ?? parsed.input ?? {}, {});
+            const args = normalizeJsonValue(
+              parsed.args ?? parsed.input ?? {},
+              {}
+            );
             const status = maybeResult?.isError ? "failed" : "completed";
             const errorMessage =
               maybeResult?.isError && typeof maybeResult.result === "string"
@@ -1163,15 +1207,20 @@ export async function handleChat(
                   ? `Running tool: ${toolNames[0]}`
                   : `Running tools: ${toolNames.join(", ")}`;
               const label =
-                rawLabel.length > 200 ? `${rawLabel.slice(0, 197)}...` : rawLabel;
+                rawLabel.length > 200
+                  ? `${rawLabel.slice(0, 197)}...`
+                  : rawLabel;
               writeStatus({ kind: "tool", label, step: stepCount });
 
-              const stepMetadata = mergeAssistantMetadata(assistantBaseMetadata, {
-                // Preserve checkpoint info if a request ends mid-tool loop.
-                lastToolNames: toolNames,
-                lastToolStepAt: now,
-                toolStepCount: stepCount,
-              });
+              const stepMetadata = mergeAssistantMetadata(
+                assistantBaseMetadata,
+                {
+                  // Preserve checkpoint info if a request ends mid-tool loop.
+                  lastToolNames: toolNames,
+                  lastToolStepAt: now,
+                  toolStepCount: stepCount,
+                }
+              );
 
               if (canPersistAssistantMessage) {
                 const { error: stepError } = await updateSingle(
@@ -1248,7 +1297,7 @@ export async function handleChat(
         responseMessage.metadata
       );
       const abortReason = metadataResult.success
-        ? (metadataResult.data.abortReason ?? null)
+        ? metadataResult.data.abortReason ?? null
         : null;
 
       const updatedMeta: Json = mergeAssistantMetadata(assistantBaseMetadata, {

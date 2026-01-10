@@ -7,7 +7,11 @@ import "server-only";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
-import type { ModelMapper, ProviderId, ProviderResolution } from "@schemas/providers";
+import type {
+  ModelMapper,
+  ProviderId,
+  ProviderResolution,
+} from "@schemas/providers";
 import { createGateway } from "ai";
 import {
   getUserAllowGatewayFallback,
@@ -24,7 +28,12 @@ const providerRegistryLogger = createServerLogger("ai.providers");
  * Provider preference order for BYOK key resolution.
  * Earlier providers in this array take precedence when multiple keys are available.
  */
-const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
+const PROVIDER_PREFERENCE: ProviderId[] = [
+  "openai",
+  "openrouter",
+  "anthropic",
+  "xai",
+];
 /**
  * Checks if E2E bypass mode is enabled for testing.
  * Always returns false in production.
@@ -69,7 +78,11 @@ function isPrivateGatewayHost(hostname: string): boolean {
       Number(ipv4Match[3]),
       Number(ipv4Match[4]),
     ];
-    if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    if (
+      octets.some(
+        (octet) => !Number.isInteger(octet) || octet < 0 || octet > 255
+      )
+    ) {
       return true;
     }
     const [a, b] = octets;
@@ -102,9 +115,8 @@ function isPrivateGatewayHost(hostname: string): boolean {
   // IPv4-mapped / embedded IPv4 in IPv6, e.g. ::ffff:10.0.0.1
   if (ipv6.includes(".")) {
     const lastSegment = ipv6.split(":").pop() ?? "";
-    const embeddedIpv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(
-      lastSegment
-    );
+    const embeddedIpv4Match =
+      /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(lastSegment);
     if (embeddedIpv4Match) {
       const a = Number(embeddedIpv4Match[1]);
       const b = Number(embeddedIpv4Match[2]);
@@ -136,17 +148,23 @@ function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
   try {
     parsed = new URL(rawBaseUrl);
   } catch {
-    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "invalid_url" });
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "invalid_url",
+    });
     return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (parsed.protocol !== "https:") {
-    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "non_https" });
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "non_https",
+    });
     return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
   if (parsed.username || parsed.password) {
-    providerRegistryLogger.warn("gateway_base_url_rejected", { reason: "credentials" });
+    providerRegistryLogger.warn("gateway_base_url_rejected", {
+      reason: "credentials",
+    });
     return { baseUrl: undefined, source: "invalid_user_fallback" };
   }
 
@@ -160,7 +178,10 @@ function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
   return { baseUrl: parsed.toString(), source: "user" };
 }
 
-function normalizeGatewayModelId(provider: ProviderId, modelId: string): string {
+function normalizeGatewayModelId(
+  provider: ProviderId,
+  modelId: string
+): string {
   const trimmed = modelId.trim();
   if (!trimmed) {
     return `${provider}/${DEFAULT_MODEL_MAPPER(provider)}`;
@@ -370,7 +391,10 @@ export async function resolveProvider(
     }
 
     if (provider === "openrouter") {
-      serverApiKey = getServerEnvVarWithFallback("OPENROUTER_API_KEY", undefined);
+      serverApiKey = getServerEnvVarWithFallback(
+        "OPENROUTER_API_KEY",
+        undefined
+      );
       if (serverApiKey) {
         const openrouter = createOpenAI({
           apiKey: serverApiKey,
@@ -382,7 +406,10 @@ export async function resolveProvider(
     }
 
     if (provider === "anthropic") {
-      serverApiKey = getServerEnvVarWithFallback("ANTHROPIC_API_KEY", undefined);
+      serverApiKey = getServerEnvVarWithFallback(
+        "ANTHROPIC_API_KEY",
+        undefined
+      );
       if (serverApiKey) {
         const a = createAnthropic({ apiKey: serverApiKey });
         return { model: a(modelId), modelId, provider };
@@ -403,7 +430,10 @@ export async function resolveProvider(
   const allowFallback = bypassUserKeys
     ? true
     : await getUserAllowGatewayFallback(userId);
-  const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
+  const gatewayApiKey = getServerEnvVarWithFallback(
+    "AI_GATEWAY_API_KEY",
+    undefined
+  );
   if (gatewayApiKey) {
     const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);
     const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);

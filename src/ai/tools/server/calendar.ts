@@ -120,7 +120,8 @@ export const createCalendarEvent = createAiTool({
  * Checks calendar availability and free/busy status.
  */
 export const getAvailability = createAiTool({
-  description: "Check calendar availability (free/busy) for specified calendars.",
+  description:
+    "Check calendar availability (free/busy) for specified calendars.",
   execute: async (params) => {
     try {
       const timeMax = parseDateOrUndefined(params.timeMax);
@@ -139,7 +140,9 @@ export const getAvailability = createAiTool({
       });
       return {
         calendars: Object.entries(result.calendars).map(([id, data]) => ({
-          busy: (data as { busy?: Array<{ start: string; end: string }> }).busy || [],
+          busy:
+            (data as { busy?: Array<{ start: string; end: string }> }).busy ||
+            [],
           calendarId: id,
         })),
         success: true,
