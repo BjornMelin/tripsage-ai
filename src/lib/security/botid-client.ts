@@ -31,5 +31,12 @@ export function ensureBotIdClientInitialized(): void {
     globalThis.tripsageBotIdClientInitialized = true;
   }
 
-  initBotId({ protect: getBotIdProtectRules() });
+  try {
+    initBotId({ protect: getBotIdProtectRules() });
+  } catch (error) {
+    // BotID client init failed; server-side verification remains enforced.
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[BotID] Client initialization failed:", error);
+    }
+  }
 }

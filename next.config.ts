@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
   },
 
   // Headers for security and performance
-  async headers() {
+  headers() {
     const isProd = process.env.NODE_ENV === "production";
 
     const securityHeaders = [

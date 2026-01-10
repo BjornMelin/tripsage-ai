@@ -56,40 +56,24 @@ function isValidHost(host: string): boolean {
 }
 
 function resolveConfiguredOrigin(): string | null {
-  try {
-    const appBaseUrl = getServerEnvVarWithFallback("APP_BASE_URL", "");
-    if (appBaseUrl && typeof appBaseUrl === "string" && appBaseUrl.trim().length > 0) {
-      return appBaseUrl;
-    }
-  } catch {
-    // APP_BASE_URL not available, continue to next option
+  const appBaseUrl = getServerEnvVarWithFallback("APP_BASE_URL", "");
+  if (appBaseUrl && typeof appBaseUrl === "string" && appBaseUrl.trim().length > 0) {
+    return appBaseUrl;
   }
 
-  try {
-    const siteUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
-    if (siteUrl && typeof siteUrl === "string" && siteUrl.trim().length > 0) {
-      return siteUrl;
-    }
-  } catch {
-    // NEXT_PUBLIC_SITE_URL not available, continue to next option
+  const siteUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
+  if (siteUrl && typeof siteUrl === "string" && siteUrl.trim().length > 0) {
+    return siteUrl;
   }
 
-  try {
-    const baseUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_BASE_URL", "");
-    if (baseUrl && typeof baseUrl === "string" && baseUrl.trim().length > 0) {
-      return baseUrl;
-    }
-  } catch {
-    // NEXT_PUBLIC_BASE_URL not available, continue to next option
+  const baseUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_BASE_URL", "");
+  if (baseUrl && typeof baseUrl === "string" && baseUrl.trim().length > 0) {
+    return baseUrl;
   }
 
-  try {
-    const appUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_APP_URL", "");
-    if (appUrl && typeof appUrl === "string" && appUrl.trim().length > 0) {
-      return appUrl;
-    }
-  } catch {
-    // NEXT_PUBLIC_APP_URL not available, continue to next option
+  const appUrl = getServerEnvVarWithFallback("NEXT_PUBLIC_APP_URL", "");
+  if (appUrl && typeof appUrl === "string" && appUrl.trim().length > 0) {
+    return appUrl;
   }
 
   return null;

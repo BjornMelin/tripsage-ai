@@ -54,6 +54,8 @@ function buildCsp(options: { nonce: string; isDev: boolean }): string {
     const allowlistedInlineScriptHashes = [
       // Next.js 16.1.1 emits this inline bootstrap snippet without a nonce.
       // Re-audit this hash when upgrading Next.js.
+      // To regenerate: run `pnpm build`, find the inline script in .next/server/app/page.html,
+      // and compute: echo -n '<script content>' | openssl dgst -sha256 -binary | base64
       // requestAnimationFrame(function(){$RT=performance.now()});
       "'sha256-7mu4H06fwDCjmnxxr/xNHyuQC6pLTHr4M2E4jXw5WZs='",
     ];
@@ -85,6 +87,9 @@ function buildCsp(options: { nonce: string; isDev: boolean }): string {
   }
 }
 
+// NOTE: These headers are intentionally duplicated with next.config.ts.
+// next.config.ts provides global/static headers; this function applies them to dynamic/proxied routes.
+// Keep both in sync. Canonical config lives in next.config.ts.
 function applySecurityHeaders(headers: Headers, options: { isProd: boolean }): void {
   headers.set("X-DNS-Prefetch-Control", "on");
   headers.set("X-Frame-Options", "SAMEORIGIN");
@@ -173,7 +178,8 @@ export const config = {
         { key: "next-router-prefetch", type: "header" },
         { key: "purpose", type: "header", value: "prefetch" },
       ],
-      source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      source:
+        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     },
   ],
 };
