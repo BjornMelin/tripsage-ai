@@ -120,6 +120,10 @@ make supa.link PROJECT_REF=...
 make supa.db.push
 ```
 
+### Formatting enforcement
+
+Run `pnpm biome:fix` before committing. CI runs `pnpm biome:fix` and then checks for a clean working tree with `git diff --exit-code`, so any formatting changes produced locally will fail CI if not committed.
+
 ## Project Structure
 
 ```text
