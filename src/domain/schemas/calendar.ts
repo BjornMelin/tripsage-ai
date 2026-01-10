@@ -256,8 +256,28 @@ export const freeBusyRequestSchema = z
 export type FreeBusyRequest = z.infer<typeof freeBusyRequestSchema>;
 
 /** Zod schema for Google Calendar free/busy responses. */
+export const freeBusyEventRangeSchema = z.object({
+  end: z.string(),
+  start: z.string(),
+});
+export type FreeBusyEventRange = z.infer<typeof freeBusyEventRangeSchema>;
+
+export const freeBusyCalendarSchema = z.object({
+  busy: z.array(freeBusyEventRangeSchema).default([]),
+  errors: z
+    .array(
+      z.object({
+        domain: z.string(),
+        reason: z.string(),
+      })
+    )
+    .optional(),
+});
+export type FreeBusyCalendar = z.infer<typeof freeBusyCalendarSchema>;
+
+/** Zod schema for Google Calendar free/busy responses. */
 export const freeBusyResponseSchema = z.object({
-  calendars: z.record(z.string(), z.looseRecord(z.string(), z.unknown())).default({}),
+  calendars: z.record(z.string(), freeBusyCalendarSchema).default({}),
   groups: z.looseRecord(z.string(), z.unknown()).default({}),
   kind: z.literal("calendar#freeBusy").default("calendar#freeBusy"),
   timeMax: z.date(),

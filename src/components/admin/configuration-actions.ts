@@ -72,9 +72,11 @@ export async function fetchAgentBundle(
       const timestamp = now.replace(/[-:T.Z]/g, "").slice(0, 14);
 
       // Construct a fallback config that satisfies schema constraints.
-      // id: matches versionIdSchema regex /^v\d+_[a-f0-9]{8}$/
-      // model: matches modelNameSchema allowed values (e.g., "gpt-4o")
-      // parameters: matches agentConfigRequestSchema
+      // `versionIdSchema` and `agentConfigRequestSchema` expect:
+      // - `id`: `v${timestamp}_${secureId(8)}` (matches /^v\d+_[a-f0-9]{8}$/)
+      // - `model`: `DEFAULT_MODEL` ("gpt-4o") which is currently allowed.
+      // Validation failure is treated as an error on purpose to surface schema changes
+      // early in tests instead of silently returning a mismatched fallback.
       const fallbackConfigParsed = configurationAgentConfigSchema.safeParse({
         agentType,
         createdAt: now,
@@ -111,7 +113,7 @@ export async function fetchAgentBundle(
 
     return err({
       error: "internal",
-      reason: "Failed to load agent config",
+      reason: "Internal server error",
     });
   }
 
@@ -195,7 +197,7 @@ export async function updateAgentConfigAction(
     });
     return err({
       error: "internal",
-      reason: "Failed to update configuration",
+      reason: "Internal server error",
     });
   }
   if (!res.ok) {
@@ -301,7 +303,7 @@ export async function rollbackAgentConfigAction(
     });
     return err({
       error: "internal",
-      reason: "Failed to rollback configuration",
+      reason: "Internal server error",
     });
   }
   if (!res.ok) {

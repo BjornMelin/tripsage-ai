@@ -239,9 +239,11 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
   };
 
   /**
-   * Parse optional integer from input string.
-   * @param raw - The raw input string
-   * @returns Parsed integer or null if empty/invalid.
+   * Converts an input string into an optional base-10 integer.
+   *
+   * @param raw - Raw input string from a controlled `<input>`.
+   * @returns `null` for `""` (empty), otherwise a finite integer; returns `null` for
+   * non-finite parse results.
    */
   const parseOptionalInt = (raw: string): number | null => {
     if (raw === "") return null;
@@ -250,9 +252,10 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
   };
 
   /**
-   * Render finite number or empty string for controlled input.
-   * @param value - The value to render
-   * @returns Finite number or an empty string.
+   * Renders a finite number or an empty string for controlled inputs.
+   *
+   * @param value - Candidate value.
+   * @returns Finite number when `value` is a finite `number`; otherwise `""`.
    */
   const renderFiniteNumberOrEmpty = (value: unknown): number | "" =>
     typeof value === "number" && Number.isFinite(value) ? value : "";

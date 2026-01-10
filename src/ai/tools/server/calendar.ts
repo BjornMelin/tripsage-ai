@@ -21,11 +21,12 @@ import { createEvent, queryFreeBusy } from "@/lib/calendar/google";
 import { generateIcsFromEvents } from "@/lib/calendar/ics";
 
 /**
- * Parses an optional ISO date string into a Date object.
+ * Parse an optional ISO date string to a `Date`.
  *
- * @param value - The date string to parse.
- * @returns A Date object if the string is valid, or undefined if value is falsy.
- * @throws {ToolError} with calendarInvalidDate if the string is non-falsy but invalid.
+ * @param value - Optional ISO date string (e.g. from tool params).
+ * @returns Parsed `Date`, or `undefined` when `value` is falsy.
+ * @throws {ToolError} Throws via `createToolError(TOOL_ERROR_CODES.calendarInvalidDate, ...)`
+ * with details `{ value }` when `value` is provided but parses to an invalid date.
  */
 function parseDateOrUndefined(value?: string): Date | undefined {
   if (!value) return undefined;
@@ -138,9 +139,9 @@ export const getAvailability = createAiTool({
         timeMin,
       });
       return {
-        calendars: Object.entries(result.calendars).map(([id, data]) => ({
-          busy: (data.busy || []) as { start: string; end: string }[],
-          calendarId: id,
+        calendars: Object.entries(result.calendars).map(([calendarId, data]) => ({
+          busy: data.busy ?? [],
+          calendarId,
         })),
         success: true,
         timeMax: result.timeMax.toISOString(),
