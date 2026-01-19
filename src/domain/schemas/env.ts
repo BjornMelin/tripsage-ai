@@ -73,6 +73,17 @@ const stripePublishableKeySchema = z
   .optional();
 
 /**
+ * Stripe webhook signing secret format: starts with "whsec_".
+ * Empty strings are allowed (treated as "not configured").
+ */
+const stripeWebhookSecretSchema = z
+  .string()
+  .refine((val) => val === "" || val.startsWith("whsec_"), {
+    error: "STRIPE_WEBHOOK_SECRET must start with 'whsec_' when configured",
+  })
+  .optional();
+
+/**
  * OpenAI API key format: starts with "sk-".
  * Empty strings are allowed (treated as "not configured").
  */
@@ -220,6 +231,7 @@ const travelApiEnvSchema = z.object({
   OPENWEATHERMAP_API_KEY: apiKeySchema("OPENWEATHERMAP_API_KEY", 16),
   // Stripe payment processing
   STRIPE_SECRET_KEY: stripeSecretKeySchema,
+  STRIPE_WEBHOOK_SECRET: stripeWebhookSecretSchema,
 });
 
 // Monitoring and Analytics (minimal - only used vars)

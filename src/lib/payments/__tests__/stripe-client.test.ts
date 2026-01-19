@@ -7,6 +7,7 @@ const mockGetServerEnvVar = vi.hoisted(() => vi.fn());
 const mockPaymentIntentsCreate = vi.hoisted(() => vi.fn());
 const mockPaymentIntentsRetrieve = vi.hoisted(() => vi.fn());
 const mockRefundsCreate = vi.hoisted(() => vi.fn());
+const mockStripeConstructor = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 
@@ -21,6 +22,9 @@ vi.mock("@/lib/url/server-origin", () => ({
 vi.mock("stripe", () => {
   // Create a class-like constructor for Stripe
   class MockStripe {
+    constructor(...args: unknown[]) {
+      mockStripeConstructor(...args);
+    }
     paymentIntents = {
       create: mockPaymentIntentsCreate,
       retrieve: mockPaymentIntentsRetrieve,
@@ -34,21 +38,25 @@ vi.mock("stripe", () => {
 
 describe("stripe-client", () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
     mockGetServerEnvVar.mockReset();
     mockPaymentIntentsCreate.mockReset();
     mockPaymentIntentsRetrieve.mockReset();
     mockRefundsCreate.mockReset();
+    mockStripeConstructor.mockReset();
   });
 
   describe("getStripeClient", () => {
-    it("throws error when STRIPE_SECRET_KEY is not configured", async () => {
-      mockGetServerEnvVar.mockReturnValue(undefined);
+    it("throws when STRIPE_SECRET_KEY is missing", async () => {
+      mockGetServerEnvVar.mockImplementation(() => {
+        throw new Error("Environment variable STRIPE_SECRET_KEY is not defined");
+      });
 
       const { getStripeClient } = await import("../stripe-client");
 
       expect(() => getStripeClient()).toThrow(
-        "STRIPE_SECRET_KEY environment variable is required"
+        "Environment variable STRIPE_SECRET_KEY is not defined"
       );
     });
 
@@ -60,6 +68,19 @@ describe("stripe-client", () => {
 
       expect(client).toBeDefined();
       expect(client.paymentIntents).toBeDefined();
+      expect(mockStripeConstructor).toHaveBeenCalledTimes(1);
+    });
+
+    it("memoizes the Stripe client instance", async () => {
+      mockGetServerEnvVar.mockReturnValue("sk_test_12345");
+
+      const { getStripeClient } = await import("../stripe-client");
+
+      const first = getStripeClient();
+      const second = getStripeClient();
+
+      expect(first).toBe(second);
+      expect(mockStripeConstructor).toHaveBeenCalledTimes(1);
     });
   });
 
