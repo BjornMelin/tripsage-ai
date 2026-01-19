@@ -374,6 +374,7 @@ export function ChatMessageItem({
                 result?: unknown;
                 output?: unknown;
                 data?: unknown;
+                callProviderMetadata?: unknown;
                 error?: unknown;
                 errorText?: unknown;
               };
@@ -477,10 +478,15 @@ export function ChatMessageItem({
                 p?.data ??
                 p?.error ??
                 (typeof p?.errorText === "string" ? p.errorText : undefined);
+              const rawProviderMetadata = p?.callProviderMetadata;
               const inputSanitized =
                 rawInput !== undefined ? sanitizeToolOutput(rawInput) : undefined;
               const outputSanitized =
                 rawOutput !== undefined ? sanitizeToolOutput(rawOutput) : undefined;
+              const providerMetadataSanitized =
+                rawProviderMetadata !== undefined
+                  ? sanitizeToolOutput(rawProviderMetadata)
+                  : undefined;
 
               return (
                 <Tool
@@ -488,6 +494,7 @@ export function ChatMessageItem({
                   input={inputSanitized}
                   name={toolName ?? "Tool"}
                   output={outputSanitized}
+                  providerMetadata={providerMetadataSanitized}
                   status={status}
                 />
               );
@@ -540,7 +547,10 @@ export function ChatMessageItem({
                   key={`${message.id}-file-${idx}`}
                   className="my-2 inline-flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2"
                 >
-                  <FileIcon className="size-4 text-muted-foreground" />
+                  <FileIcon
+                    aria-hidden="true"
+                    className="size-4 text-muted-foreground"
+                  />
                   <span className="text-sm font-medium">{fileName}</span>
                   <span className="text-xs text-muted-foreground">{mimeType}</span>
                 </div>
