@@ -4,7 +4,7 @@ This directory contains Architecture Decision Records (ADRs) for the TripSage
 project. ADRs document significant architectural decisions made during the
 project's development.
 
-The canonical index is [`docs/architecture/decisions/index.md`](index.md).
+The canonical index is this `README.md`.
 
 ## What is an ADR?
 
@@ -45,7 +45,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0029](adr-0029-di-route-handlers-and-testing.md) | DI Route Handlers and Testing | Accepted | 2025-11-02 |
 | [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md) | Next.js Chat API AI SDK v6 | Accepted | 2025-11-02 |
 | [ADR-0032](adr-0032-centralized-rate-limiting.md) | Centralized Rate Limiting | Accepted | 2025-11-02 |
-| [ADR-0033](adr-0033-rag-advanced-v6.md) | RAG Advanced v6 | Proposed | 2025-11-02 |
+| [ADR-0033](adr-0033-rag-advanced-v6.md) | RAG advanced (hybrid retrieval + Upstash caching + Together reranking) | Accepted | 2026-01-19 |
 | [ADR-0034](adr-0034-structured-outputs-object-generation.md) | Structured Outputs Object Generation | Accepted | 2025-11-02 |
 | [ADR-0035](adr-0035-react-compiler-and-component-declarations.md) | React Compiler and Component Declarations | Accepted | 2025-11-04 |
 | [ADR-0036](adr-0036-ai-elements-response-and-sources.md) | AI Elements Response and Sources | Accepted | 2025-11-04 |

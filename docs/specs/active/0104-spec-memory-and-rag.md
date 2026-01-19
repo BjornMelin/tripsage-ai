@@ -26,7 +26,9 @@ Canonical schema:
 Tables and indexes (implementation):
 
 - `rag_documents`
-  - `id` UUID (primary key), chunked with `chunk_index` for lineage
+  - Primary key: `(id, chunk_index)`
+    - `id` is the stable “document id” (lineage across chunks)
+    - `chunk_index` is the 0-based chunk position within that document
   - `content` TEXT
   - `embedding` vector(1536) (standard dimension for the system; matches OpenAI `text-embedding-3-small`)
   - `metadata` JSONB (arbitrary filter/context fields)
