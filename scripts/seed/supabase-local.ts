@@ -68,14 +68,25 @@ const USERS = {
 } as const;
 
 async function getUserIdByEmail(email: string): Promise<string | null> {
-  const { data, error } = await supabase.auth.admin.listUsers();
-  if (error) throw new Error("auth.admin.listUsers failed");
+  const normalizedEmail = email.toLowerCase();
+  let page = 1;
+  const perPage = 200;
 
-  const users = data.users;
-  const match = users.find(
-    (u) => (u.email ?? "").toLowerCase() === email.toLowerCase()
-  );
-  return match?.id ?? null;
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    if (error) throw new Error(`auth.admin.listUsers failed: ${error.message}`);
+
+    const match = data.users.find(
+      (u) => (u.email ?? "").toLowerCase() === normalizedEmail
+    );
+    if (match) return match.id;
+
+    if (!data.nextPage || data.users.length < perPage) return null;
+    page = data.nextPage;
+  }
 }
 
 async function ensureUser(input: {
@@ -92,7 +103,9 @@ async function ensureUser(input: {
       user_metadata: input.userMetadata,
     });
     if (update.error) {
-      throw new Error(`auth.admin.updateUserById failed for ${input.email}`);
+      throw new Error(
+        `auth.admin.updateUserById failed for ${input.email}: ${update.error.message}`
+      );
     }
     return existingId;
   }
@@ -105,8 +118,13 @@ async function ensureUser(input: {
     user_metadata: input.userMetadata,
   });
 
-  if (created.error || !created.data.user) {
-    throw new Error(`auth.admin.createUser failed for ${input.email}`);
+  if (created.error) {
+    throw new Error(
+      `auth.admin.createUser failed for ${input.email}: ${created.error.message}`
+    );
+  }
+  if (!created.data.user) {
+    throw new Error(`auth.admin.createUser failed for ${input.email}: missing user`);
   }
   return created.data.user.id;
 }
@@ -126,6 +144,9 @@ async function ensureTrip(input: {
     .eq("user_id", input.userId)
     .eq("name", input.name)
     .maybeSingle();
+  if (existing.error) {
+    throw new Error(`select trip failed for ${input.name}: ${existing.error.message}`);
+  }
 
   if (existing.data?.id) {
     const updated = await supabase
@@ -141,8 +162,11 @@ async function ensureTrip(input: {
       .select("id")
       .single();
 
-    if (updated.error || !updated.data) {
-      throw new Error(`update trip failed for ${input.name}`);
+    if (updated.error) {
+      throw new Error(`update trip failed for ${input.name}: ${updated.error.message}`);
+    }
+    if (!updated.data) {
+      throw new Error(`update trip failed for ${input.name}: missing data`);
     }
     return updated.data.id;
   }
@@ -168,8 +192,11 @@ async function ensureTrip(input: {
     .select("id")
     .single();
 
-  if (created.error || !created.data) {
-    throw new Error(`insert trip failed for ${input.name}`);
+  if (created.error) {
+    throw new Error(`insert trip failed for ${input.name}: ${created.error.message}`);
+  }
+  if (!created.data) {
+    throw new Error(`insert trip failed for ${input.name}: missing data`);
   }
   return created.data.id;
 }
@@ -185,6 +212,9 @@ async function ensureTripCollaborator(input: {
     .eq("trip_id", input.tripId)
     .eq("user_id", input.userId)
     .maybeSingle();
+  if (existing.error) {
+    throw new Error(`select trip_collaborators failed: ${existing.error.message}`);
+  }
 
   if (existing.data?.id) {
     if (existing.data.role === input.role) return;
@@ -192,7 +222,9 @@ async function ensureTripCollaborator(input: {
       .from("trip_collaborators")
       .update({ role: input.role })
       .eq("id", existing.data.id);
-    if (updated.error) throw new Error("update trip_collaborators failed");
+    if (updated.error) {
+      throw new Error(`update trip_collaborators failed: ${updated.error.message}`);
+    }
     return;
   }
 
@@ -201,7 +233,9 @@ async function ensureTripCollaborator(input: {
     trip_id: input.tripId,
     user_id: input.userId,
   });
-  if (inserted.error) throw new Error("insert trip_collaborators failed");
+  if (inserted.error) {
+    throw new Error(`insert trip_collaborators failed: ${inserted.error.message}`);
+  }
 }
 
 async function resetSeededItinerary(tripId: number): Promise<void> {
@@ -210,7 +244,9 @@ async function resetSeededItinerary(tripId: number): Promise<void> {
     .delete()
     .eq("trip_id", tripId)
     .like("external_id", "seed:%");
-  if (deleted.error) throw new Error("delete itinerary_items failed");
+  if (deleted.error) {
+    throw new Error(`delete itinerary_items failed: ${deleted.error.message}`);
+  }
 }
 
 async function seedItineraryItems(input: {
@@ -244,7 +280,9 @@ async function seedItineraryItems(input: {
       user_id: input.userId,
     }))
   );
-  if (inserted.error) throw new Error("insert itinerary_items failed");
+  if (inserted.error) {
+    throw new Error(`insert itinerary_items failed: ${inserted.error.message}`);
+  }
 }
 
 async function seedSavedPlaces(input: {
@@ -258,7 +296,9 @@ async function seedSavedPlaces(input: {
       .delete()
       .eq("trip_id", input.tripId)
       .eq("place_id", place.placeId);
-    if (deleted.error) throw new Error("delete saved_places failed");
+    if (deleted.error) {
+      throw new Error(`delete saved_places failed: ${deleted.error.message}`);
+    }
   }
 
   if (input.places.length === 0) return;
@@ -271,7 +311,9 @@ async function seedSavedPlaces(input: {
       user_id: input.userId,
     }))
   );
-  if (inserted.error) throw new Error("insert saved_places failed");
+  if (inserted.error) {
+    throw new Error(`insert saved_places failed: ${inserted.error.message}`);
+  }
 }
 
 async function seedChatSession(input: {
@@ -286,13 +328,17 @@ async function seedChatSession(input: {
     trip_id: input.tripId,
     user_id: input.userId,
   });
-  if (sessionUpsert.error) throw new Error("upsert chat_sessions failed");
+  if (sessionUpsert.error) {
+    throw new Error(`upsert chat_sessions failed: ${sessionUpsert.error.message}`);
+  }
 
   const deleted = await supabase
     .from("chat_messages")
     .delete()
     .eq("session_id", input.sessionId);
-  if (deleted.error) throw new Error("delete chat_messages failed");
+  if (deleted.error) {
+    throw new Error(`delete chat_messages failed: ${deleted.error.message}`);
+  }
 
   if (input.messages.length === 0) return;
   const inserted = await supabase.from("chat_messages").insert(
@@ -303,7 +349,9 @@ async function seedChatSession(input: {
       user_id: input.userId,
     }))
   );
-  if (inserted.error) throw new Error("insert chat_messages failed");
+  if (inserted.error) {
+    throw new Error(`insert chat_messages failed: ${inserted.error.message}`);
+  }
 }
 
 async function runDevSeed(): Promise<void> {
@@ -413,6 +461,16 @@ async function runE2eSeed(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const { hostname } = new URL(env.supabaseUrl);
+  const allowRemote = process.env.SUPABASE_SEED_ALLOW_REMOTE === "true";
+  const isLocal =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  if (!isLocal && !allowRemote) {
+    throw new Error(
+      `Refusing to seed non-local Supabase (${hostname}). Set SUPABASE_SEED_ALLOW_REMOTE=true to override.`
+    );
+  }
+
   // Basic connectivity check to surface obvious misconfiguration early.
   const health = await fetch(`${env.supabaseUrl}/auth/v1/health`, { method: "GET" });
   if (!health.ok) {

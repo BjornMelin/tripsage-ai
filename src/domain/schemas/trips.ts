@@ -30,23 +30,36 @@ const parseIsoDateToLocalMidnight = (value: string): Date | null => {
   return date;
 };
 
-const TRIP_DATE_PREFIX_REGEX = /^\d{4}-\d{2}-\d{2}(?:$|T)/;
+const TRIP_DATE_PREFIX_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-const tripIsoDateSchema = z.string().superRefine((value, ctx) => {
-  const trimmed = value.trim();
-  if (!TRIP_DATE_PREFIX_REGEX.test(trimmed)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "Date must be in YYYY-MM-DD format",
-    });
-    return;
-  }
+const tripIsoDateSchema = z
+  .string()
+  .superRefine((value, ctx) => {
+    const trimmed = value.trim();
+    const hasTime = trimmed.includes("T");
 
-  const datePart = trimmed.slice(0, 10);
-  if (!parseIsoDateToLocalMidnight(datePart)) {
-    ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
-  }
-});
+    if (!TRIP_DATE_PREFIX_REGEX.test(trimmed) && !hasTime) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Date must be in YYYY-MM-DD format",
+      });
+      return;
+    }
+
+    const datePart = trimmed.slice(0, 10);
+    if (!parseIsoDateToLocalMidnight(datePart)) {
+      ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
+      return;
+    }
+
+    if (hasTime) {
+      const datetimeResult = primitiveSchemas.isoDateTime.safeParse(trimmed);
+      if (!datetimeResult.success) {
+        ctx.addIssue({ code: "custom", message: "Invalid datetime format" });
+      }
+    }
+  })
+  .transform((value) => value.trim().slice(0, 10));
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for trip management

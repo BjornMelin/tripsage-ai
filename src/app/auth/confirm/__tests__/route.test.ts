@@ -22,9 +22,9 @@ const VERIFY_MOCK = vi.hoisted(
 
 const EXCHANGE_MOCK = vi.hoisted(
   () =>
-    vi.fn(async (_code: string) => ({
-      error: null,
-    })) as MockInstance<(_code: string) => Promise<{ error: Error | null }>>
+    vi.fn(() => Promise.resolve({ error: null })) as MockInstance<
+      (code: string) => Promise<{ error: Error | null }>
+    >
 );
 
 vi.mock("@/lib/supabase/server", () => ({

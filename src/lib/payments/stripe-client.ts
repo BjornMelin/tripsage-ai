@@ -20,6 +20,9 @@ export function getStripeClient(): Stripe {
   if (stripeClient) return stripeClient;
 
   const secretKey = getServerEnvVar("STRIPE_SECRET_KEY");
+  if (!secretKey.trim()) {
+    throw new Error("STRIPE_SECRET_KEY environment variable is required");
+  }
 
   // Use Stripe's default API version (latest). Pinning an API version here can cause
   // type drift if the version is not reflected in the generated types.

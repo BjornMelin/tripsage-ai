@@ -44,13 +44,14 @@ function recordStripeTelemetry(event: Stripe.Event, span: Span) {
   span.setAttribute("stripe.livemode", event.livemode);
 }
 
-function handleStripeEvent(event: Stripe.Event, span: Span): void {
+function handleStripeEvent(event: Stripe.Event, span: Span): Promise<void> {
   // Current implementation is intentionally minimal: record telemetry and acknowledge.
   // Downstream business logic can safely branch on `event.type` without breaking the webhook contract.
   span.addEvent("stripe.event_received", {
     "stripe.event_id": event.id,
     "stripe.event_type": event.type,
   });
+  return Promise.resolve();
 }
 
 function okResponse(

@@ -2,6 +2,7 @@
 
 import Stripe from "stripe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { RateLimitResult } from "@/lib/webhooks/rate-limit";
 import { createMockNextRequest } from "@/test/helpers/route";
 
 type StripeRouteModule = typeof import("../route");
@@ -10,6 +11,7 @@ vi.mock("server-only", () => ({}));
 
 const WEBHOOK_SECRET = "whsec_test_webhook_secret";
 const stripe = new Stripe("sk_test_123", { typescript: true });
+const MAX_WEBHOOK_BYTES = 256 * 1024;
 
 type ReserveKeyOptions = {
   degradedMode?: "fail_closed" | "fail_open";
@@ -70,12 +72,17 @@ vi.mock("@/lib/telemetry/span", () => ({
     }),
 }));
 
+const checkWebhookRateLimitMock = vi.hoisted(() =>
+  vi.fn<() => Promise<RateLimitResult>>(async () => ({ success: true }))
+);
+const createRateLimitHeadersMock = vi.hoisted(() => vi.fn(() => ({})));
+
 vi.mock("@/lib/webhooks/rate-limit", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/webhooks/rate-limit")>();
   return {
     ...original,
-    checkWebhookRateLimit: vi.fn(async () => ({ success: true })),
-    createRateLimitHeaders: vi.fn(() => ({})),
+    checkWebhookRateLimit: checkWebhookRateLimitMock,
+    createRateLimitHeaders: createRateLimitHeadersMock,
   };
 });
 
@@ -160,6 +167,44 @@ describe("POST /api/hooks/stripe", () => {
     expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("invalid_signature");
+  });
+
+  it("returns 429 when rate limit is exceeded", async () => {
+    checkWebhookRateLimitMock.mockResolvedValueOnce({
+      reason: "rate_limited",
+      success: false,
+    });
+
+    const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
+    const header = stripe.webhooks.generateTestHeaderString({
+      payload,
+      secret: WEBHOOK_SECRET,
+    });
+
+    const { POST } = await loadRoute();
+    const res = await POST(makeRequest(payload, { "stripe-signature": header }));
+    expect(res.status).toBe(429);
+    const json = await res.json();
+    expect(json.error).toBe("rate_limit_exceeded");
+  });
+
+  it("returns 413 when request body exceeds size limit", async () => {
+    const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
+    const header = stripe.webhooks.generateTestHeaderString({
+      payload,
+      secret: WEBHOOK_SECRET,
+    });
+
+    const { POST } = await loadRoute();
+    const res = await POST(
+      makeRequest(payload, {
+        "content-length": String(MAX_WEBHOOK_BYTES + 1),
+        "stripe-signature": header,
+      })
+    );
+    expect(res.status).toBe(413);
+    const json = await res.json();
+    expect(json.error).toBe("payload_too_large");
   });
 
   it("returns 200 and acknowledges valid events", async () => {

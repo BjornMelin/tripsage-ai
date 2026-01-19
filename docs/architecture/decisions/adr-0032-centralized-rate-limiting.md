@@ -10,7 +10,7 @@
 
 ## Context
 
-- TripSage previously had multiple rate limiting strategies across runtimes, which creates drift and uneven enforcement.
+- TripSage previously had multiple rate-limiting strategies across runtimes, which creates drift and uneven enforcement.
 - Next.js App Router (Route Handlers + Server Actions) is the canonical runtime for APIs.
 - Rate limiting must be:
   - centralized and consistent

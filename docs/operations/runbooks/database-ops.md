@@ -22,7 +22,7 @@ Use the pinned Supabase CLI via repo scripts:
    - `pnpm supabase:seed:dev` (UI development dataset)
    - `pnpm supabase:seed:e2e` (Playwright/E2E dataset)
    - `pnpm supabase:reset:dev` / `pnpm supabase:reset:e2e` (reset + seed)
-3. (Alt) Apply canonical schema to external Postgres: `cd supabase && psql "$DATABASE_URL" -f schema.sql`
+6. (Alt) Apply canonical schema to external Postgres: `cd supabase && psql "$DATABASE_URL" -f schema.sql`
 
 Local sign-up confirmation:
 

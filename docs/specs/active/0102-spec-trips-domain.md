@@ -87,4 +87,4 @@ Testing
 - Verified the dashboard trip creation flow end-to-end with `agent-browser`:
   - create trip in UI
   - confirm success toast
-  - navigate to trip detail page
+  - navigate to trip detail page.

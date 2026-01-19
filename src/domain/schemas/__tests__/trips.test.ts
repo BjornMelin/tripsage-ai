@@ -24,6 +24,10 @@ describe("trips schemas", () => {
       });
 
       expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.startDate).toBe("2026-02-01");
+        expect(result.data.endDate).toBe("2026-02-10");
+      }
     });
 
     it("accepts ISO date inputs", () => {

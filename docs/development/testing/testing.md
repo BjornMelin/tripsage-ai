@@ -238,6 +238,12 @@ it("validates all fields with trigger()", async () => {
     useZodForm({ schema, defaultValues: { title: "" }, mode: "onChange" })
   );
   let isValid: boolean;
+  await act(async () => {
+    isValid = await result.current.trigger();
+  });
+  expect(isValid!).toBe(false);
+});
+```
 
 ## Supabase local (when needed)
 
@@ -256,12 +262,6 @@ Standard workflow:
   - `pnpm supabase:reset:e2e` (for Playwright)
 - Copy values from `pnpm supabase:status` into `.env.local` (see `docs/runbooks/supabase.md`)
 - For local sign-up confirmation, use Inbucket at `http://localhost:54324`
-  await act(async () => {
-    isValid = await result.current.trigger();
-  });
-  expect(isValid!).toBe(false);
-});
-```
 
 ### Submission testing
 
