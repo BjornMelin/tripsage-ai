@@ -59,7 +59,7 @@ export function HotelCard({
   return (
     <Card
       className={cn(
-        "relative transition-all duration-200 hover:shadow-lg",
+        "relative transition-[box-shadow,opacity] duration-200 hover:shadow-lg",
         isOptimisticSelecting && "opacity-75",
         viewMode === "list" ? "overflow-hidden" : "h-full"
       )}
