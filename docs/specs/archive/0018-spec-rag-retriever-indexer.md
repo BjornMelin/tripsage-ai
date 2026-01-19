@@ -4,6 +4,9 @@
 **Status**: Implemented
 **Date**: 2025-12-12
 
+> **Note:** This spec is archived. For the current, canonical Memory + RAG design, see `docs/specs/active/0104-spec-memory-and-rag.md`.
+> Implementation detail update: `public.rag_documents` uses a composite primary key `(id, chunk_index)` (not `id` alone).
+
 ## Overview
 
 - Goal: Define KISS/DRY retriever/indexer contracts for Supabase Postgres + pgvector, hybrid search, and AI SDK v6 Reranking. Ensure reliability, observability, and testability.

@@ -261,7 +261,7 @@ Standard workflow:
   - `pnpm supabase:reset:dev` (for local UI dev)
   - `pnpm supabase:reset:e2e` (for Playwright)
 - Copy values from `pnpm supabase:status` into `.env.local` (see `docs/runbooks/supabase.md`)
-- For local sign-up confirmation, use Inbucket at `http://localhost:54324`
+- For local sign-up confirmation, use Inbucket/Mailpit at `http://localhost:54324`
 
 ### Submission testing
 
