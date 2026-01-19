@@ -36,13 +36,15 @@ pnpm install
 1) Copy env templates:
 
     ```bash
-    cp .env.example .env
+    cp .env.local.example .env.local
     cp .env.test.example .env.test
     ```
 
 2) Set minimum variables to boot Next.js + tests:
 
 ```bash
+# Put these in `.env.local` for Next.js local development.
+
 # URLs
 APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000

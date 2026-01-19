@@ -1,8 +1,8 @@
 # SPEC-0107: Jobs and webhooks (Supabase + QStash)
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Status**: Final  
-**Date**: 2026-01-05
+**Date**: 2026-01-19
 
 ## Goals
 
@@ -71,6 +71,13 @@ Jobs (QStash workers):
 
 - Configure a QStash DLQ for your topic/endpoint to retain failed messages after retries.
 - Operators can **republish** or **delete** DLQ messages from the Upstash Console.
+
+## Third-party webhooks (Stripe)
+
+Stripe webhooks follow the same guardrail posture (bounded raw body reads, signature verification, idempotency, rate limiting, telemetry), but are documented separately as payments infrastructure:
+
+- SPEC-0111: `docs/specs/active/0111-spec-payments-and-stripe.md`
+- ADR-0070: `docs/architecture/decisions/adr-0070-stripe-webhook-verification-and-idempotency.md`
 
 ## References
 

@@ -174,7 +174,7 @@ kubectl get pods -l app=tripsage-ai
 ### Environment Configuration
 
 | Variable | Description | Required |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |

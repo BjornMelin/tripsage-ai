@@ -27,7 +27,7 @@ architectural decision made along with its context and consequences.
 ## Decision Log
 
 | ADR | Title | Status | Date |
-|-----|-------|--------|------|
+| :--- | :--- | :--- | :--- |
 | [ADR-0002](adr-0002-supabase-platform.md) | Adopt Supabase as Primary Database and Auth Platform | Accepted | 2025-06-17 |
 | [ADR-0007](adr-0007-testing-strategy.md) | Modern Testing Strategy with Vitest and Playwright | Accepted | 2025-06-17 |
 | [ADR-0009](adr-0009-consolidate-ci-to-two-workflows-and-remove-custom-composites.md) | Consolidate CI to two workflows and remove custom composites | Proposed | 2025-10-18 |
@@ -80,13 +80,16 @@ architectural decision made along with its context and consequences.
 | [ADR-0067](adr-0067-upstash-redis-qstash-rate-limit-and-jobs.md) | Upstash Redis/QStash rate limits and jobs | Accepted | 2026-01-05 |
 | [ADR-0068](adr-0068-security-headers-csp-botid-and-abuse-controls.md) | Security headers, CSP, BotID, and abuse controls | Accepted | 2026-01-05 |
 | [ADR-0069](adr-0069-repo-structure-feature-first-and-server-only-boundaries.md) | Repo structure (feature-first) and server-only boundaries | Accepted | 2026-01-05 |
+| [ADR-0070](adr-0070-stripe-webhook-verification-and-idempotency.md) | Stripe webhook verification and idempotency (Next.js Route Handlers) | Accepted | 2026-01-19 |
+| [ADR-0071](adr-0071-unknown-errors-and-client-error-boundaries.md) | Unknown thrown values and client error boundary policy | Accepted | 2026-01-19 |
+| [ADR-0072](adr-0072-2026-01-19-dependency-upgrade-batch.md) | Dependency upgrade batch (2026-01-19) | Accepted | 2026-01-19 |
 
 ## Superseded ADRs
 
 The following ADRs have been superseded by newer decisions:
 
 | ADR | Title | Superseded By | Date |
-|-----|-------|---------------|------|
+| :--- | :--- | :--- | :--- |
 | [ADR-0001](superseded/adr-0001-langgraph-orchestration.md) | Use LangGraph for Agent Orchestration | - | 2025-06-17 |
 | [ADR-0004](superseded/adr-0004-fastapi-backend.md) | FastAPI as Backend Framework | ADR-0013 / ADR-0023 | 2025-06-17 |
 | [ADR-0005](superseded/adr-0005-nextjs-react19.md) | Next.js 15 with React 19 for Frontend | ADR-0013 | 2025-06-17 |
@@ -134,6 +137,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0057: Search Filter Panel System
 - ADR-0059: BotID Integration for Chat and Agent Endpoints
 - ADR-0060: Supabase Storage for Chat Attachments
+- ADR-0071: Unknown thrown values and client error boundary policy
 
 ### Backend
 
@@ -155,6 +159,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0024: BYOK Routes and Security (Next.js + Supabase Vault)
 - ADR-0032: Centralized Rate Limiting
 - ADR-0048: QStash Retries and Idempotency for Webhooks/Tasks
+- ADR-0070: Stripe webhook verification and idempotency (Next.js Route Handlers)
 
 ### Data
 
@@ -167,6 +172,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0007: Modern Testing Strategy with Vitest and Playwright
 - ADR-0009: Consolidate CI to two workflows and remove custom composites
 - ADR-0022: Standardize Python Test Suite Foundations
+- ADR-0072: Dependency upgrade batch (2026-01-19)
 
 ## Creating a New ADR
 

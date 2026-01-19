@@ -16,6 +16,12 @@ This is the canonical entry point for Architecture Decision Records (ADRs).
 - [ADR-0068: Security headers, CSP, BotID, and abuse controls](adr-0068-security-headers-csp-botid-and-abuse-controls.md)
 - [ADR-0069: Repo structure (feature-first) and server-only boundaries](adr-0069-repo-structure-feature-first-and-server-only-boundaries.md)
 
+## Post-baseline ADR updates (2026-01-19)
+
+- [ADR-0070: Stripe webhook verification and idempotency (Next.js Route Handlers)](adr-0070-stripe-webhook-verification-and-idempotency.md)
+- [ADR-0071: Unknown thrown values and client error boundary policy](adr-0071-unknown-errors-and-client-error-boundaries.md)
+- [ADR-0072: Dependency upgrade batch (2026-01-19)](adr-0072-2026-01-19-dependency-upgrade-batch.md)
+
 ## Historical ADR log
 
 For the full historical list (including superseded decisions), see

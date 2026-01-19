@@ -86,7 +86,9 @@ export const GET = withApiGuards({
 
 - Primary keys: `BIGINT GENERATED ALWAYS AS IDENTITY` for relational tables; UUIDs for external-facing IDs and webhook/file records.
 - Timestamp columns are timezone-aware (`TIMESTAMPTZ`) with `created_at`/`updated_at` defaults.
+- TIMESTAMPTZ values serialize as ISO 8601 strings and may include explicit timezone offsets (e.g., `+00:00`); runtime validation must accept offsets (see ADR-0063 and `primitiveSchemas.isoDateTime`).
 - Status/enum fields constrained via `CHECK` clauses; metadata kept in bounded `JSONB` columns only where flexibility is required.
+  - When `JSONB` columns are nullable, runtime schemas must model `Json | null` to match generated Supabase types.
 
 ## Security & RLS
 
@@ -138,7 +140,7 @@ Keys are never exposed client-side; all resolution occurs server-side via `"serv
 ## Extensions
 
 | Extension | Purpose | Notes |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `vector` | Embedding storage + indexes for semantic search (1536 dims) | Schema: `extensions`; uses ivfflat for accommodation_embeddings |
 | `pgcrypto` | `gen_random_uuid()` and hashing | Required for UUID PKs |
 | `pg_trgm` | Fuzzy search and text search helpers | Used in search tables |
@@ -183,7 +185,7 @@ All memory tables have owner-only RLS policies (`auth.uid() = user_id`).
 Database triggers post to Vercel route handlers on table changes:
 
 | Webhook | Trigger Tables | Route | Purpose |
-|---------|---------------|-------|---------|
+| :--- | :--- | :--- | :--- |
 | Trips | `trip_collaborators` | `/api/hooks/trips` | Trip collaboration sync via QStash |
 | Cache | `trips`, `flights`, `accommodations`, `search_*`, `chat_*` | `/api/hooks/cache` | Invalidate Upstash cache tags |
 | Files | `file_attachments` | `/api/hooks/files` | Process uploads |

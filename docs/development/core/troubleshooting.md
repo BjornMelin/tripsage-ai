@@ -100,6 +100,10 @@ Release automation expectations (semantic-release):
 - Check Supabase dashboard logs
 - Verify client credentials
 - Confirm redirect URIs match
+- Local dev email confirmations:
+  - Supabase local is configured with Inbucket (see `supabase/config.toml` `[inbucket]`); open `http://localhost:54324` and click the confirmation link instead of manually editing the database.
+  - If confirmations are enabled (`[auth.email].enable_confirmations = true`), new users must confirm before authenticated app flows work.
+  - Only as a last resort (local-only), you can mark a user as confirmed via Supabase Studio or SQL; do not carry this habit to production environments.
 
 #### Database Connection Issues
 

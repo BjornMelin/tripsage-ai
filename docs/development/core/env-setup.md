@@ -1,6 +1,11 @@
 # Environment Setup Guide (local development)
 
-Copy the root `.env.example` to `.env`, then follow the checklists below to populate every variable. Copy root `.env.test.example` to `.env.test` for local/CI test runs. All service-specific env files are derived from the root templates.
+For local Next.js development, copy the root `.env.local.example` to `.env.local`, then follow the checklists below to populate the required variables. Copy `.env.test.example` to `.env.test` for local/CI test runs.
+
+Notes:
+
+- `.env.example` remains the canonical reference template for deployment/onboarding, but Next.js local development should use `.env.local`.
+- Never commit `.env.local` (it contains secrets); commit templates only.
 
 ## Core & Supabase
 
