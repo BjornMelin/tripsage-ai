@@ -1,3 +1,9 @@
+## [1.26.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.25.0...v1.26.0) (2026-01-19)
+
+### Features
+
+* display and redact provider metadata for tool calls in chat messages, update AI SDK dependencies, and add related tests. ([de70146](https://github.com/BjornMelin/tripsage-ai/commit/de70146221c035cc8ffb8a3f1935944bc10761e6))
+
 ## [1.25.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.24.0...v1.25.0) (2026-01-10)
 
 ### Features
