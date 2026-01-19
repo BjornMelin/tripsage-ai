@@ -289,7 +289,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
 
           <div className="space-y-3">
             <Button onClick={beginEnrollment} disabled={isPending}>
-              {isPending ? "Working..." : "Start TOTP enrollment"}
+              {isPending ? "Working…" : "Start TOTP enrollment"}
             </Button>
             {factorId && (
               <Button variant="outline" onClick={resendChallenge} disabled={isPending}>
@@ -421,7 +421,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                 disabled={isPending || isRefreshing}
                 onClick={handleRefreshFactors}
               >
-                {isRefreshing ? "Refreshing..." : "Refresh"}
+                {isRefreshing ? "Refreshing…" : "Refresh"}
               </Button>
             </div>
             {factorList.length > 0 ? (

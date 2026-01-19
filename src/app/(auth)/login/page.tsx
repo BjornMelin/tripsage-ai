@@ -16,16 +16,22 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; next?: string; error?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
+  // biome-ignore lint/complexity/useLiteralKeys: query param uses snake_case
+  const errorCode = params["error_code"];
   const redirectTo = params.from || params.next || "/dashboard";
   const errorMessage =
     params.error === "oauth_failed"
       ? "OAuth sign-in failed. Please try again."
-      : params.error
-        ? "Sign-in failed. Please try again."
-        : null;
+      : params.error === "auth_confirm_failed" && errorCode === "otp_expired"
+        ? "This email link has expired. Please request a new confirmation email."
+        : params.error === "auth_confirm_failed"
+          ? "Email confirmation failed. Please try again."
+          : params.error
+            ? "Sign-in failed. Please try again."
+            : null;
 
   return (
     <div className="min-h-screen flex">

@@ -12,7 +12,7 @@ vi.mock("@ai-sdk/react", () => ({
   }) => {
     queueMicrotask(() => {
       onData?.({
-        data: { kind: "start", label: "Thinking..." },
+        data: { kind: "start", label: "Thinking…" },
         type: "data-status",
       });
     });
@@ -41,6 +41,6 @@ describe("ChatClient streaming status", () => {
     render(<ChatClient />);
 
     const status = await screen.findByTestId("chat-stream-status");
-    expect(status).toHaveTextContent("Thinking...");
+    expect(status).toHaveTextContent("Thinking…");
   });
 });

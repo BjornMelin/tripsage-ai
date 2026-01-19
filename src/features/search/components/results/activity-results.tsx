@@ -347,7 +347,7 @@ export function ActivityResults({
             disabled={isPending || isLoadingMore}
             onClick={handleLoadMore}
           >
-            {isLoadingMore ? "Loading more..." : "Load More Activities"}
+            {isLoadingMore ? "Loading more…" : "Load More Activities"}
           </Button>
         </Card>
       )}

@@ -343,7 +343,7 @@ export function AccountSettingsSection() {
                   onClick={handleEmailVerification}
                   disabled={isVerifyingEmail}
                 >
-                  {isVerifyingEmail ? "Sending..." : "Send Verification"}
+                  {isVerifyingEmail ? "Sending…" : "Send Verification"}
                 </Button>
               </div>
             </div>
@@ -371,7 +371,7 @@ export function AccountSettingsSection() {
                 )}
               />
               <Button type="submit" disabled={emailForm.formState.isSubmitting}>
-                {emailForm.formState.isSubmitting ? "Updating..." : "Update Email"}
+                {emailForm.formState.isSubmitting ? "Updating…" : "Update Email"}
               </Button>
             </form>
           </Form>
@@ -483,7 +483,7 @@ export function AccountSettingsSection() {
                   onClick={handleAccountDeletion}
                   disabled={isDeletingAccount}
                 >
-                  {isDeletingAccount ? "Deleting..." : "Yes, delete my account"}
+                  {isDeletingAccount ? "Deleting…" : "Yes, delete my account"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

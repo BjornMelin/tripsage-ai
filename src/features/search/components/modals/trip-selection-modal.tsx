@@ -147,7 +147,7 @@ export function TripSelectionModal({
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedTripId || isAdding}>
-            {isAdding ? "Adding..." : "Add to Trip"}
+            {isAdding ? "Adding…" : "Add to Trip"}
           </Button>
         </DialogFooter>
       </DialogContent>

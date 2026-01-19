@@ -413,7 +413,7 @@ export function InfiniteQueryStateHandler<TData = unknown>({
               {isFetchingNextPage ? (
                 <>
                   <Loader2Icon className="h-4 w-4 animate-spin mr-2" />
-                  Loading...
+                  Loading…
                 </>
               ) : (
                 "Load More"

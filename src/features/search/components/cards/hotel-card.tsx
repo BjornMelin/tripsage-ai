@@ -268,7 +268,7 @@ export function HotelCard({
                 disabled={isPending || isOptimisticSelecting}
                 className="w-full"
               >
-                {isOptimisticSelecting ? "Selecting..." : "View Details"}
+                {isOptimisticSelecting ? "Selecting…" : "View Details"}
               </Button>
 
               {hotel.availability.flexible && (

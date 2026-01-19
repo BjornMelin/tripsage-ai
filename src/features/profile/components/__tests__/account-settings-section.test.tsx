@@ -180,6 +180,6 @@ describe("AccountSettingsSection", () => {
     });
 
     // Check for loading text
-    expect(screen.getByText("Updating...")).toBeInTheDocument();
+    expect(screen.getByText("Updating…")).toBeInTheDocument();
   });
 });

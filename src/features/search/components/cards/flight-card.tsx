@@ -268,7 +268,7 @@ export function FlightCard({
                   className="w-full"
                   size={viewMode === "grid" ? "sm" : "default"}
                 >
-                  {isOptimisticSelecting ? "Selecting..." : "Select Flight"}
+                  {isOptimisticSelecting ? "Selecting…" : "Select Flight"}
                 </Button>
 
                 <Button

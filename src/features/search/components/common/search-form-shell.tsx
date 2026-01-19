@@ -121,7 +121,7 @@ export function SearchFormShell<
   telemetryErrorMetadata,
   error,
   submitLabel = "Search",
-  loadingLabel = "Searching...",
+  loadingLabel = "Searching…",
   disabled = false,
   disableSubmitWhenInvalid = false,
   className,

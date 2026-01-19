@@ -7,7 +7,7 @@ import { z } from "zod";
 /**
  * Base primitive schemas with enhanced validation (Zod v4 patterns)
  * Uses top-level helpers: z.email(), z.uuid(), z.url(), z.iso.datetime()
- * Uses unified error option: { error: "..." }
+ * Uses unified error option: { error: "…" }
  */
 export const primitiveSchemas = {
   email: z.email({ error: "Invalid email address" }),

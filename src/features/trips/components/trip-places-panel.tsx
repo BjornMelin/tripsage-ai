@@ -195,7 +195,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                     fireAndForget(performSearch());
                   }
                 }}
-                placeholder='Try "coffee", "museum", "sushi", "bookstore"...'
+                placeholder='Try "coffee", "museum", "sushi", "bookstore"…'
                 className="pl-9"
                 aria-label="Search places"
               />

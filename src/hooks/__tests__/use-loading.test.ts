@@ -23,23 +23,23 @@ describe("useLoading", () => {
     const { result } = renderHook(() =>
       useLoading({
         initialLoading: true,
-        initialMessage: "Initial loading...",
+        initialMessage: "Initial loading…",
       })
     );
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.message).toBe("Initial loading...");
+    expect(result.current.message).toBe("Initial loading…");
   });
 
   it("starts loading", () => {
     const { result } = renderHook(() => useLoading());
 
     act(() => {
-      result.current.startLoading("Loading data...");
+      result.current.startLoading("Loading data…");
     });
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.message).toBe("Loading data...");
+    expect(result.current.message).toBe("Loading data…");
     expect(result.current.error).toBeUndefined();
   });
 
@@ -130,12 +130,12 @@ describe("useLoading", () => {
     const { result } = renderHook(() => useLoading());
 
     act(() => {
-      result.current.startLoading("Loading...");
+      result.current.startLoading("Loading…");
       result.current.setProgress(75);
     });
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.message).toBe("Loading...");
+    expect(result.current.message).toBe("Loading…");
     expect(result.current.progress).toBe(75);
 
     act(() => {
@@ -273,7 +273,7 @@ describe("useDebouncedLoading", () => {
     const { result } = renderHook(() => useDebouncedLoading(300));
 
     act(() => {
-      result.current.startLoading("Loading...");
+      result.current.startLoading("Loading…");
     });
 
     // Should not be loading immediately
@@ -285,7 +285,7 @@ describe("useDebouncedLoading", () => {
 
     // Should be loading after debounce delay
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.message).toBe("Loading...");
+    expect(result.current.message).toBe("Loading…");
   });
 
   it("debounces stop loading", () => {

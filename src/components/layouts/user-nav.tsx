@@ -113,7 +113,7 @@ export function UserNav({ user }: UserNavProps) {
               className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
               <LogOutIcon className="h-4 w-4" />
-              {isPending ? "Logging out..." : "Log out"}
+              {isPending ? "Logging out…" : "Log out"}
             </button>
           </div>
         </div>

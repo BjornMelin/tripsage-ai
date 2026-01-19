@@ -117,10 +117,10 @@ export function ConnectionStatusMonitor() {
       { label: string; tone: ToneVariant }
     > = {
       connected: { label: "Connected", tone: "active" },
-      connecting: { label: "Connecting...", tone: "pending" },
+      connecting: { label: "Connecting…", tone: "pending" },
       disconnected: { label: "Disconnected", tone: "unknown" },
       error: { label: "Error", tone: "error" },
-      reconnecting: { label: "Reconnecting...", tone: "pending" },
+      reconnecting: { label: "Reconnecting…", tone: "pending" },
     };
 
     const config = statusMap[status];
@@ -189,7 +189,7 @@ export function ConnectionStatusMonitor() {
                 ) : (
                   <RefreshCwIcon className="h-3 w-3" />
                 )}
-                {isReconnecting ? "Reconnecting..." : "Reconnect All"}
+                {isReconnecting ? "Reconnecting…" : "Reconnect All"}
               </Button>
             </div>
 

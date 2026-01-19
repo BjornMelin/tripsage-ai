@@ -242,7 +242,7 @@ export function DestinationAutocompleteField({
                   ref(el);
                   inputRef.current = el;
                 }}
-                placeholder="Search for cities, countries, or landmarks..."
+                placeholder="Search for cities, countries, or landmarks…"
                 {...fieldProps}
                 autoComplete="off"
                 role="combobox"
@@ -317,7 +317,7 @@ export function DestinationAutocompleteField({
                   >
                     {isLoadingSuggestions ? (
                       <div className="p-3 text-sm text-gray-500">
-                        Loading suggestions...
+                        Loading suggestions…
                       </div>
                     ) : suggestionsError ? (
                       <div className="p-3 text-sm text-red-600">{suggestionsError}</div>

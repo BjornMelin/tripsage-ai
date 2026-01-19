@@ -5,5 +5,5 @@ import { PageLoading } from "@/components/ui/loading";
  * Shown when navigating between pages or during Suspense boundaries
  */
 export default function Loading() {
-  return <PageLoading message="Loading TripSage..." />;
+  return <PageLoading message="Loading TripSage…" />;
 }

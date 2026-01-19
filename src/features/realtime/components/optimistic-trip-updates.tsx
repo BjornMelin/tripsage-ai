@@ -494,7 +494,7 @@ export function OptimisticTripUpdates({
                 onChange={(e) => handleInputChange("name", e.target.value)}
                 onBlur={() => handleInputBlur("name")}
                 disabled={!canEdit}
-                placeholder="Enter trip name..."
+                placeholder="Enter trip name…"
               />
             </div>
 
@@ -512,7 +512,7 @@ export function OptimisticTripUpdates({
                 onChange={(e) => handleInputChange("destination", e.target.value)}
                 onBlur={() => handleInputBlur("destination")}
                 disabled={!canEdit}
-                placeholder="Enter destination..."
+                placeholder="Enter destination…"
               />
             </div>
 
@@ -531,7 +531,7 @@ export function OptimisticTripUpdates({
                 }
                 onBlur={() => handleInputBlur("budget")}
                 disabled={!canEdit}
-                placeholder="Enter budget..."
+                placeholder="Enter budget…"
               />
             </div>
 
@@ -551,7 +551,7 @@ export function OptimisticTripUpdates({
                 }
                 onBlur={() => handleInputBlur("travelers")}
                 disabled={!canEdit}
-                placeholder="Number of travelers..."
+                placeholder="Number of travelers…"
               />
             </div>
           </div>

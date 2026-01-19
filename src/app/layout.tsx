@@ -97,7 +97,7 @@ function AppShellFallback() {
     <div className="min-h-screen bg-background flex items-center justify-center">
       <output className="flex items-center gap-3" aria-live="polite">
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <span className="text-sm text-muted-foreground">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading…</span>
       </output>
     </div>
   );

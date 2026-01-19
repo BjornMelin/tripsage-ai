@@ -159,7 +159,7 @@ export interface IndexDocumentsParams {
  * @example
  * ```typescript
  * const result = await indexDocuments({
- *   documents: [{ content: "Travel guide...", metadata: { type: "guide" } }],
+ *   documents: [{ content: "Travel guide…", metadata: { type: "guide" } }],
  *   supabase,
  *   config: { namespace: "travel_tips", chunkSize: 512 }
  * });

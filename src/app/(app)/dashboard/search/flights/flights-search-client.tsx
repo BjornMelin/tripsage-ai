@@ -210,7 +210,7 @@ export default function FlightsSearchClient({
       if (controller.signal.aborted) return;
       if (searchId) {
         toast({
-          description: "Searching for flights...",
+          description: "Searching for flights…",
           title: "Search Started",
         });
         router.push(`${ROUTES.searchFlightsResults}?searchId=${searchId}`);

@@ -439,7 +439,7 @@ export function PreferencesSection() {
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? "Saving..." : "Save Preferences"}
+                  {form.formState.isSubmitting ? "Saving…" : "Save Preferences"}
                 </Button>
               </div>
             </form>

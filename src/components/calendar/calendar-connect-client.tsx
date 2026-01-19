@@ -80,7 +80,7 @@ export function CalendarConnectClient() {
         {isConnecting ? (
           <>
             <LoadingSpinner size="sm" className="mr-2" />
-            Connecting...
+            Connecting…
           </>
         ) : (
           "Connect Google Calendar"

@@ -131,7 +131,7 @@ describe("TripsPage", () => {
       mockTrips.mockReturnValue([]);
 
       render(<TripsPage />);
-      expect(screen.getByText("Loading your trips...")).toBeInTheDocument();
+      expect(screen.getByText("Loading your trips…")).toBeInTheDocument();
     });
 
     it("renders trips even when loading is true but data exists", () => {
@@ -151,7 +151,7 @@ describe("TripsPage", () => {
       render(<TripsPage />);
 
       expect(screen.getByTestId("trip-card-trip-loaded")).toBeInTheDocument();
-      expect(screen.queryByText("Loading your trips...")).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading your trips…")).not.toBeInTheDocument();
     });
   });
 
@@ -321,7 +321,7 @@ describe("TripsPage", () => {
 
       render(<TripsPage />);
       expect(
-        screen.getByPlaceholderText("Search trips, destinations...")
+        screen.getByPlaceholderText("Search trips, destinations…")
       ).toBeInTheDocument();
     });
 
@@ -647,7 +647,7 @@ describe("TripsPage", () => {
       mockTrips.mockReturnValue(sampleTrips);
 
       render(<TripsPage />);
-      const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
+      const searchInput = screen.getByPlaceholderText("Search trips, destinations…");
 
       await userEvent.clear(searchInput);
       await userEvent.type(searchInput, "Paris");
@@ -662,7 +662,7 @@ describe("TripsPage", () => {
       mockTrips.mockReturnValue(sampleTrips);
 
       render(<TripsPage />);
-      const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
+      const searchInput = screen.getByPlaceholderText("Search trips, destinations…");
 
       await userEvent.clear(searchInput);
       await userEvent.type(searchInput, "nonexistent");
@@ -679,7 +679,7 @@ describe("TripsPage", () => {
       mockTrips.mockReturnValue(sampleTrips);
 
       render(<TripsPage />);
-      const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
+      const searchInput = screen.getByPlaceholderText("Search trips, destinations…");
 
       await userEvent.clear(searchInput);
       await userEvent.type(searchInput, "nonexistent");

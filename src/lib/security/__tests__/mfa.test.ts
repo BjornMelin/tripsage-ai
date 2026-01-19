@@ -44,7 +44,7 @@ const mockSupabase = unsafeCast<Parameters<typeof startTotpEnrollment>[0]>({
       enroll: vi.fn(async () => ({
         data: {
           id: mockIds.factorId,
-          totp: { qr_code: "qr", secret: "secret", uri: "otpauth://..." },
+          totp: { qr_code: "qr", secret: "secret", uri: "otpauth://…" },
         },
         error: null,
       })),

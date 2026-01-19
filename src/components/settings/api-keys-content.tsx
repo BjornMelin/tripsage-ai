@@ -341,7 +341,7 @@ export function ApiKeysContent() {
               <Skeleton className="h-10 w-28 rounded-md" />
             ) : (
               <Button onClick={onSave} disabled={isBusy || !form.formState.isValid}>
-                {loading ? "Saving..." : "Save Key"}
+                {loading ? "Saving…" : "Save Key"}
               </Button>
             )}
           </div>

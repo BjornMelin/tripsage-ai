@@ -300,7 +300,7 @@ export default function TripsClient({ userId }: { userId: string }) {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">My Trips</h1>
-            <p className="text-muted-foreground">Loading your trips...</p>
+            <p className="text-muted-foreground">Loading your trips…</p>
           </div>
           <div className="flex items-center space-x-4">
             <ConnectionStatusIndicator />
@@ -423,7 +423,7 @@ export default function TripsClient({ userId }: { userId: string }) {
         <div className="relative flex-1">
           <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search trips, destinations..."
+            placeholder="Search trips, destinations…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -574,7 +574,7 @@ export default function TripsClient({ userId }: { userId: string }) {
               {deleteTripMutation.isPending ? (
                 <>
                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
+                  Deleting…
                 </>
               ) : (
                 "Delete"

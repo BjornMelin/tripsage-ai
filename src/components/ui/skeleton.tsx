@@ -78,7 +78,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
           )}
           style={inlineStyles}
           role="status"
-          aria-label="Loading content..."
+          aria-label="Loading content…"
           {...props}
         />
       );
@@ -90,7 +90,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         ref={ref}
         className={cn("space-y-2", className)}
         role="status"
-        aria-label="Loading content..."
+        aria-label="Loading content…"
         {...props}
       >
         {Array.from({ length: lines }).map((_, index) => {
