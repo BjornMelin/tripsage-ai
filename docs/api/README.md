@@ -252,10 +252,10 @@ pnpm biome:fix
 | `@ai-sdk/xai` | 3.0.26 | xAI provider |
 | `@ai-sdk/togetherai` | 2.0.13 | Together.ai provider |
 | `@supabase/ssr` | ^0.8.0 | Supabase SSR cookie handling |
-| `@supabase/supabase-js` | ^2.89.0 | Supabase client |
-| `@upstash/redis` | ^1.36.0 | Redis client |
+| `@supabase/supabase-js` | ^2.90.1 | Supabase client |
+| `@upstash/redis` | ^1.36.1 | Redis client |
 | `@upstash/ratelimit` | 2.0.7 | Rate limiting |
-| `@tanstack/react-query` | ^5.90.12 | Data fetching/caching |
-| `zod` | ^4.2.1 | Schema validation |
+| `@tanstack/react-query` | ^5.90.19 | Data fetching/caching |
+| `zod` | ^4.3.5 | Schema validation |
 | `@opentelemetry/api` | 1.9.0 | Observability |
 | `amadeus` | ^11.0.0 | Flight/hotel search |
