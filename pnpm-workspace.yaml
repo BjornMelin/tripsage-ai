@@ -1,0 +1,4 @@
+packages:
+  - "."
+  - "!opensrc/**"
+  - "!**/node_modules/**"

@@ -5,15 +5,17 @@
     "src/app/**/route.{ts,tsx}!",
     "scripts/**/*.{ts,tsx,js,mjs,cjs}"
   ],
-  "ignoreDependencies": ["import-in-the-middle", "require-in-the-middle", "shiki"],
+  "ignoreDependencies": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/github",
+    "@semantic-release/npm",
+    "@semantic-release/release-notes-generator",
+    "conventional-changelog-conventionalcommits",
+    "shiki"
+  ],
   "ignoreFiles": ["src/test/mocks/rehype-harden.ts"],
   "project": [
     "src/**/*.{ts,tsx}!",
-    "postcss.config.mjs",
-    "tailwind.config.mjs",
-    "vitest.config.ts",
-    "next.config.ts",
-    "playwright.config.ts",
     "scripts/**/*.{ts,tsx,js,mjs,cjs}",
     "e2e/**/*.{ts,tsx}",
     "!**/.next/**",
