@@ -15,11 +15,9 @@ vi.mock("ai", () => ({
   embed: mockEmbed,
 }));
 
-// Mock OpenAI provider
-vi.mock("@ai-sdk/openai", () => ({
-  openai: {
-    embeddingModel: vi.fn(() => "mock-embedding-model"),
-  },
+vi.mock("@/lib/ai/embeddings/text-embedding-model", () => ({
+  getTextEmbeddingModel: () => "mock-embedding-model",
+  TEXT_EMBEDDING_DIMENSIONS: 1536,
 }));
 
 // Mock telemetry
@@ -38,11 +36,21 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 // Mock reranker
-vi.mock("../reranker", () => ({
-  createReranker: () => ({
-    rerank: mockRerank,
-  }),
-}));
+vi.mock("../reranker", () => {
+  class NoOpReranker {
+    rerank() {
+      return [];
+    }
+  }
+
+  return {
+    createReranker: (config?: { provider?: string }) => {
+      if (config?.provider === "noop") return new NoOpReranker();
+      return { rerank: mockRerank };
+    },
+    NoOpReranker,
+  };
+});
 
 // Import after mocks
 import { retrieveDocuments, semanticSearch } from "../retriever";
