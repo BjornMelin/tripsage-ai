@@ -251,6 +251,9 @@ Use Supabase local for:
 Standard workflow:
 
 - `pnpm supabase:bootstrap` (or `pnpm supabase:start` + `pnpm supabase:db:reset`)
+- For deterministic data that covers more routes and UI surfaces:
+  - `pnpm supabase:reset:dev` (for local UI dev)
+  - `pnpm supabase:reset:e2e` (for Playwright)
 - Copy values from `pnpm supabase:status` into `.env.local` (see `docs/runbooks/supabase.md`)
 - For local sign-up confirmation, use Inbucket at `http://localhost:54324`
   await act(async () => {

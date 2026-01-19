@@ -15,6 +15,9 @@
   - `pnpm supabase:db:reset`
 - One-shot bootstrap (start + reset + print status):
   - `pnpm supabase:bootstrap`
+- Reset + seed (deterministic sample data):
+  - `pnpm supabase:reset:dev` (UI development dataset)
+  - `pnpm supabase:reset:e2e` (Playwright/E2E dataset)
 
 ## Environment variables (local)
 
@@ -27,6 +30,18 @@ Populate `.env.local` with at least:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only; never `NEXT_PUBLIC_*`)
+
+## Seed data (dev + e2e)
+
+TripSage keeps a deterministic seed script for local development and E2E testing:
+
+- `pnpm supabase:seed:dev` — creates/updates a small “realistic” dataset (trips, itinerary, saved places, chat) for UI dev
+- `pnpm supabase:seed:e2e` — creates/updates a minimal dataset with stable users for Playwright flows
+
+Notes:
+
+- Seeding requires `SUPABASE_SERVICE_ROLE_KEY` because it uses `supabase.auth.admin.*` to create confirmed users.
+- Seed data is designed to be **idempotent**: rerunning should converge to the same dataset without needing a full reset.
 
 ## Local auth email confirmations (Inbucket)
 

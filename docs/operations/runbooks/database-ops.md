@@ -18,6 +18,10 @@ Use the pinned Supabase CLI via repo scripts:
 2. Reset and apply migrations: `pnpm supabase:db:reset`
 3. Print local URLs/keys: `pnpm supabase:status`
 4. (Optional) One-shot bootstrap: `pnpm supabase:bootstrap`
+5. (Optional) Seed deterministic data:
+   - `pnpm supabase:seed:dev` (UI development dataset)
+   - `pnpm supabase:seed:e2e` (Playwright/E2E dataset)
+   - `pnpm supabase:reset:dev` / `pnpm supabase:reset:e2e` (reset + seed)
 3. (Alt) Apply canonical schema to external Postgres: `cd supabase && psql "$DATABASE_URL" -f schema.sql`
 
 Local sign-up confirmation:
