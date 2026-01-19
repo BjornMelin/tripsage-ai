@@ -38,6 +38,7 @@ import {
   assertHumanOrThrow,
   BOT_DETECTED_RESPONSE,
   isBotDetectedError,
+  isBotIdEnabledForCurrentEnvironment,
 } from "@/lib/security/botid";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -378,6 +379,7 @@ export async function enforceRateLimit(
 
     const limiter = new Ratelimit({
       analytics: false,
+      dynamicLimits: true,
       limiter: Ratelimit.slidingWindow(
         config.limit,
         config.window as Parameters<typeof Ratelimit.slidingWindow>[1]
@@ -519,7 +521,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       // Handle BotID protection if configured (after auth, before rate limiting)
       // Bot traffic shouldn't count against rate limits
-      if (botIdConfig?.mode) {
+      if (botIdConfig?.mode && isBotIdEnabledForCurrentEnvironment()) {
         try {
           await assertHumanOrThrow(
             getSafeRouteKeyForTelemetry({
