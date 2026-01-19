@@ -118,7 +118,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 **Import restrictions (scope: `src/app/api/**`):**
 
 | Rule | Required | Exceptions |
-|------|----------|------------|
+| --- | --- | --- |
 | No direct `createClient` from `@supabase/supabase-js` | `createServerSupabase()` from `@/lib/supabase/server` | Tests, QStash handlers, scripts — use shared helper or add comment |
 | No inline `NextResponse.json({ error })` | `errorResponse()` from `@/lib/next/route-helpers` | CLI tools, background handlers (non-route code) |
 
@@ -129,7 +129,7 @@ PR reviewers: enforce in `src/app/api/**`; approve exceptions with justification
 Use standardized helpers from `@/lib/api/route-helpers` for all error responses:
 
 | Status | Helper | Use Case |
-|--------|--------|----------|
+| --- | --- | --- |
 | 401 | `unauthorizedResponse()` | Missing or invalid auth |
 | 403 | `forbiddenResponse()` | Valid auth, insufficient permissions |
 | 404 | `notFoundResponse()` | Resource doesn't exist |
@@ -145,7 +145,7 @@ Use standardized helpers from `@/lib/api/route-helpers` for all error responses:
 Prefer domain-specific error classes over string matching:
 
 | Domain | Error Class | Location |
-|--------|-------------|----------|
+| --- | --- | --- |
 | Google Calendar | `GoogleCalendarApiError` | `@/lib/calendar/google` |
 | Webhooks | `WebhookError` (+ subclasses) | `@/lib/webhooks/errors` |
 | AI Tools | `ToolError` | `@ai/tools/server/errors` |
@@ -260,6 +260,17 @@ Do not return final response until all gates pass for code changes.
 
 - Use Conventional Commit messages with scopes: i.e. `feat(scope): ...`
 - Small commits and focused; group related changes.
+
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
 
 <!-- opensrc:start -->
 

@@ -20,6 +20,7 @@ export type ToolProps = {
   status?: string;
   input?: unknown;
   output?: unknown;
+  providerMetadata?: unknown;
   className?: string;
   defaultOpen?: boolean;
 };
@@ -39,12 +40,14 @@ export function Tool({
   status,
   input,
   output,
+  providerMetadata,
   className,
   defaultOpen = false,
 }: ToolProps) {
   const [open, setOpen] = useState(defaultOpen);
   const hasInput = input !== undefined;
   const hasOutput = output !== undefined;
+  const hasProviderMetadata = providerMetadata !== undefined;
 
   const badgeVariant = useMemo(() => {
     if (!status) return "secondary" as const;
@@ -63,12 +66,13 @@ export function Tool({
     >
       <CollapsibleTrigger asChild>
         <button
-          className="flex w-full items-center justify-between gap-2 px-3 py-2 hover:bg-muted/40"
+          className="flex w-full items-center justify-between gap-2 px-3 py-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           type="button"
         >
           <div className="flex items-center gap-2">
             <ChevronDownIcon
               className={cn("size-3.5 transition-transform", open ? "rotate-180" : "")}
+              aria-hidden="true"
             />
             <span className="font-medium">{name}</span>
             {status ? (
@@ -80,13 +84,19 @@ export function Tool({
           <span className="text-[10px] opacity-70">{open ? "Hide" : "Show"}</span>
         </button>
       </CollapsibleTrigger>
-      {hasInput || hasOutput ? (
+      {hasInput || hasOutput || hasProviderMetadata ? (
         <CollapsibleContent className="space-y-2 border-t px-3 py-2">
           {open && hasInput ? (
             <CodeBlock label="Input" value={formatValue(input)} />
           ) : null}
           {open && hasOutput ? (
             <CodeBlock label="Output" value={formatValue(output)} />
+          ) : null}
+          {open && hasProviderMetadata ? (
+            <CodeBlock
+              label="Provider metadata"
+              value={formatValue(providerMetadata)}
+            />
           ) : null}
         </CollapsibleContent>
       ) : null}
