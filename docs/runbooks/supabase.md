@@ -13,6 +13,8 @@
   - `pnpm supabase:stop`
 - Reset database (re-applies `supabase/migrations/*` + `supabase/seed.sql`):
   - `pnpm supabase:db:reset`
+- One-shot bootstrap (start + reset + print status):
+  - `pnpm supabase:bootstrap`
 
 ## Environment variables (local)
 
@@ -25,6 +27,14 @@ Populate `.env.local` with at least:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only; never `NEXT_PUBLIC_*`)
+
+## Local auth email confirmations (Inbucket)
+
+Supabase local is configured with Inbucket (`supabase/config.toml` `[inbucket]`):
+
+- Inbox UI: `http://localhost:54324`
+- When signing up locally, open the Inbucket inbox and click the confirmation link.
+- Avoid “manual DB confirmation” hacks; they are easy to forget and don’t reflect production behavior.
 
 ## Type generation
 

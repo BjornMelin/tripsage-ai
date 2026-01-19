@@ -39,6 +39,7 @@
     "supabase:stop": "pnpm dlx supabase@2.71.0 stop",
     "supabase:status": "pnpm dlx supabase@2.71.0 status",
     "supabase:db:reset": "pnpm dlx supabase@2.71.0 db reset",
+    "supabase:bootstrap": "pnpm supabase:start && pnpm supabase:db:reset && pnpm supabase:status",
     "supabase:typegen": "pnpm dlx supabase@2.71.0 gen types typescript --local --schema auth,public,memories,storage > src/lib/supabase/database.types.ts",
     "ops": "tsx scripts/ops.ts",
     "test:analyze": "pnpm ops test analyze failures",

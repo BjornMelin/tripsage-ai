@@ -238,6 +238,21 @@ it("validates all fields with trigger()", async () => {
     useZodForm({ schema, defaultValues: { title: "" }, mode: "onChange" })
   );
   let isValid: boolean;
+
+## Supabase local (when needed)
+
+Most unit/component/API tests do **not** require a running database because Supabase calls are mocked or handled via MSW.
+
+Use Supabase local for:
+
+- Playwright E2E flows that sign in and mutate real data
+- Any integration tests that intentionally hit PostgREST/RPC endpoints
+
+Standard workflow:
+
+- `pnpm supabase:bootstrap` (or `pnpm supabase:start` + `pnpm supabase:db:reset`)
+- Copy values from `pnpm supabase:status` into `.env.local` (see `docs/runbooks/supabase.md`)
+- For local sign-up confirmation, use Inbucket at `http://localhost:54324`
   await act(async () => {
     isValid = await result.current.trigger();
   });

@@ -12,9 +12,18 @@ Task-focused guide for Supabase operations. For schema/design context, see `../.
 
 ### Local Dev Stack
 
-1. Start services: `supabase start`
-2. Reset and apply migrations: `supabase db reset`
+Use the pinned Supabase CLI via repo scripts:
+
+1. Start services: `pnpm supabase:start`
+2. Reset and apply migrations: `pnpm supabase:db:reset`
+3. Print local URLs/keys: `pnpm supabase:status`
+4. (Optional) One-shot bootstrap: `pnpm supabase:bootstrap`
 3. (Alt) Apply canonical schema to external Postgres: `cd supabase && psql "$DATABASE_URL" -f schema.sql`
+
+Local sign-up confirmation:
+
+- Supabase local uses Inbucket by default (see `supabase/config.toml` `[inbucket]`).
+- Open `http://localhost:54324` and click the confirmation link for the user you created.
 
 ### New Supabase Project
 
