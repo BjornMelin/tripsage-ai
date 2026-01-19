@@ -79,6 +79,14 @@ describe("getCachedJson", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when Redis throws", async () => {
+    mockRedisGet.mockRejectedValueOnce(new Error("boom"));
+
+    const result = await getCachedJson("throwing-key");
+
+    expect(result).toBeNull();
+  });
+
   it("handles complex nested objects", async () => {
     const complexData = {
       array: [1, 2, 3],
@@ -135,6 +143,14 @@ describe("getCachedJsonSafe", () => {
     });
   });
 
+  it("returns unavailable status when Redis throws", async () => {
+    mockRedisGet.mockRejectedValueOnce(new Error("boom"));
+
+    const result = await getCachedJsonSafe("throwing-key");
+
+    expect(result).toEqual({ status: "unavailable" });
+  });
+
   it("validates data against Zod schema when provided", async () => {
     const schema = z.strictObject({
       id: z.number().int(),
@@ -176,6 +192,14 @@ describe("setCachedJson", () => {
     await setCachedJson("test-key", { data: "test" });
 
     expect(mockRedisSet).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when Redis throws", async () => {
+    mockRedisSet.mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      setCachedJson("throwing-key", { data: "test" })
+    ).resolves.toBeUndefined();
   });
 
   it("sets JSON-stringified value without TTL", async () => {
@@ -248,6 +272,12 @@ describe("deleteCachedJson", () => {
     expect(mockRedisDel).not.toHaveBeenCalled();
   });
 
+  it("does not throw when Redis throws", async () => {
+    mockRedisDel.mockRejectedValueOnce(new Error("boom"));
+
+    await expect(deleteCachedJson("throwing-key")).resolves.toBeUndefined();
+  });
+
   it("deletes the specified key", async () => {
     await deleteCachedJson("delete-me");
 
@@ -276,6 +306,14 @@ describe("deleteCachedJsonMany", () => {
 
     expect(result).toBe(0);
     expect(mockRedisDel).not.toHaveBeenCalled();
+  });
+
+  it("returns 0 when Redis throws", async () => {
+    mockRedisDel.mockRejectedValueOnce(new Error("boom"));
+
+    const result = await deleteCachedJsonMany(["key1", "key2"]);
+
+    expect(result).toBe(0);
   });
 
   it("deletes multiple keys and returns count", async () => {

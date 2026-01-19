@@ -129,8 +129,8 @@ Cache helpers in `src/lib/cache/upstash.ts` emit spans:
 | Span name | Operation | Notes |
 | :--- | :--- | :--- |
 | `cache.get` | get | Sets `cache.hit` and `cache.parse_error` |
-| `cache.get_safe` | get | Sets `cache.status` (`hit`/`miss`/`invalid`), `cache.has_schema`, and `cache.validation_failed` |
-| `cache.set` | set | Sets `cache.ttl_seconds` and `cache.value_bytes` |
+| `cache.get_safe` | get | Sets `cache.status` (`hit`/`miss`/`invalid`/`unavailable`), `cache.has_schema`, and `cache.validation_failed` |
+| `cache.set` | set | Sets `cache.ttl_seconds` and `cache.value_bytes` (and `cache.status=unavailable` on errors) |
 | `cache.delete` | delete | Sets `cache.deleted_count` |
 | `cache.delete_many` | delete | Sets `cache.key_count` and `cache.deleted_count` |
 
@@ -140,9 +140,14 @@ Common attributes:
 - `cache.operation`: `"get" | "set" | "delete"`
 - `cache.namespace`: low-cardinality namespace derived from the key
 - `cache.key_length`: key length (we intentionally do not record raw keys)
-- `cache.unavailable`: `true` when Redis is not configured
+- `cache.status`: `"unavailable"` when Redis is not configured or when a Redis operation throws (helpers fail open; callers treat this as a cache miss)
+- `cache.error_name`: error class name when a Redis operation throws (no raw keys recorded)
 - `cache.has_schema`: `true` when a schema is provided (`cache.get_safe`)
 - `cache.validation_failed`: `true` when schema validation fails (`cache.get_safe`)
+
+Notes:
+
+- Redis command errors from Upstash may include full command payloads (including keys). The cache helpers sanitize these error messages before recording them in telemetry to avoid leaking keys.
 
 ### QStash
 

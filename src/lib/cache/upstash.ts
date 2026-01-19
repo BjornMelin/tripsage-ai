@@ -4,7 +4,8 @@
 
 import type { z } from "zod";
 import { getRedis } from "@/lib/redis";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import type { Span } from "@/lib/telemetry/span";
+import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 
 type CacheTelemetryOptions = {
   namespace?: string;
@@ -26,6 +27,23 @@ function deriveCacheNamespace(key: string): string {
   if (candidate.length > 32) return "unknown";
   if (!/^[a-z][a-z0-9_-]*$/i.test(candidate)) return "unknown";
   return candidate.toLowerCase();
+}
+
+function sanitizeUpstashErrorMessage(message: string): string {
+  const commandIndex = message.indexOf(", command was:");
+  if (commandIndex === -1) return message;
+  return message.slice(0, commandIndex).trim();
+}
+
+function captureCacheErrorOnSpan(span: Span, error: unknown): void {
+  const errorName = error instanceof Error ? error.name : "UnknownError";
+  const errorMessageRaw = error instanceof Error ? error.message : String(error);
+  const errorMessage = sanitizeUpstashErrorMessage(errorMessageRaw);
+
+  span.setAttribute("cache.status", "unavailable");
+  span.setAttribute("cache.error_name", errorName);
+
+  recordErrorOnSpan(span, new Error(errorMessage));
 }
 
 /**
@@ -77,7 +95,13 @@ export function getCachedJson<T>(
 
       // We store JSON strings via JSON.stringify(), so we need to parse them manually.
       // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
-      const raw = await redis.get<string>(key);
+      let raw: string | null;
+      try {
+        raw = await redis.get<string>(key);
+      } catch (error) {
+        captureCacheErrorOnSpan(span, error);
+        return null;
+      }
       if (raw === null) {
         span.setAttribute("cache.hit", false);
         return null;
@@ -145,7 +169,13 @@ export function getCachedJsonSafe<T>(
 
       // We store JSON strings via JSON.stringify(), so we need to parse them manually.
       // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
-      const raw = await redis.get<string>(key);
+      let raw: string | null;
+      try {
+        raw = await redis.get<string>(key);
+      } catch (error) {
+        captureCacheErrorOnSpan(span, error);
+        return { status: "unavailable" as const };
+      }
       if (raw === null) {
         span.setAttribute("cache.status", "miss");
         return { status: "miss" as const };
@@ -222,11 +252,15 @@ export function setCachedJson(
 
       const payload = JSON.stringify(value);
       span.setAttribute("cache.value_bytes", payload.length);
-      if (ttlSeconds && ttlSeconds > 0) {
-        await redis.set(key, payload, { ex: ttlSeconds });
-        return;
+      try {
+        if (ttlSeconds && ttlSeconds > 0) {
+          await redis.set(key, payload, { ex: ttlSeconds });
+          return;
+        }
+        await redis.set(key, payload);
+      } catch (error) {
+        captureCacheErrorOnSpan(span, error);
       }
-      await redis.set(key, payload);
     }
   );
 }
@@ -265,8 +299,12 @@ export function deleteCachedJson(
         span.setAttribute("cache.status", "unavailable");
         return;
       }
-      const deleted = await redis.del(key);
-      span.setAttribute("cache.deleted_count", deleted);
+      try {
+        const deleted = await redis.del(key);
+        span.setAttribute("cache.deleted_count", deleted);
+      } catch (error) {
+        captureCacheErrorOnSpan(span, error);
+      }
     }
   );
 }
@@ -313,9 +351,14 @@ export function deleteCachedJsonMany(
         return 0;
       }
       if (keys.length === 0) return 0;
-      const deleted = await redis.del(...keys);
-      span.setAttribute("cache.deleted_count", deleted);
-      return deleted;
+      try {
+        const deleted = await redis.del(...keys);
+        span.setAttribute("cache.deleted_count", deleted);
+        return deleted;
+      } catch (error) {
+        captureCacheErrorOnSpan(span, error);
+        return 0;
+      }
     }
   );
 }

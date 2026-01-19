@@ -1,6 +1,6 @@
 # ADR-0003: Use Upstash Redis (HTTP) for Caching
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Status**: Accepted
 **Date**: 2025-10-22
 **Category**: platform
@@ -28,6 +28,8 @@
 - `@upstash/redis` provides `set`, `get`, `mget/mset`, `expire/ttl`, `incr/decr`.
 - Rate limiting via `Ratelimit.slidingWindow()` from `@upstash/ratelimit`.
 - Health via `ping()`. Errors propagate as service errors.
+- JSON caching in `src/lib/cache/upstash.ts` is best-effort: cache get/set/delete failures are recorded in telemetry and treated as `miss/unavailable` (fail open) so callers can continue without Redis.
+- For correctness-critical operations (e.g., strict rate limiting or idempotency), routes/modules may choose fail-closed behavior instead of fail-open caching.
 - docs/ and docker/ updated to remove Dragonfly.
 
 ## References
@@ -39,5 +41,6 @@
 
 ## Changelog
 
+- 1.2.0 (2026-01-19) — Clarified fail-open behavior for JSON caching helpers; noted fail-closed exceptions for correctness-critical features.
 - 1.1.0 (2025-11-18) — Updated for TypeScript-only implementation; removed Python SDK references.
 - 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
