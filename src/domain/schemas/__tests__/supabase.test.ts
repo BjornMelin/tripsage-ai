@@ -238,6 +238,32 @@ describe("apiMetricsUpdateSchema", () => {
   });
 });
 
+describe("tripsRowSchema", () => {
+  it.concurrent("accepts nullable json fields", () => {
+    const result = supabaseSchemas.trips.row.safeParse({
+      budget: 0,
+      created_at: "2026-01-19T00:00:00.000Z",
+      currency: "USD",
+      description: null,
+      destination: "Paris, France",
+      end_date: "2026-01-26",
+      flexibility: null,
+      id: 1,
+      name: "Trip to Paris",
+      search_metadata: null,
+      start_date: "2026-01-19",
+      status: "planning",
+      tags: null,
+      travelers: 1,
+      trip_type: "leisure",
+      updated_at: "2026-01-19T00:00:00.000Z",
+      user_id: "123e4567-e89b-12d3-a456-426614174000",
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("supabaseSchemas.api_metrics", () => {
   it.concurrent("should have all schema variants", () => {
     expect(supabaseSchemas.api_metrics).toBeDefined();

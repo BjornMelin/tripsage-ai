@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA } from "./shared/person";
-import { FUTURE_DATE_SCHEMA, ISO_DATE_STRING } from "./shared/time";
+import { FUTURE_DATE_SCHEMA } from "./shared/time";
 import { tripStatusSchema, tripTypeSchema } from "./supabase";
 
 const parseIsoDateToLocalMidnight = (value: string): Date | null => {
@@ -30,8 +30,20 @@ const parseIsoDateToLocalMidnight = (value: string): Date | null => {
   return date;
 };
 
-const tripIsoDateSchema = ISO_DATE_STRING.superRefine((value, ctx) => {
-  if (!parseIsoDateToLocalMidnight(value)) {
+const TRIP_DATE_PREFIX_REGEX = /^\d{4}-\d{2}-\d{2}(?:$|T)/;
+
+const tripIsoDateSchema = z.string().superRefine((value, ctx) => {
+  const trimmed = value.trim();
+  if (!TRIP_DATE_PREFIX_REGEX.test(trimmed)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Date must be in YYYY-MM-DD format",
+    });
+    return;
+  }
+
+  const datePart = trimmed.slice(0, 10);
+  if (!parseIsoDateToLocalMidnight(datePart)) {
     ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
   }
 });

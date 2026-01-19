@@ -2,12 +2,63 @@
 
 import {
   itineraryItemUpsertSchema,
+  tripCreateSchema,
   tripSettingsFormSchema,
   tripUpdateSchema,
 } from "@schemas/trips";
 import { describe, expect, it } from "vitest";
 
 describe("trips schemas", () => {
+  describe("tripCreateSchema", () => {
+    it("accepts ISO datetime inputs by normalizing to dates", () => {
+      const result = tripCreateSchema.safeParse({
+        currency: "USD",
+        destination: "Paris, France",
+        endDate: "2026-02-10T00:00:00.000Z",
+        startDate: "2026-02-01T00:00:00.000Z",
+        status: "planning",
+        title: "Trip to Paris",
+        travelers: 1,
+        tripType: "leisure",
+        visibility: "private",
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts ISO date inputs", () => {
+      const result = tripCreateSchema.safeParse({
+        currency: "USD",
+        destination: "Tokyo, Japan",
+        endDate: "2026-02-10",
+        startDate: "2026-02-01",
+        status: "planning",
+        title: "Tokyo weekender",
+        travelers: 1,
+        tripType: "leisure",
+        visibility: "private",
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects non-ISO date strings", () => {
+      const result = tripCreateSchema.safeParse({
+        currency: "USD",
+        destination: "Tokyo, Japan",
+        endDate: "02/10/2026",
+        startDate: "02/01/2026",
+        status: "planning",
+        title: "Bad date trip",
+        travelers: 1,
+        tripType: "leisure",
+        visibility: "private",
+      });
+
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe("tripUpdateSchema", () => {
     it("accepts null description to clear", () => {
       const result = tripUpdateSchema.safeParse({ description: null });

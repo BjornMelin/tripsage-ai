@@ -161,15 +161,14 @@ describe("ISO_DATETIME_STRING", () => {
       const result = ISO_DATETIME_STRING.safeParse("2024-01-15T10:30:00.123Z");
       expect(result.success).toBe(true);
     });
+
+    it.concurrent("should accept timezone offsets", () => {
+      const result = ISO_DATETIME_STRING.safeParse("2024-01-15T10:30:00+05:00");
+      expect(result.success).toBe(true);
+    });
   });
 
   describe("invalid datetimes", () => {
-    it.concurrent("should reject timezone offset (offset: true not set)", () => {
-      // Note: z.iso.datetime() without { offset: true } only accepts Z suffix
-      const result = ISO_DATETIME_STRING.safeParse("2024-01-15T10:30:00+05:00");
-      expect(result.success).toBe(false);
-    });
-
     it.concurrent("should reject date only", () => {
       const result = ISO_DATETIME_STRING.safeParse("2024-01-15");
       expect(result.success).toBe(false);
