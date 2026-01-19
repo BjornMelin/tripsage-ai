@@ -134,8 +134,8 @@ importers:
         specifier: ^2.8.4
         version: 2.8.4
       '@upstash/ratelimit':
-        specifier: 2.0.7
-        version: 2.0.7(@upstash/redis@1.36.1)
+        specifier: 2.0.8
+        version: 2.0.8(@upstash/redis@1.36.1)
       '@upstash/redis':
         specifier: ^1.36.1
         version: 1.36.1
@@ -173,8 +173,8 @@ importers:
         specifier: ^2.2.1
         version: 2.2.1
       import-in-the-middle:
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: 2.0.4
+        version: 2.0.4
       js-tiktoken:
         specifier: ^1.0.21
         version: 1.0.21
@@ -185,8 +185,8 @@ importers:
         specifier: ^1.11.0
         version: 1.11.0
       motion:
-        specifier: ^12.25.0
-        version: 12.26.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        specifier: 12.27.0
+        version: 12.27.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next:
         specifier: ^16.1.3
         version: 16.1.3(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -203,8 +203,8 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(react@19.2.3)
       react-error-boundary:
-        specifier: ^6.0.3
-        version: 6.0.3(react@19.2.3)
+        specifier: 6.1.0
+        version: 6.1.0(react@19.2.3)
       react-hook-form:
         specifier: ^7.71.1
         version: 7.71.1(react@19.2.3)
@@ -227,8 +227,8 @@ importers:
         specifier: ^1.6.11
         version: 1.6.11(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.3)
       stripe:
-        specifier: ^20.1.2
-        version: 20.1.2(@types/node@25.0.9)
+        specifier: 20.2.0
+        version: 20.2.0(@types/node@25.0.9)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -324,8 +324,8 @@ importers:
         specifier: ^27.4.0
         version: 27.4.0
       knip:
-        specifier: ^5.80.2
-        version: 5.80.2(@types/node@25.0.9)(typescript@5.9.3)
+        specifier: 5.82.0
+        version: 5.82.0(@types/node@25.0.9)(typescript@5.9.3)
       madge:
         specifier: ^8.0.0
         version: 8.0.0(typescript@5.9.3)
@@ -2677,8 +2677,8 @@ packages:
   '@upstash/qstash@2.8.4':
     resolution: {integrity: sha512-iojHWUlRoC3M2e4XQ1NFEgC+7Orurrm5uIrPn5WilU7LvWQoocyjYBXR0VUalXkeMAmFyk4blF0EOYZY4igdIQ==}
 
-  '@upstash/ratelimit@2.0.7':
-    resolution: {integrity: sha512-qNQW4uBPKVk8c4wFGj2S/vfKKQxXx1taSJoSGBN36FeiVBBKHQgsjPbKUijZ9Xu5FyVK+pfiXWKIsQGyoje8Fw==}
+  '@upstash/ratelimit@2.0.8':
+    resolution: {integrity: sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w==}
     peerDependencies:
       '@upstash/redis': ^1.34.3
 
@@ -2985,8 +2985,8 @@ packages:
   chevrotain@11.0.3:
     resolution: {integrity: sha512-ci2iJH6LeIkvP9eJW6gpueU8cnZhv85ELY8w8WiFtNjMHA5ad6pQLaJo9mEly/9qUyCpvqX8/POVUTf18/HFdw==}
 
-  cjs-module-lexer@1.4.3:
-    resolution: {integrity: sha512-9z8TZaGM1pfswYeXrUpzPrkx8UnWYdhJclsiYMm6x/w5+nN+8Tf/LnAgfLGQCm59qAOxU8WwHEq2vNwF6i4j+Q==}
+  cjs-module-lexer@2.2.0:
+    resolution: {integrity: sha512-4bHTS2YuzUvtoLjdy+98ykbNB5jS0+07EvFNXerqZQJ89F7DI6ET7OQo/HJuW6K0aVsKA9hj9/RVb2kQVOrPDQ==}
 
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
@@ -3664,8 +3664,8 @@ packages:
     engines: {node: '>=18.3.0'}
     hasBin: true
 
-  framer-motion@12.26.0:
-    resolution: {integrity: sha512-yFatQro5/mNKVqBT/IAMq9v27z4dJsjKklnsCu7mdp2mrn78UW3mkG4qfmmLxHzh6WMts1o+A4FH4Iiomt/jFQ==}
+  framer-motion@12.27.0:
+    resolution: {integrity: sha512-gJtqOKEDJH/jrn0PpsWp64gdOjBvGX8hY6TWstxjDot/85daIEtJHl1UsiwHSXiYmJF2QXUoXP6/3gGw5xY2YA==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -3981,8 +3981,8 @@ packages:
     resolution: {integrity: sha512-YVt14UZCgsX1vZQ3gKjkWVdBdHQ6eu3MPU1TBgL1H5orXe2+jWD006WCPPtOuwlQm10NuzOW5WawiF1Q9veW8g==}
     engines: {node: '>=18.20'}
 
-  import-in-the-middle@2.0.1:
-    resolution: {integrity: sha512-bruMpJ7xz+9jwGzrwEhWgvRrlKRYCRDBrfU+ur3FcasYXLJDxTruJ//8g2Noj+QFyRBeqbpj8Bhn4Fbw6HjvhA==}
+  import-in-the-middle@2.0.4:
+    resolution: {integrity: sha512-Al0kMpa0BqfvDnxjxGlab9vdQ0vTDs82TBKrD59X9jReUoPAzSGBb6vGDzMUMFBGyyDF03RpLT4oxGn6BpASzQ==}
 
   import-meta-resolve@4.2.0:
     resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
@@ -4198,8 +4198,8 @@ packages:
   khroma@2.1.0:
     resolution: {integrity: sha512-Ls993zuzfayK269Svk9hzpeGUKob/sIgZzyHYdjQoAdQetRKpOLj+k/QQQ/6Qi0Yz65mlROrfd+Ev+1+7dz9Kw==}
 
-  knip@5.80.2:
-    resolution: {integrity: sha512-Yt7iF8Uzl7pp3mGA6yvum6PZBcbGhjasZYuqIwcIAX1jsIhGRUAK0icP0qrB6FSPBI3BpIeMHl7n9meCLO6ovg==}
+  knip@5.82.0:
+    resolution: {integrity: sha512-LNOR/TcauMdJLGZ9jdniIUpt0yy8aG/v8g31UJlb6qBvMNFY31w02hnwS8KMHEGy/X+pfxqsOLMFdm0NAJ3wWg==}
     engines: {node: '>=18.18.0'}
     hasBin: true
     peerDependencies:
@@ -4644,14 +4644,14 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  motion-dom@12.24.11:
-    resolution: {integrity: sha512-DlWOmsXMJrV8lzZyd+LKjG2CXULUs++bkq8GZ2Sr0R0RRhs30K2wtY+LKiTjhmJU3W61HK+rB0GLz6XmPvTA1A==}
+  motion-dom@12.27.0:
+    resolution: {integrity: sha512-oDjl0WoAsWIWKl3GCDxmh7GITrNjmLX+w5+jwk4+pzLu3VnFvsOv2E6+xCXeH72O65xlXsr84/otiOYQKW/nQA==}
 
   motion-utils@12.24.10:
     resolution: {integrity: sha512-x5TFgkCIP4pPsRLpKoI86jv/q8t8FQOiM/0E8QKBzfMozWHfkKap2gA1hOki+B5g3IsBNpxbUnfOum1+dgvYww==}
 
-  motion@12.26.0:
-    resolution: {integrity: sha512-dg6+O4Wei/Th9QIHqY+KnNa01T7HbcHnbPvM9qIJk20IntGikRZT80UwycKQvOEG/XqzUnbc/hdXJlnkQ+1JTQ==}
+  motion@12.27.0:
+    resolution: {integrity: sha512-5/WbUMUV0QPOlgimOKJRhKwE+/pIHBI38SVgEpsfadOa5lYDgkgJAEav7KqNahdX3i3xkvogD5JR4K41w+9Hzw==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -5126,8 +5126,8 @@ packages:
     peerDependencies:
       react: ^19.2.3
 
-  react-error-boundary@6.0.3:
-    resolution: {integrity: sha512-5guqn2UYpCFjE8UDMA8J7Kke+YSGBFrKQRJb3XdcaGZXYINZfQXgBt3ifY6MvjkN7QROc5A8zclyoSCwrcRUKw==}
+  react-error-boundary@6.1.0:
+    resolution: {integrity: sha512-02k9WQ/mUhdbXir0tC1NiMesGzRPaCsJEWU/4bcFrbY1YMZOtHShtZP6zw0SJrBWA/31H0KT9/FgdL8+sPKgHA==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
@@ -5610,8 +5610,8 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
-  stripe@20.1.2:
-    resolution: {integrity: sha512-qU+lQRRJnTxmyvglYBPE24/IepncmywsAg0GDTsTdP2pb+3e3RdREHJZjKgqCmv0phPxN/nmgNPnIPPH8w0P4A==}
+  stripe@20.2.0:
+    resolution: {integrity: sha512-m8niTfdm3nPP/yQswRWMwQxqEUcTtB3RTJQ9oo6NINDzgi7aPOadsH/fPXIIfL1Sc5+lqQFKSk7WiO6CXmvaeA==}
     engines: {node: '>=16'}
     peerDependencies:
       '@types/node': '>=16'
@@ -6996,7 +6996,7 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/api-logs': 0.209.0
-      import-in-the-middle: 2.0.1
+      import-in-the-middle: 2.0.4
       require-in-the-middle: 8.0.1
     transitivePeerDependencies:
       - supports-color
@@ -8427,7 +8427,7 @@ snapshots:
       jose: 5.10.0
       neverthrow: 7.2.0
 
-  '@upstash/ratelimit@2.0.7(@upstash/redis@1.36.1)':
+  '@upstash/ratelimit@2.0.8(@upstash/redis@1.36.1)':
     dependencies:
       '@upstash/core-analytics': 0.0.10
       '@upstash/redis': 1.36.1
@@ -8752,7 +8752,7 @@ snapshots:
       '@chevrotain/utils': 11.0.3
       lodash-es: 4.17.21
 
-  cjs-module-lexer@1.4.3: {}
+  cjs-module-lexer@2.2.0: {}
 
   class-variance-authority@0.7.1:
     dependencies:
@@ -9482,9 +9482,9 @@ snapshots:
     dependencies:
       fd-package-json: 2.0.0
 
-  framer-motion@12.26.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  framer-motion@12.27.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
-      motion-dom: 12.24.11
+      motion-dom: 12.27.0
       motion-utils: 12.24.10
       tslib: 2.8.1
     optionalDependencies:
@@ -9844,11 +9844,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  import-in-the-middle@2.0.1:
+  import-in-the-middle@2.0.4:
     dependencies:
       acorn: 8.15.0
       acorn-import-attributes: 1.9.5(acorn@8.15.0)
-      cjs-module-lexer: 1.4.3
+      cjs-module-lexer: 2.2.0
       module-details-from-path: 1.0.4
 
   import-meta-resolve@4.2.0: {}
@@ -10034,7 +10034,7 @@ snapshots:
 
   khroma@2.1.0: {}
 
-  knip@5.80.2(@types/node@25.0.9)(typescript@5.9.3):
+  knip@5.82.0(@types/node@25.0.9)(typescript@5.9.3):
     dependencies:
       '@nodelib/fs.walk': 1.2.8
       '@types/node': 25.0.9
@@ -10725,15 +10725,15 @@ snapshots:
       requirejs: 2.3.8
       requirejs-config-file: 4.0.0
 
-  motion-dom@12.24.11:
+  motion-dom@12.27.0:
     dependencies:
       motion-utils: 12.24.10
 
   motion-utils@12.24.10: {}
 
-  motion@12.26.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  motion@12.27.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
-      framer-motion: 12.26.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      framer-motion: 12.27.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tslib: 2.8.1
     optionalDependencies:
       react: 19.2.3
@@ -11175,7 +11175,7 @@ snapshots:
       react: 19.2.3
       scheduler: 0.27.0
 
-  react-error-boundary@6.0.3(react@19.2.3):
+  react-error-boundary@6.1.0(react@19.2.3):
     dependencies:
       react: 19.2.3
 
@@ -11810,7 +11810,7 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stripe@20.1.2(@types/node@25.0.9):
+  stripe@20.2.0(@types/node@25.0.9):
     dependencies:
       qs: 6.14.1
     optionalDependencies:
