@@ -31,7 +31,7 @@ Common operational env vars (non-exhaustive, names only):
 - AI gateway/providers: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `EMBEDDINGS_API_KEY`
 - Search/crawl: `FIRECRAWL_API_KEY`, `FIRECRAWL_BASE_URL`
 - Maps/weather: `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `OPENWEATHERMAP_API_KEY`
-- Payments: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- Payments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - Email: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`
 - Security: `HMAC_SECRET`, `MFA_BACKUP_CODE_PEPPER`, `TELEMETRY_AI_DEMO_KEY`, `COLLAB_WEBHOOK_URL`
 - Flags: `ENABLE_AI_DEMO`, `DEBUG`, `ANALYZE`
@@ -76,8 +76,8 @@ Database → Vercel webhooks are documented in `docs/operations/supabase-webhook
 
 ## References (full URLs)
 
-- Next.js deployment docs: https://nextjs.org/docs/app/building-your-application/deploying
-- Vercel Next.js docs: https://vercel.com/docs/frameworks/nextjs
-- Supabase docs: https://supabase.com/docs
-- Upstash docs: https://upstash.com/docs
-- Supabase CLI: https://supabase.com/docs/guides/cli
+- Next.js deployment docs: <https://nextjs.org/docs/app/building-your-application/deploying>
+- Vercel Next.js docs: <https://vercel.com/docs/frameworks/nextjs>
+- Supabase docs: <https://supabase.com/docs>
+- Upstash docs: <https://upstash.com/docs>
+- Supabase CLI: <https://supabase.com/docs/guides/cli>

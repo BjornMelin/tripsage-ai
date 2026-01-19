@@ -20,7 +20,7 @@ Copy the root `.env.example` to the target environment and fill the values (see 
 - **Feature flags**: `ENABLE_AI_DEMO` (set to `"true"` to enable demo routes)
 - **Telemetry**: `TELEMETRY_HASH_SECRET` (required in production; enables stable hashed identifiers in spans), `TELEMETRY_AI_DEMO_KEY` (required only if enabling `/api/telemetry/ai-demo`)
 - **Maps/Weather**: `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `OPENWEATHERMAP_API_KEY`
-- **Payments**: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- **Payments**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - **Email/Notifications**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `HMAC_SECRET`
 - **Travel APIs**: `DUFFEL_ACCESS_TOKEN`, `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV`
 

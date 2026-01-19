@@ -71,6 +71,7 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 
 - Stripe keys (<https://dashboard.stripe.com/apikeys>):
   - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET` (<https://dashboard.stripe.com/webhooks>)
   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
 ## Email / notifications
