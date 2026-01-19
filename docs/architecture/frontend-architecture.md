@@ -6,7 +6,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 - Next.js `^16.1.1` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
 - TypeScript `^5.9.3`, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
-- AI SDK v6 (`ai@6.0.3`, `@ai-sdk/react@3.0.3`) is the only LLM transport.
+- AI SDK v6 (`ai@6.0.39`, `@ai-sdk/react@3.0.41`) is the only LLM transport.
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
 - UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
@@ -18,7 +18,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 > Keep this list high-level to avoid docs drift; use `package.json` as the source of truth for exact semver ranges.
 
 - **Framework:** `next@^16.1.1`, `react@^19.2.3`, `typescript@^5.9.3`
-- **AI SDK v6:** `ai@6.0.3`, `@ai-sdk/react@3.0.3`, connectors `@ai-sdk/openai@3.0.1`, `@ai-sdk/anthropic@3.0.1`, `@ai-sdk/xai@3.0.1`, `@ai-sdk/togetherai@2.0.1`
+- **AI SDK v6:** `ai@6.0.39`, `@ai-sdk/react@3.0.41`, connectors `@ai-sdk/openai@3.0.12`, `@ai-sdk/anthropic@3.0.15`, `@ai-sdk/xai@3.0.26`, `@ai-sdk/togetherai@2.0.13`
 - **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.89.0`
 - **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.12`
 - **Caching/Jobs:** `@upstash/redis@^1.36.0`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@^2.8.4`
@@ -91,11 +91,11 @@ TripSage uses a **three-tier caching architecture**. Choose the right tier based
 
 ### Decision Matrix
 
-|Data Type|Access Pattern|Cache Tier|Reason|
-|:---|:---|:---|:---|
-|Per-user data|Auth required|Upstash Redis|Dynamic, user-scoped|
-|Public global data|No auth|Next.js Cache Components|HTTP-level, CDN cacheable|
-|Client state|Interactive|TanStack Query|Deduplication, SWR|
+| Data Type | Access Pattern | Cache Tier | Reason |
+| --- | --- | --- | --- |
+| Per-user data | Auth required | Upstash Redis | Dynamic, user-scoped |
+| Public global data | No auth | Next.js Cache Components | HTTP-level, CDN cacheable |
+| Client state | Interactive | TanStack Query | Deduplication, SWR |
 
 ### Tier 1: Upstash Redis (Server-side)
 

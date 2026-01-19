@@ -92,6 +92,19 @@ reason, and transient status updates to the client.
   stream transient data parts via `createUIMessageStream` + `writer.write`.
 - Enable `sendSources: true` to include `source-url` parts for citations.
 
+## Provider Metadata During Tool Input Streaming
+
+Starting with `ai@6.0.39`, provider-executed tools (e.g. MCP tools) can attach
+provider metadata while the tool call is still in `state: "input-streaming"`
+(via `callProviderMetadata` on tool parts).
+
+Guidelines:
+
+- Do not strip unknown keys from tool parts in the UI. Tool parts may include
+  `callProviderMetadata` even before inputs are fully available.
+- Prefer rendering metadata in a safe, redacted way (tokens/keys removed) when
+  surfaced to users.
+
 ## Related Docs
 
 - [AI Tools](ai-tools.md) - Tool creation with `createAiTool` factory and guardrails

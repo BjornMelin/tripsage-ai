@@ -174,7 +174,7 @@ kubectl get pods -l app=tripsage-ai
 ### Environment Configuration
 
 | Variable | Description | Required |
-|----------|-------------|----------|
+| --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
@@ -230,13 +230,13 @@ channel.subscribe()
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! See the [Development Guide](docs/development/core/development-guide.md) for the full workflow, code standards, and testing details.
 
 ---
 
-## 📈 Performance
+## Performance
 
 TripSage AI is optimized for high performance and global scalability:
 
@@ -259,7 +259,7 @@ autocannon -c 100 -d 30 http://localhost:3000/api/health
 
 ---
 
-## 🔒 Security
+## Security
 
 Zero-trust architecture with defense-in-depth security:
 
@@ -295,7 +295,7 @@ pnpm test --grep security
 
 ---
 
-## 📊 Monitoring & Observability
+## Monitoring & Observability
 
 - **Health Checks**: Endpoint monitoring with health checks
 - **Logging**: Structured logging with correlation IDs

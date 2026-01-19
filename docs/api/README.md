@@ -27,15 +27,15 @@ curl http://localhost:3000/api/dashboard
 
 ### Tech Stack
 
-| Layer                   | Technology                                       | Purpose                                                 |
-| ----------------------- | ------------------------------------------------ | ------------------------------------------------------- |
-| **Framework**           | Next.js 16                                       | Server route handlers, React Server Components          |
-| **AI**                  | AI SDK v6 (`ai@6.0.3`)                           | `streamText`, `generateObject`, tool calling, streaming |
-| **Database**            | Supabase (`@supabase/ssr@^0.8.0`)                | PostgreSQL, Row Level Security, SSR cookie handling     |
-| **Cache/Rate Limiting** | Upstash (`@upstash/redis`, `@upstash/ratelimit`) | Redis caching, sliding window rate limits               |
-| **State Management**    | TanStack Query (`@tanstack/react-query@5.x`)     | Client-side data fetching, caching, mutations           |
-| **Validation**          | Zod v4 (`zod@4.x`)                               | Request/response schema validation                      |
-| **Observability**       | OpenTelemetry (`@opentelemetry/api@1.9.0`)       | Distributed tracing, metrics                            |
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Framework** | Next.js 16 | Server route handlers, React Server Components |
+| **AI** | AI SDK v6 (`ai@6.0.39`) | `streamText`, `generateObject`, tool calling, streaming |
+| **Database** | Supabase (`@supabase/ssr@^0.8.0`) | PostgreSQL, Row Level Security, SSR cookie handling |
+| **Cache/Rate Limiting** | Upstash (`@upstash/redis`, `@upstash/ratelimit`) | Redis caching, sliding window rate limits |
+| **State Management** | TanStack Query (`@tanstack/react-query@5.x`) | Client-side data fetching, caching, mutations |
+| **Validation** | Zod v4 (`zod@4.x`) | Request/response schema validation |
+| **Observability** | OpenTelemetry (`@opentelemetry/api@1.9.0`) | Distributed tracing, metrics |
 
 ### Route Handler Pattern
 
@@ -80,10 +80,10 @@ return streamText({
 
 ### Supporting Documentation
 
-| Document                              | Description                        |
-| ------------------------------------- | ---------------------------------- |
+| Document | Description |
+| :--- | :--- |
 | **[Realtime Guide](realtime-api.md)** | Supabase Realtime private channels |
-| **[Error Codes](error-codes.md)**     | Error handling and troubleshooting |
+| **[Error Codes](error-codes.md)** | Error handling and troubleshooting |
 
 ## API Categories
 
@@ -91,127 +91,127 @@ return streamText({
 
 Streaming AI agents with tool calling for travel planning:
 
-| Endpoint                     | Method | Description                                  |
-| ---------------------------- | ------ | -------------------------------------------- |
-| `/api/agents/flights`        | POST   | Flight search agent with Amadeus integration |
-| `/api/agents/accommodations` | POST   | Accommodation search agent                   |
-| `/api/agents/destinations`   | POST   | Destination research agent                   |
-| `/api/agents/itineraries`    | POST   | Itinerary planning agent                     |
-| `/api/agents/budget`         | POST   | Budget planning agent                        |
-| `/api/agents/memory`         | POST   | Memory update agent                          |
-| `/api/agents/router`         | POST   | Intent classification router                 |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/agents/flights` | POST | Flight search agent with Amadeus integration |
+| `/api/agents/accommodations` | POST | Accommodation search agent |
+| `/api/agents/destinations` | POST | Destination research agent |
+| `/api/agents/itineraries` | POST | Itinerary planning agent |
+| `/api/agents/budget` | POST | Budget planning agent |
+| `/api/agents/memory` | POST | Memory update agent |
+| `/api/agents/router` | POST | Intent classification router |
 
 ### Chat (`/api/chat/*`)
 
 Conversational AI with session management:
 
-| Endpoint                | Method   | Description                   |
-| ----------------------- | -------- | ----------------------------- |
-| `/api/chat`             | POST     | Streaming chat (AI SDK UI stream protocol) |
-| `/api/chat/sessions`    | GET/POST | Session management            |
-| `/api/chat/attachments` | POST     | File attachments              |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/chat` | POST | Streaming chat (AI SDK UI stream protocol) |
+| `/api/chat/sessions` | GET/POST | Session management |
+| `/api/chat/attachments` | POST | File attachments |
 
 ### Trips (`/api/trips/*`)
 
 Trip suggestions (read-only). Trip CRUD/collaboration/itinerary mutations are implemented as Server Actions:
 
-| Endpoint                 | Method | Description                 |
-| ------------------------ | ------ | --------------------------- |
-| `/api/trips/suggestions` | GET    | AI-powered trip suggestions |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/trips/suggestions` | GET | AI-powered trip suggestions |
 
 ### Authentication (`/api/auth/*`)
 
 Supabase SSR authentication:
 
-| Endpoint          | Method | Description          |
-| ----------------- | ------ | -------------------- |
-| `/api/auth/login` | POST   | Email/password login |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/auth/login` | POST | Email/password login |
 
 ### Memory (`/api/memory/*`)
 
 User context and preference storage via Supabase pgvector:
 
-| Endpoint                           | Method | Description               |
-| ---------------------------------- | ------ | ------------------------- |
-| `/api/memory/conversations`        | POST   | Store conversation memory |
-| `/api/memory/search`               | POST   | Search memories           |
-| `/api/memory/context/[userId]`     | GET    | Get user context          |
-| `/api/memory/preferences/[userId]` | POST   | Update preferences        |
-| `/api/memory/stats/[userId]`       | GET    | Memory statistics         |
-| `/api/memory/insights/[userId]`    | GET    | AI-generated insights     |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/memory/conversations` | POST | Store conversation memory |
+| `/api/memory/search` | POST | Search memories |
+| `/api/memory/context/[userId]` | GET | Get user context |
+| `/api/memory/preferences/[userId]` | POST | Update preferences |
+| `/api/memory/stats/[userId]` | GET | Memory statistics |
+| `/api/memory/insights/[userId]` | GET | AI-generated insights |
 
 ### Calendar (`/api/calendar/*`)
 
 Calendar integration with ICS support:
 
-| Endpoint                   | Method                | Description          |
-| -------------------------- | --------------------- | -------------------- |
-| `/api/calendar/events`     | GET/POST/PATCH/DELETE | Event CRUD           |
-| `/api/calendar/freebusy`   | POST                  | Free/busy lookup     |
-| `/api/calendar/status`     | GET                   | Calendar sync status |
-| `/api/calendar/ics/import` | POST                  | Import ICS file      |
-| `/api/calendar/ics/export` | POST                  | Export to ICS        |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/calendar/events` | GET/POST/PATCH/DELETE | Event CRUD |
+| `/api/calendar/freebusy` | POST | Free/busy lookup |
+| `/api/calendar/status` | GET | Calendar sync status |
+| `/api/calendar/ics/import` | POST | Import ICS file |
+| `/api/calendar/ics/export` | POST | Export to ICS |
 
 ### Places & Geocoding (`/api/places/*`, `/api/geocode`)
 
 Google Places API integration:
 
-| Endpoint                   | Method | Description     |
-| -------------------------- | ------ | --------------- |
-| `/api/places/search`       | POST   | Search places   |
-| `/api/places/photo`        | GET    | Place photos    |
-| `/api/places/details/[id]` | GET    | Place details   |
-| `/api/geocode`             | POST   | Geocoding       |
-| `/api/timezone`            | POST   | Timezone lookup |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/places/search` | POST | Search places |
+| `/api/places/photo` | GET | Place photos |
+| `/api/places/details/[id]` | GET | Place details |
+| `/api/geocode` | POST | Geocoding |
+| `/api/timezone` | POST | Timezone lookup |
 
 ### Activities (`/api/activities/*`)
 
 Activity search (anonymous access allowed):
 
-| Endpoint                 | Method | Description       |
-| ------------------------ | ------ | ----------------- |
-| `/api/activities/search` | POST   | Search activities |
-| `/api/activities/[id]`   | GET    | Activity details  |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/activities/search` | POST | Search activities |
+| `/api/activities/[id]` | GET | Activity details |
 
 ### Configuration (`/api/config/*`)
 
 Agent configuration management:
 
-| Endpoint                                              | Method  | Description            |
-| ----------------------------------------------------- | ------- | ---------------------- |
-| `/api/config/agents/[agentType]`                      | GET/PUT | Agent config CRUD      |
-| `/api/config/agents/[agentType]/versions`             | GET     | Config version history |
-| `/api/config/agents/[agentType]/rollback/[versionId]` | POST    | Rollback to version    |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/config/agents/[agentType]` | GET/PUT | Agent config CRUD |
+| `/api/config/agents/[agentType]/versions` | GET | Config version history |
+| `/api/config/agents/[agentType]/rollback/[versionId]` | POST | Rollback to version |
 
 ### Security (`/api/security/*`)
 
 Session and security management:
 
-| Endpoint                             | Method | Description          |
-| ------------------------------------ | ------ | -------------------- |
-| `/api/security/sessions`             | GET    | List active sessions |
-| `/api/security/sessions/[sessionId]` | DELETE | Revoke session       |
-| `/api/security/metrics`              | GET    | Security metrics     |
-| `/api/security/events`               | GET    | Security events      |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/security/sessions` | GET | List active sessions |
+| `/api/security/sessions/[sessionId]` | DELETE | Revoke session |
+| `/api/security/metrics` | GET | Security metrics |
+| `/api/security/events` | GET | Security events |
 
 ### API Keys (`/api/keys/*`)
 
 BYOK API key management:
 
-| Endpoint             | Method   | Description         |
-| -------------------- | -------- | ------------------- |
-| `/api/keys`          | GET/POST | List/store API keys |
-| `/api/keys/validate` | POST     | Validate API key    |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/keys` | GET/POST | List/store API keys |
+| `/api/keys/validate` | POST | Validate API key |
 
 ### Utilities
 
-| Endpoint             | Method   | Description              |
-| -------------------- | -------- | ------------------------ |
-| `/api/dashboard`     | GET      | Dashboard metrics        |
-| `/api/embeddings`    | POST     | Generate embeddings      |
-| `/api/routes`        | POST     | Route planning           |
-| `/api/route-matrix`  | POST     | Distance/duration matrix |
-| `/api/user-settings` | GET/POST | User preferences         |
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/dashboard` | GET | Dashboard metrics |
+| `/api/embeddings` | POST | Generate embeddings |
+| `/api/routes` | POST | Route planning |
+| `/api/route-matrix` | POST | Distance/duration matrix |
+| `/api/user-settings` | GET/POST | User preferences |
 
 ## Development
 
@@ -243,19 +243,19 @@ pnpm biome:fix
 
 ## Key Dependencies
 
-| Package                 | Version        | Usage                                                     |
-| ----------------------- | -------------- | --------------------------------------------------------- |
-| `ai`                    | 6.0.3          | AI SDK core: `streamText`, `generateObject`, tool calling |
-| `@ai-sdk/react`         | 3.0.3          | React hooks: `useChat`, `useCompletion`                   |
-| `@ai-sdk/openai`        | 3.0.1          | OpenAI provider                                           |
-| `@ai-sdk/anthropic`     | 3.0.1          | Anthropic provider                                        |
-| `@ai-sdk/xai`           | 3.0.1          | xAI provider                                              |
-| `@ai-sdk/togetherai`    | 2.0.1          | Together.ai provider                                      |
-| `@supabase/ssr`         | ^0.8.0         | Supabase SSR cookie handling                              |
-| `@supabase/supabase-js` | ^2.89.0        | Supabase client                                           |
-| `@upstash/redis`        | ^1.36.0        | Redis client                                              |
-| `@upstash/ratelimit`    | 2.0.7          | Rate limiting                                             |
-| `@tanstack/react-query` | ^5.90.12       | Data fetching/caching                                     |
-| `zod`                   | ^4.2.1         | Schema validation                                         |
-| `@opentelemetry/api`    | 1.9.0          | Observability                                             |
-| `amadeus`               | ^11.0.0        | Flight/hotel search                                       |
+| Package | Version | Usage |
+| :--- | :--- | :--- |
+| `ai` | 6.0.39 | AI SDK core: `streamText`, `generateObject`, tool calling |
+| `@ai-sdk/react` | 3.0.41 | React hooks: `useChat`, `useCompletion` |
+| `@ai-sdk/openai` | 3.0.12 | OpenAI provider |
+| `@ai-sdk/anthropic` | 3.0.15 | Anthropic provider |
+| `@ai-sdk/xai` | 3.0.26 | xAI provider |
+| `@ai-sdk/togetherai` | 2.0.13 | Together.ai provider |
+| `@supabase/ssr` | ^0.8.0 | Supabase SSR cookie handling |
+| `@supabase/supabase-js` | ^2.89.0 | Supabase client |
+| `@upstash/redis` | ^1.36.0 | Redis client |
+| `@upstash/ratelimit` | 2.0.7 | Rate limiting |
+| `@tanstack/react-query` | ^5.90.12 | Data fetching/caching |
+| `zod` | ^4.2.1 | Schema validation |
+| `@opentelemetry/api` | 1.9.0 | Observability |
+| `amadeus` | ^11.0.0 | Flight/hotel search |
