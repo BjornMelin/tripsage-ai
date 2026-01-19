@@ -12,6 +12,8 @@
  * - SUPABASE_SERVICE_ROLE_KEY (server-only; never expose client-side)
  */
 
+// biome-ignore-all lint/style/useNamingConvention: Supabase APIs and DB columns require snake_case keys.
+
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database, Json } from "../../src/lib/supabase/database.types";
@@ -85,10 +87,8 @@ async function ensureUser(input: {
   const existingId = await getUserIdByEmail(input.email);
   if (existingId) {
     const update = await supabase.auth.admin.updateUserById(existingId, {
-      // biome-ignore lint/style/useNamingConvention: Supabase GoTrue Admin API uses snake_case
       email_confirm: true,
       password: input.password,
-      // biome-ignore lint/style/useNamingConvention: Supabase GoTrue Admin API uses snake_case
       user_metadata: input.userMetadata,
     });
     if (update.error) {
@@ -99,11 +99,9 @@ async function ensureUser(input: {
 
   const created = await supabase.auth.admin.createUser({
     email: input.email,
-    // biome-ignore lint/style/useNamingConvention: Supabase GoTrue Admin API uses snake_case
     email_confirm: true,
     id: input.id,
     password: input.password,
-    // biome-ignore lint/style/useNamingConvention: Supabase GoTrue Admin API uses snake_case
     user_metadata: input.userMetadata,
   });
 
@@ -135,9 +133,7 @@ async function ensureTrip(input: {
       .update({
         description: input.description ?? null,
         destination: input.destination,
-        // biome-ignore lint/style/useNamingConvention: Supabase column name
         end_date: input.endDate,
-        // biome-ignore lint/style/useNamingConvention: Supabase column name
         start_date: input.startDate,
         travelers: input.travelers,
       })
@@ -158,20 +154,15 @@ async function ensureTrip(input: {
       currency: "USD",
       description: input.description ?? null,
       destination: input.destination,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       end_date: input.endDate,
       flexibility: null,
       name: input.name,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       search_metadata: null,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       start_date: input.startDate,
       status: "planning",
       tags: ["seed"],
       travelers: input.travelers,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       trip_type: "leisure",
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       user_id: input.userId,
     })
     .select("id")
@@ -207,9 +198,7 @@ async function ensureTripCollaborator(input: {
 
   const inserted = await supabase.from("trip_collaborators").insert({
     role: input.role,
-    // biome-ignore lint/style/useNamingConvention: Supabase column name
     trip_id: input.tripId,
-    // biome-ignore lint/style/useNamingConvention: Supabase column name
     user_id: input.userId,
   });
   if (inserted.error) throw new Error("insert trip_collaborators failed");
@@ -244,20 +233,14 @@ async function seedItineraryItems(input: {
   const inserted = await supabase.from("itinerary_items").insert(
     input.items.map((item) => ({
       description: item.description ?? null,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       end_time: item.endTime ?? null,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       external_id: item.externalId,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       item_type: item.itemType,
       location: item.location ?? null,
       metadata: item.metadata ?? null,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       start_time: item.startTime ?? null,
       title: item.title,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       trip_id: input.tripId,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       user_id: input.userId,
     }))
   );
@@ -281,14 +264,10 @@ async function seedSavedPlaces(input: {
   if (input.places.length === 0) return;
   const inserted = await supabase.from("saved_places").insert(
     input.places.map((place) => ({
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       place_id: place.placeId,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       place_snapshot: place.snapshot,
       provider: place.provider,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       trip_id: input.tripId,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       user_id: input.userId,
     }))
   );
@@ -304,9 +283,7 @@ async function seedChatSession(input: {
   const sessionUpsert = await supabase.from("chat_sessions").upsert({
     id: input.sessionId,
     metadata: { source: "seed" },
-    // biome-ignore lint/style/useNamingConvention: Supabase column name
     trip_id: input.tripId,
-    // biome-ignore lint/style/useNamingConvention: Supabase column name
     user_id: input.userId,
   });
   if (sessionUpsert.error) throw new Error("upsert chat_sessions failed");
@@ -322,9 +299,7 @@ async function seedChatSession(input: {
     input.messages.map((msg) => ({
       content: msg.content,
       role: msg.role,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       session_id: input.sessionId,
-      // biome-ignore lint/style/useNamingConvention: Supabase column name
       user_id: input.userId,
     }))
   );
