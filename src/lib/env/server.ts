@@ -144,6 +144,21 @@ function parseServerEnv(): ServerEnv {
     deleteIfInvalidNonProd("QSTASH_CURRENT_SIGNING_KEY", (value) => value.length < 32);
     deleteIfInvalidNonProd("QSTASH_NEXT_SIGNING_KEY", (value) => value.length < 32);
     deleteIfInvalidNonProd("QSTASH_TOKEN", (value) => value.length < 20);
+    deleteIfInvalidNonProd("UPSTASH_REDIS_REST_URL", (value) => {
+      try {
+        const url = new URL(value);
+        const host = url.hostname.toLowerCase();
+        // Ignore obvious template placeholders like "https://your-redis.upstash.io" in non-production.
+        return (
+          host.includes("your-") ||
+          host.includes("example") ||
+          host.includes("placeholder")
+        );
+      } catch {
+        return true;
+      }
+    });
+    deleteIfInvalidNonProd("UPSTASH_REDIS_REST_TOKEN", (value) => value.length < 20);
     deleteIfInvalidNonProd("COLLAB_WEBHOOK_URL", (value) => {
       try {
         new URL(value);
