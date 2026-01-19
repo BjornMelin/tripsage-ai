@@ -28,9 +28,9 @@ TanStack Query (for client data):
 
 AI SDK UI and streaming docs:
 
-- `https://v6.ai-sdk.dev/docs/foundations/streaming`
-- `https://v6.ai-sdk.dev/docs/ai-sdk-ui`
-- `https://v6.ai-sdk.dev/elements`
+- `https://ai-sdk.dev/docs/foundations/streaming`
+- `https://ai-sdk.dev/docs/ai-sdk-ui`
+- `https://ai-sdk.dev/elements`
 
 ---
 
@@ -96,10 +96,10 @@ YOU MUST USE the following skills explicitly in your workflow:
 2. External:
 
    - AI SDK streaming:
-     - `https://v6.ai-sdk.dev/docs/foundations/streaming`
+     - `https://ai-sdk.dev/docs/foundations/streaming`
    - AI SDK UI:
-     - `https://v6.ai-sdk.dev/docs/ai-sdk-ui`
-     - `https://v6.ai-sdk.dev/elements`
+     - `https://ai-sdk.dev/docs/ai-sdk-ui`
+     - `https://ai-sdk.dev/elements`
    - TanStack Query:
      - `https://tanstack.com/query/latest/docs/framework/react/overview`
 
@@ -158,9 +158,9 @@ In `src/app/ai-demo/page.tsx`:
 2. Implementation guidelines:
 
    - See streaming docs:
-     - `https://v6.ai-sdk.dev/docs/foundations/streaming`
+     - `https://ai-sdk.dev/docs/foundations/streaming`
    - If you adopt AI SDK UI:
-     - `https://v6.ai-sdk.dev/docs/ai-sdk-ui`
+     - `https://ai-sdk.dev/docs/ai-sdk-ui`
    - Keep AI Elements-inspired UI, but let AI SDK manage the stream.
 
 3. Ensure:

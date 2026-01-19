@@ -39,9 +39,9 @@ Supabase docs:
 AI SDK docs:
 
 - Embeddings:  
-  `https://v6.ai-sdk.dev/docs/ai-sdk-core/embeddings`
+  `https://ai-sdk.dev/docs/ai-sdk-core/embeddings`
 - Reranking:  
-  `https://v6.ai-sdk.dev/docs/ai-sdk-core/reranking`
+  `https://ai-sdk.dev/docs/ai-sdk-core/reranking`
 
 ---
 
@@ -113,8 +113,8 @@ YOU MUST USE the following skills explicitly in your workflow:
 2. External:
 
    - AI & Vectors: `https://supabase.com/docs/guides/ai`
-   - AI SDK embeddings: `https://v6.ai-sdk.dev/docs/ai-sdk-core/embeddings`
-   - AI SDK reranking: `https://v6.ai-sdk.dev/docs/ai-sdk-core/reranking`
+   - AI SDK embeddings: `https://ai-sdk.dev/docs/ai-sdk-core/embeddings`
+   - AI SDK reranking: `https://ai-sdk.dev/docs/ai-sdk-core/reranking`
 
 3. Optional:
 
@@ -181,7 +181,7 @@ Implement `src/app/api/rag/index/route.ts`:
     - Construct a text block to embed:
       - e.g., `title + "\n\n" + description + "\n\n" + metadata fields`.
     - Call AI SDK embeddings:  
-      `https://v6.ai-sdk.dev/docs/ai-sdk-core/embeddings`
+      `https://ai-sdk.dev/docs/ai-sdk-core/embeddings`
     - Upsert into the embeddings table with:
       - `source_id`, `source_type`, `embedding`, `metadata`.
   - Consider batching to stay under provider limits.
@@ -217,7 +217,7 @@ Implement `src/app/api/rag/search/route.ts`:
        `description`.
   4. Hybrid mixing:
      - Combine results and rerank using AI SDK `reranking` API:  
-       `https://v6.ai-sdk.dev/docs/ai-sdk-core/reranking`
+       `https://ai-sdk.dev/docs/ai-sdk-core/reranking`
   5. Return a unified list:
 
      ```json
@@ -246,8 +246,8 @@ Implement `src/app/api/rag/search/route.ts`:
    - Agents that need location-aware retrieval (e.g., travel planning agent).
 3. Ensure:
    - Tools follow AI SDK tools pattern, as in:
-     - `https://v6.ai-sdk.dev/docs/foundations/tools`
-     - `https://v6.ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling`
+     - `https://ai-sdk.dev/docs/foundations/tools`
+     - `https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling`
 
 ### Step 5 – Update SPEC-0018
 

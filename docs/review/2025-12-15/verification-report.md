@@ -83,7 +83,7 @@ This report provides repo-local traceability from each finding in `docs/review/2
 ### SEC-006 — embeddings boundary
 
 | Option | Leverage(35) | Value(30) | Maintain(25) | Adapt(10) | Weighted Total |
-|---|---:|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: | ---: |
 | A — per-user auth + no admin writes | 6 | 8 | 5 | 6 | 6.35 |
 | B — mandatory internal key + admin writes only under key | 8 | 9 | 9 | 7 | 8.45 |
 
@@ -93,7 +93,7 @@ This report provides repo-local traceability from each finding in `docs/review/2
 ### REL-003 — attachments `url` contract
 
 | Option | Leverage(35) | Value(30) | Maintain(25) | Adapt(10) | Weighted Total |
-|---|---:|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: | ---: |
 | A — `url` nullable | 5 | 6 | 5 | 6 | 5.40 |
 | B — route fails if any URL missing | 7 | 4 | 7 | 5 | 5.90 |
 | C — filter out missing URLs | 8 | 8 | 8 | 7 | 7.90 |
@@ -104,7 +104,7 @@ This report provides repo-local traceability from each finding in `docs/review/2
 ### TEST-001 — coverage enforcement strategy
 
 | Option | Leverage(35) | Value(30) | Maintain(25) | Adapt(10) | Weighted Total |
-|---|---:|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: | ---: |
 | A — global thresholds (repo-wide) | 7 | 6 | 6 | 6 | 6.35 |
 | B — per-directory thresholds (“critical surfaces”) | 8 | 9 | 8 | 8 | 8.30 |
 | C — no thresholds; coverage reporting only | 9 | 2 | 9 | 4 | 6.40 |
@@ -115,7 +115,7 @@ This report provides repo-local traceability from each finding in `docs/review/2
 ### AI-002 (Zen) — full-repo `@fileoverview` scan
 
 | Option | Leverage(35) | Value(30) | Maintain(25) | Adapt(10) | Weighted Total |
-|---|---:|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: | ---: |
 | A — report-only full scan | 6 | 3 | 5 | 6 | 4.85 |
 | B — strict full scan + one-time cleanup | 8 | 8 | 9 | 7 | 8.15 |
 | C — strict full scan + allowlists/exclusions | 7 | 6 | 6 | 6 | 6.35 |
@@ -281,9 +281,9 @@ Each entry links back to a finding ID in `docs/review/2025-12-15/review-log.md`.
 - Next.js Image SVG safety (`dangerouslyAllowSVG`): <https://nextjs.org/docs/app/api-reference/components/image#dangerouslyallowsvg>
 - Vercel conformance (safe SVG images): <https://vercel.com/docs/conformance/rules/NEXTJS_SAFE_SVG_IMAGES>
 - React `use server`: <https://react.dev/reference/rsc/use-server>
-- AI SDK v6: <https://v6.ai-sdk.dev/llms.txt>
-- AI SDK v6 MCP tools: <https://v6.ai-sdk.dev/docs/ai-sdk-core/mcp-tools>
-- AI SDK v6 ToolLoopAgent: <https://v6.ai-sdk.dev/docs/reference/ai-sdk-core/tool-loop-agent>
+- AI SDK v6: <https://ai-sdk.dev/llms.txt>
+- AI SDK v6 MCP tools: <https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools>
+- AI SDK v6 ToolLoopAgent: <https://ai-sdk.dev/docs/reference/ai-sdk-core/tool-loop-agent>
 - Supabase SSR client creation: <https://supabase.com/docs/guides/auth/server-side/creating-a-client>
 - Supabase API keys: <https://supabase.com/docs/guides/api/api-keys>
 - Supabase key changes announcement: <https://github.com/orgs/supabase/discussions/29260>

@@ -132,7 +132,7 @@ Use MCP tools to fetch and read the following before coding:
    - Next.js caching and tags:
      - `https://nextjs.org/docs/app/getting-started/caching-and-revalidating`
    - Optional: AI SDK telemetry (for tracing uploads):
-     - `https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry`
+     - `https://ai-sdk.dev/docs/ai-sdk-core/telemetry`
 
 3. **Library ID resolution (optional)**
 

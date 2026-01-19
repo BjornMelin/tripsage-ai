@@ -408,5 +408,5 @@ emitOperationalAlert("webhook.verification_failed", {
 
 - `docs/architecture/decisions/adr-0046-otel-tracing-frontend.md`
 - Vercel OTEL: <https://vercel.com/docs/observability/otel-overview>
-- AI SDK telemetry: <https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry>
+- AI SDK telemetry: <https://ai-sdk.dev/docs/ai-sdk-core/telemetry>
 - OpenTelemetry JS: <https://opentelemetry.io/docs/languages/js/>

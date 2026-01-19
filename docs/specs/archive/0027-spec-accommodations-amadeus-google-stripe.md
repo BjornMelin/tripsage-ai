@@ -397,7 +397,7 @@ Tasks:
 
 - [x] Implement `AmadeusProviderAdapter` that:
 
-  - Wraps [Amadeus SDK](https://developers.amadeus.com/sdks-and-libraries) calls for search and booking. ([AI SDK v6](https://v6.ai-sdk.dev/docs/introduction))
+  - Wraps [Amadeus SDK](https://developers.amadeus.com/sdks-and-libraries) calls for search and booking. ([AI SDK v6](https://ai-sdk.dev/docs/introduction))
   - Uses existing retry and circuit-breaker utilities (`retryWithBackoff` + `CircuitBreaker`) as seen in `ExpediaProviderAdapter`.
   - Produces normalized `ProviderError` instances for:
 
@@ -501,7 +501,7 @@ Tasks:
   - Clarify that the agent is using “real-time hotel offers and bookings via Amadeus and enriches with Google Places hotel data”.
 
 No changes to the AI SDK v6 usage are required; TripSage already uses
-`streamText` and tools as recommended by [Vercel AI SDK v6 Tools](https://v6.ai-sdk.dev/docs/foundations/tools).
+`streamText` and tools as recommended by [Vercel AI SDK v6 Tools](https://ai-sdk.dev/docs/foundations/tools).
 
 ---
 
@@ -664,7 +664,7 @@ Using Vitest + MSW:
 
 ### Vercel AI SDK v6
 
-- Docs: `https://v6.ai-sdk.dev/docs/introduction`
+- Docs: `https://ai-sdk.dev/docs/introduction`
 - TripSage uses `streamText` + tool calling; no changes needed except tool semantics.
 
 ### shadcn/ui

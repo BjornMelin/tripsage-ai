@@ -21,6 +21,6 @@ We need a robust RAG pipeline on Next.js 16 using AI SDK v6. Python RAG remains 
 
 ## References
 
-- v6 Reranking: <https://v6.ai-sdk.dev/docs/ai-sdk-core/reranking>
-- Embeddings: <https://v6.ai-sdk.dev/docs/ai-sdk-core/embeddings>
-- Next.js App Router: <https://v6.ai-sdk.dev/docs/getting-started/nextjs-app-router>
+- v6 Reranking: <https://ai-sdk.dev/docs/ai-sdk-core/reranking>
+- Embeddings: <https://ai-sdk.dev/docs/ai-sdk-core/embeddings>
+- Next.js App Router: <https://ai-sdk.dev/docs/getting-started/nextjs-app-router>

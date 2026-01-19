@@ -38,7 +38,7 @@ Docs:
 - Vercel instrumentation:  
   `https://vercel.com/docs/tracing/instrumentation`
 - AI SDK telemetry:  
-  `https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry`
+  `https://ai-sdk.dev/docs/ai-sdk-core/telemetry`
 - Supabase telemetry:  
   `https://supabase.com/docs/guides/telemetry`
 - Vitest guide (includes OTel references):  
@@ -107,7 +107,7 @@ YOU MUST USE the following skills explicitly in your workflow:
 
    - `https://vercel.com/docs/tracing`
    - `https://vercel.com/docs/tracing/instrumentation`
-   - `https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry`
+   - `https://ai-sdk.dev/docs/ai-sdk-core/telemetry`
    - `https://supabase.com/docs/guides/telemetry`
    - `https://vitest.dev/guide/`
 
@@ -134,7 +134,7 @@ For LLM calls in:
 
 Use AI SDK telemetry:
 
-- Docs: `https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry`
+- Docs: `https://ai-sdk.dev/docs/ai-sdk-core/telemetry`
 
 Pattern example:
 

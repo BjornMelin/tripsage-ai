@@ -3,6 +3,7 @@
 > Phase 1 (analysis-only). No source-code changes were made during this phase.
 >
 > **Post-review updates:**
+>
 > - `src/lib/memory/mem0-adapter.ts` was removed on 2025-12-30 (see ADR-0042 v1.1.0). Semantic search now handled natively by Supabase pgvector.
 >
 > **Repo state at time of review**
@@ -381,7 +382,7 @@ Plan:
 > - `zen.consensus` consulted `gemini3` and `grok-4.1-openrouter` to finalize D9–D12. All decisions in this table meet the **≥ 9.0** threshold; where models disagreed (D11), we chose the KISS option that preserves the guardrail without adding expiration machinery.
 
 | ID | Decision | Final option (Phase 2) | Weighted score | Status |
-|---:|---|---|---:|---|
+| ---: | --- | --- | ---: | --- |
 | D1 | Domain boundary remediation (TD-1/TD-2) | **Functional Core + Imperative Shell (scope-limited):** refactor **only** `src/domain/accommodations/**` + `src/domain/activities/**` toward the `src/domain/flights/service.ts` pattern by (a) moving infra wiring to route/tool adapters and (b) injecting side effects as plain functions (not “interface explosion” ports); remove domain singletons. | **9.2** | Finalized |
 | D2 | Chat stream DRY (TD-3) | **Single owner for auth + route rate limits:** `withApiGuards` owns auth + route rate limiting; `_handler.ts` becomes a pure DI handler that receives `context.user`/`userId` and never calls `supabase.auth.getUser()` or performs rate limiting. | **9.6** | Finalized |
 | D3 | Supabase Realtime typing (TD-5) | **Overload-aligned typing (no subscription widening):** eliminate `@ts-expect-error` and `(channel as any).on(...)` by matching Supabase SDK overload constraints (payload must be object) and using literal event values to select the correct overloads. Keep socket-level filtering (`{ event: 'shout' }`, `{ event: 'INSERT' }`) intact. | **9.1** | Finalized |
@@ -400,7 +401,7 @@ Plan:
 > Scores are 0–10 per criterion; weighted score uses the formula above.
 
 | ID | SL | AV | MCL | Ada | Weighted |
-|---:|---:|---:|---:|---:|---:|
+| ---: | ---: | ---: | ---: | ---: | ---: |
 | D1 | 9.5 | 9.0 | 9.0 | 9.0 | 9.2 |
 | D2 | 9.5 | 9.5 | 10.0 | 9.0 | 9.6 |
 | D3 | 9.0 | 9.0 | 9.5 | 9.0 | 9.1 |
@@ -417,7 +418,7 @@ Plan:
 ### Primary sources and repo evidence used to finalize decisions
 
 - AI SDK 6 announcement + release date (Dec 22, 2025): `https://vercel.com/blog/ai-sdk-6`
-- AI SDK v6 reference (`createAgentUIStreamResponse` signature, `uiMessages`, `headers`, `includeUsage`, `abortSignal`): `https://v6.ai-sdk.dev/docs/reference/ai-sdk-core/create-agent-ui-stream-response`
+- AI SDK v6 reference (`createAgentUIStreamResponse` signature, `uiMessages`, `headers`, `includeUsage`, `abortSignal`): `https://ai-sdk.dev/docs/reference/ai-sdk-core/create-agent-ui-stream-response`
 - AI SDK v6 reference (`tool()` signature: `inputSchema`, `execute`, `ToolExecutionOptions`): `https://ai-sdk.dev/docs/reference/ai-sdk-core/tool`
 - AI SDK 5→6 migration guide (ToolLoopAgent; async `convertToModelMessages`): `https://ai-sdk.dev/docs/migration-guides/migration-guide-6-0`
 - Supabase Realtime Broadcast docs (explicitly: event can be `*`): `https://supabase.com/docs/guides/realtime/broadcast`
@@ -663,7 +664,7 @@ Plan:
 
 - [x] Align AI SDK version references across docs (Docs/Tooling) — refs: TD-10, D5 — Priority: Low
   - [x] Update beta-pinned docs to match reality (or replace with “see `package.json`” references)
-  - [x] Replace beta-only doc links with stable `ai-sdk.dev` / `v6.ai-sdk.dev` references where appropriate (see **9.0**)
+  - [x] Replace beta-only doc links with stable `ai-sdk.dev` / `ai-sdk.dev` references where appropriate (see **9.0**)
   - **Done when:** no project docs reference obsolete beta pins.
 
 - [x] Resolve `TODO(ARCH-001/002)` script debt (Docs/Tooling) — refs: TD-11 — Priority: Low

@@ -167,7 +167,7 @@ Available to AI agents via the tool registry.
 **Provider:** Together.ai with Mixedbread `mxbai-rerank-large-v2`
 
 | Metric | Value |
-|--------|-------|
+| --- | ---: |
 | Cost | **Estimate**: ~$0.002 per 1k queries (Together.ai pricing as of 2025-12-12) |
 | Annual cost (10k/day) | **Estimate**: ~$5–10/year at ~10k queries/day (derived from pricing above; 2025-12-12) |
 | Savings vs Cohere | **Estimate**: ~90–97% cheaper vs Cohere rerank pricing (comparison as of 2025-12-12) |
@@ -240,7 +240,7 @@ Available to AI agents via the tool registry.
 ## File Inventory
 
 | File | Description |
-|------|-------------|
+| --- | --- |
 | `src/domain/schemas/rag.ts` | Zod v4 schemas for RAG operations |
 | `src/lib/rag/reranker.ts` | Pluggable reranker interface + Together.ai impl |
 | `src/lib/rag/indexer.ts` | Document indexing with chunking + embedding |
@@ -254,7 +254,7 @@ Available to AI agents via the tool registry.
 
 ## References
 
-- AI SDK v6 Reranking: <https://v6.ai-sdk.dev/docs/ai-sdk-core/reranking>
-- AI SDK Core Embeddings: <https://v6.ai-sdk.dev/docs/ai-sdk-core/embeddings>
-- Together.ai Reranking: <https://v6.ai-sdk.dev/providers/ai-sdk-providers/togetherai#reranking-models>
+- AI SDK v6 Reranking: <https://ai-sdk.dev/docs/ai-sdk-core/reranking>
+- AI SDK Core Embeddings: <https://ai-sdk.dev/docs/ai-sdk-core/embeddings>
+- Together.ai Reranking: <https://ai-sdk.dev/providers/ai-sdk-providers/togetherai#reranking-models>
 - Mixedbread mxbai-rerank-large-v2: <https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v2>

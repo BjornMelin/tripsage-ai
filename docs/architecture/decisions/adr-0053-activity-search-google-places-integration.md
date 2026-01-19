@@ -203,8 +203,8 @@ We adopt a **heuristically gated web search fallback** pattern for this ADR:
   - <https://upstash.com/docs/redis/quickstarts/nextjs-app-router>  
   - <https://github.com/upstash/ratelimit-js>
 - Vercel AI SDK v6 (tools, `streamText`, Next.js route patterns):  
-  - <https://v6.ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage>  
-  - <https://v6.ai-sdk.dev/docs/getting-started/nextjs-app-router>
+  - <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage>  
+  - <https://ai-sdk.dev/docs/getting-started/nextjs-app-router>
 - Zod v4 (schemas, strict validation): <https://zod.dev/v4>
 - Supabase RLS & Data API Hardening (for `search_activities`):  
   - <https://supabase.com/docs/guides/database/postgres/row-level-security>  
