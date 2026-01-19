@@ -61,7 +61,7 @@ export type ErrorReport = z.infer<typeof errorReportSchema>;
  * Defines error display and recovery action props.
  */
 export interface ErrorFallbackProps {
-  error: Error & { digest?: string };
+  error: unknown;
   reset?: () => void;
   retry?: () => void;
 }
@@ -73,7 +73,7 @@ export interface ErrorFallbackProps {
 export interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ComponentType<ErrorFallbackProps>;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  onError?: (error: unknown, errorInfo: ErrorInfo) => void;
   level?: "page" | "component" | "global";
 }
 

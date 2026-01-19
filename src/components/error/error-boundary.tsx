@@ -11,14 +11,14 @@ import {
   type FallbackProps,
   ErrorBoundary as ReactErrorBoundary,
 } from "react-error-boundary";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
+import { getUserIdFromUserStore } from "@/lib/client/user-store";
 import { errorService } from "@/lib/error-service";
 import { fireAndForget } from "@/lib/utils";
 import { ErrorFallback } from "./error-fallback";
 
 const COMPONENT_CONTEXT = "ErrorBoundary" as const;
-
-type ErrorWithDigest = Error & { digest?: string };
 
 /**
  * Extract the user ID from the global window.userStore.
@@ -29,14 +29,6 @@ type ErrorWithDigest = Error & { digest?: string };
  *
  * @returns The current user ID if available, or undefined if not set or inaccessible.
  */
-function GetUserId(): string | undefined {
-  try {
-    return window.userStore?.user?.id;
-  } catch {
-    return undefined;
-  }
-}
-
 function ToSchemaErrorInfo(
   info: { componentStack?: string | null } | undefined
 ): ErrorInfo {
@@ -48,7 +40,7 @@ function ToSchemaErrorInfo(
 function GetFallbackComponent(
   fallback: ErrorBoundaryProps["fallback"] | undefined
 ): React.ComponentType<{
-  error: ErrorWithDigest;
+  error: unknown;
   reset?: () => void;
   retry?: () => void;
 }> {
@@ -64,18 +56,19 @@ export function ErrorBoundary({
   const FallbackComponent = GetFallbackComponent(fallback);
 
   const handleError = useCallback(
-    (error: Error, info: { componentStack?: string | null }) => {
+    (error: unknown, info: { componentStack?: string | null }) => {
       const schemaInfo = ToSchemaErrorInfo(info);
       onError?.(error, schemaInfo);
 
+      const normalized = normalizeThrownError(error);
       const errorReport = errorService.createErrorReport(
-        error,
+        normalized,
         schemaInfo.componentStack
           ? { componentStack: schemaInfo.componentStack }
           : undefined,
         {
           sessionId: getSessionId(),
-          userId: GetUserId(),
+          userId: getUserIdFromUserStore(),
         }
       );
 
@@ -89,7 +82,7 @@ export function ErrorBoundary({
       );
 
       if (process.env.NODE_ENV === "development") {
-        console.error("ErrorBoundary caught error:", error);
+        console.error("ErrorBoundary caught error:", normalized);
       }
     },
     [level, onError]
@@ -99,7 +92,7 @@ export function ErrorBoundary({
     <ReactErrorBoundary
       fallbackRender={({ error, resetErrorBoundary }: FallbackProps) => (
         <FallbackComponent
-          error={error as ErrorWithDigest}
+          error={error}
           reset={resetErrorBoundary}
           retry={resetErrorBoundary}
         />

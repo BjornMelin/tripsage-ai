@@ -11,6 +11,7 @@ import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage, handleApiError } from "@/lib/api/error-types";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
 import { cn, fireAndForget } from "@/lib/utils";
@@ -46,7 +47,7 @@ interface QueryErrorFallbackProps extends FallbackProps {
  * @returns Promise or void - failures are swallowed to prevent boundary loops.
  */
 type OptionalAsyncHandler = (
-  error: Error,
+  error: unknown,
   info?: ErrorInfo,
   meta?: ErrorMeta
 ) => void | Promise<void>;
@@ -64,7 +65,7 @@ const COMPONENT_CONTEXT = "QueryErrorBoundary" as const;
  */
 function SafeInvoke(
   handler: OptionalAsyncHandler | undefined,
-  error: Error,
+  error: unknown,
   info: ErrorInfo | undefined,
   meta: ErrorMeta
 ) {
@@ -194,6 +195,7 @@ function QueryErrorFallback({
   onRetry,
   loginHref,
 }: QueryErrorFallbackProps) {
+  const normalized = normalizeThrownError(error);
   const errorMessage = getErrorMessage(error);
   const display = VARIANT_DISPLAY[meta.variant];
   const showLogin = meta.variant === "auth";
@@ -244,7 +246,7 @@ function QueryErrorFallback({
             Error Details (Development)
           </summary>
           <pre className="mt-2 max-h-32 overflow-auto text-xs opacity-70">
-            {error.stack}
+            {normalized.stack}
           </pre>
         </details>
       )}
@@ -294,12 +296,13 @@ export function QueryErrorBoundary({
   /**
    * Handles boundary errors by emitting telemetry and delegating to injected sinks.
    */
-  const handleError = (error: Error, info: ErrorInfo) => {
-    const meta = ResolveMeta(error);
+  const handleError = (error: unknown, info: ErrorInfo) => {
+    const normalized = normalizeThrownError(error);
+    const meta = ResolveMeta(normalized);
     latestMetaRef.current = meta;
-    RecordTelemetry(error, info, meta);
-    SafeInvoke(onOperationalAlert, error, info, meta);
-    SafeInvoke(onError, error, info, meta);
+    RecordTelemetry(normalized, info, meta);
+    SafeInvoke(onOperationalAlert, normalized, info, meta);
+    SafeInvoke(onError, normalized, info, meta);
   };
 
   const handleReset = () => {

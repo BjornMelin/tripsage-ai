@@ -5,20 +5,10 @@
 "use client";
 
 import { useCallback } from "react";
+import { getSessionId } from "@/lib/client/session";
+import { getUserIdFromUserStore } from "@/lib/client/user-store";
 import { errorService } from "@/lib/error-service";
-import { secureUuid } from "@/lib/security/random";
 import { fireAndForget } from "@/lib/utils";
-
-// Extend Window interface for custom properties
-declare global {
-  interface Window {
-    userStore?: {
-      user?: {
-        id?: string;
-      };
-    };
-  }
-}
 
 /**
  * Hook for handling errors in React components with automatic reporting.
@@ -31,11 +21,11 @@ declare global {
  */
 export function useErrorHandler() {
   const handleError = useCallback(
-    (error: Error, additionalInfo?: Record<string, unknown>) => {
+    (error: unknown, additionalInfo?: Record<string, unknown>) => {
       // Create error report
       const errorReport = errorService.createErrorReport(error, undefined, {
         sessionId: getSessionId(),
-        userId: getUserId(),
+        userId: getUserIdFromUserStore(),
         ...additionalInfo,
       });
 
@@ -50,7 +40,7 @@ export function useErrorHandler() {
       try {
         return await asyncOperation();
       } catch (error) {
-        handleError(error as Error, { context: "async_operation" });
+        handleError(error, { context: "async_operation" });
         if (fallback) {
           fallback();
         }
@@ -64,36 +54,4 @@ export function useErrorHandler() {
     handleAsyncError,
     handleError,
   };
-}
-
-/**
- * Gets the current user ID from the user store.
- *
- * @returns User ID or undefined if not available
- */
-function getUserId(): string | undefined {
-  try {
-    const userStore = window.userStore;
-    return userStore?.user?.id;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Gets or creates a session ID for error tracking.
- *
- * @returns Session ID or undefined if sessionStorage is unavailable
- */
-function getSessionId(): string | undefined {
-  try {
-    let sessionId = sessionStorage.getItem("session_id");
-    if (!sessionId) {
-      sessionId = `session_${secureUuid()}`;
-      sessionStorage.setItem("session_id", sessionId);
-    }
-    return sessionId;
-  } catch {
-    return undefined;
-  }
 }

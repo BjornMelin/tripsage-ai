@@ -6,6 +6,7 @@
 
 import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
 import { fireAndForget } from "@/lib/utils";
@@ -18,12 +19,13 @@ export default function AuthError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  error: unknown;
   reset: () => void;
 }) {
   useEffect(() => {
+    const normalized = normalizeThrownError(error);
     // Report the auth error
-    const errorReport = errorService.createErrorReport(error, undefined, {
+    const errorReport = errorService.createErrorReport(normalized, undefined, {
       sessionId: getSessionId(),
     });
 
@@ -31,7 +33,7 @@ export default function AuthError({
 
     // Log error in development
     if (process.env.NODE_ENV === "development") {
-      console.error("Auth error boundary caught error:", error);
+      console.error("Auth error boundary caught error:", normalized);
     }
   }, [error]);
 

@@ -15,12 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 
 /**
  * Default error fallback component for error boundaries
  */
 export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
   const isDev = process.env.NODE_ENV === "development";
+  const normalized = normalizeThrownError(error);
 
   const handleGoHome = () => {
     window.location.href = "/";
@@ -45,19 +47,19 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
             We apologize for the inconvenience. An unexpected error has occurred.
           </p>
 
-          {isDev && error.message && (
+          {isDev && normalized.message && (
             <Alert variant="destructive">
               <BugIcon className="h-4 w-4" />
               <AlertDescription className="font-mono text-xs">
-                {error.message}
+                {normalized.message}
               </AlertDescription>
             </Alert>
           )}
 
-          {error.digest && (
+          {normalized.digest && (
             <Alert>
               <AlertDescription className="text-xs">
-                Error ID: {error.digest}
+                Error ID: {normalized.digest}
               </AlertDescription>
             </Alert>
           )}
@@ -121,6 +123,7 @@ export function MinimalErrorFallback({ error: _error, reset }: ErrorFallbackProp
  * Page-level error fallback
  */
 export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
+  const normalized = normalizeThrownError(error);
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-2xl mx-auto text-center space-y-6">
@@ -149,13 +152,13 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
           </Button>
         </div>
 
-        {process.env.NODE_ENV === "development" && error.stack && (
+        {process.env.NODE_ENV === "development" && normalized.stack && (
           <details className="mt-8 text-left">
             <summary className="cursor-pointer font-semibold mb-2">
               Error Details (Development)
             </summary>
             <pre className="text-xs overflow-auto p-4 bg-muted rounded-md">
-              {error.stack}
+              {normalized.stack}
             </pre>
           </details>
         )}
