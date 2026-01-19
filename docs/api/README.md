@@ -257,5 +257,5 @@ pnpm biome:fix
 | `@upstash/ratelimit` | 2.0.7 | Rate limiting |
 | `@tanstack/react-query` | ^5.90.19 | Data fetching/caching |
 | `zod` | ^4.3.5 | Schema validation |
-| `@opentelemetry/api` | 1.9.0 | Observability |
+| `@opentelemetry/api` | ^1.9.0 | Observability |
 | `amadeus` | ^11.0.0 | Flight/hotel search |
