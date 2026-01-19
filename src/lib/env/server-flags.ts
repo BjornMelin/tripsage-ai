@@ -29,7 +29,7 @@ function parseEnvFlag(value: string | undefined, defaultValue: boolean): boolean
 }
 
 export function getBotIdEnableCsv(): string {
-  return normalizeOptionalEnvVar(process.env.BOTID_ENABLE) ?? "production,preview";
+  return normalizeOptionalEnvVar(process.env.BOTID_ENABLE) ?? "production,preview,test";
 }
 
 export function getIdempotencyFailOpenDefault(): boolean {
