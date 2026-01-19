@@ -190,6 +190,7 @@ benchmark-*.json
 # IDE and editor temporary files
 **/.history/
 **/*.tmp
+**/.tmp-*
 **/*.temp
 **/.scratch/
 **/scratch.*
