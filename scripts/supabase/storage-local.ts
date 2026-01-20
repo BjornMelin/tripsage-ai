@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { STORAGE_API_IMAGE_VERSION } from "./supabase-cli";
 
 type LocalSupabaseIds = {
   projectId: string;
@@ -237,7 +238,7 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
     "TUS_URL_PATH=/storage/v1/upload/resumable",
     "-e",
     "S3_PROTOCOL_ENABLED=false",
-    "public.ecr.aws/supabase/storage-api:v1.33.5",
+    `public.ecr.aws/supabase/storage-api:${STORAGE_API_IMAGE_VERSION}`,
   ]);
 
   // Quick sanity check through kong (ensures routing + auth headers work).

@@ -36,6 +36,8 @@ References:
 
 TripSage enables Upstash “dynamic limits” support by setting `dynamicLimits: true` when constructing `Ratelimit` instances (API routes, webhooks, AI tools). This keeps steady-state behavior unchanged, while allowing operators to set a global limit at runtime via Upstash dynamic limit APIs (`setDynamicLimit`, `getDynamicLimit`).
 
+Note: When `dynamicLimits` is enabled on a `Ratelimit` instance, the default ephemeral cache can keep identifiers marked as blocked until their reset timestamp expires. Raising limits at runtime via `setDynamicLimit`/`getDynamicLimit` may not take immediate effect for those cached blocked identifiers; clear the ephemeral cache or wait for expiry if you need immediate impact.
+
 References:
 
 - <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods>

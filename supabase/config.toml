@@ -64,7 +64,6 @@ allowed_mime_types = [
   "image/png",
   "image/webp",
   "image/gif",
-  "image/svg+xml",
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

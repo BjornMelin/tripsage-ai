@@ -262,6 +262,84 @@ describe("tripsRowSchema", () => {
 
     expect(result.success).toBe(true);
   });
+
+  it.concurrent("accepts json objects in flexibility and search_metadata", () => {
+    const result = supabaseSchemas.trips.row.safeParse({
+      budget: 5000,
+      created_at: "2026-01-19T00:00:00.000Z",
+      currency: "USD",
+      description: "A wonderful trip",
+      destination: "Paris, France",
+      end_date: "2026-01-26",
+      flexibility: { budget: "strict", dates: "flexible" },
+      id: 1,
+      name: "Trip to Paris",
+      search_metadata: { source: "web", timestamp: 1234567890 },
+      start_date: "2026-01-19",
+      status: "planning",
+      tags: ["vacation", "europe"],
+      travelers: 2,
+      trip_type: "leisure",
+      updated_at: "2026-01-19T00:00:00.000Z",
+      user_id: "123e4567-e89b-12d3-a456-426614174000",
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("tripsInsertSchema", () => {
+  it.concurrent("accepts nullable json fields", () => {
+    const result = supabaseSchemas.trips.insert.safeParse({
+      budget: 1000,
+      destination: "Tokyo, Japan",
+      end_date: "2026-02-15",
+      flexibility: null,
+      name: "Japan Trip",
+      search_metadata: null,
+      start_date: "2026-02-01",
+      travelers: 1,
+      user_id: "123e4567-e89b-12d3-a456-426614174000",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it.concurrent("accepts json objects in flexibility and search_metadata", () => {
+    const result = supabaseSchemas.trips.insert.safeParse({
+      budget: 2000,
+      destination: "Seoul, South Korea",
+      end_date: "2026-03-10",
+      flexibility: { dates: "strict" },
+      name: "Seoul Trip",
+      search_metadata: { flags: ["promo"], source: "manual" },
+      start_date: "2026-03-01",
+      travelers: 2,
+      user_id: "123e4567-e89b-12d3-a456-426614174000",
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("tripsUpdateSchema", () => {
+  it.concurrent("accepts nullable json fields", () => {
+    const result = supabaseSchemas.trips.update.safeParse({
+      flexibility: null,
+      search_metadata: null,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it.concurrent("accepts json objects in flexibility and search_metadata", () => {
+    const result = supabaseSchemas.trips.update.safeParse({
+      flexibility: { dates: "flexible" },
+      search_metadata: { source: "import" },
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("supabaseSchemas.api_metrics", () => {

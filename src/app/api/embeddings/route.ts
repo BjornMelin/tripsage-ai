@@ -18,7 +18,11 @@ import {
   TEXT_EMBEDDING_DIMENSIONS,
 } from "@/lib/ai/embeddings/text-embedding-model";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  forbiddenResponse,
+  unauthorizedResponse,
+} from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { toPgvector } from "@/lib/rag/pgvector";
 import { isValidInternalKey } from "@/lib/security/internal-key";
@@ -119,7 +123,9 @@ export const POST = withApiGuards({
 
   const provided = req.headers.get("x-internal-key");
   if (!isValidInternalKey(provided, internalKey)) {
-    return unauthorizedResponse();
+    return provided
+      ? forbiddenResponse("Invalid internal key")
+      : unauthorizedResponse();
   }
 
   const text =

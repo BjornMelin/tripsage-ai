@@ -74,6 +74,19 @@ describe("auth/confirm route", () => {
     expect(REDIRECT_MOCK).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("redirects to login when code exchange fails", async () => {
+    EXCHANGE_MOCK.mockResolvedValueOnce({ error: new Error("invalid_grant") });
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?code=bad_code&next=%2Fdashboard",
+    });
+    await GET(req);
+    expect(EXCHANGE_MOCK).toHaveBeenCalledWith("bad_code");
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith(
+      "/login?error=auth_confirm_failed&next=%2Fdashboard"
+    );
+  });
+
   it("redirects to login when Supabase provides an error payload", async () => {
     const req = createMockNextRequest({
       method: "GET",

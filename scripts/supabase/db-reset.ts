@@ -6,8 +6,12 @@ function main() {
   // and start the stack (which reapplies migrations).
   try {
     run("pnpm", supabaseDlxArgs(["stop", "--no-backup", "--yes"]));
-  } catch {
-    // Best-effort cleanup/bootstrapping
+  } catch (error) {
+    // Best-effort cleanup/bootstrapping — stop may fail if not running
+    console.debug(
+      "[db-reset] supabase stop failed or not running, continuing...",
+      error
+    );
   }
 
   run("pnpm", ["supabase:start"]);

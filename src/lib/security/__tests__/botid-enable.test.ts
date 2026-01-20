@@ -8,24 +8,22 @@ afterEach(() => {
 });
 
 describe("isBotIdEnabledForCurrentEnvironment", () => {
-  it("defaults to enabled for production, preview, and test", () => {
-    vi.stubEnv("BOTID_ENABLE", undefined);
-
-    vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("VERCEL_ENV", undefined);
-    expect(isBotIdEnabledForCurrentEnvironment()).toBe(false);
-
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("VERCEL_ENV", undefined);
-    expect(isBotIdEnabledForCurrentEnvironment()).toBe(true);
-
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("VERCEL_ENV", "preview");
-    expect(isBotIdEnabledForCurrentEnvironment()).toBe(true);
-
-    vi.stubEnv("NODE_ENV", "test");
-    vi.stubEnv("VERCEL_ENV", undefined);
-    expect(isBotIdEnabledForCurrentEnvironment()).toBe(true);
+  describe.each([
+    { expected: false, nodeEnv: "development", vercelEnv: undefined },
+    { expected: true, nodeEnv: "production", vercelEnv: undefined },
+    { expected: true, nodeEnv: "production", vercelEnv: "preview" },
+    { expected: true, nodeEnv: "test", vercelEnv: undefined },
+  ])("defaults for NODE_ENV=$nodeEnv, VERCEL_ENV=$vercelEnv", ({
+    nodeEnv,
+    vercelEnv,
+    expected,
+  }) => {
+    it(`returns ${expected}`, () => {
+      vi.stubEnv("BOTID_ENABLE", undefined);
+      vi.stubEnv("NODE_ENV", nodeEnv);
+      vi.stubEnv("VERCEL_ENV", vercelEnv);
+      expect(isBotIdEnabledForCurrentEnvironment()).toBe(expected);
+    });
   });
 
   it("can be enabled for development via BOTID_ENABLE", () => {

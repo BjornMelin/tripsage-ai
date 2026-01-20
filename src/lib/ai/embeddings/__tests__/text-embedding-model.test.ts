@@ -4,6 +4,7 @@ import { embed } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import {
+  __resetEmbeddingKeyCacheForTest,
   getTextEmbeddingModel,
   getTextEmbeddingModelId,
   TEXT_EMBEDDING_DIMENSIONS,
@@ -15,6 +16,7 @@ vi.mock("server-only", () => ({}));
 afterEach(() => {
   vi.unstubAllEnvs();
   __resetServerEnvCacheForTest();
+  __resetEmbeddingKeyCacheForTest();
 });
 
 describe("getTextEmbeddingModel", () => {
@@ -22,6 +24,7 @@ describe("getTextEmbeddingModel", () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "");
     __resetServerEnvCacheForTest();
+    __resetEmbeddingKeyCacheForTest();
 
     const model = getTextEmbeddingModel();
     expect(typeof model).not.toBe("string");
@@ -53,6 +56,7 @@ describe("getTextEmbeddingModel", () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "aaaaaaaaaaaaaaaaaaaa");
     vi.stubEnv("OPENAI_API_KEY", "");
     __resetServerEnvCacheForTest();
+    __resetEmbeddingKeyCacheForTest();
 
     expect(getTextEmbeddingModel()).toBe(TEXT_EMBEDDING_MODEL_ID);
     expect(getTextEmbeddingModelId()).toBe(TEXT_EMBEDDING_MODEL_ID);
@@ -62,6 +66,7 @@ describe("getTextEmbeddingModel", () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "sk-test-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     __resetServerEnvCacheForTest();
+    __resetEmbeddingKeyCacheForTest();
 
     const model = getTextEmbeddingModel();
     expect(typeof model).not.toBe("string");

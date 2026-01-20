@@ -43,12 +43,29 @@ function createDeterministicEmbeddingModel(): EmbeddingModelV3 {
   };
 }
 
+let cachedAiGatewayKey: boolean | undefined;
+let cachedOpenAiKey: boolean | undefined;
+
+// biome-ignore lint/style/useNamingConvention: test-only reset helper
+export function __resetEmbeddingKeyCacheForTest() {
+  cachedAiGatewayKey = undefined;
+  cachedOpenAiKey = undefined;
+}
+
 function hasAiGatewayKey(): boolean {
-  return Boolean(getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined));
+  if (cachedAiGatewayKey === undefined) {
+    cachedAiGatewayKey = Boolean(
+      getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined)
+    );
+  }
+  return cachedAiGatewayKey;
 }
 
 function hasOpenAiKey(): boolean {
-  return Boolean(getServerEnvVarWithFallback("OPENAI_API_KEY", undefined));
+  if (cachedOpenAiKey === undefined) {
+    cachedOpenAiKey = Boolean(getServerEnvVarWithFallback("OPENAI_API_KEY", undefined));
+  }
+  return cachedOpenAiKey;
 }
 
 export function getTextEmbeddingModel(): EmbeddingModel {

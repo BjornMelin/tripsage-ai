@@ -26,10 +26,10 @@ import { createClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
 import { z } from "zod";
 import {
-  DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS,
   DETERMINISTIC_TEXT_EMBEDDING_MODEL_ID,
   deterministicTextEmbedding,
 } from "../../src/lib/ai/embeddings/deterministic";
+import { TEXT_EMBEDDING_DIMENSIONS } from "../../src/lib/ai/embeddings/text-embedding-model";
 import { toPgvector as toPgvectorShared } from "../../src/lib/rag/pgvector";
 import type { Database, Json } from "../../src/lib/supabase/database.types";
 import { SUPABASE_CLI_VERSION } from "../supabase/supabase-cli";
@@ -214,9 +214,9 @@ async function embedTextValues(values: string[]): Promise<{
   }
 
   for (const [idx, embedding] of embeddings.entries()) {
-    if (embedding.length !== DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS) {
+    if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
       throw new Error(
-        `Invalid embedding dimensions at index ${idx} (expected ${DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length})`
+        `Invalid embedding dimensions at index ${idx} (expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length})`
       );
     }
   }
@@ -227,12 +227,12 @@ async function embedTextValues(values: string[]): Promise<{
 /**
  * Serialize embedding to pgvector format with strict dimension validation.
  *
- * Wraps the shared toPgvector function to enforce deterministic embedding dimensions.
+ * Wraps the shared toPgvector function to enforce standard embedding dimensions.
  */
 function toPgvector(embedding: readonly number[]): string {
-  if (embedding.length !== DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS) {
+  if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
     throw new Error(
-      `Invalid embedding dimensions (expected ${DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length})`
+      `Invalid embedding dimensions (expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length})`
     );
   }
   return toPgvectorShared(embedding);

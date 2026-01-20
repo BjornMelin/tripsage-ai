@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { sanitizeAuthConfirmNextParam } from "@/lib/auth/confirm-next";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const ALLOWED_EMAIL_OTP_TYPES = new Set<string>([
   "email",
@@ -25,6 +26,7 @@ function parseEmailOtpType(value: string | null): EmailOtpType | null {
 }
 
 export async function GET(request: NextRequest) {
+  const logger = createServerLogger("auth-confirm");
   const { searchParams } = new URL(request.url);
   const next = sanitizeAuthConfirmNextParam(searchParams.get("next"));
 
@@ -45,6 +47,12 @@ export async function GET(request: NextRequest) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (!exchangeError) {
       redirect(next);
+    }
+    if (exchangeError) {
+      logger.warn("OAuth code exchange failed", {
+        code,
+        error: exchangeError.message ?? "unknown",
+      });
     }
   }
 

@@ -16,7 +16,15 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<
+    {
+      from?: string;
+      next?: string;
+      error?: string;
+      // biome-ignore lint/style/useNamingConvention: query param uses snake_case
+      error_code?: string;
+    } & Record<string, string | undefined>
+  >;
 }) {
   const params = await searchParams;
   // biome-ignore lint/complexity/useLiteralKeys: query param uses snake_case

@@ -14,7 +14,7 @@
 
 ### Security & Compliance
 
-TripSage AI implements a military-grade security model designed for sensitive agentic operations:
+TripSage AI implements a defense-in-depth security model designed for sensitive agentic operations:
 
 - **BYOK (Bring Your Own Key)**: Users can provide their own API keys for AI providers, which are stored securely in **Supabase Vault** and never accessed by the application backend outside of resolution.
 - **withApiGuards**: A unified factory for Next.js Route Handlers that centralizes:
@@ -350,7 +350,7 @@ const basePath = getClientEnvVarWithFallback("NEXT_PUBLIC_BASE_PATH", "");
 **Never** use `process.env` directly in application code. Always use the
 env helpers.
 
-See `src/lib/env/schema.ts` for the full list of supported variables.
+See `src/domain/schemas/env.ts` for the full list of supported variables.
 
 ### HTTP Client (Unified)
 
