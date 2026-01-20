@@ -4,7 +4,9 @@
 
 import { createHash } from "node:crypto";
 
+/** Embedding dimensionality for deterministic offline vectors. */
 export const DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS = 1536;
+/** Model id for deterministic offline embeddings. */
 export const DETERMINISTIC_TEXT_EMBEDDING_MODEL_ID =
   "tripsage/deterministic-embedding-1536-v1" as const;
 
@@ -41,6 +43,9 @@ function normalizeVector(vec: number[]): number[] {
   return vec.map((v) => v / norm);
 }
 
+/**
+ * Deterministically derives a normalized embedding vector for the given text.
+ */
 export function deterministicTextEmbedding(text: string): number[] {
   // Stable across platforms/Node versions: use UTF-8 + SHA-256 only.
   const seedPrefix = utf8("tripsage:deterministic-embeddings:v1\0");
