@@ -10,7 +10,7 @@ project_id = "tripsage-ai"
 # API server configuration (PostgREST)
 enabled = true
 port = 54321
-schemas = ["public", "auth", "storage", "graphql_public"]
+schemas = ["public", "auth", "storage", "graphql_public", "memories"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -64,7 +64,10 @@ allowed_mime_types = [
   "image/png",
   "image/webp",
   "image/gif",
+  "image/svg+xml",
   "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
   "text/csv",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -7,6 +7,17 @@
 -- - Allow trip collaborators to read itinerary items and editors/admins to mutate them.
 -- - Allow attachment uploads using the current API path prefix (chat/{userId}/...).
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20260106009000';
+  END IF;
+END;
+$do$;
+
 -- ===========================
 -- CHAT SESSIONS
 -- ===========================
@@ -54,6 +65,11 @@ DROP POLICY IF EXISTS itinerary_select_own ON public.itinerary_items;
 DROP POLICY IF EXISTS itinerary_insert_own ON public.itinerary_items;
 DROP POLICY IF EXISTS itinerary_update_own ON public.itinerary_items;
 DROP POLICY IF EXISTS itinerary_delete_trip_edit ON public.itinerary_items;
+
+-- Make idempotent across cached local restores (or partially-applied DBs).
+DROP POLICY IF EXISTS itinerary_select_trip_access ON public.itinerary_items;
+DROP POLICY IF EXISTS itinerary_insert_trip_edit ON public.itinerary_items;
+DROP POLICY IF EXISTS itinerary_update_trip_edit ON public.itinerary_items;
 
 CREATE POLICY itinerary_select_trip_access
   ON public.itinerary_items

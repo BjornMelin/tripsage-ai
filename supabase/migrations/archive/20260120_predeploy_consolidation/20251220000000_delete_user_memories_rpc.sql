@@ -1,6 +1,17 @@
 -- Delete user memories atomically (service_role only).
 -- Uses a single transaction via PL/pgSQL function execution.
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251220000000';
+  END IF;
+END;
+$do$;
+
 CREATE OR REPLACE FUNCTION public.delete_user_memories(
   p_user_id UUID
 ) RETURNS TABLE (
@@ -28,4 +39,3 @@ BEGIN
   RETURN QUERY SELECT v_deleted_turns, v_deleted_sessions;
 END;
 $$;
-

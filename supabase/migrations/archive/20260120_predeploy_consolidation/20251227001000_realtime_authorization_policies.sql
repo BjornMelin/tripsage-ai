@@ -13,6 +13,17 @@
 -- Note: trip collaboration introduced `trip:{id}` policies in 20251227000000_trip_collaboration.sql.
 -- This migration recreates them to remove unsafe casts.
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251227001000';
+  END IF;
+END;
+$do$;
+
 CREATE OR REPLACE FUNCTION public.try_cast_uuid(p_value TEXT)
 RETURNS UUID
 LANGUAGE plpgsql

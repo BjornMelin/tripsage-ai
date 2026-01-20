@@ -2,6 +2,17 @@
 -- Purpose: Enable semantic search over memory turn embeddings for context retrieval
 -- This replaces the external Mem0 dependency with native Supabase pgvector search
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251230000000';
+  END IF;
+END;
+$do$;
+
 -- Match turn embeddings for semantic memory search
 -- Pattern follows match_rag_documents and match_accommodation_embeddings
 CREATE OR REPLACE FUNCTION memories.match_turn_embeddings(
@@ -83,7 +94,7 @@ BEGIN
     t.user_id,
     t.content,
     t.role,
-    1 - (te.embedding <=> query_embedding) AS similarity,
+    1 - (te.embedding OPERATOR(extensions.<=>) query_embedding) AS similarity,
     t.created_at
   FROM memories.turn_embeddings te
   JOIN memories.turns t ON t.id = te.turn_id
@@ -93,8 +104,8 @@ BEGIN
     -- Session filter: optional scope narrowing
     AND (filter_session_id IS NULL OR t.session_id = filter_session_id)
     -- Similarity threshold: exclude low-relevance matches
-    AND 1 - (te.embedding <=> query_embedding) > match_threshold
-  ORDER BY te.embedding <=> query_embedding
+    AND 1 - (te.embedding OPERATOR(extensions.<=>) query_embedding) > match_threshold
+  ORDER BY te.embedding OPERATOR(extensions.<=>) query_embedding
   LIMIT match_count;
 END;
 $$;

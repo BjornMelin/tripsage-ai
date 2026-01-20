@@ -2,6 +2,17 @@
 -- Generated: 2025-12-11
 -- SPEC-0018: RAG Retriever/Indexer
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251211000000';
+  END IF;
+END;
+$do$;
+
 -- ===========================
 -- RAG DOCUMENTS TABLE
 -- ===========================
@@ -71,6 +82,7 @@ CREATE INDEX IF NOT EXISTS rag_documents_fts_idx
 ALTER TABLE public.rag_documents ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can read all documents
+DROP POLICY IF EXISTS "Allow authenticated users to read RAG documents" ON public.rag_documents;
 CREATE POLICY "Allow authenticated users to read RAG documents"
   ON public.rag_documents
   FOR SELECT
@@ -78,6 +90,7 @@ CREATE POLICY "Allow authenticated users to read RAG documents"
   USING (true);
 
 -- Anonymous users can read documents for public search
+DROP POLICY IF EXISTS "Allow anonymous users to read RAG documents" ON public.rag_documents;
 CREATE POLICY "Allow anonymous users to read RAG documents"
   ON public.rag_documents
   FOR SELECT
@@ -85,6 +98,7 @@ CREATE POLICY "Allow anonymous users to read RAG documents"
   USING (true);
 
 -- Service role has full access for indexing
+DROP POLICY IF EXISTS "Allow service role to manage RAG documents" ON public.rag_documents;
 CREATE POLICY "Allow service role to manage RAG documents"
   ON public.rag_documents
   FOR ALL
@@ -100,7 +114,7 @@ CREATE POLICY "Allow service role to manage RAG documents"
 CREATE OR REPLACE FUNCTION public.match_rag_documents (
   query_embedding vector(1536),
   filter_namespace TEXT DEFAULT NULL,
-  match_threshold FLOAT DEFAULT 0.7,
+  match_threshold FLOAT DEFAULT 0.0,
   match_count INT DEFAULT 10
 )
 RETURNS TABLE (
@@ -131,12 +145,12 @@ BEGIN
     d.namespace,
     d.source_id,
     d.chunk_index,
-    1 - (d.embedding <=> query_embedding) AS similarity
+    1 - (d.embedding OPERATOR(extensions.<=>) query_embedding) AS similarity
   FROM public.rag_documents d
   WHERE
     (filter_namespace IS NULL OR d.namespace = filter_namespace) AND
-    1 - (d.embedding <=> query_embedding) > match_threshold
-  ORDER BY d.embedding <=> query_embedding
+    1 - (d.embedding OPERATOR(extensions.<=>) query_embedding) > match_threshold
+  ORDER BY d.embedding OPERATOR(extensions.<=>) query_embedding
   LIMIT match_count;
 END;
 $$;
@@ -147,7 +161,7 @@ CREATE OR REPLACE FUNCTION public.hybrid_rag_search (
   query_embedding vector(1536),
   filter_namespace TEXT DEFAULT NULL,
   match_count INT DEFAULT 10,
-  match_threshold FLOAT DEFAULT 0.7,
+  match_threshold FLOAT DEFAULT 0.0,
   keyword_weight FLOAT DEFAULT 0.3,
   semantic_weight FLOAT DEFAULT 0.7
 )
@@ -182,12 +196,12 @@ BEGIN
       d.namespace,
       d.source_id,
       d.chunk_index,
-      1 - (d.embedding <=> query_embedding) AS sim_score
+      1 - (d.embedding OPERATOR(extensions.<=>) query_embedding) AS sim_score
     FROM public.rag_documents d
     WHERE
       (filter_namespace IS NULL OR d.namespace = filter_namespace) AND
-      1 - (d.embedding <=> query_embedding) > match_threshold
-    ORDER BY d.embedding <=> query_embedding
+      1 - (d.embedding OPERATOR(extensions.<=>) query_embedding) > match_threshold
+    ORDER BY d.embedding OPERATOR(extensions.<=>) query_embedding
     LIMIT match_count * 2
   ),
 	  keyword_results AS (

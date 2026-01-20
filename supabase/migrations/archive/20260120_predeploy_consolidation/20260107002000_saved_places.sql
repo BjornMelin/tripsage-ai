@@ -5,6 +5,17 @@
 -- - Persist user-saved places to trips without storing raw provider payloads.
 -- - Enforce trip collaboration access via existing SECURITY DEFINER helpers.
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20260107002000';
+  END IF;
+END;
+$do$;
+
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.saved_places (
@@ -106,4 +117,3 @@ CREATE TRIGGER saved_places_prevent_identity_change
   FOR EACH ROW EXECUTE FUNCTION public.prevent_saved_places_identity_change();
 
 COMMIT;
-

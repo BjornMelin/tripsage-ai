@@ -2,6 +2,17 @@
 -- Generated: 2025-11-22
 -- This file replaces all prior migrations. Do not split unless required by production change management.
 
+-- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
+-- If the tracking row for this migration already exists, the CLI will fail at the end when recording
+-- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
+DO $do$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251122000000';
+  END IF;
+END;
+$do$;
+
 -- ===========================
 -- EXTENSIONS
 -- ===========================
@@ -91,6 +102,7 @@ CREATE INDEX IF NOT EXISTS auth_backup_codes_consumed_at_idx
 
 ALTER TABLE public.auth_backup_codes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role can manage backup codes" ON public.auth_backup_codes;
 CREATE POLICY "Service role can manage backup codes"
   ON public.auth_backup_codes
   FOR ALL
@@ -142,12 +154,14 @@ CREATE INDEX IF NOT EXISTS mfa_backup_code_audit_user_created_idx
 
 ALTER TABLE public.mfa_backup_code_audit ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own backup code audit" ON public.mfa_backup_code_audit;
 CREATE POLICY "Users can view own backup code audit"
   ON public.mfa_backup_code_audit
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Service role manages backup code audit" ON public.mfa_backup_code_audit;
 CREATE POLICY "Service role manages backup code audit"
   ON public.mfa_backup_code_audit
   FOR ALL
@@ -178,12 +192,14 @@ CREATE INDEX IF NOT EXISTS mfa_enrollments_challenge_idx
 
 ALTER TABLE public.mfa_enrollments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own mfa_enrollments" ON public.mfa_enrollments;
 CREATE POLICY "Users can view own mfa_enrollments"
   ON public.mfa_enrollments
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Service role manages mfa_enrollments" ON public.mfa_enrollments;
 CREATE POLICY "Service role manages mfa_enrollments"
   ON public.mfa_enrollments
   FOR ALL
@@ -224,12 +240,16 @@ CREATE INDEX IF NOT EXISTS profiles_admin_idx ON public.profiles (is_admin) WHER
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Profiles owner select" ON public.profiles;
 CREATE POLICY "Profiles owner select" ON public.profiles
   FOR SELECT TO authenticated USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Profiles owner update" ON public.profiles;
 CREATE POLICY "Profiles owner update" ON public.profiles
   FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "Profiles owner insert" ON public.profiles;
 CREATE POLICY "Profiles owner insert" ON public.profiles
   FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "Profiles service all" ON public.profiles;
 CREATE POLICY "Profiles service all" ON public.profiles
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
@@ -434,7 +454,9 @@ CREATE TABLE IF NOT EXISTS public.gateway_user_keys (
 );
 
 ALTER TABLE public.gateway_user_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "gateway_user_keys_owner" ON public.gateway_user_keys;
 CREATE POLICY gateway_user_keys_owner ON public.gateway_user_keys FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "gateway_user_keys_service" ON public.gateway_user_keys;
 CREATE POLICY gateway_user_keys_service ON public.gateway_user_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- API gateway configuration (BYOK base URL) and user settings
@@ -647,6 +669,7 @@ CREATE INDEX IF NOT EXISTS idx_api_metrics_time_status ON public.api_metrics(cre
 
 ALTER TABLE public.api_metrics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin_read_api_metrics" ON public.api_metrics;
 CREATE POLICY "admin_read_api_metrics" ON public.api_metrics
     FOR SELECT
     USING (
@@ -658,6 +681,7 @@ CREATE POLICY "admin_read_api_metrics" ON public.api_metrics
         )
     );
 
+DROP POLICY IF EXISTS "service_role_all_api_metrics" ON public.api_metrics;
 CREATE POLICY "service_role_all_api_metrics" ON public.api_metrics
     FOR ALL
     USING (auth.role() = 'service_role')
@@ -754,9 +778,13 @@ CREATE TABLE IF NOT EXISTS public.webhook_events (
   payload JSONB NOT NULL,
   delivery_status TEXT NOT NULL DEFAULT 'pending' CHECK (delivery_status IN ('pending','delivered','failed','skipped')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   delivered_at TIMESTAMPTZ,
   last_error TEXT
 );
+
+ALTER TABLE public.webhook_events
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 CREATE TABLE IF NOT EXISTS public.webhook_logs (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -1244,38 +1272,57 @@ END$$;
 -- ===========================
 
 ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "trips_select_own" ON public.trips;
 CREATE POLICY trips_select_own ON public.trips FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "trips_insert_own" ON public.trips;
 CREATE POLICY trips_insert_own ON public.trips FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "trips_update_own" ON public.trips;
 CREATE POLICY trips_update_own ON public.trips FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "trips_delete_own" ON public.trips;
 CREATE POLICY trips_delete_own ON public.trips FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
 ALTER TABLE public.trip_collaborators ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "trip_collab_select" ON public.trip_collaborators;
 CREATE POLICY trip_collab_select ON public.trip_collaborators FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "trip_collab_insert" ON public.trip_collaborators;
 CREATE POLICY trip_collab_insert ON public.trip_collaborators FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE public.flights ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "flights_select_own" ON public.flights;
 CREATE POLICY flights_select_own ON public.flights FOR SELECT TO authenticated USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "flights_mutate_own" ON public.flights;
 CREATE POLICY flights_mutate_own ON public.flights FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "bookings_select_own" ON public.bookings;
 CREATE POLICY bookings_select_own ON public.bookings FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "bookings_insert_own" ON public.bookings;
 CREATE POLICY bookings_insert_own ON public.bookings FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "bookings_update_own" ON public.bookings;
 CREATE POLICY bookings_update_own ON public.bookings FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "bookings_all_service" ON public.bookings;
 CREATE POLICY bookings_all_service ON public.bookings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.accommodation_embeddings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "embeddings_select_auth" ON public.accommodation_embeddings;
 CREATE POLICY embeddings_select_auth ON public.accommodation_embeddings FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "embeddings_all_service" ON public.accommodation_embeddings;
 CREATE POLICY embeddings_all_service ON public.accommodation_embeddings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.itinerary_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "itinerary_select_own" ON public.itinerary_items;
 CREATE POLICY itinerary_select_own ON public.itinerary_items FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "itinerary_insert_own" ON public.itinerary_items;
 CREATE POLICY itinerary_insert_own ON public.itinerary_items FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "itinerary_update_own" ON public.itinerary_items;
 CREATE POLICY itinerary_update_own ON public.itinerary_items FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE public.accommodations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "accommodations_select_own" ON public.accommodations;
 CREATE POLICY accommodations_select_own ON public.accommodations FOR SELECT TO authenticated USING (
   trip_id IN (SELECT id FROM public.trips WHERE user_id = auth.uid())
 );
+DROP POLICY IF EXISTS "accommodations_mutate_own" ON public.accommodations;
 CREATE POLICY accommodations_mutate_own ON public.accommodations FOR ALL TO authenticated USING (
   trip_id IN (SELECT id FROM public.trips WHERE user_id = auth.uid())
 ) WITH CHECK (
@@ -1283,6 +1330,7 @@ CREATE POLICY accommodations_mutate_own ON public.accommodations FOR ALL TO auth
 );
 
 ALTER TABLE public.chat_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "chat_sessions_select" ON public.chat_sessions;
 CREATE POLICY chat_sessions_select ON public.chat_sessions FOR SELECT TO authenticated USING (
   auth.uid() = user_id
   OR trip_id IN (
@@ -1291,9 +1339,11 @@ CREATE POLICY chat_sessions_select ON public.chat_sessions FOR SELECT TO authent
     SELECT trip_id FROM public.trip_collaborators WHERE user_id = auth.uid()
   )
 );
+DROP POLICY IF EXISTS "chat_sessions_insert" ON public.chat_sessions;
 CREATE POLICY chat_sessions_insert ON public.chat_sessions FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "chat_messages_select" ON public.chat_messages;
 CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authenticated USING (
   session_id IN (
     SELECT id FROM public.chat_sessions
@@ -1305,9 +1355,11 @@ CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authent
     )
   )
 );
+DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;
 CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
 
 ALTER TABLE public.chat_tool_calls ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "chat_tool_calls_select" ON public.chat_tool_calls;
 CREATE POLICY chat_tool_calls_select ON public.chat_tool_calls FOR SELECT TO authenticated USING (
   message_id IN (
     SELECT cm.id
@@ -1321,6 +1373,7 @@ CREATE POLICY chat_tool_calls_select ON public.chat_tool_calls FOR SELECT TO aut
     )
   )
 );
+DROP POLICY IF EXISTS "chat_tool_calls_insert" ON public.chat_tool_calls;
 CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO authenticated WITH CHECK (
   message_id IN (
     SELECT id FROM public.chat_messages WHERE user_id = auth.uid()
@@ -1328,41 +1381,58 @@ CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO aut
 );
 
 ALTER TABLE public.api_gateway_configs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "api_gateway_configs_owner" ON public.api_gateway_configs;
 CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "api_gateway_configs_service" ON public.api_gateway_configs;
 CREATE POLICY api_gateway_configs_service ON public.api_gateway_configs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "user_settings_owner" ON public.user_settings;
 CREATE POLICY user_settings_owner ON public.user_settings FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "user_settings_service" ON public.user_settings;
 CREATE POLICY user_settings_service ON public.user_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "api_keys_owner" ON public.api_keys;
 CREATE POLICY api_keys_owner ON public.api_keys FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "api_keys_service" ON public.api_keys;
 CREATE POLICY api_keys_service ON public.api_keys FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.webhook_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.webhook_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "webhook_configs_service_all" ON public.webhook_configs;
 CREATE POLICY webhook_configs_service_all ON public.webhook_configs FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "webhook_configs_admin_read" ON public.webhook_configs;
 CREATE POLICY webhook_configs_admin_read ON public.webhook_configs FOR SELECT TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "webhook_events_service_all" ON public.webhook_events;
 CREATE POLICY webhook_events_service_all ON public.webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "webhook_events_admin_read" ON public.webhook_events;
 CREATE POLICY webhook_events_admin_read ON public.webhook_events FOR SELECT TO authenticated USING (public.is_admin());
 
+DROP POLICY IF EXISTS "webhook_logs_service_all" ON public.webhook_logs;
 CREATE POLICY webhook_logs_service_all ON public.webhook_logs FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "webhook_logs_admin_read" ON public.webhook_logs;
 CREATE POLICY webhook_logs_admin_read ON public.webhook_logs FOR SELECT TO authenticated USING (public.is_admin());
 
 ALTER TABLE public.file_attachments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "file_attachments_owner" ON public.file_attachments;
 CREATE POLICY file_attachments_owner ON public.file_attachments FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "file_attachments_service" ON public.file_attachments;
 CREATE POLICY file_attachments_service ON public.file_attachments FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE memories.sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "memories_sessions_owner" ON memories.sessions;
 CREATE POLICY memories_sessions_owner ON memories.sessions FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE memories.turns ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "memories_turns_owner" ON memories.turns;
 CREATE POLICY memories_turns_owner ON memories.turns FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE memories.turn_embeddings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "memories_turn_embeddings_owner" ON memories.turn_embeddings;
 CREATE POLICY memories_turn_embeddings_owner ON memories.turn_embeddings FOR ALL TO authenticated USING (
   turn_id IN (SELECT id FROM memories.turns WHERE user_id = auth.uid())
 ) WITH CHECK (
@@ -1370,28 +1440,38 @@ CREATE POLICY memories_turn_embeddings_owner ON memories.turn_embeddings FOR ALL
 );
 
 ALTER TABLE public.search_destinations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "search_destinations_owner" ON public.search_destinations;
 CREATE POLICY search_destinations_owner ON public.search_destinations FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE public.search_activities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "search_activities_owner" ON public.search_activities;
 CREATE POLICY search_activities_owner ON public.search_activities FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE public.search_flights ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "search_flights_owner" ON public.search_flights;
 CREATE POLICY search_flights_owner ON public.search_flights FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE public.search_hotels ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "search_hotels_owner" ON public.search_hotels;
 CREATE POLICY search_hotels_owner ON public.search_hotels FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 ALTER TABLE public.file_processing_queue ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "fpq_all_service" ON public.file_processing_queue;
 CREATE POLICY fpq_all_service ON public.file_processing_queue FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.file_versions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "file_versions_all_service" ON public.file_versions;
 CREATE POLICY file_versions_all_service ON public.file_versions FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE public.agent_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agent_config_versions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "agent_config_service_all" ON public.agent_config;
 CREATE POLICY agent_config_service_all ON public.agent_config FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "agent_config_versions_service_all" ON public.agent_config_versions;
 CREATE POLICY agent_config_versions_service_all ON public.agent_config_versions FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "agent_config_admin_all" ON public.agent_config;
 CREATE POLICY agent_config_admin_all ON public.agent_config FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "agent_config_versions_admin_all" ON public.agent_config_versions;
 CREATE POLICY agent_config_versions_admin_all ON public.agent_config_versions FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Storage helper functions and policies for buckets
@@ -1427,6 +1507,7 @@ EXCEPTION WHEN OTHERS THEN RETURN NULL;
 END;
 $$;
 
+DROP POLICY IF EXISTS "Users can upload attachments to their trips" ON storage.objects;
 CREATE POLICY "Users can upload attachments to their trips"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
@@ -1436,6 +1517,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Users can view attachments from accessible trips" ON storage.objects;
 CREATE POLICY "Users can view attachments from accessible trips"
 ON storage.objects FOR SELECT TO authenticated
 USING (
@@ -1445,6 +1527,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Users can view attachments they own by record" ON storage.objects;
 CREATE POLICY "Users can view attachments they own by record"
 ON storage.objects FOR SELECT TO authenticated
 USING (
@@ -1454,6 +1537,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Users can update their own attachments" ON storage.objects;
 CREATE POLICY "Users can update their own attachments"
 ON storage.objects FOR UPDATE TO authenticated
 USING (
@@ -1475,6 +1559,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Users can delete their own attachments" ON storage.objects;
 CREATE POLICY "Users can delete their own attachments"
 ON storage.objects FOR DELETE TO authenticated
 USING (
@@ -1488,8 +1573,10 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
 CREATE POLICY "Anyone can view avatars" ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
 CREATE POLICY "Users can upload their own avatar"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
@@ -1498,23 +1585,28 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE TO authenticated
 USING (bucket_id = 'avatars' AND coalesce(owner_id::text, owner::text) = auth.uid()::text)
 WITH CHECK (bucket_id = 'avatars' AND coalesce(owner_id::text, owner::text) = auth.uid()::text);
 
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE TO authenticated
 USING (bucket_id = 'avatars' AND coalesce(owner_id::text, owner::text) = auth.uid()::text);
 
+DROP POLICY IF EXISTS "Users can upload trip images" ON storage.objects;
 CREATE POLICY "Users can upload trip images" ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (bucket_id = 'trip-images' AND public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name)));
 
+DROP POLICY IF EXISTS "Users can view trip images" ON storage.objects;
 CREATE POLICY "Users can view trip images" ON storage.objects FOR SELECT TO authenticated
 USING (
   bucket_id = 'trip-images' AND public.user_has_trip_access(auth.uid(), public.extract_trip_id_from_path(name))
 );
 
+DROP POLICY IF EXISTS "Users can update their trip images" ON storage.objects;
 CREATE POLICY "Users can update their trip images" ON storage.objects FOR UPDATE TO authenticated
 USING (
   bucket_id = 'trip-images' AND (
@@ -1529,6 +1621,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Users can delete trip images" ON storage.objects;
 CREATE POLICY "Users can delete trip images" ON storage.objects FOR DELETE TO authenticated
 USING (
   bucket_id = 'trip-images' AND (
@@ -1537,6 +1630,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Service role has full access" ON storage.objects;
 CREATE POLICY "Service role has full access" ON storage.objects TO service_role USING (true) WITH CHECK (true);
 
 -- ===========================
