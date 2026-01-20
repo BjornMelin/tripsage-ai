@@ -189,7 +189,12 @@ describe("POST /api/hooks/stripe", () => {
   });
 
   it("returns 413 when request body exceeds size limit", async () => {
-    const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
+    const event = makeEventPayload("payment_intent.succeeded");
+    // Pad the event with enough data to exceed the limit
+    const padding = "x".repeat(MAX_WEBHOOK_BYTES + 1024);
+    const largeEvent = { ...event, _padding: padding };
+    const payload = JSON.stringify(largeEvent);
+
     const header = stripe.webhooks.generateTestHeaderString({
       payload,
       secret: WEBHOOK_SECRET,
@@ -198,7 +203,7 @@ describe("POST /api/hooks/stripe", () => {
     const { POST } = await loadRoute();
     const res = await POST(
       makeRequest(payload, {
-        "content-length": String(MAX_WEBHOOK_BYTES + 1),
+        "content-length": String(payload.length),
         "stripe-signature": header,
       })
     );
