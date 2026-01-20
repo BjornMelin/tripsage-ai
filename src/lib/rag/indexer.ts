@@ -4,7 +4,6 @@
 
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import type {
   IndexerConfig,
   RagDocument,
@@ -15,6 +14,10 @@ import type {
 import { indexerConfigSchema } from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
+import {
+  getTextEmbeddingModel,
+  TEXT_EMBEDDING_DIMENSIONS,
+} from "@/lib/ai/embeddings/text-embedding-model";
 import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -23,6 +26,7 @@ import { RagLimitError } from "./errors";
 import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
+const EMBED_TIMEOUT_MS = 10_000;
 
 /** Token to character ratio approximation (conservative). */
 const CHARS_PER_TOKEN = 4;
@@ -181,6 +185,7 @@ export async function indexDocuments(
         "rag.indexer.chunk_overlap": config.chunkOverlap,
         "rag.indexer.chunk_size": config.chunkSize,
         "rag.indexer.document_count": documents.length,
+        "rag.indexer.max_parallel_calls": config.maxParallelCalls,
         "rag.indexer.namespace": config.namespace,
         "rag.indexer.trip_id_present": Boolean(tripId),
       },
@@ -339,7 +344,9 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
 
   // Generate embeddings for all chunks in batch
   const { embeddings } = await embedMany({
-    model: openai.embeddingModel("text-embedding-3-small"),
+    abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    maxParallelCalls: config.maxParallelCalls,
+    model: getTextEmbeddingModel(),
     values: allChunks.map((c) => c.chunk),
   });
 
@@ -347,6 +354,15 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     throw new Error(
       `Embedding count mismatch: expected ${allChunks.length}, got ${embeddings.length}`
     );
+  }
+
+  for (let i = 0; i < embeddings.length; i += 1) {
+    const embedding = embeddings[i];
+    if (!embedding || embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
+      throw new Error(
+        `Embedding dimension mismatch at index ${i}: expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding?.length ?? -1}`
+      );
+    }
   }
 
   // Prepare rows for upsert

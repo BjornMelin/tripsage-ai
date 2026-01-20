@@ -7,6 +7,7 @@ import "server-only";
 import { ragSearchRequestSchema } from "@schemas/rag";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
+import { unauthorizedResponse } from "@/lib/api/route-helpers";
 import { handleRagSearch } from "./_handler";
 
 /**
@@ -35,6 +36,10 @@ export const POST = withApiGuards({
   rateLimit: "rag:search",
   schema: ragSearchRequestSchema,
   telemetry: "rag.search",
-})(async (_req: NextRequest, { supabase }, body) =>
-  handleRagSearch({ supabase }, body)
-);
+})((_req: NextRequest, { supabase, user }, body) => {
+  const userId = user?.id;
+  if (!userId) {
+    return unauthorizedResponse();
+  }
+  return handleRagSearch({ supabase, userId }, body);
+});

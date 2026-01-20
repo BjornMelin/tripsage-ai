@@ -68,7 +68,7 @@ describe("resolveProvider telemetry", () => {
     // No user gateway; enable team fallback via env key
     const rpc = await import("@/lib/supabase/rpc");
     vi.mocked(rpc.getUserApiKey).mockResolvedValue(null);
-    vi.stubEnv("AI_GATEWAY_API_KEY", "team-key");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "aaaaaaaaaaaaaaaaaaaa");
     vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v3/ai");
     const { resolveProvider } = await import("@ai/models/registry");
     await resolveProvider("u2", "openai/gpt-4o-mini");

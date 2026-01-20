@@ -60,6 +60,7 @@ function createMockDocument(
 describe("TogetherReranker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("TOGETHER_AI_API_KEY", "together_test_key_12345678901234567890");
   });
 
   it("returns empty array for empty documents", async () => {
@@ -204,11 +205,13 @@ describe("NoOpReranker", () => {
 
 describe("createReranker", () => {
   it("creates TogetherReranker by default", () => {
+    vi.stubEnv("TOGETHER_AI_API_KEY", "together_test_key_12345678901234567890");
     const reranker = createReranker();
     expect(reranker).toBeInstanceOf(TogetherReranker);
   });
 
   it("creates TogetherReranker with provider together", () => {
+    vi.stubEnv("TOGETHER_AI_API_KEY", "together_test_key_12345678901234567890");
     const reranker = createReranker({ provider: "together" });
     expect(reranker).toBeInstanceOf(TogetherReranker);
   });
@@ -219,6 +222,7 @@ describe("createReranker", () => {
   });
 
   it("passes config to reranker", () => {
+    vi.stubEnv("TOGETHER_AI_API_KEY", "together_test_key_12345678901234567890");
     const reranker = createReranker({
       provider: "together",
       timeout: 1000,
@@ -228,6 +232,7 @@ describe("createReranker", () => {
   });
 
   it("propagates factory config into effective topN", async () => {
+    vi.stubEnv("TOGETHER_AI_API_KEY", "together_test_key_12345678901234567890");
     const documents = [
       createMockDocument("1", "Doc 1", 0.9),
       createMockDocument("2", "Doc 2", 0.8),

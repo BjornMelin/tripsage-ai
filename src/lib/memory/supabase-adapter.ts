@@ -4,11 +4,14 @@
 
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import type { MemoryContextResponse } from "@schemas/chat";
 import { jsonSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embed } from "ai";
+import {
+  getTextEmbeddingModel,
+  TEXT_EMBEDDING_DIMENSIONS,
+} from "@/lib/ai/embeddings/text-embedding-model";
 import { toPgvector } from "@/lib/rag/pgvector";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
@@ -27,6 +30,7 @@ type MemoryTurnRow = Database["memories"]["Tables"]["turns"]["Row"];
 
 const MAX_CONTEXT_ITEMS = 10;
 const DEFAULT_SIMILARITY_THRESHOLD = 0.7;
+const EMBED_TIMEOUT_MS = 2_000;
 
 function extractTextFromContent(contentValue: unknown): string {
   if (typeof contentValue === "string") return contentValue;
@@ -58,15 +62,17 @@ async function handleSemanticFetchContext(
       : DEFAULT_SIMILARITY_THRESHOLD;
 
   try {
-    // Generate query embedding using OpenAI text-embedding-3-small (1536-d)
+    // Generate query embedding using the configured embedding provider (AI Gateway/OpenAI),
+    // falling back to deterministic offline embeddings when no provider keys are set.
     const { embedding } = await embed({
-      model: openai.embeddingModel("text-embedding-3-small"),
+      abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+      model: getTextEmbeddingModel(),
       value: intent.query,
     });
 
-    if (embedding.length !== 1536) {
+    if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
       logger.warn("embedding_dimension_mismatch", {
-        expected: 1536,
+        expected: TEXT_EMBEDDING_DIMENSIONS,
         got: embedding.length,
       });
       // Fall back to recency-based search

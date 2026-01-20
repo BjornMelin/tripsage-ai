@@ -22,6 +22,7 @@ export async function handleRagIndex(
     config: {
       chunkOverlap: body.chunkOverlap,
       chunkSize: body.chunkSize,
+      maxParallelCalls: body.maxParallelCalls,
       namespace: body.namespace,
     },
     documents: body.documents,

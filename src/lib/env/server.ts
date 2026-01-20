@@ -144,6 +144,16 @@ function parseServerEnv(): ServerEnv {
     deleteIfInvalidNonProd("QSTASH_CURRENT_SIGNING_KEY", (value) => value.length < 32);
     deleteIfInvalidNonProd("QSTASH_NEXT_SIGNING_KEY", (value) => value.length < 32);
     deleteIfInvalidNonProd("QSTASH_TOKEN", (value) => value.length < 20);
+    // Optional AI provider keys should not prevent local dev from booting.
+    deleteIfInvalidNonProd("AI_GATEWAY_API_KEY", (value) => value.length < 20);
+    deleteIfInvalidNonProd("OPENAI_API_KEY", (value) => !value.startsWith("sk-"));
+    deleteIfInvalidNonProd(
+      "ANTHROPIC_API_KEY",
+      (value) => !value.startsWith("sk-ant-")
+    );
+    deleteIfInvalidNonProd("OPENROUTER_API_KEY", (value) => value.length < 20);
+    deleteIfInvalidNonProd("XAI_API_KEY", (value) => value.length < 20);
+    deleteIfInvalidNonProd("TOGETHER_AI_API_KEY", (value) => value.length < 20);
     deleteIfInvalidNonProd("UPSTASH_REDIS_REST_URL", (value) => {
       try {
         const url = new URL(value);

@@ -4,7 +4,6 @@
 
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import {
   embeddingsRequestSchema,
   type PersistableEmbeddingsProperty,
@@ -13,8 +12,13 @@ import {
 import { embed } from "ai";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  getTextEmbeddingModel,
+  getTextEmbeddingModelId,
+  TEXT_EMBEDDING_DIMENSIONS,
+} from "@/lib/ai/embeddings/text-embedding-model";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
+import { errorResponse, unauthorizedResponse } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { toPgvector } from "@/lib/rag/pgvector";
 import { isValidInternalKey } from "@/lib/security/internal-key";
@@ -23,6 +27,7 @@ import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const MAX_INPUT_LENGTH = 8000;
+const EMBED_TIMEOUT_MS = 2_000;
 
 /**
  * Normalizes source string to "hotel" or "vrbo".
@@ -61,7 +66,7 @@ function normalizeAmenities(amenities?: string[] | string): string | null {
  * Persists accommodation embedding to Supabase.
  *
  * @param property - Property data with required ID.
- * @param embedding - Embedding vector (1536 dimensions).
+ * @param embedding - Embedding vector (must match `TEXT_EMBEDDING_DIMENSIONS`).
  * @throws Error if database operation fails.
  */
 async function persistAccommodationEmbedding(
@@ -89,7 +94,8 @@ async function persistAccommodationEmbedding(
 }
 
 /**
- * Generates text embeddings using OpenAI text-embedding-3-small model.
+ * Generates text embeddings using the configured embedding provider (AI Gateway/OpenAI),
+ * falling back to deterministic offline embeddings when no provider keys are set.
  *
  * @param req - Request containing text or property data.
  * @returns Response with embedding vector and metadata, or error.
@@ -98,8 +104,9 @@ export const POST = withApiGuards({
   auth: false,
   degradedMode: "fail_closed",
   rateLimit: "embeddings",
+  schema: embeddingsRequestSchema,
   telemetry: "embeddings.generate",
-})(async (req: NextRequest) => {
+})(async (req: NextRequest, _context, body) => {
   const logger = createServerLogger("embeddings.generate");
   const internalKey = getServerEnvVarWithFallback("EMBEDDINGS_API_KEY", "");
   if (!internalKey) {
@@ -112,18 +119,9 @@ export const POST = withApiGuards({
 
   const provided = req.headers.get("x-internal-key");
   if (!isValidInternalKey(provided, internalKey)) {
-    return errorResponse({
-      error: "unauthorized",
-      reason: "Authentication required",
-      status: 401,
-    });
+    return unauthorizedResponse();
   }
 
-  const parsed = await parseJsonBody(req);
-  if (!parsed.ok) return parsed.error;
-  const validation = validateSchema(embeddingsRequestSchema, parsed.data);
-  if (!validation.ok) return validation.error;
-  const body = validation.data;
   const text =
     body.text ??
     (body.property
@@ -145,15 +143,17 @@ export const POST = withApiGuards({
     });
   }
 
-  // Generate embedding via AI SDK v6 using OpenAI text-embedding-3-small (1536-d)
+  // Generate embedding via AI SDK v6 using Gateway/OpenAI when configured,
+  // otherwise deterministic local embeddings (1536-d).
   const { embedding, usage } = await embed({
-    model: openai.embeddingModel("text-embedding-3-small"),
+    abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    model: getTextEmbeddingModel(),
     value: text,
   });
-  if (!Array.isArray(embedding) || embedding.length !== 1536) {
+  if (!Array.isArray(embedding) || embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
     return errorResponse({
       err: new Error(
-        `Embedding dimension mismatch: expected 1536, got ${Array.isArray(embedding) ? embedding.length : -1}`
+        `Embedding dimension mismatch: expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${Array.isArray(embedding) ? embedding.length : -1}`
       ),
       error: "internal",
       reason: "Embedding dimension mismatch",
@@ -180,7 +180,7 @@ export const POST = withApiGuards({
   return NextResponse.json({
     embedding,
     id: body.property?.id,
-    modelId: "text-embedding-3-small",
+    modelId: getTextEmbeddingModelId(),
     persisted,
     success: true,
     usage,
