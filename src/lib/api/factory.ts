@@ -57,6 +57,12 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
   const authorization = getAuthorization(req);
   if (authorization?.trim()) return true;
 
+  const isSupabaseSsrAuthCookieName = (cookieName: string): boolean => {
+    if (!cookieName.startsWith("sb-")) return false;
+    if (cookieName.endsWith("-auth-token")) return true;
+    return /-auth-token\.\d+$/.test(cookieName);
+  };
+
   // Prefer request cookies when available (works in tests and Route Handlers).
   try {
     if (req.cookies.get("sb-access-token")?.value) return true;
@@ -67,9 +73,7 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
         .getAll()
         .some(
           (cookie) =>
-            cookie.name.startsWith("sb-") &&
-            cookie.name.endsWith("-auth-token") &&
-            Boolean(cookie.value?.trim())
+            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
         )
     ) {
       return true;
@@ -88,9 +92,7 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
         .getAll()
         .some(
           (cookie) =>
-            cookie.name.startsWith("sb-") &&
-            cookie.name.endsWith("-auth-token") &&
-            Boolean(cookie.value?.trim())
+            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
         )
     ) {
       return true;
