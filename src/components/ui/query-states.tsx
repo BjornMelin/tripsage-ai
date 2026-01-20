@@ -31,7 +31,7 @@ const QUERY_STATE_COLORS = {
 /**
  * Props for the QueryStateHandler component.
  */
-interface QueryStateHandlerProps<TData = unknown, TError = Error> {
+interface QueryStateHandlerProps<TData = unknown, TError = unknown> {
   /** The React Query result object to handle. */
   query: UseQueryResult<TData, TError>;
   /** Render function that receives the query data when available. */
@@ -57,7 +57,7 @@ interface QueryStateHandlerProps<TData = unknown, TError = Error> {
  * @param isEmpty - Optional function to check if data is empty.
  * @returns The appropriate component based on query state.
  */
-export function QueryStateHandler<TData = unknown, TError = Error>({
+export function QueryStateHandler<TData = unknown, TError = unknown>({
   query,
   children,
   loadingFallback,
@@ -77,12 +77,7 @@ export function QueryStateHandler<TData = unknown, TError = Error>({
     if (errorFallback) {
       return <>{errorFallback(error, refetch)}</>;
     }
-    // Convert error to Error type for InlineQueryError
-    const errorObject =
-      error instanceof Error
-        ? error
-        : new Error(typeof error === "string" ? error : "An error occurred");
-    return <InlineQueryError error={errorObject} retry={refetch} />;
+    return <InlineQueryError error={error} retry={refetch} />;
   }
 
   // Empty state
@@ -104,7 +99,7 @@ export function QueryStateHandler<TData = unknown, TError = Error>({
  */
 interface MutationStateHandlerProps<
   TData = unknown,
-  TError = Error,
+  TError = unknown,
   TVariables = unknown,
 > {
   /** The React Query mutation result object to handle. */
@@ -131,7 +126,7 @@ interface MutationStateHandlerProps<
  */
 export function MutationStateHandler<
   TData = unknown,
-  TError = Error,
+  TError = unknown,
   TVariables = unknown,
 >({
   mutation,
@@ -157,15 +152,7 @@ export function MutationStateHandler<
       )}
 
       {/* Error state */}
-      {isError && error && (
-        <InlineQueryError
-          error={
-            error instanceof Error
-              ? error
-              : new Error(typeof error === "string" ? error : "An error occurred")
-          }
-        />
-      )}
+      {isError && error && <InlineQueryError error={error} />}
 
       {/* Success state */}
       {showSuccess && isSuccess && (
@@ -333,7 +320,7 @@ export function SuspenseQuery<TData = unknown, TError = Error>({
  */
 interface InfiniteQueryStateHandlerProps<TData = unknown> {
   /** The React Query infinite result object to handle. */
-  query: UseInfiniteQueryResult<TData, Error>;
+  query: UseInfiniteQueryResult<TData, unknown>;
   /** Render function that receives flattened array of all pages data. */
   children: (data: TData[]) => ReactNode;
   /** Optional fallback component to show during loading. */
@@ -380,12 +367,7 @@ export function InfiniteQueryStateHandler<TData = unknown>({
   }
 
   if (isError && error) {
-    // Convert error to Error type for InlineQueryError
-    const errorObject =
-      error instanceof Error
-        ? error
-        : new Error(typeof error === "string" ? error : "An error occurred");
-    return <InlineQueryError error={errorObject} retry={refetch} />;
+    return <InlineQueryError error={error} retry={refetch} />;
   }
 
   // Extract data from infinite query pages structure

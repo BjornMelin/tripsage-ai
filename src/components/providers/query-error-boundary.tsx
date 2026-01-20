@@ -340,7 +340,7 @@ export function QueryErrorBoundary({
  * @param className - Additional CSS classes to apply.
  */
 interface InlineQueryErrorProps {
-  error: Error;
+  error: unknown;
   retry?: () => void;
   className?: string;
 }

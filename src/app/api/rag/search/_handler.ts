@@ -117,7 +117,7 @@ export async function handleRagSearch(
           rerankingApplied: cached.data.rerankingApplied,
           results: rehydrated,
           success: true,
-          total: rehydrated.length,
+          total: cached.data.total,
         });
       }
 

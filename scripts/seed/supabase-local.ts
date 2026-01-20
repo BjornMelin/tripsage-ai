@@ -720,18 +720,19 @@ async function seedSearchDestinations(input: {
     source: "google_maps" | "external_api" | "cached";
   }>;
 }): Promise<void> {
-  for (const row of input.rows) {
-    const deleted = await supabase
-      .from("search_destinations")
-      .delete()
-      .eq("user_id", input.userId)
-      .eq("query_hash", row.queryHash);
-    if (deleted.error) {
-      throw new Error(`delete search_destinations failed: ${deleted.error.message}`);
-    }
+  if (input.rows.length === 0) return;
+  const deleted = await supabase
+    .from("search_destinations")
+    .delete()
+    .eq("user_id", input.userId)
+    .in(
+      "query_hash",
+      input.rows.map((row) => row.queryHash)
+    );
+  if (deleted.error) {
+    throw new Error(`delete search_destinations failed: ${deleted.error.message}`);
   }
 
-  if (input.rows.length === 0) return;
   const inserted = await supabase.from("search_destinations").insert(
     input.rows.map((row) => ({
       expires_at: row.expiresAt,
