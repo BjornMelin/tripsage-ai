@@ -17,7 +17,7 @@ Environment prerequisites:
 - Operators should treat `MFA_BACKUP_CODE_PEPPER` and `SUPABASE_JWT_SECRET` as distinct secrets: the pepper is only for deterministic backup-code hashing/salting, while the JWT secret is for token signing.
 - When the fallback is used, document the risk and schedule rotation to a dedicated pepper as soon as possible.
 
-Audit events for backup-code operations are stored in the `mfa_backup_code_audit` table (schema in `supabase/migrations/20251122000000_base_schema.sql`) with columns:
+Audit events for backup-code operations are stored in the `mfa_backup_code_audit` table (schema in `supabase/migrations/20260120000000_base_schema.sql`) with columns:
 
 - `id` (UUID, PK)
 - `user_id` (UUID)

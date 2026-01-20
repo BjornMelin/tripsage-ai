@@ -20,7 +20,7 @@
 
 Canonical schema:
 
-- Database migration: `supabase/migrations/20251211000000_create_rag_documents.sql`
+- Database migration: `supabase/migrations/20260120000000_base_schema.sql`
 - Zod schemas and request/response types: `src/domain/schemas/rag.ts`
 
 Tables and indexes (implementation):

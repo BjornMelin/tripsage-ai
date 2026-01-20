@@ -38,7 +38,7 @@ OPENROUTER_API_KEY=...
 
 ## Migrations to Verify
 
-- `supabase/migrations/20251113000000_gateway_user_byok.sql`
+- `supabase/migrations/20260120000000_base_schema.sql` (squashed)
   - Tables: `api_gateway_configs` (owner RLS), `user_settings` (owner RLS, `allow_gateway_fallback` default true).
   - RPCs (SECURITY DEFINER, service_role only): `upsert_user_gateway_config`, `get_user_gateway_base_url`, `delete_user_gateway_config`, `get_user_allow_gateway_fallback`.
 

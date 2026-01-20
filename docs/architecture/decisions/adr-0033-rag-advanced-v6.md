@@ -32,7 +32,7 @@ We will:
 
    This is implemented in `src/lib/ai/embeddings/text-embedding-model.ts`.
 
-3) **Use hybrid retrieval** via Supabase RPC `hybrid_rag_search` in `supabase/migrations/20251211000000_create_rag_documents.sql`, and generate the query embedding using `embed()` in `src/lib/rag/retriever.ts`.
+3) **Use hybrid retrieval** via Supabase RPC `hybrid_rag_search` in `supabase/migrations/20260120000000_base_schema.sql`, and generate the query embedding using `embed()` in `src/lib/rag/retriever.ts`.
 
    - Indexing uses `embedMany()` with `maxParallelCalls` (default: 2) to bound concurrency and reduce provider/rate-limit pressure during bulk indexing.
 

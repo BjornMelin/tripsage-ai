@@ -21,7 +21,7 @@
 ## Quick Start Tasks
 
 | **Task** | **Documentation** | **Time Estimate** |
-|----------|-------------------|-------------------|
+| :--- | :--- | :--- |
 | New deployment | [Operators Reference](./operators-reference.md) | 1-2 hours |
 | Environment setup | [Operators Reference](./operators-reference.md) | 30-60 min |
 | Security review | [Security Guide](./security-guide.md) | 1-2 hours |

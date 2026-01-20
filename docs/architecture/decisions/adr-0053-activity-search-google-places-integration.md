@@ -60,7 +60,7 @@ We will implement activity search and (future) booking using a **hybrid provider
    - Rate limits wired via `@upstash/ratelimit` + `Redis.fromEnv()` and the central `ROUTE_RATE_LIMITS` registry.
 
 6. **Supabase-backed search cache (no new Redis cache for MVP)**  
-   - Use `public.search_activities` as the **authoritative durable cache**, with existing RLS policy and indexes (`supabase/migrations/20251122000000_base_schema.sql`).  
+   - Use `public.search_activities` as the **authoritative durable cache**, with existing RLS policy and indexes (`supabase/migrations/20260120000000_base_schema.sql`).  
    - Store normalized request parameters, hash, provider `source` (`googleplaces` or `ai_fallback`), and search metadata.  
    - Upstash Redis is used **only for rate limiting and existing shared infra**, not as an additional cache layer for this feature to keep KISS/YAGNI.
 

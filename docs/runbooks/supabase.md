@@ -12,7 +12,7 @@
   - `pnpm supabase:start`
 - Stop Supabase:
   - `pnpm supabase:stop`
-- Reset database (re-applies `supabase/migrations/*`; skips `supabase/seed.sql` — use `pnpm supabase:seed:*`):
+- Reset database (re-applies the squashed migration `supabase/migrations/20260120000000_base_schema.sql`; skips `supabase/seed.sql` — use `pnpm supabase:seed:*`):
   - `pnpm supabase:db:reset`
 - One-shot bootstrap (start + reset + print status):
   - `pnpm supabase:bootstrap`
@@ -75,7 +75,7 @@ This writes `src/lib/supabase/database.types.ts` from the local database (schema
 
 ## Common workflow
 
-1) Add/modify SQL in `supabase/migrations/*`
+1) Add/modify SQL in `supabase/migrations/20260120000000_base_schema.sql` (historical split migrations are archived under `supabase/migrations/archive/`)
 2) `pnpm supabase:db:reset`
 3) `pnpm supabase:typegen`
 4) Commit both the migration(s) and updated `src/lib/supabase/database.types.ts`

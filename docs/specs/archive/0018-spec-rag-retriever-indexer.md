@@ -248,7 +248,7 @@ Available to AI agents via the tool registry.
 | `src/lib/rag/reranker.ts` | Pluggable reranker interface + Together.ai impl |
 | `src/lib/rag/indexer.ts` | Document indexing with chunking + embedding |
 | `src/lib/rag/retriever.ts` | Hybrid search + reranking logic |
-| `supabase/migrations/*_create_rag_documents.sql` | Database migration |
+| `supabase/migrations/20260120000000_base_schema.sql` | Database migration (squashed) |
 | `src/app/api/rag/index/route.ts` | POST /api/rag/index endpoint |
 | `src/app/api/rag/search/route.ts` | POST /api/rag/search endpoint |
 | `src/ai/tools/server/rag.ts` | ragSearch agent tool |

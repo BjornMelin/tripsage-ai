@@ -4,7 +4,9 @@ Task-focused guide for Supabase operations. For schema/design context, see `../.
 
 ## Scope & Prerequisites
 
-- Supabase CLI installed and authenticated (`supabase --version`, `supabase login`).
+- Supabase CLI available:
+  - Local: use repo scripts (`pnpm supabase:*`) which run a pinned CLI via `pnpm dlx` (no global install required).
+  - Remote ops: install the CLI (or use `pnpm dlx supabase@<version>`) and authenticate (`supabase login`).
 - Access to project `project-ref`, service role key, and Vault-enabled Supabase project.
 - Local env ready for this repo (PNPM, Node, `supabase` directory present).
 
@@ -359,7 +361,7 @@ WHERE schemaname = 'public'
 - [ ] All 5 providers functional (OpenAI, Anthropic, xAI, OpenRouter, Gateway)
 - [ ] Webhook GUCs match `HMAC_SECRET`; verification script passes
 - [ ] Required env vars present (Supabase, Redis/QStash, HMAC, Resend, AI keys)
-- [ ] Migrations applied (consolidated: `20251122000000_base_schema.sql`); types regenerated
+- [ ] Migrations applied (consolidated: `20260120000000_base_schema.sql`); types regenerated
 - [ ] RLS policies active on: `api_keys`, `api_gateway_configs`, `user_settings`
 - [ ] Vector indexes healthy; no critical slow queries in `pg_stat_statements`
 

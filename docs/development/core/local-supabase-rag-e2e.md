@@ -56,12 +56,12 @@ This validates: seeded `rag_documents` exist â†’ retrieval via `hybrid_rag_searc
 
 1) Go to `/chat`.
 2) Ask:
-   - `Search my user_content documents for "seeded" and summarize what you find.`
+   - `Use the ragSearch tool to search my user_content documents for "deterministic seed attachment" and summarize what you find.`
 
 Expected:
 
 - The assistant executes a `ragSearch` tool call.
-- Results include snippets from seeded `user_content` attachments.
+- Results include snippets from seeded `user_content` attachments (e.g. `hello.txt`, `sample.pdf`, `sample.docx`, `sample.csv`).
 
 ### Embeddings & reranking keys (optional)
 
@@ -91,7 +91,7 @@ If you need **DB-backed** end-to-end validation (RLS/RAG/attachments), use the â
 
 ## 8) Type generation (when migrations change)
 
-After changing `supabase/migrations/*`:
+After changing `supabase/migrations/20260120000000_base_schema.sql`:
 
 ```bash
 pnpm supabase:db:reset

@@ -156,11 +156,11 @@ Prereq: Use a seeded local Supabase project or a mocked auth/session approach fo
 
 ### Auth verification status
 
-- **BLOCKED** (local Supabase cannot start due to migration error). Follow-up: `T-011`.
+- Previously **BLOCKED** (local Supabase could not start due to migration error). Follow-up: `T-011`.
 - Unblock steps (high-level):
-  1. Fix the nested dollar-quoting in `supabase/migrations/20251122000000_base_schema.sql` (see `T-011`).
-  2. Run `pnpm dlx supabase start --debug` and confirm `pnpm dlx supabase status` shows API/Auth running.
-  3. Update `.env.local` with the local Supabase URL + anon key from `supabase status`.
+  1. Fix the nested dollar-quoting in `supabase/migrations/20260120000000_base_schema.sql` (see `T-011`).
+  2. Run `pnpm supabase:bootstrap` and confirm `pnpm supabase:status` shows API/Auth running.
+  3. Update `.env.local` with the local Supabase URL + public key from `pnpm supabase:status`.
   4. Start `pnpm dev`, register at `http://localhost:3000/register`, then re-run the `browser_eval` steps above while authenticated.
 
 ## Notes / Links (full URLs only)

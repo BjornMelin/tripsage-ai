@@ -7,7 +7,7 @@ TripSage uses Supabase Realtime private channels with Row Level Security (no cus
 Topic naming conventions:
 
 | Topic Pattern | Access | Use Case |
-|--------------|--------|----------|
+| :--- | :--- | :--- |
 | `user:{sub}` | Subject user only | Per-user notifications |
 | `session:{uuid}` | Session owner + collaborators | Chat session updates |
 | `trip:{trip_id}` | Trip owner + collaborators | Trip collaboration events |
@@ -174,5 +174,4 @@ CREATE POLICY "private_session_channels" ON realtime.messages
 ## References
 
 - [Supabase Realtime Authorization](https://supabase.com/docs/guides/realtime/authorization)
-- TripSage migrations: `20251122000000_base_schema.sql` (contains `rt_topic_prefix`, `rt_topic_suffix`, `rt_is_session_member`)
-- TripSage migrations: `20251227001000_realtime_authorization_policies.sql` (adds `user:{uuid}` / `session:{uuid}` policies and hardens topic parsing for `trip:` / `session:`)
+- TripSage migration (squashed): `20260120000000_base_schema.sql` (contains `rt_topic_prefix`, `rt_topic_suffix`, `try_cast_*`, `rt_is_session_member`, and Realtime topic policies for `user:{uuid}` / `session:{uuid}` / `trip:{id}`)
