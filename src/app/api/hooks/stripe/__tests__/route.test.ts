@@ -145,7 +145,7 @@ describe("POST /api/hooks/stripe", () => {
     dateNowSpy = null;
   });
 
-  it("returns 400 when stripe-signature header is missing", async () => {
+  it("returns 401 when stripe-signature header is missing", async () => {
     const { POST } = await loadRoute();
     const res = await POST(
       makeRequest(JSON.stringify(makeEventPayload("payment_intent.succeeded")))
