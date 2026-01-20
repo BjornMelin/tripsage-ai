@@ -192,7 +192,7 @@ describe("POST /api/hooks/stripe", () => {
     const event = makeEventPayload("payment_intent.succeeded");
     // Pad the event with enough data to exceed the limit
     const padding = "x".repeat(MAX_WEBHOOK_BYTES + 1024);
-    const largeEvent = { ...event, _padding: padding };
+    const largeEvent = { ...event, padding };
     const payload = JSON.stringify(largeEvent);
 
     const header = stripe.webhooks.generateTestHeaderString({
