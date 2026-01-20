@@ -20,8 +20,8 @@ const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-12-15.clover";
 export function getStripeClient(): Stripe {
   if (stripeClient) return stripeClient;
 
-  const secretKey = getServerEnvVar("STRIPE_SECRET_KEY");
-  if (!secretKey.trim()) {
+  const secretKey = getServerEnvVar("STRIPE_SECRET_KEY").trim();
+  if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY environment variable is required");
   }
 

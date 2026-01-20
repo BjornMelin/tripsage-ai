@@ -1,5 +1,6 @@
 .env
 .env-*
+.env.local
 .env.local.*
 !.env.local.example
 
@@ -242,7 +243,6 @@ scan-results/
 **/*.rej
 **/.git/COMMIT_EDITMSG.backup
 
-.env.local
 .env.production
 .env.development
 .env.test

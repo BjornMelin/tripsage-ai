@@ -38,8 +38,18 @@ vi.mock("@/lib/telemetry/span", () => ({
 // Mock reranker
 vi.mock("../reranker", () => {
   class NoOpReranker {
-    rerank(): unknown[] {
-      return [];
+    // biome-ignore lint/suspicious/useAwait: Interface requires async signature
+    async rerank(
+      _query: string,
+      documents: unknown[],
+      topN: number
+    ): Promise<unknown[]> {
+      // Align with real NoOpReranker: return documents sorted by combinedScore
+      const docs = documents as Array<{ combinedScore: number }>;
+      const effectiveTopN = Math.min(topN, docs.length);
+      return [...docs]
+        .sort((a, b) => b.combinedScore - a.combinedScore)
+        .slice(0, effectiveTopN);
     }
   }
 

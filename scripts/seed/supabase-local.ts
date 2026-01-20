@@ -30,6 +30,7 @@ import {
   DETERMINISTIC_TEXT_EMBEDDING_MODEL_ID,
   deterministicTextEmbedding,
 } from "../../src/lib/ai/embeddings/deterministic";
+import { toPgvector as toPgvectorShared } from "../../src/lib/rag/pgvector";
 import type { Database, Json } from "../../src/lib/supabase/database.types";
 import { SUPABASE_CLI_VERSION } from "../supabase/supabase-cli";
 
@@ -223,19 +224,18 @@ async function embedTextValues(values: string[]): Promise<{
   return { embeddings, modelId };
 }
 
+/**
+ * Serialize embedding to pgvector format with strict dimension validation.
+ *
+ * Wraps the shared toPgvector function to enforce deterministic embedding dimensions.
+ */
 function toPgvector(embedding: readonly number[]): string {
   if (embedding.length !== DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS) {
     throw new Error(
       `Invalid embedding dimensions (expected ${DETERMINISTIC_TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length})`
     );
   }
-  const parts = embedding.map((value, idx) => {
-    if (!Number.isFinite(value)) {
-      throw new Error(`Invalid embedding value at index ${idx}`);
-    }
-    return String(value);
-  });
-  return `[${parts.join(",")}]`;
+  return toPgvectorShared(embedding);
 }
 
 function chunkText(
@@ -1419,7 +1419,7 @@ async function runEdgeCasesSeed(): Promise<void> {
     "seed:edge:chat_session"
   )}/${attachmentId}/infected.txt`;
 
-  await supabase.from("file_attachments").upsert({
+  const attachmentResult = await supabase.from("file_attachments").upsert({
     bucket_name: "attachments",
     chat_id: stableUuid("seed:edge:chat_session"),
     chat_message_id: msgId,
@@ -1436,6 +1436,12 @@ async function runEdgeCasesSeed(): Promise<void> {
     virus_scan_result: { reason: "seed infected" },
     virus_scan_status: "infected",
   });
+
+  if (attachmentResult.error) {
+    throw new Error(
+      `upsert file_attachments (infected) failed: ${attachmentResult.error.message}`
+    );
+  }
 }
 
 async function main(): Promise<void> {

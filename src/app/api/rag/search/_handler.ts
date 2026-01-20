@@ -126,7 +126,7 @@ export async function handleRagSearch(
         attributes: {
           cachedCount: cached.data.results.length,
           missingKeys: missingKeys.join(","),
-          query: body.query,
+          queryLength: body.query.length,
           rehydratedCount: rehydrated.length,
           rerankingApplied: cached.data.rerankingApplied,
         },
