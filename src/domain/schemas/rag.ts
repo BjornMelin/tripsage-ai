@@ -228,6 +228,30 @@ export type RagSearchToolOutput = z.infer<typeof ragSearchToolOutputSchema>;
 // Schemas for internal RAG operations
 
 /**
+ * Cached search result entry stored in RAG search cache.
+ */
+export const cachedRagSearchResultSchema = z.strictObject({
+  chunkIndex: z.number().int(),
+  combinedScore: z.number(),
+  id: z.string(),
+  keywordRank: z.number(),
+  rerankScore: z.number().optional(),
+  similarity: z.number(),
+});
+
+/**
+ * Cached RAG search payload stored in Upstash.
+ */
+export const cachedRagSearchEntrySchema = z.strictObject({
+  rerankingApplied: z.boolean(),
+  results: z.array(cachedRagSearchResultSchema),
+  total: z.number().int(),
+  version: z.literal(1),
+});
+
+export type CachedRagSearchEntry = z.infer<typeof cachedRagSearchEntrySchema>;
+
+/**
  * Zod schema for reranker configuration.
  * Used to configure the pluggable reranker.
  */

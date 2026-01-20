@@ -20,10 +20,6 @@ vi.mock("@/lib/ratelimit/identifier", () => ({
   hashIdentifier: (value: string) => `hash:${value}`,
 }));
 
-vi.mock("@/lib/ai/embeddings/text-embedding-model", () => ({
-  getTextEmbeddingModelId: () => "openai/text-embedding-3-small",
-}));
-
 const retrieveDocumentsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/rag/retriever", () => ({
@@ -85,7 +81,11 @@ describe("handleRagSearch (cache)", () => {
     const supabase = createSupabaseMock(dbRows);
 
     const response = await handleRagSearch(
-      { supabase: supabase as never, userId: "user-1" },
+      {
+        embeddingModelId: "openai/text-embedding-3-small",
+        supabase: supabase as never,
+        userId: "user-1",
+      },
       {
         keywordWeight: 0.3,
         limit: 10,
@@ -134,7 +134,11 @@ describe("handleRagSearch (cache)", () => {
     const supabase = createSupabaseMock([]);
 
     const response = await handleRagSearch(
-      { supabase: supabase as never, userId: "user-1" },
+      {
+        embeddingModelId: "openai/text-embedding-3-small",
+        supabase: supabase as never,
+        userId: "user-1",
+      },
       {
         keywordWeight: 0.3,
         limit: 10,
@@ -177,7 +181,11 @@ describe("handleRagSearch (cache)", () => {
     const supabase = createSupabaseMock([]);
 
     const response = await handleRagSearch(
-      { supabase: supabase as never, userId: "user-1" },
+      {
+        embeddingModelId: "openai/text-embedding-3-small",
+        supabase: supabase as never,
+        userId: "user-1",
+      },
       {
         keywordWeight: 0.3,
         limit: 10,

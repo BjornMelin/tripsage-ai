@@ -4,10 +4,13 @@
 
 import "server-only";
 
-import type { RagNamespace, RagSearchRequest } from "@schemas/rag";
-import { ragNamespaceSchema } from "@schemas/rag";
+import type {
+  CachedRagSearchEntry,
+  RagNamespace,
+  RagSearchRequest,
+} from "@schemas/rag";
+import { cachedRagSearchEntrySchema, ragNamespaceSchema } from "@schemas/rag";
 import { NextResponse } from "next/server";
-import { getTextEmbeddingModelId } from "@/lib/ai/embeddings/text-embedding-model";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { getCachedJsonSafe, setCachedJson } from "@/lib/cache/upstash";
 import { createReranker } from "@/lib/rag/reranker";
@@ -25,6 +28,8 @@ export interface RagSearchDeps {
   supabase: TypedServerSupabase;
   /** Authenticated user ID. */
   userId: string;
+  /** Embedding model ID used for cache key derivation. */
+  embeddingModelId: string;
   /** Logger instance (optional). */
   logger?: ReturnType<typeof createServerLogger>;
   /** Cache TTL in seconds (optional). */
@@ -34,37 +39,18 @@ export interface RagSearchDeps {
 const DEFAULT_RAG_SEARCH_CACHE_TTL_SECONDS = 120;
 
 /**
- * Result structure for a cached RAG search item.
- */
-type CachedRagSearchResult = {
-  id: string;
-  chunkIndex: number;
-  combinedScore: number;
-  keywordRank: number;
-  similarity: number;
-  rerankScore?: number;
-};
-
-/**
- * Top-level cache entry for RAG search results.
- */
-type CachedRagSearchEntry = {
-  rerankingApplied: boolean;
-  results: CachedRagSearchResult[];
-  total: number;
-  version: 1;
-};
-
-/**
  * Creates a deterministic cache key for a RAG search request.
  *
  * @param userId - ID of the user performing the search.
  * @param body - The search request parameters.
  * @returns A unique cache key string.
  */
-function createRagSearchCacheKey(userId: string, body: RagSearchRequest): string {
+function createRagSearchCacheKey(
+  userId: string,
+  body: RagSearchRequest,
+  embeddingModelId: string
+): string {
   const userHash = hashIdentifier(userId);
-  const embeddingModelId = getTextEmbeddingModelId();
 
   const payload = {
     embeddingModelId,
@@ -109,9 +95,9 @@ export async function handleRagSearch(
 ): Promise<Response> {
   const logger = deps.logger ?? createServerLogger("rag.search");
   const cacheTtlSeconds = deps.cacheTtlSeconds ?? DEFAULT_RAG_SEARCH_CACHE_TTL_SECONDS;
-  const cacheKey = createRagSearchCacheKey(deps.userId, body);
+  const cacheKey = createRagSearchCacheKey(deps.userId, body, deps.embeddingModelId);
 
-  const cached = await getCachedJsonSafe<CachedRagSearchEntry>(cacheKey);
+  const cached = await getCachedJsonSafe(cacheKey, cachedRagSearchEntrySchema);
   if (cached.status === "hit") {
     if (cached.data.results.length === 0) {
       return NextResponse.json({

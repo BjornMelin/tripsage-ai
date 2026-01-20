@@ -6,6 +6,7 @@ import "server-only";
 
 import { ragSearchRequestSchema } from "@schemas/rag";
 import type { NextRequest } from "next/server";
+import { getTextEmbeddingModelId } from "@/lib/ai/embeddings/text-embedding-model";
 import { withApiGuards } from "@/lib/api/factory";
 import { unauthorizedResponse } from "@/lib/api/route-helpers";
 import { handleRagSearch } from "./_handler";
@@ -41,5 +42,6 @@ export const POST = withApiGuards({
   if (!userId) {
     return unauthorizedResponse();
   }
-  return handleRagSearch({ supabase, userId }, body);
+  const embeddingModelId = getTextEmbeddingModelId();
+  return handleRagSearch({ embeddingModelId, supabase, userId }, body);
 });

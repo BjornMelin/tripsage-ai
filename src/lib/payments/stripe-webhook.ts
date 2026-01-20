@@ -25,7 +25,8 @@ import {
 import { getStripeClient } from "./stripe-client";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
-const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+// Stripe retries failed webhook deliveries for up to ~72 hours in live mode.
+const IDEMPOTENCY_TTL_SECONDS = 3 * 24 * 60 * 60;
 
 type StripeWebhookResponseBody = Record<string, unknown>;
 

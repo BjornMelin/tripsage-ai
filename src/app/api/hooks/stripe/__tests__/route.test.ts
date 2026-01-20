@@ -150,7 +150,7 @@ describe("POST /api/hooks/stripe", () => {
     const res = await POST(
       makeRequest(JSON.stringify(makeEventPayload("payment_intent.succeeded")))
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("missing_signature");
   });
