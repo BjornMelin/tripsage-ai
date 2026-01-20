@@ -255,14 +255,11 @@ scan-results/
 # Project specific files
 .agent/
 supabase/.temp/
-
 docs/prompts/
+
 # Generated review artifacts
-
 docs/implementation/
-
-# Archived docs not part of source
-
+docs/tasks
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts
