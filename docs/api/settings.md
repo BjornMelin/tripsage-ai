@@ -36,9 +36,14 @@ Update user settings.
 | `theme` | string | No | UI theme preference (`light`, `dark`, `auto`) |
 | `language` | string | No | Language preference (ISO 639-1 code) |
 | `timezone` | string | No | Timezone (IANA timezone identifier) |
-| `notifications` | object | No | Notification settings {email, push, inApp} |
-| `privacy` | object | No | Privacy settings {profileVisible, shareActivity} |
-| `preferences` | object | No | Custom preferences (key-value pairs) |
+| `notifications` | object | No | Notification channel preferences |
+| `notifications.email` | boolean | No | Enable email notifications |
+| `notifications.push` | boolean | No | Enable push notifications |
+| `notifications.inApp` | boolean | No | Enable in-app notifications |
+| `privacy` | object | No | Data privacy and visibility controls |
+| `privacy.profileVisible` | boolean | No | Public profile visibility |
+| `privacy.shareActivity` | boolean | No | Shared activity visibility |
+| `preferences` | object | No | Custom key-value pairs (arbitrary JSON) |
 
 #### Response (POST /api/user-settings)
 
@@ -57,6 +62,10 @@ Update user settings.
   "privacy": {
     "profileVisible": false,
     "shareActivity": false
+  },
+  "preferences": {
+    "currency": "USD",
+    "units": "metric"
   },
   "updatedAt": "2025-01-20T15:30:00Z"
 }
@@ -124,7 +133,7 @@ Generate and (optionally) persist embeddings for internal ingestion workflows.
 }
 ```
 
-The `embedding` array continues to 1536 numeric values.
+The `embedding` array continues to 1536 numeric values. The `modelId` format varies by provider: AI Gateway uses `openai/...`, Direct OpenAI uses `text-embedding-3-small`, and Deterministic uses `tripsage/...`.
 
 #### Errors (POST /api/embeddings)
 

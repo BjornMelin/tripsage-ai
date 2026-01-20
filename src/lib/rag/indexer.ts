@@ -34,12 +34,22 @@ const CHARS_PER_TOKEN = 4;
 /** Max chunks per embedding batch to prevent runaway costs and respect API limits. */
 const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
 
+/**
+ * Computes a dynamic timeout for embedding requests based on chunk count and parallelism.
+ *
+ * @param chunkCount - Number of chunks being embedded.
+ * @param maxParallelCalls - Configured maximum parallel model calls.
+ * @returns Timeout duration in milliseconds.
+ */
 function getEmbedTimeoutMs(chunkCount: number, maxParallelCalls: number): number {
   const parallelCalls = Math.max(1, maxParallelCalls);
   const rounds = Math.ceil(chunkCount / parallelCalls);
   return Math.max(EMBED_TIMEOUT_BASE_MS, rounds * EMBED_TIMEOUT_PER_CHUNK_MS);
 }
 
+/**
+ * Contextual data for chunk limit enforcement logs and errors.
+ */
 interface ChunkLimitContext {
   batchStartIndex: number;
   chunkOverlap: number;
@@ -47,6 +57,13 @@ interface ChunkLimitContext {
   documentCount: number;
 }
 
+/**
+ * Enforces the maximum number of chunks allowed per embedding batch to prevent runaway costs.
+ *
+ * @param count - Actual number of chunks to be processed.
+ * @param context - Metadata for logging and error reporting.
+ * @throws {RagLimitError} If the chunk count exceeds MAX_CHUNKS_PER_EMBED_BATCH.
+ */
 function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
   if (count <= MAX_CHUNKS_PER_EMBED_BATCH) return;
   logger.warn("chunk_limit_exceeded", {
@@ -61,6 +78,14 @@ function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
   });
 }
 
+/**
+ * Validates that all generated embeddings match the expected vector dimensionality.
+ *
+ * @param embeddings - List of embedding vectors to validate.
+ * @param expectedDim - Required number of dimensions (e.g., 1536).
+ * @param context - Optional description for error reporting.
+ * @throws {Error} If any embedding has an incorrect dimension count.
+ */
 function assertEmbeddingDimensions(
   embeddings: readonly number[][],
   expectedDim: number,
@@ -275,7 +300,7 @@ export async function indexDocuments(
 }
 
 /**
- * Internal batch indexing parameters.
+ * Parameters for internal batch processing of documents.
  */
 interface IndexBatchParams {
   batch: RagDocument[];
@@ -288,7 +313,7 @@ interface IndexBatchParams {
 }
 
 /**
- * Internal batch indexing result.
+ * Result of a single batch indexing operation.
  */
 interface IndexBatchResult {
   chunksCreated: number;
@@ -381,7 +406,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     );
   }
 
-  assertEmbeddingDimensions(embeddings, TEXT_EMBEDDING_DIMENSIONS);
+  assertEmbeddingDimensions(embeddings, TEXT_EMBEDDING_DIMENSIONS, "indexBatch");
 
   // Prepare rows for upsert
   const rows: Database["public"]["Tables"]["rag_documents"]["Insert"][] = allChunks.map(

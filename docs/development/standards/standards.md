@@ -103,8 +103,8 @@ TripSage aligns UI implementation with Vercel Web Interface Guidelines:
 - Avoid `transition-all`; prefer explicit transition properties (e.g., `transition-colors`, `transition-transform`, `transition-[opacity,box-shadow]`).
 - Preserve focus visibility (no `outline: none` without an accessible replacement).
 - Use semantic elements:
-  - navigation: `Link`/`<a>`
-  - actions: `<button>`
+  - navigation: `Link`/`<a>`.
+  - actions: `<button>`.
   - avoid `div` + `onClick` for interactive controls.
 
 References:

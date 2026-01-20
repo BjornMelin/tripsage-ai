@@ -17,13 +17,22 @@ import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
+/**
+ * Dependencies required for the RAG search handler.
+ */
 export interface RagSearchDeps {
+  /** Authenticated Supabase client. */
   supabase: TypedServerSupabase;
+  /** Authenticated user ID. */
   userId: string;
 }
 
+const logger = createServerLogger("rag.search");
 const RAG_SEARCH_CACHE_TTL_SECONDS = 120;
 
+/**
+ * Result structure for a cached RAG search item.
+ */
 type CachedRagSearchResult = {
   id: string;
   chunkIndex: number;
@@ -33,6 +42,9 @@ type CachedRagSearchResult = {
   rerankScore?: number;
 };
 
+/**
+ * Top-level cache entry for RAG search results.
+ */
 type CachedRagSearchEntry = {
   rerankingApplied: boolean;
   results: CachedRagSearchResult[];
@@ -40,6 +52,13 @@ type CachedRagSearchEntry = {
   version: 1;
 };
 
+/**
+ * Creates a deterministic cache key for a RAG search request.
+ *
+ * @param userId - ID of the user performing the search.
+ * @param body - The search request parameters.
+ * @returns A unique cache key string.
+ */
 function createRagSearchCacheKey(userId: string, body: RagSearchRequest): string {
   const userHash = hashIdentifier(userId);
   const embeddingModelId = getTextEmbeddingModelId();
@@ -58,16 +77,33 @@ function createRagSearchCacheKey(userId: string, body: RagSearchRequest): string
   return `rag_search:v1:${userHash}:${hashInputForCache(payload)}`;
 }
 
+/**
+ * Validates and normalizes a RAG namespace string.
+ *
+ * @param value - The raw namespace value to validate.
+ * @returns A valid RagNamespace, defaulting to "default" if invalid.
+ */
 function validateNamespace(value: unknown): RagNamespace {
   const result = ragNamespaceSchema.safeParse(value);
   return result.success ? result.data : "default";
 }
 
+/**
+ * Handles RAG search requests with multi-stage caching and rehydration.
+ *
+ * The handler attempts to serve results from Upstash Redis. If a cache hit occurs,
+ * it rehydrates document content and metadata from Supabase to ensure fresh data.
+ * If a cache miss occurs, it performs a hybrid search, applies optional reranking,
+ * and populates the cache.
+ *
+ * @param deps - Injected dependencies (Supabase client, user ID).
+ * @param body - Validated RAG search request parameters.
+ * @returns A JSON response containing search results and metadata.
+ */
 export async function handleRagSearch(
   deps: RagSearchDeps,
   body: RagSearchRequest
 ): Promise<Response> {
-  const logger = createServerLogger("rag.search");
   const cacheKey = createRagSearchCacheKey(deps.userId, body);
 
   const cached = await getCachedJsonSafe<CachedRagSearchEntry>(cacheKey);

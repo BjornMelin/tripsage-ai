@@ -29,14 +29,32 @@ const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
 
 type StripeWebhookResponseBody = Record<string, unknown>;
 
+/**
+ * Extracts the Stripe signature header from the request.
+ *
+ * @param req - The incoming request object.
+ * @returns The stripe-signature header value or null if missing.
+ */
 function getStripeSignatureHeader(req: Request): string | null {
   return req.headers.get("stripe-signature");
 }
 
+/**
+ * Builds a standardized cache/idempotency key for a Stripe event.
+ *
+ * @param eventId - The unique Stripe event ID.
+ * @returns A formatted event key string.
+ */
 function buildStripeEventKey(eventId: string): string {
   return `stripe:${eventId}`;
 }
 
+/**
+ * Records relevant Stripe event attributes to the current telemetry span.
+ *
+ * @param event - The verified Stripe event.
+ * @param span - The active telemetry span.
+ */
 function recordStripeTelemetry(event: Stripe.Event, span: Span) {
   span.setAttribute("stripe.event_id", event.id);
   span.setAttribute("stripe.event_type", event.type);
@@ -44,6 +62,16 @@ function recordStripeTelemetry(event: Stripe.Event, span: Span) {
   span.setAttribute("stripe.livemode", event.livemode);
 }
 
+/**
+ * Processes a verified Stripe event.
+ *
+ * This function currently serves as a telemetry hook and success acknowledgement.
+ * Business logic should branch on event.type here or in downstream handlers.
+ *
+ * @param event - The verified Stripe event.
+ * @param span - The active telemetry span.
+ * @returns A promise that resolves when processing is complete.
+ */
 function handleStripeEvent(event: Stripe.Event, span: Span): Promise<void> {
   // Current implementation is intentionally minimal: record telemetry and acknowledge.
   // Downstream business logic can safely branch on `event.type` without breaking the webhook contract.
@@ -54,6 +82,13 @@ function handleStripeEvent(event: Stripe.Event, span: Span): Promise<void> {
   return Promise.resolve();
 }
 
+/**
+ * Creates a standard success response for the webhook.
+ *
+ * @param rateLimitResult - The result from the rate limit check.
+ * @param body - The JSON body to include in the response.
+ * @returns A formatted NextResponse.
+ */
 function okResponse(
   rateLimitResult: { success: boolean },
   body: StripeWebhookResponseBody
@@ -61,6 +96,14 @@ function okResponse(
   return createWebhookResponse(rateLimitResult, { body });
 }
 
+/**
+ * Creates a standard error response for the webhook.
+ *
+ * @param rateLimitResult - The result from the rate limit check.
+ * @param status - The HTTP status code.
+ * @param body - The JSON error body.
+ * @returns A formatted NextResponse.
+ */
 function errorResponse(
   rateLimitResult: { success: boolean },
   status: number,
@@ -69,6 +112,18 @@ function errorResponse(
   return createWebhookResponse(rateLimitResult, { body, status });
 }
 
+/**
+ * Factory function that creates a POST handler for Stripe webhooks.
+ *
+ * The handler implements:
+ * 1. Rate limiting (fail-closed for reliability).
+ * 2. Body size limits and raw byte reading.
+ * 3. Stripe signature verification.
+ * 4. Redis-backed idempotency to prevent duplicate processing.
+ * 5. Comprehensive telemetry and error reporting.
+ *
+ * @returns An async Next.js route handler function.
+ */
 export function createStripeWebhookHandler() {
   return async function post(req: NextRequest): Promise<NextResponse> {
     return await withTelemetrySpan(
@@ -127,7 +182,7 @@ export function createStripeWebhookHandler() {
         const signature = getStripeSignatureHeader(req);
         if (!signature) {
           span.setAttribute("webhook.unauthorized", true);
-          return errorResponse(rateLimitResult, 400, {
+          return errorResponse(rateLimitResult, 401, {
             code: "UNAUTHORIZED",
             error: "missing_signature",
           });
