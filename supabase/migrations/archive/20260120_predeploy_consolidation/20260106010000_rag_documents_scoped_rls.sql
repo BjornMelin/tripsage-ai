@@ -6,6 +6,8 @@
 -- - Keep global documents readable to authenticated users.
 -- - Scope user-authored documents to the owning user (and optionally trip collaborators).
 
+BEGIN;
+
 -- NOTE: Supabase CLI can restore `supabase_migrations.schema_migrations` from a cached local backup.
 -- If the tracking row for this migration already exists, the CLI will fail at the end when recording
 -- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
@@ -16,8 +18,6 @@ BEGIN
   END IF;
 END;
 $do$;
-
-BEGIN;
 
 ALTER TABLE public.rag_documents
   ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,

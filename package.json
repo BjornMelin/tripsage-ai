@@ -225,10 +225,5 @@
       "esbuild",
       "msw"
     ]
-  },
-  "workspaces": [
-    ".",
-    "!opensrc/**",
-    "!**/node_modules/**"
-  ]
+  }
 }

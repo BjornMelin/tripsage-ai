@@ -81,7 +81,7 @@ Upstash timeout behavior is treated as degraded infrastructure: `success: true` 
 
 ## Post-acceptance updates (2026-01-19)
 
-- Enabled Upstash “global dynamic limit” support by setting `dynamicLimits: true` in all `Ratelimit` constructors used by the app (API routes, webhooks, AI tools). This keeps steady-state behavior unchanged while allowing operators to set a global limit at runtime via Upstash dynamic limit methods (`setDynamicLimit` / `getDynamicLimit`).
+- Enabled Upstash “global dynamic limit” support by setting `dynamicLimits: true` in all `Ratelimit` constructors used by the app (API routes, webhooks, AI tools). This allows operators to set a global limit at runtime via Upstash dynamic limit methods (`setDynamicLimit` / `getDynamicLimit`). Note: dynamicLimits adds one Redis command per rate-limit check, increasing operational costs. Also be aware that the ephemeral cache may continue denying requests for users previously over limit, even after raising limits, until the cache entry resets.
 
 ## References
 

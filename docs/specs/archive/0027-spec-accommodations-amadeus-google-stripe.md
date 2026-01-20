@@ -397,7 +397,7 @@ Tasks:
 
 - [x] Implement `AmadeusProviderAdapter` that:
 
-  - Wraps [Amadeus SDK](https://developers.amadeus.com/sdks-and-libraries) calls for search and booking. ([AI SDK v6](https://ai-sdk.dev/docs/introduction))
+  - Wraps [Amadeus SDK](https://developers.amadeus.com/sdks-and-libraries) calls for search and booking.
   - Uses existing retry and circuit-breaker utilities (`retryWithBackoff` + `CircuitBreaker`) as seen in `ExpediaProviderAdapter`.
   - Produces normalized `ProviderError` instances for:
 

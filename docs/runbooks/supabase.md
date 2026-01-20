@@ -33,7 +33,7 @@ Populate `.env.local` with at least:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only; use the `sb_secret_...` key printed by `pnpm supabase:status`; never `NEXT_PUBLIC_*`)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; use the `sb_secret_…` key printed by `pnpm supabase:status`; never `NEXT_PUBLIC_*`)
 - (Recommended) `SUPABASE_JWT_SECRET` (use `JWT_SECRET` from `pnpm supabase:status` for local non-test flows like MFA)
 
 ## Seed data (dev + e2e)
@@ -86,7 +86,7 @@ Supabase recommends stopping local containers and deleting data volumes before u
 
 ## Playwright E2E note
 
-The default Playwright setup (`pnpm test:e2e:*`) starts its own dev server and uses a mock Supabase Auth HTTP server (`scripts/e2e-webserver.mjs`) on `http://127.0.0.1:54329`. It does **not** require local Supabase.
+The default Playwright setup (`pnpm test:e2e:*`) starts its dev server and uses a mock Supabase Auth HTTP server (`scripts/e2e-webserver.mjs`) on `http://127.0.0.1:54329`. It does **not** require local Supabase.
 
 Use local Supabase when you specifically want to validate real DB/RLS behavior and the full ingestion + RAG pipelines end-to-end.
 

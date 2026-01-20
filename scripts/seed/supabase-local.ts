@@ -598,15 +598,14 @@ async function seedSavedPlaces(input: {
   userId: string;
   places: Array<{ placeId: string; provider: string; snapshot: Json }>;
 }): Promise<void> {
-  for (const place of input.places) {
-    const deleted = await supabase
-      .from("saved_places")
-      .delete()
-      .eq("trip_id", input.tripId)
-      .eq("place_id", place.placeId);
-    if (deleted.error) {
-      throw new Error(`delete saved_places failed: ${deleted.error.message}`);
-    }
+  const deleted = await supabase
+    .from("saved_places")
+    .delete()
+    .eq("trip_id", input.tripId)
+    .eq("user_id", input.userId)
+    .like("place_id", "seed-%");
+  if (deleted.error) {
+    throw new Error(`delete saved_places failed: ${deleted.error.message}`);
   }
 
   if (input.places.length === 0) return;
@@ -1108,8 +1107,15 @@ async function runDevSeed(): Promise<void> {
     throw new Error("seedChatSession failed: missing message ids");
   }
 
-  await supabase.from("chat_tool_calls").delete().in("message_id", devChat.messageIds);
-  await supabase.from("chat_tool_calls").insert({
+  const deletedToolCalls = await supabase
+    .from("chat_tool_calls")
+    .delete()
+    .in("message_id", devChat.messageIds);
+  if (deletedToolCalls.error) {
+    throw new Error(`delete chat_tool_calls failed: ${deletedToolCalls.error.message}`);
+  }
+
+  const insertedToolCall = await supabase.from("chat_tool_calls").insert({
     arguments: { days: 4, destination: "San Francisco, CA", source: "seed" },
     message_id: devChat.messageIds[1] ?? firstMessageId,
     result: { ok: true, source: "seed" },
@@ -1117,6 +1123,9 @@ async function runDevSeed(): Promise<void> {
     tool_id: "seed-tool-1",
     tool_name: "plan_trip",
   });
+  if (insertedToolCall.error) {
+    throw new Error(`insert chat_tool_calls failed: ${insertedToolCall.error.message}`);
+  }
 
   await seedAttachmentAndRag({
     attachmentId: stableUuid("seed:dev:attachment:hello_txt"),

@@ -35,6 +35,10 @@ CREATE INDEX IF NOT EXISTS inbound_webhook_receipts_source_received_at_idx
 CREATE INDEX IF NOT EXISTS inbound_webhook_receipts_request_id_idx
   ON public.inbound_webhook_receipts (request_id);
 
+CREATE INDEX IF NOT EXISTS inbound_webhook_receipts_idempotency_key_idx
+  ON public.inbound_webhook_receipts (idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+
 ALTER TABLE public.inbound_webhook_receipts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS inbound_webhook_receipts_service_all ON public.inbound_webhook_receipts;

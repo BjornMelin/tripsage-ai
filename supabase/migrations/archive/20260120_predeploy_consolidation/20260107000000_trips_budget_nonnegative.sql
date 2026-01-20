@@ -15,8 +15,15 @@ $do$;
 ALTER TABLE public.trips
   DROP CONSTRAINT IF EXISTS trips_budget_check;
 
+UPDATE public.trips
+SET budget = 0
+WHERE budget < 0;
+
 ALTER TABLE public.trips
-  ADD CONSTRAINT trips_budget_check CHECK (budget >= 0);
+  ADD CONSTRAINT trips_budget_check CHECK (budget >= 0) NOT VALID;
+
+ALTER TABLE public.trips
+  VALIDATE CONSTRAINT trips_budget_check;
 
 ALTER TABLE public.trips
   ALTER COLUMN budget SET DEFAULT 0;

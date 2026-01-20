@@ -26,12 +26,19 @@ import { RagLimitError } from "./errors";
 import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
-const EMBED_TIMEOUT_MS = 10_000;
+const EMBED_TIMEOUT_BASE_MS = 30_000;
+const EMBED_TIMEOUT_PER_CHUNK_MS = 100;
 
 /** Token to character ratio approximation (conservative). */
 const CHARS_PER_TOKEN = 4;
 /** Max chunks per embedding batch to prevent runaway costs and respect API limits. */
 const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
+
+function getEmbedTimeoutMs(chunkCount: number, maxParallelCalls: number): number {
+  const parallelCalls = Math.max(1, maxParallelCalls);
+  const rounds = Math.ceil(chunkCount / parallelCalls);
+  return Math.max(EMBED_TIMEOUT_BASE_MS, rounds * EMBED_TIMEOUT_PER_CHUNK_MS);
+}
 
 interface ChunkLimitContext {
   batchStartIndex: number;
@@ -344,7 +351,9 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
 
   // Generate embeddings for all chunks in batch
   const { embeddings } = await embedMany({
-    abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    abortSignal: AbortSignal.timeout(
+      getEmbedTimeoutMs(allChunks.length, config.maxParallelCalls)
+    ),
     maxParallelCalls: config.maxParallelCalls,
     model: getTextEmbeddingModel(),
     values: allChunks.map((c) => c.chunk),

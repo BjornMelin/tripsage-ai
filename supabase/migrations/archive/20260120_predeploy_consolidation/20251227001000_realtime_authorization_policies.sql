@@ -18,8 +18,14 @@
 -- the migration version. Make the migration idempotent by deleting any pre-existing row (when present).
 DO $do$
 BEGIN
-  IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
-    DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251227001000';
+  IF lower(coalesce(
+    current_setting('app.environment', true),
+    current_setting('app.settings.environment', true),
+    'development'
+  )) NOT IN ('production', 'prod') THEN
+    IF to_regclass('supabase_migrations.schema_migrations') IS NOT NULL THEN
+      DELETE FROM supabase_migrations.schema_migrations WHERE version = '20251227001000';
+    END IF;
   END IF;
 END;
 $do$;

@@ -36,9 +36,9 @@ vi.mock("@/lib/rag/reranker", () => ({
 
 import { handleRagSearch } from "../_handler";
 
-function createSupabaseMock(rows: unknown[]) {
+function createSupabaseMock(rows: unknown[], error: { message: string } | null = null) {
   const select = vi.fn().mockReturnThis();
-  const inFn = vi.fn().mockResolvedValue({ data: rows, error: null });
+  const inFn = vi.fn().mockResolvedValue({ data: error ? null : rows, error });
   const from = vi.fn(() => ({ in: inFn, select }));
   return { from, inFn, select };
 }

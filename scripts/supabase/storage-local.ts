@@ -138,6 +138,25 @@ function getDbPassword(dbId: string): string {
   return "postgres";
 }
 
+function waitForStorageReady(apiKey: string, label: string): void {
+  const maxAttempts = 10;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const ready = trySh("curl", [
+      "-sSfL",
+      "-H",
+      `apikey: ${apiKey}`,
+      "http://127.0.0.1:54321/storage/v1/bucket",
+      "-o",
+      "/dev/null",
+    ]);
+    if (ready !== null) return;
+    if (attempt === maxAttempts) {
+      throw new Error(`Storage container failed to become ready for ${label} key`);
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+  }
+}
+
 export type EnsureStorageOptions = {
   projectId: string;
   supabaseDir: string;
@@ -162,7 +181,13 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   const jwks = getContainerEnvValue(ids.restId, "PGRST_JWT_SECRET");
 
   const storageMigrationFile = `${opts.supabaseDir}/.temp/storage-migration`;
-  const storageMigration = sh("cat", [storageMigrationFile]);
+  const storageMigration = trySh("cat", [storageMigrationFile]);
+  if (!storageMigration) {
+    throw new Error(
+      `Storage migration file not found at ${storageMigrationFile}. ` +
+        "Run 'pnpm supabase:bootstrap' first to initialize local Supabase."
+    );
+  }
 
   // Replace any existing container (e.g., from prior runs).
   trySh("docker", ["rm", "-f", ids.storageId]);
@@ -216,20 +241,6 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   ]);
 
   // Quick sanity check through kong (ensures routing + auth headers work).
-  sh("curl", [
-    "-sSfL",
-    "-H",
-    `apikey: ${publishableKey}`,
-    "http://127.0.0.1:54321/storage/v1/bucket",
-    "-o",
-    "/dev/null",
-  ]);
-  sh("curl", [
-    "-sSfL",
-    "-H",
-    `apikey: ${secretKey}`,
-    "http://127.0.0.1:54321/storage/v1/bucket",
-    "-o",
-    "/dev/null",
-  ]);
+  waitForStorageReady(publishableKey, "publishable");
+  waitForStorageReady(secretKey, "secret");
 }

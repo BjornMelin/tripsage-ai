@@ -73,6 +73,7 @@ Operational validation:
 ### Webhooks (DB → app)
 
 - Webhook payloads are verified (HMAC/QStash signing) before processing.
+- Stripe webhooks are hardened per ADR-0070: signature verification with raw-body preservation, idempotency handling, rate limiting, and payment-event sensitivity.
 - Webhook handler expectations and payload shapes are documented in `docs/api/internal/webhooks.md` and the runbooks under `docs/operations/runbooks/`.
 
 ## Output

@@ -417,6 +417,7 @@ export async function enforceRateLimit(
     const limiter = new Ratelimit({
       analytics: false,
       dynamicLimits: true,
+      ephemeralCache: false,
       limiter: Ratelimit.slidingWindow(
         config.limit,
         config.window as Parameters<typeof Ratelimit.slidingWindow>[1]

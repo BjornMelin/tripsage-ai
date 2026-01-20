@@ -13,6 +13,7 @@ import { createReranker } from "@/lib/rag/reranker";
 import { retrieveDocuments } from "@/lib/rag/retriever";
 import { hashIdentifier } from "@/lib/ratelimit/identifier";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 export interface RagSearchDeps {
   supabase: TypedServerSupabase;
@@ -119,6 +120,18 @@ export async function handleRagSearch(
           total: rehydrated.length,
         });
       }
+
+      const missingKeys = Array.from(wantKeySet).filter((key) => !rowByKey.has(key));
+      recordTelemetryEvent("rag.cache.partial_rehydration", {
+        attributes: {
+          cachedCount: cached.data.results.length,
+          missingKeys: missingKeys.join(","),
+          query: body.query,
+          rehydratedCount: rehydrated.length,
+          rerankingApplied: cached.data.rerankingApplied,
+        },
+        level: "warning",
+      });
     }
   }
 

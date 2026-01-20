@@ -47,13 +47,13 @@ We will:
 
 5) **Add user-scoped, content-free Upstash caching** for RAG search results:
 
-   - Cache key includes a user hash + request parameters + embedding model id to avoid cross-user leakage and stale results.
-   - Cache TTL is short (currently 120 seconds).
-   - Cache entries store only ids + scores + `chunkIndex` and are rehydrated from `public.rag_documents`.
+   - Key construction includes a user hash + request parameters + embedding model id to avoid cross-user leakage and stale results.
+   - TTL is short (currently 120 seconds).
+   - Entries store only ids + scores + `chunkIndex` and are rehydrated from `public.rag_documents`.
 
    This is implemented in `src/app/api/rag/search/_handler.ts`.
 
-6) **Add provider call timeouts** using `AbortSignal.timeout(...)` for embeddings/reranking so serverless requests cannot hang indefinitely.
+6) **Add provider call timeouts** using `AbortSignal.timeout(ms)` for embeddings/reranking so serverless requests cannot hang indefinitely.
 
 ## Consequences
 

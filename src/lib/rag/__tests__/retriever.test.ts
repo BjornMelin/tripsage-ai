@@ -38,7 +38,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 // Mock reranker
 vi.mock("../reranker", () => {
   class NoOpReranker {
-    rerank() {
+    rerank(): unknown[] {
       return [];
     }
   }

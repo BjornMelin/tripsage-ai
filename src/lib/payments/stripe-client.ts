@@ -9,6 +9,7 @@ import { getServerEnvVar } from "@/lib/env/server";
 import { getRequiredServerOrigin } from "@/lib/url/server-origin";
 
 let stripeClient: Stripe | null = null;
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-12-15.clover";
 
 /**
  * Get or create Stripe client instance.
@@ -24,9 +25,12 @@ export function getStripeClient(): Stripe {
     throw new Error("STRIPE_SECRET_KEY environment variable is required");
   }
 
-  // Use Stripe's default API version (latest). Pinning an API version here can cause
-  // type drift if the version is not reflected in the generated types.
-  stripeClient = new Stripe(secretKey, { typescript: true });
+  // Pin API version to avoid dashboard changes impacting behavior. Update this when
+  // upgrading the Stripe SDK/types.
+  stripeClient = new Stripe(secretKey, {
+    apiVersion: STRIPE_API_VERSION,
+    typescript: true,
+  });
   return stripeClient;
 }
 

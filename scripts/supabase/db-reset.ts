@@ -1,9 +1,4 @@
-import { execFileSync } from "node:child_process";
-import { supabaseDlxArgs } from "./supabase-cli";
-
-function run(cmd: string, args: string[]): void {
-  execFileSync(cmd, args, { stdio: "inherit" });
-}
+import { run, supabaseDlxArgs } from "./supabase-cli";
 
 function main() {
   // Workaround: Supabase CLI `db reset` restarts services and triggers the broken Storage

@@ -10,7 +10,7 @@
 - **Generative UI Framework**: Component-driven UI that streams rich interactive elements (Destination cards, Flight offers, Itinerary timelines) directly into the chat.
 - **Token Budgeting**: Dynamic token counting and clamping using `js-tiktoken` to respect model context windows and optimize costs.
 - **Memory & Checkpoints**: Conversation context management with LangGraph.js
-  state persistence and Supabase storage
+  state persistence and Supabase storage.
 
 ### Security & Compliance
 
