@@ -123,7 +123,7 @@ If the factory cannot support requirements, document:
 ## Current Exceptions
 
 | Route | Category | Justification | ADR |
-|-------|----------|---------------|-----|
+| :--- | :--- | :--- | :--- |
 | `/api/hooks/cache` | Webhook | Supabase HMAC verification | ADR-0032 |
 | `/api/hooks/files` | Webhook | File processing signature | ADR-0032 |
 | `/api/hooks/trips` | Webhook | Trip sync signature | ADR-0032 |
@@ -196,7 +196,7 @@ When exceptions are identified:
 ## Metrics
 
 | Metric | Current |
-|--------|---------|
+| :--- | :--- |
 | Factory adoption | 92% (35/38 routes) |
 | Exception routes | 4 |
 | Documented exceptions | 4 |

@@ -12,7 +12,7 @@ secrets.
 ### Decision Framework Score: 91/100
 
 | Category | Weight | Score | Rationale |
-|----------|--------|-------|-----------|
+| :--- | :--- | :--- | :--- |
 | Solution Leverage | 35% | 34/35 | Google REST + minimal libs |
 | Application Value | 30% | 27/30 | Read/write, availability, ICS import/export |
 | Maintenance Load | 25% | 22/25 | Thin adapters, server-only, mocks |

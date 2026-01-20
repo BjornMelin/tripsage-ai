@@ -1,8 +1,5 @@
 /**
  * @fileoverview Deterministic, offline-safe text embeddings (1536-d) for local dev/tests.
- *
- * This is a non-semantic fallback designed to keep the app runnable when no paid
- * embedding provider is configured. It MUST NOT be used to evaluate retrieval quality.
  */
 
 import { createHash } from "node:crypto";
