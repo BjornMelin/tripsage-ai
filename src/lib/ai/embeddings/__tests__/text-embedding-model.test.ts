@@ -2,29 +2,29 @@
 
 import { embed } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { __resetServerEnvCacheForTest } from "@/lib/env/server";
-import {
-  __resetEmbeddingKeyCacheForTest,
-  getTextEmbeddingModel,
-  getTextEmbeddingModelId,
-  TEXT_EMBEDDING_DIMENSIONS,
-  TEXT_EMBEDDING_MODEL_ID,
-} from "../text-embedding-model";
+
+async function loadTextEmbeddingModule() {
+  vi.resetModules();
+  const { __resetServerEnvCacheForTest } = await import("@/lib/env/server");
+  __resetServerEnvCacheForTest();
+  return import("../text-embedding-model");
+}
 
 vi.mock("server-only", () => ({}));
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  __resetServerEnvCacheForTest();
-  __resetEmbeddingKeyCacheForTest();
 });
 
 describe("getTextEmbeddingModel", () => {
   it("returns deterministic EmbeddingModelV3 when no provider keys are configured", async () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "");
-    __resetServerEnvCacheForTest();
-    __resetEmbeddingKeyCacheForTest();
+    const {
+      getTextEmbeddingModel,
+      getTextEmbeddingModelId,
+      TEXT_EMBEDDING_DIMENSIONS,
+    } = await loadTextEmbeddingModule();
 
     const model = getTextEmbeddingModel();
     expect(typeof model).not.toBe("string");
@@ -52,22 +52,20 @@ describe("getTextEmbeddingModel", () => {
     }
   });
 
-  it("prefers AI Gateway when configured", () => {
+  it("prefers AI Gateway when configured", async () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "aaaaaaaaaaaaaaaaaaaa");
     vi.stubEnv("OPENAI_API_KEY", "");
-    __resetServerEnvCacheForTest();
-    __resetEmbeddingKeyCacheForTest();
-
+    const { getTextEmbeddingModel, getTextEmbeddingModelId, TEXT_EMBEDDING_MODEL_ID } =
+      await loadTextEmbeddingModule();
     expect(getTextEmbeddingModel()).toBe(TEXT_EMBEDDING_MODEL_ID);
     expect(getTextEmbeddingModelId()).toBe(TEXT_EMBEDDING_MODEL_ID);
   });
 
-  it("falls back to direct OpenAI when configured and Gateway is not", () => {
+  it("falls back to direct OpenAI when configured and Gateway is not", async () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "sk-test-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-    __resetServerEnvCacheForTest();
-    __resetEmbeddingKeyCacheForTest();
-
+    const { getTextEmbeddingModel, getTextEmbeddingModelId } =
+      await loadTextEmbeddingModule();
     const model = getTextEmbeddingModel();
     expect(typeof model).not.toBe("string");
     expect(getTextEmbeddingModelId()).toBe("text-embedding-3-small");

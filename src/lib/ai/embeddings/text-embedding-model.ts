@@ -46,12 +46,6 @@ function createDeterministicEmbeddingModel(): EmbeddingModelV3 {
 let cachedAiGatewayKey: boolean | undefined;
 let cachedOpenAiKey: boolean | undefined;
 
-// biome-ignore lint/style/useNamingConvention: test-only reset helper
-export function __resetEmbeddingKeyCacheForTest() {
-  cachedAiGatewayKey = undefined;
-  cachedOpenAiKey = undefined;
-}
-
 function hasAiGatewayKey(): boolean {
   if (cachedAiGatewayKey === undefined) {
     cachedAiGatewayKey = Boolean(
