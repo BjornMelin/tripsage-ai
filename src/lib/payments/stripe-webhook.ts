@@ -245,8 +245,14 @@ export function createStripeWebhookHandler() {
           );
 
           if (reserved) {
-            await releaseKey(eventKey, { degradedMode: "fail_open" }).catch(() => {
-              // best-effort rollback only
+            await releaseKey(eventKey, { degradedMode: "fail_open" }).catch((e) => {
+              span.recordException(e instanceof Error ? e : new Error(String(e)));
+              span.setAttribute("webhook.release_failed", true);
+              span.addEvent("webhook.release_key_rollback_failed", {
+                message: "Best-effort rollback in releaseKey failed",
+                "stripe.event_id": event.id,
+                "webhook.event_key": eventKey,
+              });
             });
           }
 

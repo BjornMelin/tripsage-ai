@@ -25,10 +25,13 @@ export interface RagSearchDeps {
   supabase: TypedServerSupabase;
   /** Authenticated user ID. */
   userId: string;
+  /** Logger instance (optional). */
+  logger?: ReturnType<typeof createServerLogger>;
+  /** Cache TTL in seconds (optional). */
+  cacheTtlSeconds?: number;
 }
 
-const logger = createServerLogger("rag.search");
-const RAG_SEARCH_CACHE_TTL_SECONDS = 120;
+const DEFAULT_RAG_SEARCH_CACHE_TTL_SECONDS = 120;
 
 /**
  * Result structure for a cached RAG search item.
@@ -104,6 +107,8 @@ export async function handleRagSearch(
   deps: RagSearchDeps,
   body: RagSearchRequest
 ): Promise<Response> {
+  const logger = deps.logger ?? createServerLogger("rag.search");
+  const cacheTtlSeconds = deps.cacheTtlSeconds ?? DEFAULT_RAG_SEARCH_CACHE_TTL_SECONDS;
   const cacheKey = createRagSearchCacheKey(deps.userId, body);
 
   const cached = await getCachedJsonSafe<CachedRagSearchEntry>(cacheKey);
@@ -219,7 +224,7 @@ export async function handleRagSearch(
     version: 1,
   };
   try {
-    await setCachedJson(cacheKey, cacheEntry, RAG_SEARCH_CACHE_TTL_SECONDS);
+    await setCachedJson(cacheKey, cacheEntry, cacheTtlSeconds);
   } catch (error) {
     logger.warn("RAG search cache write failed", {
       cacheKey,

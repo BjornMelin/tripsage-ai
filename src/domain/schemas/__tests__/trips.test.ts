@@ -86,6 +86,14 @@ describe("trips schemas", () => {
       });
 
       expect(result.success).toBe(false);
+      if (!result.success) {
+        const issues = result.error.issues;
+        const startIssue = issues.find((i) => i.path.includes("startDate"));
+        const endIssue = issues.find((i) => i.path.includes("endDate"));
+
+        expect(startIssue?.message).toBe("Date must be in YYYY-MM-DD format");
+        expect(endIssue?.message).toBe("Date must be in YYYY-MM-DD format");
+      }
     });
   });
 
