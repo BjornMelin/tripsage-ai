@@ -4,6 +4,7 @@
 
 - Docker (required for `supabase start`)
 - `pnpm` per repo `package.json`
+- Supabase CLI: this repo runs a pinned CLI via `pnpm dlx supabase@2.72.8` in `package.json` scripts (no global install required). If you choose to install the CLI locally, Supabase’s docs note `pnpm add supabase --save-dev --allow-build=supabase` may be required on pnpm v10+.
 
 ## Local stack
 
@@ -11,13 +12,16 @@
   - `pnpm supabase:start`
 - Stop Supabase:
   - `pnpm supabase:stop`
-- Reset database (re-applies `supabase/migrations/*` + `supabase/seed.sql`):
+- Reset database (re-applies `supabase/migrations/*`; skips `supabase/seed.sql` — use `pnpm supabase:seed:*`):
   - `pnpm supabase:db:reset`
 - One-shot bootstrap (start + reset + print status):
   - `pnpm supabase:bootstrap`
 - Reset + seed (deterministic sample data):
   - `pnpm supabase:reset:dev` (UI development dataset)
-  - `pnpm supabase:reset:e2e` (Playwright/E2E dataset)
+  - `pnpm supabase:reset:e2e` (Playwright/E2E dataset, for when you want to run E2E against a real local DB)
+  - `pnpm supabase:reset:payments` (payments/Stripe dataset)
+  - `pnpm supabase:reset:calendar` (calendar/OAuth dataset)
+  - `pnpm supabase:reset:edge-cases` (validation/error-path dataset)
 
 ## Environment variables (local)
 
@@ -28,8 +32,9 @@ After `pnpm supabase:start`, get local URLs/keys via:
 Populate `.env.local` with at least:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only; never `NEXT_PUBLIC_*`)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; use the `sb_secret_...` key printed by `pnpm supabase:status`; never `NEXT_PUBLIC_*`)
+- (Recommended) `SUPABASE_JWT_SECRET` (use `JWT_SECRET` from `pnpm supabase:status` for local non-test flows like MFA)
 
 ## Seed data (dev + e2e)
 
@@ -37,15 +42,24 @@ TripSage keeps a deterministic seed script for local development and E2E testing
 
 - `pnpm supabase:seed:dev` — creates/updates a small “realistic” dataset (trips, itinerary, saved places, chat) for UI dev
 - `pnpm supabase:seed:e2e` — creates/updates a minimal dataset with stable users for Playwright flows
+- `pnpm supabase:seed:payments` — creates/updates a payments-focused dataset (Stripe/webhook fixtures + representative rows)
+- `pnpm supabase:seed:calendar` — creates/updates a calendar-focused dataset
+- `pnpm supabase:seed:edge-cases` — creates/updates an edge-case dataset (constraints, missing fields, partial states)
 
 Notes:
 
 - Seeding requires `SUPABASE_SERVICE_ROLE_KEY` because it uses `supabase.auth.admin.*` to create confirmed users.
 - Seed data is designed to be **idempotent**: rerunning should converge to the same dataset without needing a full reset.
+- Seed fixtures live in `scripts/seed/fixtures/` and are uploaded into Supabase Storage buckets (`avatars`, `attachments`) as part of seeding.
+- RAG/memory embedding generation uses AI SDK v6:
+  - If `AI_GATEWAY_API_KEY` or `OPENAI_API_KEY` is configured, real embeddings are generated (`openai/text-embedding-3-small`, 1536 dims).
+  - If no embedding provider is configured, seeding falls back to a deterministic local embedding model for offline/dev/test. This preserves end-to-end flows but does **not** provide real semantic relevance.
+- RAG reranking uses Together.ai via AI SDK v6 `rerank()` when `TOGETHER_AI_API_KEY` is set; otherwise reranking degrades to a no-op reranker.
 
-## Local auth email confirmations (Inbucket)
+## Local auth email confirmations (Inbucket / Mailpit)
 
-Supabase local is configured with Inbucket (`supabase/config.toml` `[inbucket]`):
+Supabase local is configured with Inbucket (`supabase/config.toml` `[inbucket]`).
+In newer Supabase CLI versions, `pnpm supabase:status` may label this service as **Mailpit**.
 
 - Inbox UI: `http://localhost:54324`
 - When signing up locally, open the Inbucket inbox and click the confirmation link.
@@ -65,6 +79,34 @@ This writes `src/lib/supabase/database.types.ts` from the local database (schema
 2) `pnpm supabase:db:reset`
 3) `pnpm supabase:typegen`
 4) Commit both the migration(s) and updated `src/lib/supabase/database.types.ts`
+
+## Supabase CLI upgrades (local)
+
+Supabase recommends stopping local containers and deleting data volumes before upgrading the CLI to ensure managed services apply internal migrations on a clean state. For this repo, `pnpm supabase:bootstrap` starts from a clean slate by calling `supabase stop --no-backup` before bringing the stack up again.
+
+## Playwright E2E note
+
+The default Playwright setup (`pnpm test:e2e:*`) starts its own dev server and uses a mock Supabase Auth HTTP server (`scripts/e2e-webserver.mjs`) on `http://127.0.0.1:54329`. It does **not** require local Supabase.
+
+Use local Supabase when you specifically want to validate real DB/RLS behavior and the full ingestion + RAG pipelines end-to-end.
+
+## RAG smoke test (manual, full local stack)
+
+This is the quickest way to validate end-to-end RAG retrieval against the local database:
+
+1) `pnpm supabase:reset:dev`
+2) `pnpm dev`
+3) Sign in with the seeded user:
+   - `dev.owner@example.local` / `dev-password-change-me`
+4) Go to `/chat` and ask:
+   - “Search my `user_content` documents for `seeded` and summarize what you find.”
+
+Expected: the assistant triggers a `ragSearch` tool call and returns snippets from seeded `user_content` fixtures.
+
+Notes:
+
+- This validates the whole stack: `rag_documents` rows exist, embeddings are generated, `hybrid_rag_search` RPC returns results, and the agent tool wiring works.
+- Meaningful semantic relevance locally requires `AI_GATEWAY_API_KEY` or `OPENAI_API_KEY`; deterministic embeddings are for offline/dev/CI and are not semantically meaningful.
 
 ## RLS hardening checks (recommended before deploying migrations)
 

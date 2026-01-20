@@ -28,7 +28,7 @@ Common operational env vars (non-exhaustive, names only):
 - Supabase: `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`
 - Upstash Redis: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 - Upstash QStash: `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
-- AI gateway/providers: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `EMBEDDINGS_API_KEY`
+- AI gateway/providers: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `TOGETHER_AI_API_KEY`, `EMBEDDINGS_API_KEY`
 - Search/crawl: `FIRECRAWL_API_KEY`, `FIRECRAWL_BASE_URL`
 - Maps/weather: `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `OPENWEATHERMAP_API_KEY`
 - Payments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
@@ -64,8 +64,9 @@ Source of truth lives in `supabase/migrations/`.
 
 Local:
 
-- `supabase start`
-- `supabase db reset --debug`
+- `pnpm supabase:bootstrap`
+- `pnpm supabase:reset:dev` (optional seed)
+- `pnpm supabase:typegen` (after migration changes)
 
 Prod:
 
@@ -73,6 +74,10 @@ Prod:
 - `supabase db push`
 
 Database → Vercel webhooks are documented in `docs/operations/supabase-webhooks.md`.
+
+### Supabase CLI upgrades (local dev)
+
+Supabase recommends stopping local containers and deleting data volumes before upgrading the CLI to ensure local services can apply internal migrations on a clean state (`supabase stop --no-backup`). This repo pins Supabase CLI via `pnpm dlx supabase@2.72.8` in `package.json` scripts.
 
 ## References (full URLs)
 

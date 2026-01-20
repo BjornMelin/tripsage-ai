@@ -76,6 +76,7 @@ export const GET = withApiGuards({
 
 - **Trips & Content**: `trips`, `flights`, `accommodations`, `transportation`, `itinerary_items`, `trip_collaborators`, `bookings`.
 - **Chat & Memory**: `chat_sessions`, `chat_messages`, `chat_tool_calls`, `accommodation_embeddings`; `memories` schema tables (`memories.sessions`, `memories.turns`, `memories.turn_embeddings`).
+- **RAG**: `rag_documents` (chunked documents + `vector(1536)` embeddings) and RPCs for hybrid/vector search.
 - **Auth & Keys**: Vault-backed `api_keys`, `user_gateway_configs`, `user_settings`; SECURITY DEFINER RPCs gate all BYOK operations.
 - **MFA & Recovery**: `mfa_enrollments` tracks TOTP enrollment lifecycle (pending/consumed/expired) with RLS; `auth_backup_codes` stores hashed backup codes (peppered) and is replaced atomically via the `replace_backup_codes` RPC; `mfa_backup_code_audit` logs regeneration/consumption metadata (user_id, event, count, ip, user_agent) for forensics.
 - **Telemetry & Webhooks**: `webhook_configs`, `webhook_logs`, `webhook_events`, `system_metrics`; helper RPCs for realtime topics.
@@ -202,14 +203,14 @@ Webhook handlers use HMAC signature verification (`X-Signature-HMAC` header) wit
 
 - Single-source schema lives in `supabase/schema.sql` (plus migrations); supports bootstrapping a new project in one apply.
 - Prefer Supabase migrations for changes; keep table and function inventory aligned with above domains.
-- Regenerate TypeScript types after schema updates: `supabase gen types typescript --local > src/lib/supabase/database.types.ts`.
+- Regenerate TypeScript types after schema updates: `pnpm supabase:typegen`.
 
 ## Function / RPC Inventory (keep)
 
 - Vault/BYOK: `insert_user_api_key`, `get_user_api_key`, `delete_user_api_key`, `touch_user_api_key`.
 - Gateway configs: `upsert_user_gateway_config`, `get_user_gateway_base_url`, `get_user_allow_gateway_fallback`, `delete_user_gateway_config`.
 - Realtime helpers: `rt_topic_prefix`, `rt_topic_suffix`, `rt_is_session_member`.
-- Vector search: `match_accommodation_embeddings` over `vector(1536)` embeddings.
+- Vector search: `match_accommodation_embeddings`, `match_rag_documents`, `hybrid_rag_search` (all over `vector(1536)` embeddings).
 - Webhooks/supporting helpers: keep only actively used retry/send functions; retire unused ones alongside migrations.
 
 ## Related How-To

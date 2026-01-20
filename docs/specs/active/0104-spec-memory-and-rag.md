@@ -88,6 +88,7 @@ Implementation:
 
 - Hybrid retrieval uses the `hybrid_rag_search` RPC (vector + lexical).
 - Pure semantic search uses `match_rag_documents` (vector only).
+- Default `threshold` is `0.0` so that deterministic fallback embeddings can still return non-empty results in local dev/CI. Production deployments should tune `threshold` upward to reduce noise.
 
 ### Reranking (AI SDK v6)
 
@@ -153,9 +154,7 @@ Seed implementation: `scripts/seed/supabase-local.ts` (+ fixtures in `scripts/se
 
 ### Embeddings cost (OpenAI)
 
-OpenAI pricing (as of the referenced pricing page):
-
-- `text-embedding-3-small`: $0.02 / 1M tokens (Batch: $0.01 / 1M tokens)
+OpenAI pricing changes over time. Refer to the official pricing page for current rates for `text-embedding-3-small` (and any batch pricing, if applicable).
 
 Rule of thumb:
 
@@ -164,13 +163,11 @@ Rule of thumb:
 
 Estimated cost to embed N chunks:
 
-- Cost ≈ (total_input_tokens / 1_000_000) * $0.02
+- Cost ≈ (total_input_tokens / 1_000_000) * (current $/1M tokens)
 
 ### Reranking cost (Together.ai)
 
-Together rerank pricing (as of the referenced pricing page):
-
-- `Mxbai Rerank Large V2`: $0.10 / 1M tokens
+Together rerank pricing changes over time. Refer to the official pricing page for current rates for `mixedbread-ai/Mxbai-Rerank-Large-V2` (or the configured rerank model).
 
 Cost drivers:
 
