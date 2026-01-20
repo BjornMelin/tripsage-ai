@@ -112,8 +112,8 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 
 > **Note**: This is a reusable onboarding template. Copy and complete when setting up a new development environment.
 
-- [ ] `.env` copied from root `.env.example`
 - [ ] `.env.local` copied from root `.env.local.example` (Next.js local dev)
+- [ ] `.env` copied from root `.env.example` (optional — only if you need shared defaults/legacy workflows)
 - [ ] `.env.test` copied from root `.env.test.example` (local/CI test runs)
 - [ ] Supabase URL + public key (publishable or anon) + service role key present
 - [ ] Upstash Redis REST URL + token present

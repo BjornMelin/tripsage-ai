@@ -14,6 +14,7 @@ import { createReranker } from "@/lib/rag/reranker";
 import { retrieveDocuments } from "@/lib/rag/retriever";
 import { hashIdentifier } from "@/lib/ratelimit/identifier";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
 export interface RagSearchDeps {
@@ -66,6 +67,7 @@ export async function handleRagSearch(
   deps: RagSearchDeps,
   body: RagSearchRequest
 ): Promise<Response> {
+  const logger = createServerLogger("rag.search");
   const cacheKey = createRagSearchCacheKey(deps.userId, body);
 
   const cached = await getCachedJsonSafe<CachedRagSearchEntry>(cacheKey);
@@ -180,7 +182,16 @@ export async function handleRagSearch(
     total: result.total,
     version: 1,
   };
-  await setCachedJson(cacheKey, cacheEntry, RAG_SEARCH_CACHE_TTL_SECONDS);
+  try {
+    await setCachedJson(cacheKey, cacheEntry, RAG_SEARCH_CACHE_TTL_SECONDS);
+  } catch (error) {
+    logger.warn("RAG search cache write failed", {
+      cacheKey,
+      error,
+      total: cacheEntry.total,
+      version: cacheEntry.version,
+    });
+  }
 
   return NextResponse.json(result);
 }

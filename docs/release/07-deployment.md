@@ -77,7 +77,7 @@ Database → Vercel webhooks are documented in `docs/operations/supabase-webhook
 
 ### Supabase CLI upgrades (local dev)
 
-Supabase recommends stopping local containers and deleting data volumes before upgrading the CLI to ensure local services can apply internal migrations on a clean state (`supabase stop --no-backup`). This repo pins Supabase CLI via `pnpm dlx supabase@2.72.8` in `package.json` scripts.
+Supabase recommends stopping local containers and deleting data volumes before upgrading the CLI to ensure local services can apply internal migrations on a clean state (`supabase stop --no-backup`). This repo pins the Supabase CLI only for the direct CLI scripts (`supabase:status`, `supabase:typegen`) via `pnpm dlx supabase@2.72.8`; the other Supabase-related scripts run via `tsx scripts/supabase/*.ts` and do not pin the CLI version.
 
 ## References (full URLs)
 

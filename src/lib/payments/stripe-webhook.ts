@@ -76,6 +76,8 @@ export function createStripeWebhookHandler() {
       { attributes: { route: "/api/hooks/stripe" } },
       async (span) => {
         // 1) Rate limit (fail-closed; Stripe will retry)
+        // Note: 503 on limiter unavailability triggers Stripe retries.
+        // Monitor "webhook.rate_limit_unavailable" attribute for Redis outages.
         const rateLimitResult = await checkWebhookRateLimit(req);
 
         if (!rateLimitResult.success) {

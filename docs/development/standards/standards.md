@@ -105,7 +105,7 @@ TripSage aligns UI implementation with Vercel Web Interface Guidelines:
 - Use semantic elements:
   - navigation: `Link`/`<a>`
   - actions: `<button>`
-  - avoid `div` + `onClick` for interactive controls
+  - avoid `div` + `onClick` for interactive controls.
 
 References:
 

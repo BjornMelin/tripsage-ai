@@ -78,8 +78,12 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
     ) {
       return true;
     }
-  } catch {
+  } catch (error) {
     // Fall back to cookies() store (best-effort).
+    apiFactoryLogger.info("Supabase SSR cookie detection failed", {
+      context: "isSupabaseSsrAuthCookieName",
+      error,
+    });
   }
 
   try {

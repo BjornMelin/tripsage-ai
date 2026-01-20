@@ -61,6 +61,22 @@ function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
   });
 }
 
+function assertEmbeddingDimensions(
+  embeddings: readonly number[][],
+  expectedDim: number,
+  context?: string
+): void {
+  for (let i = 0; i < embeddings.length; i += 1) {
+    const embedding = embeddings[i];
+    if (!embedding || embedding.length !== expectedDim) {
+      const contextSuffix = context ? ` (${context})` : "";
+      throw new Error(
+        `Embedding dimension mismatch${contextSuffix} at index ${i}: expected ${expectedDim}, got ${embedding?.length ?? -1}`
+      );
+    }
+  }
+}
+
 /**
  * Chunk document text with overlap.
  *
@@ -365,14 +381,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     );
   }
 
-  for (let i = 0; i < embeddings.length; i += 1) {
-    const embedding = embeddings[i];
-    if (!embedding || embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
-      throw new Error(
-        `Embedding dimension mismatch at index ${i}: expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding?.length ?? -1}`
-      );
-    }
-  }
+  assertEmbeddingDimensions(embeddings, TEXT_EMBEDDING_DIMENSIONS);
 
   // Prepare rows for upsert
   const rows: Database["public"]["Tables"]["rag_documents"]["Insert"][] = allChunks.map(

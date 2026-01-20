@@ -48,12 +48,10 @@ export async function GET(request: NextRequest) {
     if (!exchangeError) {
       redirect(next);
     }
-    if (exchangeError) {
-      logger.warn("OAuth code exchange failed", {
-        code,
-        error: exchangeError.message ?? "unknown",
-      });
-    }
+    logger.warn("OAuth code exchange failed", {
+      error: exchangeError?.message ?? "unknown",
+      errorCode: exchangeError?.code ?? "unknown",
+    });
   }
 
   const tokenHash = searchParams.get("token_hash");

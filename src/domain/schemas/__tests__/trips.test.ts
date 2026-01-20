@@ -30,6 +30,26 @@ describe("trips schemas", () => {
       }
     });
 
+    it("normalizes ISO datetimes with timezone offsets", () => {
+      const result = tripCreateSchema.safeParse({
+        currency: "USD",
+        destination: "Mumbai, India",
+        endDate: "2026-02-10T12:00:00+05:30",
+        startDate: "2026-02-01T12:00:00+05:30",
+        status: "planning",
+        title: "Trip with offset",
+        travelers: 1,
+        tripType: "leisure",
+        visibility: "private",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.startDate).toBe("2026-02-01");
+        expect(result.data.endDate).toBe("2026-02-10");
+      }
+    });
+
     it("accepts ISO date inputs", () => {
       const result = tripCreateSchema.safeParse({
         currency: "USD",

@@ -16,7 +16,8 @@
 
 TripSage AI implements a defense-in-depth security model designed for sensitive agentic operations:
 
-- **BYOK (Bring Your Own Key)**: Users can provide their own API keys for AI providers, which are stored securely in **Supabase Vault** and never accessed by the application backend outside of resolution.
+- **BYOK (Bring Your Own Key)**: Users can provide API keys for AI providers, which are
+  stored securely in **Supabase Vault** and never accessed by the application backend outside of resolution.
 - **withApiGuards**: A unified factory for Next.js Route Handlers that centralizes:
   - **MFA (Multi-Factor Authentication)**: Enforces MFA sessions for sensitive tool operations.
   - **BotID Protection**: Blocks automated scraping and bot traffic using Vercel BotID (Kasada-powered).

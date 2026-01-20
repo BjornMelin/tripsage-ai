@@ -106,6 +106,7 @@ Generate and (optionally) persist embeddings for internal ingestion workflows.
   - AI Gateway: `openai/text-embedding-3-small`
   - Direct OpenAI: `text-embedding-3-small`
   - Offline/dev fallback: `tripsage/deterministic-embedding-1536-v1` (not semantically meaningful)
+- Selection prioritizes `AI_GATEWAY_API_KEY`, then `OPENAI_API_KEY`, then falls back to deterministic embeddings.
 - The endpoint is disabled unless `EMBEDDINGS_API_KEY` is set.
 
 #### Response (POST /api/embeddings)

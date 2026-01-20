@@ -14,11 +14,11 @@
 - Stripe retries aggressively on non-2xx responses and expects signature verification on the **raw request body**.
 - Next.js Route Handlers run within the App Router runtime constraints (Cache Components enabled) and must avoid module-scope request state.
 - Webhook handlers must be safe by default:
-  - signature verification before parsing
-  - bounded request body reads
-  - idempotency to prevent duplicate side effects
-  - rate limiting to control abuse and accidental retry storms
-  - telemetry for operability without logging secrets
+  - signature verification before parsing.
+  - bounded request body reads.
+  - idempotency to prevent duplicate side effects.
+  - rate limiting to control abuse and accidental retry storms.
+  - telemetry for operability without logging secrets.
 
 ## Decision
 
@@ -31,11 +31,11 @@ We implement Stripe webhook handling as a first-class Next.js Route Handler with
 2) **Canonical Stripe webhook handler**
    - A shared handler factory `createStripeWebhookHandler()` is implemented in `src/lib/payments/stripe-webhook.ts` and mounted at `POST /api/hooks/stripe` (`src/app/api/hooks/stripe/route.ts`).
    - The handler enforces, in-order:
-     - fail-closed rate limiting via `src/lib/webhooks/rate-limit.ts`
-     - bounded raw body reads (`readRequestBodyBytesWithLimit`) with a hard cap
-     - signature verification using `stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)`
-     - event-level idempotency using Upstash Redis reservation keys with a 24h TTL (`stripe:<event.id>`)
-     - minimal event handling (telemetry + acknowledgement); unknown event types are accepted safely
+    - fail-closed rate limiting via `src/lib/webhooks/rate-limit.ts`
+    - bounded raw body reads (`readRequestBodyBytesWithLimit`) with a hard cap
+    - signature verification using `stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)`
+    - event-level idempotency using Upstash Redis reservation keys with a 24h TTL (`stripe:<event.id>`)
+    - minimal event handling (telemetry + acknowledgement); unknown event types are accepted safely.
 
 3) **Unknown event types are safe**
    - The webhook contract is “verify + acknowledge”; downstream handlers may add per-event-type behavior, but unknown types (including Stripe `v2.*` event notification surfaces) must not break the endpoint.

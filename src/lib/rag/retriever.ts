@@ -70,7 +70,9 @@ export async function retrieveDocuments(
     (config.useReranking
       ? createReranker({ provider: "together", timeout: 700 })
       : createReranker({ provider: "noop" }));
-  const shouldRerank = config.useReranking && !(reranker instanceof NoOpReranker);
+  const shouldRerank =
+    !(reranker instanceof NoOpReranker) &&
+    (config.useReranking || customReranker !== undefined);
 
   return withTelemetrySpan(
     "rag.retriever.retrieve_documents",

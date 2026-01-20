@@ -6,6 +6,7 @@
 
 import { getErrorMessage } from "react-error-boundary";
 
+/** Error type with an optional digest from boundary/framework. */
 export type ErrorWithDigest = Error & { digest?: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -18,6 +19,9 @@ function getOptionalString(value: unknown, key: string): string | undefined {
   return typeof raw === "string" && raw.trim().length > 0 ? raw : undefined;
 }
 
+/**
+ * Normalize unknown thrown values into a standard Error instance for UI boundaries.
+ */
 export function normalizeThrownError(
   thrown: unknown,
   fallbackMessage = "Unknown error"
