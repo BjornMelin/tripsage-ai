@@ -258,7 +258,7 @@ export function TableLoadingSkeleton({
 /**
  * Props for the SuspenseQuery component.
  */
-interface SuspenseQueryProps<TData = unknown, TError = Error> {
+interface SuspenseQueryProps<TData = unknown, TError = unknown> {
   /** The React Query result object to handle. */
   query: UseQueryResult<TData, TError>;
   /** Render function that receives the query data. */
@@ -278,7 +278,7 @@ interface SuspenseQueryProps<TData = unknown, TError = Error> {
  * @param placeholderData - Optional placeholder data for loading state.
  * @returns Component that handles query states with placeholder support.
  */
-export function SuspenseQuery<TData = unknown, TError = Error>({
+export function SuspenseQuery<TData = unknown, TError = unknown>({
   query,
   children,
   fallback,

@@ -4,7 +4,8 @@
 
 import "server-only";
 
-import type { RagSearchRequest, RagSearchResult } from "@schemas/rag";
+import type { RagNamespace, RagSearchRequest } from "@schemas/rag";
+import { ragNamespaceSchema } from "@schemas/rag";
 import { NextResponse } from "next/server";
 import { getTextEmbeddingModelId } from "@/lib/ai/embeddings/text-embedding-model";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -56,6 +57,11 @@ function createRagSearchCacheKey(userId: string, body: RagSearchRequest): string
   return `rag_search:v1:${userHash}:${hashInputForCache(payload)}`;
 }
 
+function validateNamespace(value: unknown): RagNamespace {
+  const result = ragNamespaceSchema.safeParse(value);
+  return result.success ? result.data : "default";
+}
+
 export async function handleRagSearch(
   deps: RagSearchDeps,
   body: RagSearchRequest
@@ -87,7 +93,15 @@ export async function handleRagSearch(
       .select("id, chunk_index, content, metadata, namespace, source_id")
       .in("id", uniqueIds);
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      recordTelemetryEvent("rag.cache.rehydration_db_error", {
+        attributes: {
+          errorMessage: error.message,
+          uniqueIdCount: uniqueIds.length,
+        },
+        level: "warning",
+      });
+    } else if (data && data.length > 0) {
       const rowByKey = new Map<string, (typeof data)[number]>();
       for (const row of data) {
         const key = `${row.id}:${row.chunk_index ?? 0}`;
@@ -104,7 +118,7 @@ export async function handleRagSearch(
             ...result,
             content: row.content ?? "",
             metadata: (row.metadata ?? {}) as Record<string, unknown>,
-            namespace: (row.namespace ?? "default") as RagSearchResult["namespace"],
+            namespace: validateNamespace(row.namespace ?? "default"),
             sourceId: row.source_id ?? null,
           };
         })

@@ -196,7 +196,7 @@ function QueryErrorFallback({
   loginHref,
 }: QueryErrorFallbackProps) {
   const normalized = normalizeThrownError(error);
-  const errorMessage = getErrorMessage(error);
+  const errorMessage = getErrorMessage(normalized);
   const display = VARIANT_DISPLAY[meta.variant];
   const showLogin = meta.variant === "auth";
   const message = meta.variant === "default" ? errorMessage : display.message;
