@@ -1,3 +1,16 @@
+## [1.28.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.27.0...v1.28.0) (2026-01-21)
+
+### Features
+
+* enhance security with improved CSRF origin normalization and add photo proxy size limits and error handling. ([d68a146](https://github.com/BjornMelin/tripsage-ai/commit/d68a1460f89c3fb1602e5dee85ed19d22480b7ec))
+* enhance trip access logic to return 404 for non-existent trips, refine CSRF protection, and improve API key validation robustness. ([0160b53](https://github.com/BjornMelin/tripsage-ai/commit/0160b534b6e5073c042a693368658bc06fe8b825))
+* refine CSRF security logic with `allowedOrigins` and `Sec-Fetch-Site` adjustments, improve external API error handling, and update Google Maps photo type definition. ([451d43a](https://github.com/BjornMelin/tripsage-ai/commit/451d43a8f711b59b0ffe5e4b7e1d3641087761ea))
+
+### Bug Fixes
+
+* **security:** address PR [#645](https://github.com/BjornMelin/tripsage-ai/issues/645) review threads ([f641334](https://github.com/BjornMelin/tripsage-ai/commit/f641334dfc8b5872783db2b5efda173cfc40fb75))
+* **security:** harden api guards and origin handling ([1fe59d4](https://github.com/BjornMelin/tripsage-ai/commit/1fe59d47b85acd06f6f888987f17259d3d288423))
+
 ## [1.27.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.26.0...v1.27.0) (2026-01-21)
 
 ### Features
