@@ -57,14 +57,12 @@ export const viewport = {
 };
 
 /**
- * Root layout component.
+ * Wraps the application with platform providers and renders children inside the main content area.
  *
- * Wraps the application with providers for theming, data fetching, performance monitoring,
- * notifications, and navigation.
+ * The component establishes telemetry, authentication, theming, performance monitoring, and
+ * notification contexts and provides a skip-link and semantic main container for accessibility.
  *
- * @param props - Component props
- * @param props.children - Child components to render in the main content area
- * @returns The root layout JSX element
+ * @returns The root layout element containing provider contexts and the main content region
  */
 async function AppShell({ children }: { children: React.ReactNode }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
@@ -101,11 +99,9 @@ async function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Fallback component for the root AppShell.
+ * Render a full-screen loading state shown while initial session and theme data are resolved.
  *
- * Displays a loading state while initial session and theme data are resolved.
- *
- * @returns Loading state JSX element.
+ * @returns A JSX element with a centered spinner and the text "Loading…"
  */
 function AppShellFallback() {
   return (
@@ -119,14 +115,11 @@ function AppShellFallback() {
 }
 
 /**
- * Root layout component for the application.
+ * Defines the application's root HTML structure, applies Geist fonts,
+ * and wraps page content with the AppShell.
  *
- * Provides the base HTML structure and wraps children in the AppShell.
- * Utilizes Geist fonts and handles technical SEO defaults.
- *
- * @param props - Layout props.
- * @param props.children - Page content.
- * @returns The root HTML document structure.
+ * @param props.children - Page content to render inside the app shell.
+ * @returns The root HTML element tree for the application.
  */
 export default function RootLayout({
   children,

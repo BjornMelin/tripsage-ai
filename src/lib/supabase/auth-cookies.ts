@@ -24,12 +24,10 @@ export function isSupabaseSsrAuthCookieName(cookieName: string): boolean {
 }
 
 /**
- * Checks if any of the provided cookies are related to Supabase authentication.
+ * Determines whether any cookie in the array is a Supabase authentication cookie.
  *
- * Includes legacy 'sb-access-token'/'sb-refresh-token' and modern SSR patterns.
- *
- * @param cookies - Array of cookie objects.
- * @returns True if at least one auth cookie is present and non-empty.
+ * @param cookies - Array of SupabaseCookie to inspect
+ * @returns `true` if at least one auth cookie with a non-empty value is found, `false` otherwise.
  */
 export function hasSupabaseAuthCookies(cookies: SupabaseCookie[]): boolean {
   return cookies.some((cookie) => {

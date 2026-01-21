@@ -72,14 +72,17 @@ async function readResponseBodyBytesWithLimit(
 }
 
 /**
- * Handles a request to proxy a Google Places photo.
+ * Proxy a Google Places photo request and return the image or a formatted error response.
  *
- * Validates existence, size limits, and content types before returning the image data.
- * Supports both direct stream proxying and buffered reads for responses without content length.
+ * Validates content headers and enforces the MAX_PLACES_PHOTO_BYTES limit; when the upstream
+ * response includes a Content-Length it streams the body with preserved headers, otherwise
+ * it buffers the body up to the size limit before responding.
  *
- * @param deps - Handler dependencies including API key.
- * @param params - Validated request parameters.
- * @returns Image response or standard error response.
+ * @param deps - Handler dependencies; must include `apiKey` used to call the Places API
+ * @param params - Validated request parameters for the photo fetch
+ * @returns The HTTP Response containing the proxied image with appropriate caching
+ *   and content headers, or an error response describing the failure (e.g.,
+ *   size limit exceeded or external API error)
  */
 export async function handlePlacesPhoto(
   deps: PlacesPhotoDeps,

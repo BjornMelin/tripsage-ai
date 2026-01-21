@@ -34,10 +34,13 @@ export function vaultUnavailableResponse(reason: string, err?: unknown): Respons
 }
 
 /**
- * Maps an HTTP status code from a provider to a PlannedErrorCode.
+ * Map a provider HTTP status code to a PlannedErrorCode.
  *
- * @param status - HTTP status code from the provider.
- * @returns Mapped error code (NETWORK_ERROR or INVALID_KEY).
+ * 429 and any status >= 500 map to `NETWORK_ERROR`; statuses from 400 through
+ * 499 map to `INVALID_KEY`; all other statuses map to `NETWORK_ERROR`.
+ *
+ * @param status - HTTP status code returned by the provider
+ * @returns The corresponding planned error code (`INVALID_KEY` or `NETWORK_ERROR`)
  */
 export function mapProviderStatusToCode(status: number): PlannedErrorCode {
   if (status === 429) return PLANNED_ERROR_CODES.networkError;
@@ -47,10 +50,10 @@ export function mapProviderStatusToCode(status: number): PlannedErrorCode {
 }
 
 /**
- * Checks if an error is a timeout or abort-related exception.
+ * Determine whether an error represents an abort or timeout condition.
  *
- * @param error - The error to check.
- * @returns True if the error is an AbortError or TimeoutError.
+ * @param error - The value to inspect for abort/timeout semantics.
+ * @returns `true` if the error is an `AbortError` or `TimeoutError`, `false` otherwise.
  */
 function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;

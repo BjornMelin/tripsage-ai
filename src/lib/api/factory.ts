@@ -58,6 +58,13 @@ export type DegradedMode = "fail_closed" | "fail_open";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/**
+ * Determines whether an HTTP method is considered mutating.
+ *
+ * @param method - The HTTP method name (case-insensitive).
+ * @returns `true` if `method` is one of POST, PUT, PATCH, or
+ *   DELETE (case-insensitive), `false` otherwise.
+ */
 function isMutatingMethod(method: string): boolean {
   return MUTATING_METHODS.has(method.toUpperCase());
 }
@@ -68,6 +75,15 @@ type AuthCredentialState = {
   hasAny: boolean;
 };
 
+/**
+ * Determines whether Supabase authentication cookies are present for the current request.
+ *
+ * Checks the provided request's cookie list first and falls back to the
+ * Next.js `cookies()` store when available.
+ *
+ * @param req - The incoming NextRequest to inspect for Supabase auth cookies
+ * @returns `true` if Supabase authentication cookies are found, `false` otherwise
+ */
 async function hasSupabaseCookieCredentials(req: NextRequest): Promise<boolean> {
   // Prefer request cookies when available (works in tests and Route Handlers).
   try {
@@ -97,6 +113,15 @@ async function hasSupabaseCookieCredentials(req: NextRequest): Promise<boolean> 
   return false;
 }
 
+/**
+ * Detects whether the request carries an Authorization header or Supabase
+ * authentication cookies.
+ *
+ * @returns An `AuthCredentialState` object: `hasAny` is `true` if either an
+ *   Authorization header or Supabase auth cookies are present;
+ *   `hasAuthorization` is `true` if an Authorization header is present;
+ *   `hasCookie` is `true` if Supabase auth cookies are present.
+ */
 async function getAuthCredentials(req: NextRequest): Promise<AuthCredentialState> {
   const authorization = getAuthorization(req);
   const hasAuthorization = Boolean(authorization?.trim());
@@ -514,6 +539,23 @@ export function withApiGuards(
 ): (
   handler: RouteHandler<unknown>
 ) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response>;
+/**
+ * Creates a higher-order wrapper that applies authorization, CSRF same-origin checks,
+ * BotID protection, rate limiting, request body parsing & validation, and telemetry
+ * around a route handler.
+ *
+ * The provided GuardsConfig controls which guards are applied (for example: `auth`,
+ * `botId`, `rateLimit`, `csrf`, `telemetry`, and `schema`) and how they behave. When
+ * enabled, authentication is validated before CSRF checks and bot protection; rate
+ * limiting is enforced early; request bodies are size-limited and validated against a
+ * Zod schema when provided; and handler execution is recorded with telemetry and
+ * fire-and-forget metrics.
+ *
+ * @param config - Configuration object that determines which guards to enable and their options.
+ * @returns A function that accepts a RouteHandler and returns a Next.js route handler
+ *   function that processes a NextRequest and RouteParamsContext and produces a
+ *   Response.
+ */
 export function withApiGuards<SchemaType extends z.ZodType>(
   config: GuardsConfig<SchemaType>
 ): (

@@ -45,16 +45,13 @@ function normalizeOrigin(input: string): string | null {
 }
 
 /**
- * Enforces same-origin constraints on a request.
+ * Validate that the request originates from the application's expected origin.
  *
- * Compares the request's Origin or Referer header against the expected
- * application origin. Used to prevent CSRF on cookie-authenticated routes.
- *
- * Priority: Origin header > Referer header.
- *
- * @param req - The incoming Next.js request.
- * @param options - Configuration for allowed origins and missing header behavior.
- * @returns Success or a failure result with a reason.
+ * @param req - The incoming Next.js request whose headers are checked for origin.
+ * @param options - Optional configuration:
+ *   - `allowMissingHeaders`: when true, permits requests with neither Origin nor Referer.
+ *   - `allowedOrigins`: additional origins (strings) to accept alongside the resolved expected origin.
+ * @returns `{ ok: true }` if the request origin is allowed, `{ ok: false; reason: string }` otherwise.
  */
 export function requireSameOrigin(
   req: NextRequest,

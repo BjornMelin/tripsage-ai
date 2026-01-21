@@ -30,6 +30,16 @@ const SIGNED_URL_EXPIRATION = 3600;
 /** Logger for attachments file listing operations. */
 const logger = createServerLogger("attachments.files");
 
+/**
+ * Validate that a user has owner or collaborator access to a trip.
+ *
+ * @param options - Access check configuration
+ * @param options.supabase - Authenticated Supabase client
+ * @param options.tripId - The numeric identifier of the trip to check access for
+ * @param options.userId - The ID of the requesting user
+ * @returns An HTTP error `Response` when access is denied or a database error
+ *   occurs, `null` when access is granted
+ */
 async function ensureTripAccess(options: {
   supabase: TypedServerSupabase;
   tripId: number;
@@ -37,51 +47,55 @@ async function ensureTripAccess(options: {
 }): Promise<Response | null> {
   const { supabase, tripId, userId } = options;
 
-  const { data: ownerRow, error: ownerError } = await supabase
-    .from("trips")
-    .select("id")
-    .eq("id", tripId)
-    .eq("user_id", userId)
-    .maybeSingle();
+  // Run owner and collaborator checks in parallel to eliminate waterfall
+  const [ownerResult, collaboratorResult] = await Promise.all([
+    supabase
+      .from("trips")
+      .select("id")
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("trip_collaborators")
+      .select("id")
+      .eq("trip_id", tripId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
 
-  if (ownerError) {
+  if (ownerResult.error) {
     logger.error("trip_access_owner_check_failed", {
-      error: ownerError.message,
+      error: ownerResult.error.message,
       tripId,
       userId,
     });
     return errorResponse({
-      err: new Error(ownerError.message),
+      err: new Error(ownerResult.error.message),
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,
     });
   }
 
-  if (ownerRow) return null;
+  // If they are the owner, they have access
+  if (ownerResult.data) return null;
 
-  const { data: collaboratorRow, error: collaboratorError } = await supabase
-    .from("trip_collaborators")
-    .select("id")
-    .eq("trip_id", tripId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (collaboratorError) {
+  if (collaboratorResult.error) {
     logger.error("trip_access_collaborator_check_failed", {
-      error: collaboratorError.message,
+      error: collaboratorResult.error.message,
       tripId,
       userId,
     });
     return errorResponse({
-      err: new Error(collaboratorError.message),
+      err: new Error(collaboratorResult.error.message),
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,
     });
   }
 
-  if (!collaboratorRow) {
+  // If they are not a collaborator, they are forbidden
+  if (!collaboratorResult.data) {
     return forbiddenResponse("You do not have access to this trip");
   }
 
