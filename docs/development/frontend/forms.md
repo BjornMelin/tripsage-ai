@@ -31,7 +31,7 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 **Options:**
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| ------ | ---- | ------- | ----------- |
 | `schema` | `z.ZodType<T>` | required | Zod schema for validation |
 | `defaultValues` | `DefaultValues<T>` | `{}` | Initial form values |
 | `mode` | `"onChange" \| "onBlur" \| "onSubmit" \| "onTouched" \| "all"` | `"onChange"` | Standard RHF validation mode (recommended) |
@@ -45,7 +45,7 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 **Return Values:**
 
 | Property | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `handleSubmitSafe` | Safe submit handler with validation |
 | `isFormComplete` | Convenience alias for `formState.isValid` |
 | `validationState` | Submit-only summary: `{ isValidating, lastValidation, validationErrors }` |
@@ -109,6 +109,8 @@ import {
   />
 </Form>
 ```
+
+Inputs, selects, and textareas inherit `background` and `color` from `src/app/globals.css`. Avoid hard-coded input background colors unless required for contrast.
 
 ## Validation Patterns
 
