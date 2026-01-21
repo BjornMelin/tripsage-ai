@@ -114,6 +114,13 @@ type FetchLike = (
 
 type MockFetch = ReturnType<typeof vi.fn<FetchLike>>;
 
+/**
+ * Builds a mock AI provider for testing validation logic.
+ *
+ * @param fetchMock - Vi mock for the fetch implementation.
+ * @param baseUrl - Base URL for the provider API.
+ * @returns A mock provider function that returns a configured model.
+ */
 function buildProvider(fetchMock: MockFetch, baseUrl = "https://provider.test/") {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const config = {
@@ -193,10 +200,13 @@ describe("/api/keys/validate route", () => {
     const res = await POST(req, createRouteParamsContext());
     const body = await res.json();
 
-    expect(fetchMock).toHaveBeenCalledWith("https://provider.test/models", {
-      headers: { Authorization: "Bearer test" },
-      method: "GET",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://provider.test/models",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer test" },
+        method: "GET",
+      })
+    );
     expect({ body, status: res.status }).toEqual({
       body: { isValid: true },
       status: 200,
@@ -247,6 +257,24 @@ describe("/api/keys/validate route", () => {
     });
   });
 
+  it("returns NETWORK_ERROR when provider SDK shape is unexpected", async () => {
+    const malformedProvider = vi.fn(() => ({ config: undefined }));
+    mockCreateOpenAI.mockImplementation(() => malformedProvider);
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
+  });
+
   it("returns NETWORK_ERROR for provider 429 responses", async () => {
     const fetchMock = vi
       .fn<FetchLike>()
@@ -282,6 +310,35 @@ describe("/api/keys/validate route", () => {
     const body = await res.json();
 
     expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
+  });
+
+  it.each([
+    ["TimeoutError", new DOMException("Timeout", "TimeoutError")],
+    ["AbortError", Object.assign(new Error("Abort"), { name: "AbortError" })],
+  ] as const)("returns REQUEST_TIMEOUT when provider validation times out (%s)", async (_label, error) => {
+    const fetchMock = vi.fn<FetchLike>().mockRejectedValue(error);
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://provider.test/models",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer test" },
+        method: "GET",
+        signal: expect.any(AbortSignal),
+      })
+    );
+    expect(body).toEqual({ isValid: false, reason: "REQUEST_TIMEOUT" });
     expect(res.status).toBe(200);
   });
 

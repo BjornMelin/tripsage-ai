@@ -12,6 +12,7 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { ensureTripAccess } from "@/lib/trips/trip-access";
 
 /** Cache TTL for attachment listings (2 minutes). */
 const CACHE_TTL_SECONDS = 120;
@@ -87,6 +88,11 @@ export const GET = withApiGuards({
   }
 
   const { chatId, tripId, chatMessageId, limit, offset } = queryResult.data;
+
+  if (tripId !== undefined) {
+    const accessResult = await ensureTripAccess({ supabase, tripId, userId });
+    if (accessResult) return accessResult;
+  }
 
   // Check cache first (with normalized key)
   const cacheKey = buildCacheKey(userId, queryResult.data);

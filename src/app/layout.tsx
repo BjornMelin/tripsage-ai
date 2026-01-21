@@ -57,14 +57,12 @@ export const viewport = {
 };
 
 /**
- * Root layout component.
+ * Wraps the application with platform providers and renders children inside the main content area.
  *
- * Wraps the application with providers for theming, data fetching, performance monitoring,
- * notifications, and navigation.
+ * The component establishes telemetry, authentication, theming, performance monitoring, and
+ * notification contexts and provides a skip-link and semantic main container for accessibility.
  *
- * @param props - Component props
- * @param props.children - Child components to render in the main content area
- * @returns The root layout JSX element
+ * @returns The root layout element containing provider contexts and the main content region
  */
 async function AppShell({ children }: { children: React.ReactNode }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
@@ -84,7 +82,15 @@ async function AppShell({ children }: { children: React.ReactNode }) {
         >
           {/* Keep Supabase Realtime authorized with the current access token */}
           <RealtimeAuthProvider />
-          <div className="flex flex-col min-h-screen">{children}</div>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow"
+          >
+            Skip to main content
+          </a>
+          <main id="main-content" className="flex flex-col min-h-screen" tabIndex={-1}>
+            {children}
+          </main>
           <Toaster />
         </ThemeProvider>
       </PerformanceMonitor>
@@ -92,6 +98,11 @@ async function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Render a full-screen loading state shown while initial session and theme data are resolved.
+ *
+ * @returns A JSX element with a centered spinner and the text "Loading…"
+ */
 function AppShellFallback() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -103,6 +114,13 @@ function AppShellFallback() {
   );
 }
 
+/**
+ * Defines the application's root HTML structure, applies Geist fonts,
+ * and wraps page content with the AppShell.
+ *
+ * @param props.children - Page content to render inside the app shell.
+ * @returns The root HTML element tree for the application.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

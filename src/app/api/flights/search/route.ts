@@ -10,6 +10,7 @@ import { withApiGuards } from "@/lib/api/factory";
 
 export const POST = withApiGuards({
   auth: false, // Allow anonymous searches
+  botId: true,
   rateLimit: "flights:search",
   schema: flightSearchRequestSchema,
   telemetry: "flights.search",

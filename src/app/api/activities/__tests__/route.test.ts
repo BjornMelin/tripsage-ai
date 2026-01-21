@@ -247,6 +247,38 @@ describe("/api/activities routes", () => {
       );
     });
 
+    it("uses Supabase SSR auth-token cookie for personalization", async () => {
+      const mockActivity = {
+        date: "2025-01-01",
+        description: "Test",
+        duration: 120,
+        id: "places/123",
+        location: "Test Location",
+        name: "Test Activity",
+        price: 2,
+        rating: 4.5,
+        type: "museum",
+      };
+
+      MOCK_ACTIVITIES_DETAILS.mockResolvedValue(mockActivity);
+
+      const { GET } = await import("../[id]/route");
+      const req = createMockNextRequest({
+        cookies: { "sb-127-auth-token": "test-auth-token" },
+        method: "GET",
+        url: "http://localhost/api/activities/places/123",
+      });
+
+      const routeContext = createRouteParamsContext({ id: "places/123" });
+
+      const res = await GET(req, routeContext);
+      expect(res.status).toBe(200);
+      expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith(
+        "places/123",
+        expect.objectContaining({ userId: "user-1" })
+      );
+    });
+
     it("should return 400 for missing place ID", async () => {
       const { GET } = await import("../[id]/route");
       const req = createMockNextRequest({

@@ -57,6 +57,15 @@ const OPENAI_BASE_URL = "https://api.openai.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 const XAI_BASE_URL = "https://api.x.ai/v1";
+/**
+ * Timeout for key validation requests.
+ *
+ * NOTE: AbortSignal.timeout(VALIDATE_TIMEOUT_MS) only cancels the fetch at the
+ * application/promise level and does not override undici’s internal connect
+ * timeout (which defaults to ~10s), so callers should configure a Dispatcher
+ * when strict connect-level timing is required.
+ */
+const VALIDATE_TIMEOUT_MS = 5_000;
 
 const validateKeyRequestSchema = postKeyBodySchema.pick({
   apiKey: true,
@@ -82,6 +91,11 @@ function buildSDKRequest(options: BuildSDKRequestOptions): ProviderRequest {
   });
   const model = provider(options.modelId) as ConfigurableModel;
   const config = model.config;
+  if (!config || typeof config.headers !== "function") {
+    throw new Error(
+      "Unexpected SDK model structure for provider - config access failed"
+    );
+  }
   const resolvedBaseURL = trimmedBaseURL || config.baseURL || options.defaultBaseURL;
   const normalizedBase = resolvedBaseURL.endsWith("/")
     ? resolvedBaseURL
@@ -140,11 +154,12 @@ function normalizeErrorReason(error: unknown): string {
 }
 
 /**
- * Generic validator using provider configuration map.
+ * Validates a provider API key by probing the provider's endpoint.
  *
- * @param service Provider identifier (openai|openrouter|anthropic|xai).
- * @param apiKey The plaintext API key to check.
- * @returns Validation result with is_valid and optional reason.
+ * @param service - Provider identifier: "openai", "openrouter", "anthropic", "xai", or "gateway".
+ * @param apiKey - The plaintext API key to validate.
+ * @returns `{ isValid: true }` if the key is accepted;
+ *   `{ isValid: false, reason: string }` otherwise.
  */
 async function validateProviderKey(
   service: string,
@@ -161,6 +176,7 @@ async function validateProviderKey(
     const response = await fetchImpl(url, {
       headers,
       method: "GET",
+      signal: AbortSignal.timeout(VALIDATE_TIMEOUT_MS),
     });
     if (response.status === 200) return { isValid: true };
     return { isValid: false, reason: mapProviderStatusToCode(response.status) };

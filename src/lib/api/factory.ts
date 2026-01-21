@@ -23,6 +23,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import {
   checkAuthentication,
   errorResponse,
+  forbiddenResponse,
   getAuthorization,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
@@ -41,7 +42,9 @@ import {
   isBotDetectedError,
   isBotIdEnabledForCurrentEnvironment,
 } from "@/lib/security/botid";
+import { requireSameOrigin, type SameOriginOptions } from "@/lib/security/csrf";
 import { secureUuid } from "@/lib/security/random";
+import { hasSupabaseAuthCookies } from "@/lib/supabase/auth-cookies";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
@@ -53,52 +56,51 @@ const apiFactoryLogger = createServerLogger("api.factory");
 
 export type DegradedMode = "fail_closed" | "fail_open";
 
-async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
-  const authorization = getAuthorization(req);
-  if (authorization?.trim()) return true;
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-  const isSupabaseSsrAuthCookieName = (cookieName: string): boolean => {
-    if (!cookieName.startsWith("sb-")) return false;
-    if (cookieName.endsWith("-auth-token")) return true;
-    return /-auth-token\.\d+$/.test(cookieName);
-  };
+/**
+ * Determines whether an HTTP method is considered mutating.
+ *
+ * @param method - The HTTP method name (case-insensitive).
+ * @returns `true` if `method` is one of POST, PUT, PATCH, or
+ *   DELETE (case-insensitive), `false` otherwise.
+ */
+function isMutatingMethod(method: string): boolean {
+  return MUTATING_METHODS.has(method.toUpperCase());
+}
 
+type AuthCredentialState = {
+  hasAuthorization: boolean;
+  hasCookie: boolean;
+  hasAny: boolean;
+};
+
+/**
+ * Determines whether Supabase authentication cookies are present for the current request.
+ *
+ * Checks the provided request's cookie list first and falls back to the
+ * Next.js `cookies()` store when available.
+ *
+ * @param req - The incoming NextRequest to inspect for Supabase auth cookies
+ * @returns `true` if Supabase authentication cookies are found, `false` otherwise
+ */
+async function hasSupabaseCookieCredentials(req: NextRequest): Promise<boolean> {
   // Prefer request cookies when available (works in tests and Route Handlers).
   try {
-    if (req.cookies.get("sb-access-token")?.value) return true;
-    if (req.cookies.get("sb-refresh-token")?.value) return true;
-    // Supabase SSR stores the session in a single cookie like `sb-<project>-auth-token`.
-    if (
-      req.cookies
-        .getAll()
-        .some(
-          (cookie) =>
-            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
-        )
-    ) {
+    if (hasSupabaseAuthCookies(req.cookies.getAll())) {
       return true;
     }
   } catch (error) {
     // Fall back to cookies() store (best-effort).
     apiFactoryLogger.info("Supabase SSR cookie detection failed", {
-      context: "isSupabaseSsrAuthCookieName",
+      context: "hasSupabaseAuthCookies",
       error,
     });
   }
 
   try {
     const cookieStore = await cookies();
-    if (cookieStore.get("sb-access-token")?.value) return true;
-    if (cookieStore.get("sb-refresh-token")?.value) return true;
-    // Supabase SSR stores the session in a single cookie like `sb-<project>-auth-token`.
-    if (
-      cookieStore
-        .getAll()
-        .some(
-          (cookie) =>
-            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
-        )
-    ) {
+    if (hasSupabaseAuthCookies(cookieStore.getAll())) {
       return true;
     }
   } catch (error) {
@@ -109,6 +111,22 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
   }
 
   return false;
+}
+
+/**
+ * Detects whether the request carries an Authorization header or Supabase
+ * authentication cookies.
+ *
+ * @returns An `AuthCredentialState` object: `hasAny` is `true` if either an
+ *   Authorization header or Supabase auth cookies are present;
+ *   `hasAuthorization` is `true` if an Authorization header is present;
+ *   `hasCookie` is `true` if Supabase auth cookies are present.
+ */
+async function getAuthCredentials(req: NextRequest): Promise<AuthCredentialState> {
+  const authorization = getAuthorization(req);
+  const hasAuthorization = Boolean(authorization?.trim());
+  const hasCookie = await hasSupabaseCookieCredentials(req);
+  return { hasAny: hasAuthorization || hasCookie, hasAuthorization, hasCookie };
 }
 
 /**
@@ -149,6 +167,12 @@ export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
    * Defaults to `API_CONSTANTS.maxBodySizeBytes` (64KB).
    */
   maxBodyBytes?: number;
+  /**
+   * Enable same-origin validation for cookie-authenticated mutating requests.
+   *
+   * Defaults to `true` for authenticated POST/PUT/PATCH/DELETE routes.
+   */
+  csrf?: boolean | SameOriginOptions;
 }
 
 export type BotIdGuardConfig =
@@ -515,12 +539,29 @@ export function withApiGuards(
 ): (
   handler: RouteHandler<unknown>
 ) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response>;
+/**
+ * Creates a higher-order wrapper that applies authorization, CSRF same-origin checks,
+ * BotID protection, rate limiting, request body parsing & validation, and telemetry
+ * around a route handler.
+ *
+ * The provided GuardsConfig controls which guards are applied (for example: `auth`,
+ * `botId`, `rateLimit`, `csrf`, `telemetry`, and `schema`) and how they behave. When
+ * enabled, authentication is validated before CSRF checks and bot protection; rate
+ * limiting is enforced early; request bodies are size-limited and validated against a
+ * Zod schema when provided; and handler execution is recorded with telemetry and
+ * fire-and-forget metrics.
+ *
+ * @param config - Configuration object that determines which guards to enable and their options.
+ * @returns A function that accepts a RouteHandler and returns a Next.js route handler
+ *   function that processes a NextRequest and RouteParamsContext and produces a
+ *   Response.
+ */
 export function withApiGuards<SchemaType extends z.ZodType>(
   config: GuardsConfig<SchemaType>
 ): (
   handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
 ) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
-  const { auth = false, botId, rateLimit, telemetry, schema } = config;
+  const { auth = false, botId, rateLimit, telemetry, schema, csrf } = config;
   const botIdConfig: {
     mode: boolean | "deep";
     allowVerifiedAiAssistants: boolean;
@@ -548,9 +589,11 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       // Handle authentication if required
       let supabase: TypedServerSupabase | null = null;
       let user: User | null = null;
+      let authCredentials: AuthCredentialState | null = null;
       if (auth) {
         // Fast-fail without hitting Supabase when no auth credentials are present.
-        if (!(await hasAuthCredentials(req))) {
+        authCredentials = await getAuthCredentials(req);
+        if (!authCredentials.hasAny) {
           return unauthorizedResponse();
         }
         supabase = await supabaseFactory();
@@ -559,6 +602,27 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           return unauthorizedResponse();
         }
         user = authResult.user as User | null;
+      }
+
+      const csrfOptions: SameOriginOptions | null =
+        csrf && typeof csrf === "object" ? csrf : null;
+      const isMutating = isMutatingMethod(req.method);
+      const shouldCheckCsrf =
+        isMutating && (typeof csrf === "boolean" ? csrf : Boolean(csrfOptions) || auth);
+
+      if (shouldCheckCsrf) {
+        if (!authCredentials) {
+          authCredentials = await getAuthCredentials(req);
+        }
+        if (authCredentials.hasCookie && !authCredentials.hasAuthorization) {
+          const originResult = requireSameOrigin(req, csrfOptions ?? undefined);
+          if (!originResult.ok) {
+            if (originResult.response) {
+              return originResult.response;
+            }
+            return forbiddenResponse(originResult.reason);
+          }
+        }
       }
 
       // Handle BotID protection if configured (after auth, before rate limiting)

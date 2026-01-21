@@ -41,6 +41,7 @@ import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import type { ServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
@@ -128,6 +129,16 @@ export type MemorySummaryCache = {
   set: (key: string, value: string, now: number) => void;
 };
 
+/**
+ * Determines whether a UI message part is a chat-renderable part and validates `data-status` parts.
+ *
+ * For parts with `type === "data-status"`, the function validates the `data` payload against the
+ * `chatDataPartSchemas.status` schema. For other parts, any `type` starting with `"data-"` is treated
+ * as a data-only part and not considered a chat-renderable part.
+ *
+ * @param part - The UI message part to test
+ * @returns `true` if `part` is a chat UI message part (renderable); `false` otherwise.
+ */
 function isChatUiMessagePart(part: UiMessagePart): part is ChatUiMessagePart {
   if (!part || typeof part !== "object") return false;
   if (part.type === "data-status") {
@@ -136,6 +147,38 @@ function isChatUiMessagePart(part: UiMessagePart): part is ChatUiMessagePart {
   return !String(part.type).startsWith("data-");
 }
 
+/**
+ * Produce hashed telemetry identifiers for the provided session and user IDs when available.
+ *
+ * @param input - Object containing optional identifiers to hash
+ * @param input.sessionId - Session identifier to convert into a telemetry-safe hash; omitted from the result if not provided
+ * @param input.userId - User identifier to convert into a telemetry-safe hash; omitted from the result if not provided
+ * @returns An object with `sessionIdHash` and/or `userIdHash` properties containing the telemetry-safe hashed values for the corresponding inputs when present
+ */
+function buildChatLogIdentifiers(input: {
+  sessionId?: string | null;
+  userId?: string | null;
+}): { sessionIdHash?: string; userIdHash?: string } {
+  const sessionIdHash = input.sessionId
+    ? hashTelemetryIdentifier(input.sessionId)
+    : null;
+  const userIdHash = input.userId ? hashTelemetryIdentifier(input.userId) : null;
+  return {
+    ...(sessionIdHash ? { sessionIdHash } : {}),
+    ...(userIdHash ? { userIdHash } : {}),
+  };
+}
+
+/**
+ * Creates an in-memory memory-summary cache with time-based expiration and a bounded size.
+ *
+ * The cache stores entries that expire after `ttlMs` milliseconds and evicts the oldest entry when the
+ * number of entries exceeds `maxEntries`.
+ *
+ * @param options.ttlMs - Time-to-live for each cache entry in milliseconds.
+ * @param options.maxEntries - Maximum number of entries to retain in the cache; defaults to 1000.
+ * @returns A MemorySummaryCache exposing `get(key, now)` which returns the cached value or `undefined` if absent/expired, and `set(key, value, now)` which stores a value with the configured TTL and performs eviction when at capacity.
+ */
 export function createMemorySummaryCache(options: {
   ttlMs: number;
   maxEntries?: number;
@@ -215,6 +258,16 @@ function getLastUserText(messages: UIMessage[]): string | undefined {
   return chunks.join("\n").trim();
 }
 
+/**
+ * Ensure a chat session exists for the given user, creating and persisting a new session when no valid sessionId is provided.
+ *
+ * @param options.allowEphemeral - If true, allow using or returning a provided sessionId without verifying or persisting it; also permit falling back to an in-memory session when creation fails.
+ * @param options.logger - Optional server logger for emitting warnings when ephemeral behavior is used.
+ * @param options.sessionId - Optional existing session ID to validate or accept for ephemeral use.
+ * @param options.supabase - Supabase client used to validate or create a chat session record.
+ * @param options.userId - ID of the user who must own the session.
+ * @returns On success: `{ ok: true, sessionId, created }` where `created` is true when a new session was inserted, false when an existing session was used. On failure: `{ ok: false, res }` containing a Response suitable for returning an API error to the caller.
+ */
 async function ensureChatSession(options: {
   allowEphemeral?: boolean;
   logger?: ServerLogger;
@@ -272,7 +325,7 @@ async function ensureChatSession(options: {
     if (allowEphemeralSession) {
       logger?.warn?.("chat:session_create_skipped", {
         error: error instanceof Error ? error.message : String(error),
-        userId,
+        ...buildChatLogIdentifiers({ userId }),
       });
       return { created: true, ok: true, sessionId: id };
     }
@@ -290,6 +343,13 @@ async function ensureChatSession(options: {
   return { created: true, ok: true, sessionId: id };
 }
 
+/**
+ * Persists a chat message row to the database, optionally allowing ephemeral failures.
+ *
+ * @param allowEphemeral - If true, a database insert failure is treated as a non-fatal event: the function logs a warning and returns `{ ok: true, id: -1 }` instead of an error response.
+ * @param metadata - Arbitrary JSON metadata to store with the message.
+ * @returns `{ ok: true; id: number }` on successful persistence (or `{ ok: true; id: -1 }` when `allowEphemeral` is true and persistence was skipped), or `{ ok: false; res: Response }` when persistence fails and ephemeral mode is not allowed.
+ */
 async function persistChatMessage(options: {
   allowEphemeral?: boolean;
   content: string;
@@ -326,8 +386,7 @@ async function persistChatMessage(options: {
       logger?.warn?.("chat:message_persist_skipped", {
         error: error instanceof Error ? error.message : String(error),
         role,
-        sessionId,
-        userId,
+        ...buildChatLogIdentifiers({ sessionId, userId }),
       });
       return { id: -1, ok: true };
     }
@@ -519,6 +578,13 @@ type HydratedChatMessage = {
 
 const HISTORY_LIMIT = 40;
 
+/**
+ * Load and validate stored chat messages and their associated tool-call records for a session.
+ *
+ * @param allowEphemeral - If true, treat database or validation failures as non-fatal and return an empty message list instead of an error response.
+ * @param limit - Maximum number of recent messages to load (defaults to the file's HISTORY_LIMIT when omitted).
+ * @returns On success, `{ ok: true; messages: HydratedChatMessage[] }` containing reconstructed, validated, and hydrated chat messages; on failure, `{ ok: false; res: Response }` with a prepared error response.
+ */
 async function loadChatHistory(options: {
   allowEphemeral?: boolean;
   limit?: number;
@@ -543,8 +609,10 @@ async function loadChatHistory(options: {
     if (options.allowEphemeral) {
       options.logger?.warn?.("chat:history_load_skipped", {
         error: error instanceof Error ? error.message : String(error),
-        sessionId: options.sessionId,
-        userId: options.userId,
+        ...buildChatLogIdentifiers({
+          sessionId: options.sessionId,
+          userId: options.userId,
+        }),
       });
       return { messages: [], ok: true };
     }
@@ -579,8 +647,10 @@ async function loadChatHistory(options: {
     if (options.allowEphemeral) {
       options.logger?.warn?.("chat:tool_history_load_skipped", {
         error: toolError instanceof Error ? toolError.message : String(toolError),
-        sessionId: options.sessionId,
-        userId: options.userId,
+        ...buildChatLogIdentifiers({
+          sessionId: options.sessionId,
+          userId: options.userId,
+        }),
       });
     } else {
       return {
@@ -660,8 +730,10 @@ async function loadChatHistory(options: {
           validated.error instanceof Error
             ? validated.error.message
             : String(validated.error),
-        sessionId: options.sessionId,
-        userId: options.userId,
+        ...buildChatLogIdentifiers({
+          sessionId: options.sessionId,
+          userId: options.userId,
+        }),
       });
       return { messages: [], ok: true };
     }
@@ -671,8 +743,10 @@ async function loadChatHistory(options: {
         : new Error(String(validated.error ?? "Invalid stored messages"));
     options.logger?.error?.("chat:history_validation_failed", {
       error: normalizedError.message,
-      sessionId: options.sessionId,
-      userId: options.userId,
+      ...buildChatLogIdentifiers({
+        sessionId: options.sessionId,
+        userId: options.userId,
+      }),
     });
 
     return {
@@ -726,6 +800,25 @@ function mergeAssistantMetadata(
   return { ...baseRecord, ...patch };
 }
 
+/**
+ * Orchestrates a chat request: validates input, hydrates session/history/memory,
+ * persists user and assistant placeholders, runs a bounded tool loop with the
+ * AI provider, and returns a streaming assistant response.
+ *
+ * This handler supports submitting new messages and regenerating prior assistant
+ * responses, enforces token budgeting, manages tool execution checkpoints,
+ * updates persistence state as the stream progresses, and returns a streaming
+ * HTTP Response that emits UI message parts for the assistant.
+ *
+ * @param deps - Server-side dependencies (database client, provider resolver,
+ *   logger, clock, memory cache, and config) required to process the chat.
+ * @param payload - Chat request payload (messages, trigger, session/message
+ *   identifiers, model hints, token settings, user/connection info, and abort
+ *   signal).
+ * @returns A Response that streams assistant UI message parts (including status,
+ *   tool steps, partial content, and final finish/abort metadata) or an error
+ *   response when validation/provider/session/history/token budget checks fail.
+ */
 export async function handleChat(
   deps: ChatDeps,
   payload: ChatPayload
@@ -765,8 +858,7 @@ export async function handleChat(
       error: error instanceof Error ? error.message : String(error),
       modelHint: modelHint ?? null,
       requestId,
-      sessionId,
-      userId,
+      ...buildChatLogIdentifiers({ sessionId, userId }),
     });
     return errorResponse({
       err: error,
@@ -906,8 +998,7 @@ export async function handleChat(
       deps.logger?.error?.("chat:memory_fetch_failed", {
         error: error instanceof Error ? error.message : String(error),
         requestId,
-        sessionId,
-        userId,
+        ...buildChatLogIdentifiers({ sessionId, userId }),
       });
     }
   }
@@ -937,8 +1028,7 @@ export async function handleChat(
         deps.logger?.warn?.("chat:regenerate_supersede_failed", {
           error: error instanceof Error ? error.message : String(error),
           requestId,
-          sessionId,
-          userId,
+          ...buildChatLogIdentifiers({ sessionId, userId }),
         });
       }
     }
@@ -1040,9 +1130,8 @@ export async function handleChat(
             finishReason,
             model: provider.modelId,
             requestId,
-            sessionId,
             totalUsage: totalUsage ?? null,
-            userId,
+            ...buildChatLogIdentifiers({ sessionId, userId }),
           });
 
           if (trigger === "submit-message") {
@@ -1079,8 +1168,7 @@ export async function handleChat(
             deps.logger?.warn?.("chat:message_update_failed", {
               error: error instanceof Error ? error.message : String(error),
               requestId,
-              sessionId,
-              userId,
+              ...buildChatLogIdentifiers({ sessionId, userId }),
             });
           }
         },
@@ -1146,10 +1234,9 @@ export async function handleChat(
                 deps.logger?.warn?.("chat:tool_persist_failed", {
                   error: persistErrorMessage,
                   requestId,
-                  sessionId,
                   toolCallId: parsed.toolCallId,
                   toolName: parsed.toolName,
-                  userId,
+                  ...buildChatLogIdentifiers({ sessionId, userId }),
                 });
               }
             }
@@ -1191,8 +1278,7 @@ export async function handleChat(
                         ? stepError.message
                         : String(stepError),
                     requestId,
-                    sessionId,
-                    userId,
+                    ...buildChatLogIdentifiers({ sessionId, userId }),
                   });
                 }
               }
@@ -1233,8 +1319,7 @@ export async function handleChat(
             deps.logger?.error?.("chat:stream_error", {
               error: error instanceof Error ? error.message : String(error),
               requestId,
-              sessionId,
-              userId,
+              ...buildChatLogIdentifiers({ sessionId, userId }),
             });
             return "An error occurred while processing your request.";
           },
@@ -1282,8 +1367,7 @@ export async function handleChat(
         deps.logger?.warn?.("chat:aborted_message_update_failed", {
           error: error instanceof Error ? error.message : String(error),
           requestId,
-          sessionId,
-          userId,
+          ...buildChatLogIdentifiers({ sessionId, userId }),
         });
       }
     },

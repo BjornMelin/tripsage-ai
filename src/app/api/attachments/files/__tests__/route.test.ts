@@ -45,6 +45,7 @@ function hasRequest(
 describe("/api/attachments/files", () => {
   // Storage mock for signed URL generation
   const mockCreateSignedUrls = vi.fn();
+  let fromSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.resetModules();
@@ -54,7 +55,7 @@ describe("/api/attachments/files", () => {
 
     // Setup storage mock for signed URL generation
     const supabase = getApiRouteSupabaseMock();
-    vi.spyOn(supabase, "from");
+    fromSpy = vi.spyOn(supabase, "from");
     setupStorageFromMock(supabase, { createSignedUrls: mockCreateSignedUrls });
 
     // Default: return signed URLs matching file paths
@@ -148,6 +149,54 @@ describe("/api/attachments/files", () => {
     });
   });
 
+  it("returns cached response without querying Supabase", async () => {
+    getApiRouteSupabaseMock();
+    const cache = await import("@/lib/cache/upstash");
+    const cachedPayload = {
+      items: [
+        {
+          chatId: null,
+          chatMessageId: null,
+          createdAt: "2025-01-01T00:00:00Z",
+          id: "cached-id",
+          mimeType: "image/jpeg",
+          name: "cached-id",
+          originalName: "cached.jpg",
+          size: 123,
+          tripId: null,
+          updatedAt: "2025-01-01T00:00:00Z",
+          uploadStatus: "completed",
+          url: "https://supabase.storage/signed/cached.jpg?token=abc",
+        },
+      ],
+      pagination: {
+        hasMore: false,
+        limit: 20,
+        nextOffset: null,
+        offset: 0,
+        total: 1,
+      },
+    };
+    vi.mocked(cache.getCachedJson).mockResolvedValueOnce(cachedPayload);
+
+    const mod = await import("../route");
+    const req = new NextRequest(
+      "http://localhost/api/attachments/files?limit=20&offset=0",
+      {
+        method: "GET",
+      }
+    );
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(cachedPayload);
+    const calledFileAttachments = fromSpy.mock.calls.some(
+      (call: unknown[]) => call[0] === "file_attachments"
+    );
+    expect(calledFileAttachments).toBe(false);
+    expect(cache.setCachedJson).not.toHaveBeenCalled();
+  });
+
   it("should handle pagination correctly", async () => {
     const supabase = getApiRouteSupabaseMock();
     const state = getSupabaseMockState(supabase);
@@ -202,6 +251,11 @@ describe("/api/attachments/files", () => {
     const supabase = getApiRouteSupabaseMock();
     const state = getSupabaseMockState(supabase);
 
+    state.selectByTable.set("trips", {
+      data: [{ id: 123, user_id: "user-1" }],
+      error: null,
+    });
+
     state.selectResult = {
       count: 0,
       data: [],
@@ -225,6 +279,22 @@ describe("/api/attachments/files", () => {
           r.url.includes("trip_id=eq.123")
       )
     ).toBe(true);
+  });
+
+  it("should return 404 when trip does not exist", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
+
+    state.selectByTable.set("trips", { data: [], error: null });
+    state.selectByTable.set("trip_collaborators", { data: [], error: null });
+
+    const mod = await import("../route");
+    const req = new NextRequest("http://localhost/api/attachments/files?tripId=999", {
+      method: "GET",
+    });
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(404);
   });
 
   it("should filter by chatMessageId when provided", async () => {
@@ -387,6 +457,50 @@ describe("/api/attachments/files", () => {
       offset: 0,
       total: 0,
     });
+  });
+
+  it("caches successful responses with normalized keys", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
+    const cache = await import("@/lib/cache/upstash");
+
+    state.selectByTable.set("trips", {
+      data: [{ id: 123, user_id: "user-1" }],
+      error: null,
+    });
+    state.selectByTable.set("trip_collaborators", { data: [], error: null });
+
+    state.selectResult = {
+      count: 0,
+      data: [],
+      error: null,
+    };
+
+    const mod = await import("../route");
+    const req = new NextRequest(
+      "http://localhost/api/attachments/files?offset=0&limit=20&tripId=123",
+      {
+        method: "GET",
+      }
+    );
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(200);
+
+    expect(cache.setCachedJson).toHaveBeenCalledWith(
+      "attachments:files:user-1:limit=20&offset=0&tripId=123",
+      expect.objectContaining({
+        items: [],
+        pagination: expect.objectContaining({
+          hasMore: false,
+          limit: 20,
+          nextOffset: null,
+          offset: 0,
+          total: 0,
+        }),
+      }),
+      120
+    );
   });
 
   it("should filter out items when signed URL generation fails completely", async () => {

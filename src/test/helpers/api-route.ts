@@ -1,6 +1,8 @@
 /**
  * @fileoverview Unified API route testing utilities for Next.js.
- *
+ */
+
+/**
  * Provides:
  * - Request factories (makeJsonRequest, createRouteParamsContext)
  * - Hoisted mocks for withApiGuards dependencies
@@ -19,6 +21,7 @@ import type { BotIdVerification } from "@/lib/security/botid";
 import { mockBotIdHumanResponse } from "@/test/mocks/botid";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
+import { applyOriginHeader } from "./origin";
 import { getMockCookiesForTest } from "./route";
 
 registerUpstashMocksWithVitest();
@@ -48,6 +51,8 @@ export function makeJsonRequest(
   headers.set("Content-Type", "application/json");
   const method = init?.method ?? "POST";
   const fullUrl = url.startsWith("http") ? url : `http://localhost:3000${url}`;
+  applyOriginHeader(headers, method, fullUrl);
+
   return new NextRequest(
     new Request(fullUrl, {
       body: body === undefined ? undefined : JSON.stringify(body),

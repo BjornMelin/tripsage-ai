@@ -4,7 +4,7 @@
 
 import "server-only";
 
-import { ragIndexRequestSchema } from "@schemas/rag";
+import { MAX_RAG_INDEX_TOTAL_CONTENT_CHARS, ragIndexRequestSchema } from "@schemas/rag";
 import type { NextRequest } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { requireUserId } from "@/lib/api/route-helpers";
@@ -33,6 +33,7 @@ import { handleRagIndex } from "./_handler";
 export const POST = withApiGuards({
   auth: true,
   botId: true,
+  maxBodyBytes: Math.max(512 * 1024, MAX_RAG_INDEX_TOTAL_CONTENT_CHARS * 4),
   rateLimit: "rag:index",
   schema: ragIndexRequestSchema,
   telemetry: "rag.index",

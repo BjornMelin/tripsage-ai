@@ -182,6 +182,10 @@ export function getOriginFromRequest(request: NextRequest): string {
     return configuredOrigin;
   }
 
+  if (isProduction) {
+    return getRequiredServerOrigin();
+  }
+
   // 2. Only if no configured origin, consider forwarded headers from trusted proxy
   const forwardedHost = request.headers.get("x-forwarded-host");
   if (forwardedHost) {

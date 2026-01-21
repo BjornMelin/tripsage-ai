@@ -33,37 +33,53 @@ declare global {
 
     /** The Maps library module returned by importLibrary("maps"). */
     interface MapsLibrary {
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       Map: typeof google.maps.Map;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       MapTypeId: typeof google.maps.MapTypeId;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       TrafficLayer: typeof google.maps.TrafficLayer;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       TransitLayer: typeof google.maps.TransitLayer;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       BicyclingLayer: typeof google.maps.BicyclingLayer;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       InfoWindow: typeof google.maps.InfoWindow;
     }
 
     /** The Marker library module returned by importLibrary("marker"). */
     interface MarkerLibrary {
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       PinElement: typeof google.maps.marker.PinElement;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       Marker: typeof google.maps.Marker;
     }
 
     /** The Places library module returned by importLibrary("places"). */
     interface PlacesLibrary {
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       Autocomplete: typeof google.maps.places.Autocomplete;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       AutocompleteService: typeof google.maps.places.AutocompleteService;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       AutocompleteSessionToken: typeof google.maps.places.AutocompleteSessionToken;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       PlacesService: typeof google.maps.places.PlacesService;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       SearchBox: typeof google.maps.places.SearchBox;
       /**
        * AutocompleteSuggestion class for the new Places Autocomplete Data API.
        * Runtime type - not fully typed in @types/google.maps.
        */
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       AutocompleteSuggestion: AutocompleteSuggestionConstructor;
       /**
        * Place class for the new Places API.
        * Runtime type - not fully typed in @types/google.maps.
        */
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       Place: PlaceConstructor;
     }
 
@@ -76,12 +92,15 @@ declare global {
 
     /** The Drawing library module returned by importLibrary("drawing"). */
     interface DrawingLibrary {
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       DrawingManager: typeof google.maps.drawing.DrawingManager;
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       OverlayType: typeof google.maps.drawing.OverlayType;
     }
 
     /** The Visualization library module returned by importLibrary("visualization"). */
     interface VisualizationLibrary {
+      // biome-ignore lint/style/useNamingConvention: Google Maps API property
       HeatmapLayer: typeof google.maps.visualization.HeatmapLayer;
     }
   }
@@ -168,6 +187,7 @@ interface PlaceInstance {
   userRatingCount?: number;
   businessStatus?: string;
   openingHours?: PlaceOpeningHours;
+  // biome-ignore lint/style/useNamingConvention: Google Maps API property
   websiteURI?: string;
   nationalPhoneNumber?: string;
   internationalPhoneNumber?: string;
@@ -202,6 +222,7 @@ interface SearchByTextRequest {
 
 /** Place photo from the Places API. */
 interface PlacePhoto {
+  // biome-ignore lint/style/useNamingConvention: Google Maps API property
   getURI(options?: { maxWidth?: number; maxHeight?: number }): string;
   authorAttributions: PlaceAttribution[];
   widthPx: number;
@@ -212,6 +233,7 @@ interface PlacePhoto {
 interface PlaceAttribution {
   displayName: string;
   uri?: string;
+  // biome-ignore lint/style/useNamingConvention: Google Maps API property
   photoURI?: string;
 }
 

@@ -225,6 +225,15 @@ export interface ChatMessageItemProps {
   isStreaming?: boolean;
 }
 
+/**
+ * Render a chat message item that displays message parts (text, schema cards,
+ * reasoning, tool outputs, files, and sources) with safe sanitization and UI-specific handling.
+ *
+ * @param message - The UI message object to render, containing role, id, parts, and optional metadata.
+ * @param isStreaming - When true, enables streaming animation for the last assistant text part.
+ * @returns A React element representing the rendered chat message, including avatar,
+ *   content parts, citations, and optional usage/finish/abort info.
+ */
 export function ChatMessageItem({
   message,
   isStreaming = false,
@@ -525,18 +534,37 @@ export function ChatMessageItem({
 
               // Render images inline
               if (mimeType.startsWith("image/") && fileUrl) {
+                const width =
+                  typeof filePart.width === "number" && filePart.width > 0
+                    ? filePart.width
+                    : null;
+                const height =
+                  typeof filePart.height === "number" && filePart.height > 0
+                    ? filePart.height
+                    : null;
+                const resolvedWidth = width ?? 640;
+                const resolvedHeight = height ?? 480;
+                const aspectRatio = `${resolvedWidth} / ${resolvedHeight}`;
+
                 return (
                   <div key={`${message.id}-img-${idx}`} className="my-2">
-                    {/* biome-ignore lint/performance/noImgElement: External URLs without known dimensions */}
-                    <img
-                      src={fileUrl}
-                      alt={fileName}
-                      className="max-h-64 max-w-full rounded-md border"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
+                    <div
+                      className="max-h-64 max-w-full overflow-hidden rounded-md border bg-muted/30"
+                      style={{ aspectRatio }}
+                    >
+                      {/* biome-ignore lint/performance/noImgElement: External URLs without known dimensions */}
+                      <img
+                        src={fileUrl}
+                        alt={fileName}
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                        height={resolvedHeight}
+                        width={resolvedWidth}
+                      />
+                    </div>
                   </div>
                 );
               }
