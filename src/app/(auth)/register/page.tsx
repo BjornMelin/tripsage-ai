@@ -61,14 +61,14 @@ export default async function RegisterPage({
 
       {/* Right side - Branding and imagery */}
       <div className="hidden lg:flex lg:w-1/2 bg-linear-to-bl from-primary/10 via-primary/5 to-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 mask-[radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+        <div className="absolute inset-0 bg-grid-foreground/10 bg-grid-16 mask-[radial-gradient(ellipse_at_center,transparent_20%,black)]" />
 
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-between p-12">
           <div className="text-right">
             <Link href="/" className="inline-flex items-center space-x-2">
               <span className="text-2xl font-bold text-foreground">TripSage</span>
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">T</span>
+                <span className="text-primary-foreground font-bold text-xl">T</span>
               </div>
             </Link>
           </div>

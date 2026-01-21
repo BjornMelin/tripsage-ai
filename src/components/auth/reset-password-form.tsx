@@ -157,13 +157,13 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 If you don&apos;t see the email, check your spam folder.
               </p>
               <p className="text-xs text-muted-foreground">
-                Redirecting to login in 5 seconds...
+                Redirecting to login in 5 seconds…
               </p>
             </div>
 
             <Button className="w-full" variant="outline" asChild>
               <Link href={loginPath}>
-                <ArrowLeftIcon className="mr-2 h-4 w-4" />
+                <ArrowLeftIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                 Return to Sign In
               </Link>
             </Button>
@@ -216,19 +216,22 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                  Sending instructions...
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
+                  Sending instructions…
                 </>
               ) : (
                 <>
-                  <MailIcon className="mr-2 h-4 w-4" />
+                  <MailIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                   Send Reset Instructions
                 </>
               )}
             </Button>
 
             <div className="flex items-center justify-center space-x-1 text-sm text-muted-foreground">
-              <ArrowLeftIcon className="h-3 w-3" />
+              <ArrowLeftIcon aria-hidden="true" className="h-3 w-3" />
               <Link
                 href={loginPath}
                 className="text-primary hover:underline font-medium"
