@@ -473,12 +473,12 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               </div>
 
               {hasUnsavedChanges && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-yellow-800">
+                <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-warning">
                     <AlertTriangleIcon className="h-4 w-4" />
                     <span className="text-sm font-medium">Unsaved Changes</span>
                   </div>
-                  <p className="text-sm text-yellow-700 mt-1">
+                  <p className="text-sm text-warning mt-1">
                     Save changes to update the active configuration and create a
                     version.
                   </p>
