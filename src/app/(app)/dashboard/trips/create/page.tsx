@@ -312,17 +312,20 @@ export default function CreateTripPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Destination</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPinIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <div className="relative">
+                          <MapPinIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"
+                          />
+                          <FormControl>
                             <Input
                               {...field}
                               className="pl-9"
                               autoComplete="off"
                               placeholder="Tokyo, Japan"
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -356,12 +359,15 @@ export default function CreateTripPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Start date (optional)</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <div className="relative">
+                          <CalendarIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"
+                          />
+                          <FormControl>
                             <Input {...field} className="pl-9" type="date" />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -373,12 +379,15 @@ export default function CreateTripPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>End date (optional)</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <div className="relative">
+                          <CalendarIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"
+                          />
+                          <FormControl>
                             <Input {...field} className="pl-9" type="date" />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -1,11 +1,12 @@
 /**
- * @fileoverview Query error boundary with OTEL-backed telemetry. Refer to docs/development/observability.md for tracing and alerting standards.
+ * @fileoverview Query error boundary with OTEL-backed telemetry. Refer to docs/development/backend/observability.md for tracing and alerting standards.
  */
 
 "use client";
 
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { AlertTriangleIcon, RefreshCwIcon, WifiOffIcon } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
 import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
@@ -200,6 +201,8 @@ function QueryErrorFallback({
   const display = VARIANT_DISPLAY[meta.variant];
   const showLogin = meta.variant === "auth";
   const message = meta.variant === "default" ? errorMessage : display.message;
+  const resolvedLoginHref = loginHref ?? "/login";
+  const isInternalLoginHref = resolvedLoginHref.startsWith("/");
 
   return (
     <div
@@ -216,6 +219,7 @@ function QueryErrorFallback({
 
       <div className="flex items-center gap-2">
         <Button
+          type="button"
           onClick={onRetry}
           variant="outline"
           size="sm"
@@ -228,14 +232,12 @@ function QueryErrorFallback({
         </Button>
 
         {showLogin && (
-          <Button
-            onClick={() => {
-              window.location.href = loginHref ?? "/login";
-            }}
-            size="sm"
-            className="ml-2"
-          >
-            Go to Login
+          <Button asChild size="sm" className="ml-2">
+            {isInternalLoginHref ? (
+              <Link href={resolvedLoginHref}>Go to Login</Link>
+            ) : (
+              <a href={resolvedLoginHref}>Go to Login</a>
+            )}
           </Button>
         )}
       </div>
@@ -385,6 +387,7 @@ export function InlineQueryError({
 
       {retry && (
         <Button
+          type="button"
           onClick={retry}
           variant="outline"
           size="sm"

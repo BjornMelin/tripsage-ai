@@ -235,8 +235,8 @@ export function DestinationAutocompleteField({
       render={({ field: { ref, ...fieldProps } }) => (
         <FormItem className="relative">
           <FormLabel>Destination</FormLabel>
-          <FormControl>
-            <div className="relative">
+          <div className="relative">
+            <FormControl>
               <Input
                 ref={(el) => {
                   ref(el);
@@ -305,58 +305,56 @@ export function DestinationAutocompleteField({
                   }, 200);
                 }}
               />
+            </FormControl>
 
-              {showSuggestions &&
-                (suggestions.length > 0 ||
-                  isLoadingSuggestions ||
-                  (query?.length ?? 0) >= 2) && (
-                  <div
-                    id={suggestionsListId}
-                    role="listbox"
-                    className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
-                  >
-                    {isLoadingSuggestions ? (
-                      <div className="p-3 text-sm text-gray-500">
-                        Loading suggestions…
-                      </div>
-                    ) : suggestionsError ? (
-                      <div className="p-3 text-sm text-red-600">{suggestionsError}</div>
-                    ) : suggestions.length > 0 ? (
-                      suggestions.map((suggestion, index) => (
-                        <div
-                          key={suggestion.placeId}
-                          aria-label={suggestion.mainText}
-                          role="option"
-                          id={`destination-suggestion-${suggestion.placeId}`}
-                          aria-selected={activeSuggestionIndex === index}
-                          className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 data-[active=true]:bg-gray-50"
-                          tabIndex={-1}
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            handleSuggestionSelect(suggestion);
-                          }}
-                          onMouseEnter={() => {
-                            setActiveSuggestionIndex(index);
-                          }}
-                          data-active={activeSuggestionIndex === index}
-                        >
-                          <div className="font-medium text-sm">
-                            {suggestion.mainText}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {suggestion.secondaryText}
-                          </div>
+            {showSuggestions &&
+              (suggestions.length > 0 ||
+                isLoadingSuggestions ||
+                (query?.length ?? 0) >= 2) && (
+                <div
+                  id={suggestionsListId}
+                  role="listbox"
+                  className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {isLoadingSuggestions ? (
+                    <div className="p-3 text-sm text-gray-500">
+                      Loading suggestions…
+                    </div>
+                  ) : suggestionsError ? (
+                    <div className="p-3 text-sm text-red-600">{suggestionsError}</div>
+                  ) : suggestions.length > 0 ? (
+                    suggestions.map((suggestion, index) => (
+                      <div
+                        key={suggestion.placeId}
+                        aria-label={suggestion.mainText}
+                        role="option"
+                        id={`destination-suggestion-${suggestion.placeId}`}
+                        aria-selected={activeSuggestionIndex === index}
+                        className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 data-[active=true]:bg-gray-50"
+                        tabIndex={-1}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          handleSuggestionSelect(suggestion);
+                        }}
+                        onMouseEnter={() => {
+                          setActiveSuggestionIndex(index);
+                        }}
+                        data-active={activeSuggestionIndex === index}
+                      >
+                        <div className="font-medium text-sm">{suggestion.mainText}</div>
+                        <div className="text-xs text-gray-500">
+                          {suggestion.secondaryText}
                         </div>
-                      ))
-                    ) : (
-                      <div className="p-3 text-sm text-gray-500">
-                        No suggestions found.
                       </div>
-                    )}
-                  </div>
-                )}
-            </div>
-          </FormControl>
+                    ))
+                  ) : (
+                    <div className="p-3 text-sm text-gray-500">
+                      No suggestions found.
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
           <FormDescription>Start typing to see destination suggestions</FormDescription>
           <FormMessage />
         </FormItem>
