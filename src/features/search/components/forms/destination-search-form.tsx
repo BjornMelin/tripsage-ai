@@ -11,7 +11,7 @@ import {
   destinationSearchParamsSchema,
 } from "@schemas/search";
 import { ClockIcon, StarIcon, TrendingUpIcon } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -32,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import { useMemoryContext } from "@/hooks/use-memory";
-import { initTelemetry } from "@/lib/telemetry/client";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
@@ -121,10 +120,6 @@ export function DestinationSearchForm({
     },
     {}
   );
-
-  useEffect(() => {
-    initTelemetry();
-  }, []);
 
   const watchedTypes = form.watch("types");
   const watchedLimit = form.watch("limit");
