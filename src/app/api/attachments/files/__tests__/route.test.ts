@@ -150,7 +150,7 @@ describe("/api/attachments/files", () => {
   });
 
   it("returns cached response without querying Supabase", async () => {
-    const supabase = getApiRouteSupabaseMock();
+    getApiRouteSupabaseMock();
     const cache = await import("@/lib/cache/upstash");
     const cachedPayload = {
       items: [
