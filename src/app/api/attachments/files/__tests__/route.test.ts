@@ -202,6 +202,11 @@ describe("/api/attachments/files", () => {
     const supabase = getApiRouteSupabaseMock();
     const state = getSupabaseMockState(supabase);
 
+    state.selectByTable.set("trips", {
+      data: [{ id: 123, user_id: "user-1" }],
+      error: null,
+    });
+
     state.selectResult = {
       count: 0,
       data: [],
@@ -225,6 +230,22 @@ describe("/api/attachments/files", () => {
           r.url.includes("trip_id=eq.123")
       )
     ).toBe(true);
+  });
+
+  it("should reject tripId when user is not a collaborator", async () => {
+    const supabase = getApiRouteSupabaseMock();
+    const state = getSupabaseMockState(supabase);
+
+    state.selectByTable.set("trips", { data: [], error: null });
+    state.selectByTable.set("trip_collaborators", { data: [], error: null });
+
+    const mod = await import("../route");
+    const req = new NextRequest("http://localhost/api/attachments/files?tripId=999", {
+      method: "GET",
+    });
+
+    const res = await mod.GET(req, createRouteParamsContext());
+    expect(res.status).toBe(403);
   });
 
   it("should filter by chatMessageId when provided", async () => {

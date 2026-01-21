@@ -9,8 +9,13 @@ import { attachmentListQuerySchema } from "@schemas/attachments";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  forbiddenResponse,
+  requireUserId,
+} from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** Cache TTL for attachment listings (2 minutes). */
@@ -24,6 +29,64 @@ const SIGNED_URL_EXPIRATION = 3600;
 
 /** Logger for attachments file listing operations. */
 const logger = createServerLogger("attachments.files");
+
+async function ensureTripAccess(options: {
+  supabase: TypedServerSupabase;
+  tripId: number;
+  userId: string;
+}): Promise<Response | null> {
+  const { supabase, tripId, userId } = options;
+
+  const { data: ownerRow, error: ownerError } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("id", tripId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (ownerError) {
+    logger.error("trip_access_owner_check_failed", {
+      error: ownerError.message,
+      tripId,
+      userId,
+    });
+    return errorResponse({
+      err: new Error(ownerError.message),
+      error: "internal",
+      reason: "Failed to validate trip access",
+      status: 500,
+    });
+  }
+
+  if (ownerRow) return null;
+
+  const { data: collaboratorRow, error: collaboratorError } = await supabase
+    .from("trip_collaborators")
+    .select("id")
+    .eq("trip_id", tripId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (collaboratorError) {
+    logger.error("trip_access_collaborator_check_failed", {
+      error: collaboratorError.message,
+      tripId,
+      userId,
+    });
+    return errorResponse({
+      err: new Error(collaboratorError.message),
+      error: "internal",
+      reason: "Failed to validate trip access",
+      status: 500,
+    });
+  }
+
+  if (!collaboratorRow) {
+    return forbiddenResponse("You do not have access to this trip");
+  }
+
+  return null;
+}
 
 /**
  * Builds normalized cache key for attachment file listings.
@@ -87,6 +150,11 @@ export const GET = withApiGuards({
   }
 
   const { chatId, tripId, chatMessageId, limit, offset } = queryResult.data;
+
+  if (tripId !== undefined) {
+    const accessResult = await ensureTripAccess({ supabase, tripId, userId });
+    if (accessResult) return accessResult;
+  }
 
   // Check cache first (with normalized key)
   const cacheKey = buildCacheKey(userId, queryResult.data);

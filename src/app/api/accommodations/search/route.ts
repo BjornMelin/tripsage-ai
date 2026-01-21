@@ -20,6 +20,7 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 export const POST = withApiGuards({
   auth: false, // Allow anonymous searches
+  botId: true,
   rateLimit: "accommodations:search",
   schema: accommodationSearchInputSchema,
   telemetry: "accommodations.search",

@@ -525,18 +525,37 @@ export function ChatMessageItem({
 
               // Render images inline
               if (mimeType.startsWith("image/") && fileUrl) {
+                const width =
+                  typeof filePart.width === "number" && filePart.width > 0
+                    ? filePart.width
+                    : null;
+                const height =
+                  typeof filePart.height === "number" && filePart.height > 0
+                    ? filePart.height
+                    : null;
+                const resolvedWidth = width ?? 640;
+                const resolvedHeight = height ?? 480;
+                const aspectRatio = `${resolvedWidth} / ${resolvedHeight}`;
+
                 return (
                   <div key={`${message.id}-img-${idx}`} className="my-2">
-                    {/* biome-ignore lint/performance/noImgElement: External URLs without known dimensions */}
-                    <img
-                      src={fileUrl}
-                      alt={fileName}
-                      className="max-h-64 max-w-full rounded-md border"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
+                    <div
+                      className="max-h-64 max-w-full overflow-hidden rounded-md border bg-muted/30"
+                      style={{ aspectRatio }}
+                    >
+                      {/* biome-ignore lint/performance/noImgElement: External URLs without known dimensions */}
+                      <img
+                        src={fileUrl}
+                        alt={fileName}
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                        height={resolvedHeight}
+                        width={resolvedWidth}
+                      />
+                    </div>
                   </div>
                 );
               }

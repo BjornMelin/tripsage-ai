@@ -43,8 +43,8 @@ vi.mock("@/lib/redis", async () => {
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
-    if (key.includes("URL")) return "http://upstash.test";
-    if (key.includes("TOKEN")) return "test-token";
+    if (key === "UPSTASH_REDIS_REST_URL") return "http://upstash.test";
+    if (key === "UPSTASH_REDIS_REST_TOKEN") return "test-token";
     return fallback ?? "";
   }),
 }));
@@ -80,6 +80,7 @@ async function importDeleteRoute() {
 describe("/api/memory/user/[userId] (delete memories)", () => {
   const userId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
   const otherUserId = "3fa85f64-5717-4562-b3fc-2c963f66afa8";
+  const originHeaders = { origin: "http://localhost" };
 
   beforeEach(() => {
     upstashBeforeEachHook();
@@ -110,6 +111,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
   it("returns 405 when attempting deletion via POST", async () => {
     const post = await importRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "POST",
       url: `http://localhost/api/memory/user/${userId}`,
     });
@@ -129,6 +131,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
 
     const del = await importDeleteRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "DELETE",
       url: `http://localhost/api/memory/user/${userId}`,
     });
@@ -145,6 +148,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
 
     const del = await importDeleteRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "DELETE",
       url: `http://localhost/api/memory/user/${userId}`,
     });
@@ -159,6 +163,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
   it("returns 400 when userId parameter is missing", async () => {
     const del = await importDeleteRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "DELETE",
       url: "http://localhost/api/memory/user/",
     });
@@ -174,6 +179,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
   it("returns 403 when userId in URL does not match authenticated user", async () => {
     const del = await importDeleteRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "DELETE",
       url: `http://localhost/api/memory/user/${otherUserId}`,
     });
@@ -191,6 +197,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
   it("successfully deletes all memories when userId matches authenticated user", async () => {
     const del = await importDeleteRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "DELETE",
       url: `http://localhost/api/memory/user/${userId}`,
     });
@@ -220,6 +227,7 @@ describe("/api/memory/user/[userId] (delete memories)", () => {
 
     const del = await importDeleteRoute();
     const req = createMockNextRequest({
+      headers: originHeaders,
       method: "DELETE",
       url: `http://localhost/api/memory/user/${userId}`,
     });

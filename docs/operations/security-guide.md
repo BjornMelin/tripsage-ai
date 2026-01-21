@@ -64,6 +64,8 @@ USING (
 
 - **HTTPS**: Required in production
 - **CORS**: Properly configured origins
+- **CSRF**: Enforce same-origin checks (Origin/Referer) on cookie-authenticated mutating routes via `withApiGuards`
+  - **Production requirement**: Set `APP_BASE_URL` or `NEXT_PUBLIC_SITE_URL` so CSRF checks compare against a canonical origin (app throws if missing).
 - **Monitoring**: Log authentication failures and suspicious activity
 - **Backups**: Regular encrypted database backups
 - **MFA Ops**:

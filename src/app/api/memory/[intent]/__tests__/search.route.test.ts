@@ -59,8 +59,8 @@ vi.mock("@/lib/redis", async () => {
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: vi.fn((key: string, fallback?: string) => {
-    if (key.includes("URL")) return "http://upstash.test";
-    if (key.includes("TOKEN")) return "test-token";
+    if (key === "UPSTASH_REDIS_REST_URL") return "http://upstash.test";
+    if (key === "UPSTASH_REDIS_REST_TOKEN") return "test-token";
     return fallback ?? "";
   }),
 }));
@@ -134,6 +134,9 @@ describe("/api/memory/search route", () => {
         query: "paris",
         userId,
       },
+      headers: {
+        origin: "http://localhost",
+      },
       method: "POST",
       url: "http://localhost/api/memory/search",
     });
@@ -189,6 +192,9 @@ describe("/api/memory/search route", () => {
         query: "trip",
         similarityThreshold: 0.9,
         userId,
+      },
+      headers: {
+        origin: "http://localhost",
       },
       method: "POST",
       url: "http://localhost/api/memory/search",

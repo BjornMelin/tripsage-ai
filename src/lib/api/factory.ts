@@ -23,6 +23,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import {
   checkAuthentication,
   errorResponse,
+  forbiddenResponse,
   getAuthorization,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
@@ -41,7 +42,9 @@ import {
   isBotDetectedError,
   isBotIdEnabledForCurrentEnvironment,
 } from "@/lib/security/botid";
+import { requireSameOrigin, type SameOriginOptions } from "@/lib/security/csrf";
 import { secureUuid } from "@/lib/security/random";
+import { hasSupabaseAuthCookies } from "@/lib/supabase/auth-cookies";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
@@ -53,52 +56,35 @@ const apiFactoryLogger = createServerLogger("api.factory");
 
 export type DegradedMode = "fail_closed" | "fail_open";
 
-async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
-  const authorization = getAuthorization(req);
-  if (authorization?.trim()) return true;
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-  const isSupabaseSsrAuthCookieName = (cookieName: string): boolean => {
-    if (!cookieName.startsWith("sb-")) return false;
-    if (cookieName.endsWith("-auth-token")) return true;
-    return /-auth-token\.\d+$/.test(cookieName);
-  };
+function isMutatingMethod(method: string): boolean {
+  return MUTATING_METHODS.has(method.toUpperCase());
+}
 
+type AuthCredentialState = {
+  hasAuthorization: boolean;
+  hasCookie: boolean;
+  hasAny: boolean;
+};
+
+async function hasSupabaseCookieCredentials(req: NextRequest): Promise<boolean> {
   // Prefer request cookies when available (works in tests and Route Handlers).
   try {
-    if (req.cookies.get("sb-access-token")?.value) return true;
-    if (req.cookies.get("sb-refresh-token")?.value) return true;
-    // Supabase SSR stores the session in a single cookie like `sb-<project>-auth-token`.
-    if (
-      req.cookies
-        .getAll()
-        .some(
-          (cookie) =>
-            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
-        )
-    ) {
+    if (hasSupabaseAuthCookies(req.cookies.getAll())) {
       return true;
     }
   } catch (error) {
     // Fall back to cookies() store (best-effort).
     apiFactoryLogger.info("Supabase SSR cookie detection failed", {
-      context: "isSupabaseSsrAuthCookieName",
+      context: "hasSupabaseAuthCookies",
       error,
     });
   }
 
   try {
     const cookieStore = await cookies();
-    if (cookieStore.get("sb-access-token")?.value) return true;
-    if (cookieStore.get("sb-refresh-token")?.value) return true;
-    // Supabase SSR stores the session in a single cookie like `sb-<project>-auth-token`.
-    if (
-      cookieStore
-        .getAll()
-        .some(
-          (cookie) =>
-            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
-        )
-    ) {
+    if (hasSupabaseAuthCookies(cookieStore.getAll())) {
       return true;
     }
   } catch (error) {
@@ -109,6 +95,13 @@ async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
   }
 
   return false;
+}
+
+async function getAuthCredentials(req: NextRequest): Promise<AuthCredentialState> {
+  const authorization = getAuthorization(req);
+  const hasAuthorization = Boolean(authorization?.trim());
+  const hasCookie = await hasSupabaseCookieCredentials(req);
+  return { hasAny: hasAuthorization || hasCookie, hasAuthorization, hasCookie };
 }
 
 /**
@@ -149,6 +142,12 @@ export interface GuardsConfig<T extends z.ZodType = z.ZodType> {
    * Defaults to `API_CONSTANTS.maxBodySizeBytes` (64KB).
    */
   maxBodyBytes?: number;
+  /**
+   * Enable same-origin validation for cookie-authenticated mutating requests.
+   *
+   * Defaults to `true` for authenticated POST/PUT/PATCH/DELETE routes.
+   */
+  csrf?: boolean | SameOriginOptions;
 }
 
 export type BotIdGuardConfig =
@@ -520,7 +519,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 ): (
   handler: RouteHandler<SchemaType extends z.ZodType ? z.infer<SchemaType> : unknown>
 ) => (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
-  const { auth = false, botId, rateLimit, telemetry, schema } = config;
+  const { auth = false, botId, rateLimit, telemetry, schema, csrf } = config;
   const botIdConfig: {
     mode: boolean | "deep";
     allowVerifiedAiAssistants: boolean;
@@ -548,9 +547,11 @@ export function withApiGuards<SchemaType extends z.ZodType>(
       // Handle authentication if required
       let supabase: TypedServerSupabase | null = null;
       let user: User | null = null;
+      let authCredentials: AuthCredentialState | null = null;
       if (auth) {
         // Fast-fail without hitting Supabase when no auth credentials are present.
-        if (!(await hasAuthCredentials(req))) {
+        authCredentials = await getAuthCredentials(req);
+        if (!authCredentials.hasAny) {
           return unauthorizedResponse();
         }
         supabase = await supabaseFactory();
@@ -559,6 +560,25 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           return unauthorizedResponse();
         }
         user = authResult.user as User | null;
+      }
+
+      const csrfOptions: SameOriginOptions | null =
+        csrf && typeof csrf === "object" ? csrf : null;
+      const shouldCheckCsrf =
+        typeof csrf === "boolean"
+          ? csrf
+          : Boolean(csrfOptions) || (auth && isMutatingMethod(req.method));
+
+      if (
+        auth &&
+        shouldCheckCsrf &&
+        authCredentials?.hasCookie &&
+        !authCredentials.hasAuthorization
+      ) {
+        const originResult = requireSameOrigin(req, csrfOptions ?? undefined);
+        if (!originResult.ok) {
+          return forbiddenResponse(originResult.reason);
+        }
       }
 
       // Handle BotID protection if configured (after auth, before rate limiting)

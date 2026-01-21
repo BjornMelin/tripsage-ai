@@ -41,6 +41,7 @@ describe("getOriginFromRequest", () => {
 
   afterEach(() => {
     process.env = originalEnv;
+    vi.unstubAllEnvs();
   });
 
   function createMockRequest(
@@ -185,6 +186,22 @@ describe("getOriginFromRequest", () => {
         "x-forwarded-proto": "https",
       });
       expect(getOriginFromRequest(request)).toBe("https://appurl.com");
+    });
+  });
+
+  describe("production requirements", () => {
+    it("throws when canonical origin is missing in production", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.resetModules();
+
+      const { getOriginFromRequest: getOriginFromRequestProd } = await import(
+        "@/lib/url/server-origin"
+      );
+
+      const request = createMockRequest("https://fallback.com/callback");
+      expect(() => getOriginFromRequestProd(request)).toThrow(
+        "Server origin not configured"
+      );
     });
   });
 

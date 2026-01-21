@@ -82,6 +82,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
       body: JSON.stringify({
         files: [{ mimeType: "application/pdf", originalName: "a.pdf", size: 10 }],
       }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -105,6 +106,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
           { mimeType: "image/png", originalName: "b.png", size: 456 },
         ],
       }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -145,6 +147,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
         files: [{ mimeType: "application/pdf", originalName: "a.pdf", size: 123 }],
         tripId,
       }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -175,6 +178,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
         chatId,
         files: [{ mimeType: "image/svg+xml", originalName: "a.svg", size: 10 }],
       }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -196,6 +200,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {
       body: JSON.stringify({ chatId, files }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -217,6 +222,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
         chatId,
         files: [{ mimeType: "application/pdf", originalName: "a.pdf", size: 10 }],
       }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -236,6 +242,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
         chatId,
         files: [{ mimeType: "application/pdf", originalName: "a.pdf", size: 10 }],
       }),
+      headers: { origin: "http://localhost" },
       method: "POST",
     });
 
@@ -260,6 +267,7 @@ describe("/api/chat/attachments (signed uploads)", () => {
             { mimeType: "image/png", originalName: "b.png", size: 10 },
           ],
         }),
+        headers: { origin: "http://localhost" },
         method: "POST",
       });
 

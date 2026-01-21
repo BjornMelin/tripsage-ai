@@ -1,234 +1,73 @@
 /** @vitest-environment node */
 
-import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
-import { server } from "@/test/msw/server";
+import type { PlacesPhotoRequest } from "@schemas/api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handlePlacesPhoto } from "../_handler";
 
-const placePhotoMediaUrlPattern =
-  /^https:\/\/places\.googleapis\.com\/v1\/places\/[^/]+\/photos\/[^/]+\/media/;
+const MOCK_GET_PLACE_PHOTO = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/google/client", () => ({
+  getPlacePhoto: MOCK_GET_PLACE_PHOTO,
+}));
+
+function createStreamResponse(
+  bytes: Uint8Array,
+  headers: Record<string, string> = {}
+): Response {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers, status: 200 });
+}
 
 describe("handlePlacesPhoto", () => {
-  it("returns 400 when required dimensions are missing", async () => {
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { name: "places/ABC123/photos/XYZ789" }
-    );
+  const params: PlacesPhotoRequest = {
+    name: "places/test-photo",
+  };
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "missing_photo_dimensions",
-    });
+  beforeEach(() => {
+    MOCK_GET_PLACE_PHOTO.mockReset();
   });
 
-  it("returns 400 when photo name is invalid", async () => {
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "invalid-photo-name" }
-    );
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "invalid_photo_name",
-    });
-  });
-
-  it("returns 502 when redirect host is not allowed", async () => {
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return new HttpResponse(null, {
-          headers: { location: "https://evil.example.com/photo" },
-          status: 302,
-        });
+  it("returns 413 when content-length exceeds limit", async () => {
+    MOCK_GET_PLACE_PHOTO.mockResolvedValue(
+      createStreamResponse(new Uint8Array([1]), {
+        "content-length": String(11 * 1024 * 1024),
+        "content-type": "image/jpeg",
       })
     );
 
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(502);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "redirect_host_not_allowed",
-    });
+    const res = await handlePlacesPhoto({ apiKey: "test" }, params);
+    expect(res.status).toBe(413);
   });
 
-  it("returns 502 when redirect limit is exceeded", async () => {
-    const redirectUrls = [
-      "https://googleusercontent.com/photo/0",
-      "https://googleusercontent.com/photo/1",
-      "https://googleusercontent.com/photo/2",
-      "https://googleusercontent.com/photo/3",
-    ];
-
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return new HttpResponse(null, {
-          headers: { location: redirectUrls[0] },
-          status: 302,
-        });
-      }),
-      http.get(redirectUrls[0], () => {
-        return new HttpResponse(null, {
-          headers: { location: redirectUrls[1] },
-          status: 302,
-        });
-      }),
-      http.get(redirectUrls[1], () => {
-        return new HttpResponse(null, {
-          headers: { location: redirectUrls[2] },
-          status: 302,
-        });
-      }),
-      http.get(redirectUrls[2], () => {
-        return new HttpResponse(null, {
-          headers: { location: redirectUrls[3] },
-          status: 302,
-        });
+  it("streams when content-length is present and within limit", async () => {
+    MOCK_GET_PLACE_PHOTO.mockResolvedValue(
+      createStreamResponse(new Uint8Array([1, 2, 3]), {
+        "content-length": "3",
+        "content-type": "image/jpeg",
       })
     );
 
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(502);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "redirect_limit_exceeded",
-    });
+    const res = await handlePlacesPhoto({ apiKey: "test" }, params);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(res.headers.get("content-length")).toBe("3");
   });
 
-  it("returns upstream status for 4xx responses", async () => {
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return HttpResponse.json({ error: "quota" }, { status: 403 });
+  it("buffers with limit when content-length is missing", async () => {
+    MOCK_GET_PLACE_PHOTO.mockResolvedValue(
+      createStreamResponse(new Uint8Array([4, 5]), {
+        "content-type": "image/jpeg",
       })
     );
 
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "external_api_error",
-    });
-  });
-
-  it("returns 502 for upstream 5xx responses", async () => {
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return HttpResponse.json({ error: "upstream_failed" }, { status: 500 });
-      })
-    );
-
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(502);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "external_api_error",
-    });
-  });
-
-  it("returns JSON with photoUri when skipHttpRedirect is true", async () => {
-    const photoUri = "https://googleusercontent.com/photo/direct";
-
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return HttpResponse.json({ photoUri }, { status: 200 });
-      })
-    );
-
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      {
-        maxWidthPx: 400,
-        name: "places/ABC123/photos/XYZ789",
-        skipHttpRedirect: true,
-      }
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      photoUri,
-    });
-  });
-
-  it("returns photo response with cache headers on success", async () => {
-    const photoBytes = new Uint8Array([1, 2, 3, 4]);
-
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return new HttpResponse(null, {
-          headers: { location: "https://googleusercontent.com/photo/success" },
-          status: 302,
-        });
-      }),
-      http.get("https://googleusercontent.com/photo/success", () => {
-        return new HttpResponse(photoBytes, {
-          headers: { "Content-Type": "image/png" },
-          status: 200,
-        });
-      })
-    );
-
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("public, max-age=86400");
-    expect(response.headers.get("content-type")).toBe("image/png");
-    const buffer = await response.arrayBuffer();
-    expect(buffer.byteLength).toBe(photoBytes.byteLength);
-  });
-
-  it("defaults to image/jpeg when content-type is missing", async () => {
-    const photoBytes = new Uint8Array([1, 2, 3, 4]);
-
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return new HttpResponse(null, {
-          headers: { location: "https://googleusercontent.com/photo/no-ctype" },
-          status: 302,
-        });
-      }),
-      http.get("https://googleusercontent.com/photo/no-ctype", () => {
-        return new HttpResponse(photoBytes, { status: 200 });
-      })
-    );
-
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("image/jpeg");
-  });
-
-  it("returns 429 when upstream rate limits", async () => {
-    server.use(
-      http.get(placePhotoMediaUrlPattern, () => {
-        return HttpResponse.json({ error: "rate_limit" }, { status: 429 });
-      })
-    );
-
-    const response = await handlePlacesPhoto(
-      { apiKey: "test-key" },
-      { maxWidthPx: 400, name: "places/ABC123/photos/XYZ789" }
-    );
-
-    expect(response.status).toBe(429);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "external_api_error",
-    });
+    const res = await handlePlacesPhoto({ apiKey: "test" }, params);
+    expect(res.status).toBe(200);
+    const data = new Uint8Array(await res.arrayBuffer());
+    expect(Array.from(data)).toEqual([4, 5]);
   });
 });

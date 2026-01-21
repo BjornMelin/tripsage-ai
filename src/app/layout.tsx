@@ -84,7 +84,15 @@ async function AppShell({ children }: { children: React.ReactNode }) {
         >
           {/* Keep Supabase Realtime authorized with the current access token */}
           <RealtimeAuthProvider />
-          <div className="flex flex-col min-h-screen">{children}</div>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow"
+          >
+            Skip to main content
+          </a>
+          <div id="main-content" className="flex flex-col min-h-screen">
+            {children}
+          </div>
           <Toaster />
         </ThemeProvider>
       </PerformanceMonitor>

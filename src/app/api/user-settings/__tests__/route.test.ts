@@ -90,6 +90,18 @@ describe("/api/user-settings", () => {
     );
   });
 
+  it("POST rejects cross-site origin", async () => {
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { allowGatewayFallback: false },
+      headers: { origin: "https://evil.example" },
+      method: "POST",
+      url: "http://localhost/api/user-settings",
+    });
+    const res = await POST(req, createRouteParamsContext());
+    expect(res.status).toBe(403);
+  });
+
   it("POST rejects malformed JSON", async () => {
     const { POST } = await import("../route");
     const req = createMockNextRequest({

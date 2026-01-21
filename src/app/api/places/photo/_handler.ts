@@ -14,6 +14,50 @@ export type PlacesPhotoDeps = {
   apiKey: string;
 };
 
+const MAX_PLACES_PHOTO_BYTES = 10 * 1024 * 1024;
+
+async function readResponseBodyBytesWithLimit(
+  response: Response,
+  maxBytes: number
+): Promise<Uint8Array> {
+  if (!response.body) return new Uint8Array();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      const nextTotal = total + value.byteLength;
+      if (nextTotal > maxBytes) {
+        reader.cancel("payload_too_large").catch(() => {
+          // ignore cancel errors
+        });
+        throw new Error("payload_too_large");
+      }
+
+      chunks.push(value);
+      total = nextTotal;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (chunks.length === 0) return new Uint8Array();
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 export async function handlePlacesPhoto(
   deps: PlacesPhotoDeps,
   params: PlacesPhotoRequest
@@ -53,14 +97,68 @@ export async function handlePlacesPhoto(
     });
   }
 
-  // Stream photo bytes with cache-friendly headers.
-  const photoData = await response.arrayBuffer();
   const contentType = response.headers.get("content-type") ?? "image/jpeg";
+  const contentLengthHeader = response.headers.get("content-length");
+  const contentLength = contentLengthHeader
+    ? Number.parseInt(contentLengthHeader, 10)
+    : null;
 
-  return new NextResponse(photoData, {
-    headers: {
-      "Cache-Control": "public, max-age=86400", // 24h client cache
-      "Content-Type": contentType,
-    },
-  });
+  const hasContentLength = contentLength !== null && Number.isFinite(contentLength);
+
+  if (hasContentLength) {
+    if (contentLength > MAX_PLACES_PHOTO_BYTES) {
+      return errorResponse({
+        error: "payload_too_large",
+        reason: "Places photo exceeds size limit",
+        status: 413,
+      });
+    }
+  }
+
+  const headers: Record<string, string> = {
+    "Cache-Control": "public, max-age=86400",
+    "Content-Type": contentType,
+  };
+
+  if (hasContentLength) {
+    headers["Content-Length"] = String(contentLength);
+  }
+
+  if (!response.body) {
+    return errorResponse({
+      error: "external_api_error",
+      reason: "Places photo response missing body",
+      status: 502,
+    });
+  }
+
+  if (response.body && hasContentLength) {
+    return new NextResponse(response.body, { headers });
+  }
+
+  try {
+    const bytes = await readResponseBodyBytesWithLimit(
+      response,
+      MAX_PLACES_PHOTO_BYTES
+    );
+    const body = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(body).set(bytes);
+    return new NextResponse(body, { headers });
+  } catch (error) {
+    if (error instanceof Error && error.message === "payload_too_large") {
+      return errorResponse({
+        error: "payload_too_large",
+        reason: "Places photo exceeds size limit",
+        status: 413,
+      });
+    }
+    return errorResponse({
+      err: error instanceof Error ? error : new Error("Photo fetch failed"),
+      error: "external_api_error",
+      reason: "Failed to read photo response",
+      status: 502,
+    });
+  }
+
+  // Unreachable: all response paths should return above.
 }

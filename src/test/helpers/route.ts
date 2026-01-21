@@ -56,6 +56,34 @@ export function createMockNextRequest(options: {
     headers.set(key.toLowerCase(), value);
   });
 
+  const resolveConfiguredOrigin = (): string | null => {
+    const candidates = [
+      process.env.APP_BASE_URL,
+      process.env.NEXT_PUBLIC_SITE_URL,
+      process.env.NEXT_PUBLIC_BASE_URL,
+      process.env.NEXT_PUBLIC_APP_URL,
+    ];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      try {
+        return new URL(candidate).origin;
+      } catch {
+        // Ignore invalid URLs in test env overrides.
+      }
+    }
+    return null;
+  };
+
+  const upperMethod = method.toUpperCase();
+  if (
+    !headers.has("origin") &&
+    upperMethod !== "GET" &&
+    upperMethod !== "HEAD" &&
+    upperMethod !== "OPTIONS"
+  ) {
+    headers.set("origin", resolveConfiguredOrigin() ?? urlObj.origin);
+  }
+
   // Create request with body if provided
   type NextRequestInit = NonNullable<ConstructorParameters<typeof NextRequest>[1]>;
   const init: NextRequestInit = {

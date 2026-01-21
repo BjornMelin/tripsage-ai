@@ -41,6 +41,7 @@ import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import type { ServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
 import { clampMaxTokens, countTokens } from "@/lib/tokens/budget";
@@ -134,6 +135,20 @@ function isChatUiMessagePart(part: UiMessagePart): part is ChatUiMessagePart {
     return chatDataPartSchemas.status.safeParse(part.data).success;
   }
   return !String(part.type).startsWith("data-");
+}
+
+function buildChatLogIdentifiers(input: {
+  sessionId?: string | null;
+  userId?: string | null;
+}): { sessionIdHash?: string; userIdHash?: string } {
+  const sessionIdHash = input.sessionId
+    ? hashTelemetryIdentifier(input.sessionId)
+    : null;
+  const userIdHash = input.userId ? hashTelemetryIdentifier(input.userId) : null;
+  return {
+    ...(sessionIdHash ? { sessionIdHash } : {}),
+    ...(userIdHash ? { userIdHash } : {}),
+  };
 }
 
 export function createMemorySummaryCache(options: {
@@ -272,7 +287,7 @@ async function ensureChatSession(options: {
     if (allowEphemeralSession) {
       logger?.warn?.("chat:session_create_skipped", {
         error: error instanceof Error ? error.message : String(error),
-        userId,
+        ...buildChatLogIdentifiers({ userId }),
       });
       return { created: true, ok: true, sessionId: id };
     }
@@ -326,8 +341,7 @@ async function persistChatMessage(options: {
       logger?.warn?.("chat:message_persist_skipped", {
         error: error instanceof Error ? error.message : String(error),
         role,
-        sessionId,
-        userId,
+        ...buildChatLogIdentifiers({ sessionId, userId }),
       });
       return { id: -1, ok: true };
     }
@@ -543,8 +557,10 @@ async function loadChatHistory(options: {
     if (options.allowEphemeral) {
       options.logger?.warn?.("chat:history_load_skipped", {
         error: error instanceof Error ? error.message : String(error),
-        sessionId: options.sessionId,
-        userId: options.userId,
+        ...buildChatLogIdentifiers({
+          sessionId: options.sessionId,
+          userId: options.userId,
+        }),
       });
       return { messages: [], ok: true };
     }
@@ -579,8 +595,10 @@ async function loadChatHistory(options: {
     if (options.allowEphemeral) {
       options.logger?.warn?.("chat:tool_history_load_skipped", {
         error: toolError instanceof Error ? toolError.message : String(toolError),
-        sessionId: options.sessionId,
-        userId: options.userId,
+        ...buildChatLogIdentifiers({
+          sessionId: options.sessionId,
+          userId: options.userId,
+        }),
       });
     } else {
       return {
@@ -660,8 +678,10 @@ async function loadChatHistory(options: {
           validated.error instanceof Error
             ? validated.error.message
             : String(validated.error),
-        sessionId: options.sessionId,
-        userId: options.userId,
+        ...buildChatLogIdentifiers({
+          sessionId: options.sessionId,
+          userId: options.userId,
+        }),
       });
       return { messages: [], ok: true };
     }
@@ -671,8 +691,10 @@ async function loadChatHistory(options: {
         : new Error(String(validated.error ?? "Invalid stored messages"));
     options.logger?.error?.("chat:history_validation_failed", {
       error: normalizedError.message,
-      sessionId: options.sessionId,
-      userId: options.userId,
+      ...buildChatLogIdentifiers({
+        sessionId: options.sessionId,
+        userId: options.userId,
+      }),
     });
 
     return {
@@ -765,8 +787,7 @@ export async function handleChat(
       error: error instanceof Error ? error.message : String(error),
       modelHint: modelHint ?? null,
       requestId,
-      sessionId,
-      userId,
+      ...buildChatLogIdentifiers({ sessionId, userId }),
     });
     return errorResponse({
       err: error,
@@ -906,8 +927,7 @@ export async function handleChat(
       deps.logger?.error?.("chat:memory_fetch_failed", {
         error: error instanceof Error ? error.message : String(error),
         requestId,
-        sessionId,
-        userId,
+        ...buildChatLogIdentifiers({ sessionId, userId }),
       });
     }
   }
@@ -937,8 +957,7 @@ export async function handleChat(
         deps.logger?.warn?.("chat:regenerate_supersede_failed", {
           error: error instanceof Error ? error.message : String(error),
           requestId,
-          sessionId,
-          userId,
+          ...buildChatLogIdentifiers({ sessionId, userId }),
         });
       }
     }
@@ -1040,9 +1059,8 @@ export async function handleChat(
             finishReason,
             model: provider.modelId,
             requestId,
-            sessionId,
             totalUsage: totalUsage ?? null,
-            userId,
+            ...buildChatLogIdentifiers({ sessionId, userId }),
           });
 
           if (trigger === "submit-message") {
@@ -1079,8 +1097,7 @@ export async function handleChat(
             deps.logger?.warn?.("chat:message_update_failed", {
               error: error instanceof Error ? error.message : String(error),
               requestId,
-              sessionId,
-              userId,
+              ...buildChatLogIdentifiers({ sessionId, userId }),
             });
           }
         },
@@ -1146,10 +1163,9 @@ export async function handleChat(
                 deps.logger?.warn?.("chat:tool_persist_failed", {
                   error: persistErrorMessage,
                   requestId,
-                  sessionId,
                   toolCallId: parsed.toolCallId,
                   toolName: parsed.toolName,
-                  userId,
+                  ...buildChatLogIdentifiers({ sessionId, userId }),
                 });
               }
             }
@@ -1191,8 +1207,7 @@ export async function handleChat(
                         ? stepError.message
                         : String(stepError),
                     requestId,
-                    sessionId,
-                    userId,
+                    ...buildChatLogIdentifiers({ sessionId, userId }),
                   });
                 }
               }
@@ -1233,8 +1248,7 @@ export async function handleChat(
             deps.logger?.error?.("chat:stream_error", {
               error: error instanceof Error ? error.message : String(error),
               requestId,
-              sessionId,
-              userId,
+              ...buildChatLogIdentifiers({ sessionId, userId }),
             });
             return "An error occurred while processing your request.";
           },
@@ -1282,8 +1296,7 @@ export async function handleChat(
         deps.logger?.warn?.("chat:aborted_message_update_failed", {
           error: error instanceof Error ? error.message : String(error),
           requestId,
-          sessionId,
-          userId,
+          ...buildChatLogIdentifiers({ sessionId, userId }),
         });
       }
     },

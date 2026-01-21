@@ -193,10 +193,13 @@ describe("/api/keys/validate route", () => {
     const res = await POST(req, createRouteParamsContext());
     const body = await res.json();
 
-    expect(fetchMock).toHaveBeenCalledWith("https://provider.test/models", {
-      headers: { Authorization: "Bearer test" },
-      method: "GET",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://provider.test/models",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer test" },
+        method: "GET",
+      })
+    );
     expect({ body, status: res.status }).toEqual({
       body: { isValid: true },
       status: 200,
@@ -282,6 +285,34 @@ describe("/api/keys/validate route", () => {
     const body = await res.json();
 
     expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns REQUEST_TIMEOUT when provider validation times out", async () => {
+    const fetchMock = vi
+      .fn<FetchLike>()
+      .mockRejectedValue(new DOMException("Timeout", "AbortError"));
+    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://provider.test/models",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer test" },
+        method: "GET",
+        signal: expect.any(AbortSignal),
+      })
+    );
+    expect(body).toEqual({ isValid: false, reason: "REQUEST_TIMEOUT" });
     expect(res.status).toBe(200);
   });
 

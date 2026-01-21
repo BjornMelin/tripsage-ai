@@ -16,6 +16,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 
 export const POST = withApiGuards({
   auth: false, // Allow anonymous searches
+  botId: true,
   rateLimit: "activities:search",
   schema: activitySearchParamsSchema,
   telemetry: "activities.search",

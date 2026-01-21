@@ -12,6 +12,7 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
+import { formatUpstreamErrorReason } from "@/lib/api/upstream-errors";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { getTimezone } from "@/lib/google/client";
 
@@ -51,11 +52,16 @@ export const POST = withApiGuards({
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const status = response.status;
+    const errorText = status < 500 ? await response.text() : null;
     return errorResponse({
       error: "upstream_error",
-      reason: `Time Zone API error: ${response.status}. Details: ${errorText.slice(0, 200)}`,
-      status: response.status >= 400 && response.status < 500 ? response.status : 502,
+      reason: formatUpstreamErrorReason({
+        details: errorText,
+        service: "Time Zone API",
+        status,
+      }),
+      status: status >= 400 && status < 500 ? status : 502,
     });
   }
 

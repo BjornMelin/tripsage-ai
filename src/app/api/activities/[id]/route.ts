@@ -10,6 +10,7 @@ import { createSupabaseActivitiesDetailsCache } from "@/lib/activities/supabase-
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId } from "@/lib/api/route-helpers";
+import { hasSupabaseAuthCookiesFromHeader } from "@/lib/supabase/auth-cookies";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 /**
@@ -19,15 +20,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
  * @returns `true` if Supabase auth cookies (`sb-access-token` or `sb-refresh-token`) are present.
  */
 function hasAuthCookies(req: Request): boolean {
-  const cookieHeader = req.headers.get("cookie");
-  if (!cookieHeader) {
-    return false;
-  }
-  // Check for Supabase auth cookies
-  return (
-    cookieHeader.includes("sb-access-token") ||
-    cookieHeader.includes("sb-refresh-token")
-  );
+  return hasSupabaseAuthCookiesFromHeader(req.headers.get("cookie"));
 }
 
 /**
