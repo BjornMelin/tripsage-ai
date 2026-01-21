@@ -13,10 +13,17 @@ import {
   UserIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { logoutAction } from "@/lib/auth/actions";
 import { ROUTES } from "@/lib/routes";
 
@@ -28,18 +35,16 @@ interface UserNavProps {
  * User navigation component with profile dropdown and logout functionality.
  *
  * Displays user avatar and provides access to profile, settings, and logout
- * options via a popover menu.
+ * options via a dropdown menu.
  *
  * @param user - The authenticated user.
  * @returns The UserNav component.
  */
 export function UserNav({ user }: UserNavProps) {
   const [isPending, startTransition] = useTransition();
-  const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
     startTransition(async () => {
-      setIsOpen(false);
       await logoutAction();
     });
   };
@@ -55,8 +60,8 @@ export function UserNav({ user }: UserNavProps) {
     : user.email?.slice(0, 2).toUpperCase() || "U";
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatarUrl} alt={user.displayName || "User"} />
@@ -67,57 +72,39 @@ export function UserNav({ user }: UserNavProps) {
           <span className="text-sm font-medium hidden sm:block">
             {user.displayName || user.email || "User"}
           </span>
-          <ChevronDownIcon className="h-4 w-4 opacity-50" />
+          <ChevronDownIcon aria-hidden="true" className="h-4 w-4 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="end">
-        <div className="space-y-1">
-          <div className="px-3 py-2 border-b">
-            <p className="text-sm font-medium">{user.displayName || "User"}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-          </div>
-
-          <div className="p-1">
-            <Link
-              href={ROUTES.dashboard.profile}
-              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <UserIcon className="h-4 w-4" />
-              Profile
-            </Link>
-
-            <Link
-              href={ROUTES.dashboard.settings}
-              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <SettingsIcon className="h-4 w-4" />
-              Settings
-            </Link>
-            <Link
-              href={ROUTES.dashboard.security}
-              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <ShieldIcon className="h-4 w-4" />
-              Security
-            </Link>
-
-            <div className="border-t my-1" />
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isPending}
-              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
-            >
-              <LogOutIcon className="h-4 w-4" />
-              {isPending ? "Logging out…" : "Log out"}
-            </button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="px-3 py-2">
+          <p className="text-sm font-medium">{user.displayName || "User"}</p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href={ROUTES.dashboard.profile}>
+            <UserIcon aria-hidden="true" className="h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={ROUTES.dashboard.settings}>
+            <SettingsIcon aria-hidden="true" className="h-4 w-4" />
+            Settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={ROUTES.dashboard.security}>
+            <ShieldIcon aria-hidden="true" className="h-4 w-4" />
+            Security
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={handleLogout} disabled={isPending}>
+          <LogOutIcon aria-hidden="true" className="h-4 w-4" />
+          {isPending ? "Logging Out…" : "Log Out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -14,24 +14,24 @@ async function openUserMenu(page: Page): Promise<Locator> {
   const trigger = getUserMenuTrigger(page);
   await expect(trigger).toBeVisible({ timeout: visibilityTimeoutMs });
 
-  const logoutButton = page.getByRole("button", { name: "Log out" });
-  const popoverContent = page.getByRole("dialog").filter({ has: logoutButton });
+  const logoutItem = page.getByRole("menuitem", { name: "Log Out" });
+  const menuContent = page.getByRole("menu").filter({ has: logoutItem });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     await trigger.click();
     try {
-      await expect(popoverContent).toBeVisible({ timeout: visibilityTimeoutMs });
-      await expect(popoverContent).toHaveAttribute("data-state", "open", {
+      await expect(menuContent).toBeVisible({ timeout: visibilityTimeoutMs });
+      await expect(menuContent).toHaveAttribute("data-state", "open", {
         timeout: visibilityTimeoutMs,
       });
-      return popoverContent;
+      return menuContent;
     } catch (error) {
       if (attempt === 1) throw error;
       await page.waitForTimeout(200);
     }
   }
 
-  return popoverContent;
+  return menuContent;
 }
 
 async function clickAndWaitForUrl(
@@ -136,23 +136,23 @@ test.describe("Dashboard Functionality", () => {
       page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
     ).toBeVisible({ timeout: visibilityTimeoutMs });
 
-    const popoverContent = await openUserMenu(page);
+    const menuContent = await openUserMenu(page);
 
-    // Verify menu options using the popover container to avoid sidebar conflicts
-    await expect(popoverContent.getByRole("link", { name: "Profile" })).toBeVisible({
+    // Verify menu options using the menu container to avoid sidebar conflicts
+    await expect(menuContent.getByRole("menuitem", { name: "Profile" })).toBeVisible({
       timeout: visibilityTimeoutMs,
     });
-    await expect(popoverContent.getByRole("link", { name: "Settings" })).toBeVisible({
+    await expect(menuContent.getByRole("menuitem", { name: "Settings" })).toBeVisible({
       timeout: visibilityTimeoutMs,
     });
-    await expect(popoverContent.getByRole("button", { name: "Log out" })).toBeVisible({
+    await expect(menuContent.getByRole("menuitem", { name: "Log Out" })).toBeVisible({
       timeout: visibilityTimeoutMs,
     });
 
     // Test profile navigation
     await clickAndWaitForUrl(
       page,
-      popoverContent.getByRole("link", { name: "Profile" }),
+      menuContent.getByRole("menuitem", { name: "Profile" }),
       "/dashboard/profile"
     );
     await page.waitForLoadState("domcontentloaded");
@@ -164,10 +164,10 @@ test.describe("Dashboard Functionality", () => {
       page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
     ).toBeVisible({ timeout: visibilityTimeoutMs });
 
-    const settingsPopover = await openUserMenu(page);
+    const settingsMenu = await openUserMenu(page);
     await clickAndWaitForUrl(
       page,
-      settingsPopover.getByRole("link", { name: "Settings" }),
+      settingsMenu.getByRole("menuitem", { name: "Settings" }),
       "/dashboard/settings"
     );
   });
@@ -176,8 +176,8 @@ test.describe("Dashboard Functionality", () => {
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    const popoverContent = await openUserMenu(page);
-    await popoverContent.getByRole("button", { name: "Log out" }).click();
+    const menuContent = await openUserMenu(page);
+    await menuContent.getByRole("menuitem", { name: "Log Out" }).click();
 
     // Wait for redirect to login page
     await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
