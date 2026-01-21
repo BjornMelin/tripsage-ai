@@ -153,8 +153,8 @@ export function harden({
   allowedImagePrefixes = [],
   allowDataImages = false,
   allowedProtocols = [],
-  blockedImageClass = "inline-block bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-3 py-1 rounded text-sm",
-  blockedLinkClass = "text-gray-500",
+  blockedImageClass = "inline-block bg-muted text-muted-foreground px-3 py-1 rounded text-sm",
+  blockedLinkClass = "text-muted-foreground",
 }: HardenOptions): (tree: HastRoot) => void {
   const hasSpecificLinkPrefixes =
     allowedLinkPrefixes.length > 0 && !allowedLinkPrefixes.every((p) => p === "*");

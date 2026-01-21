@@ -21,9 +21,9 @@ const SkeletonVariants = cva("rounded-md bg-muted", {
       wave: "animate-[wave_1.5s_ease-in-out_infinite]",
     },
     variant: {
-      default: "bg-slate-100 dark:bg-slate-800",
-      light: "bg-slate-50 dark:bg-slate-700",
-      medium: "bg-slate-200 dark:bg-slate-600",
+      default: "bg-muted",
+      light: "bg-muted/60",
+      medium: "bg-muted/80",
       rounded: "rounded-full",
     },
   },
