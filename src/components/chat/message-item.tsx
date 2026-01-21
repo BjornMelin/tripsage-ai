@@ -225,6 +225,13 @@ export interface ChatMessageItemProps {
   isStreaming?: boolean;
 }
 
+/**
+ * Render a chat message item that displays message parts (text, schema cards, reasoning, tool outputs, files, and sources) with safe sanitization and UI-specific handling.
+ *
+ * @param message - The UI message object to render, containing role, id, parts, and optional metadata.
+ * @param isStreaming - When true, enables streaming animation for the last assistant text part.
+ * @returns A React element representing the rendered chat message, including avatar, content parts, citations, and optional usage/finish/abort info.
+ */
 export function ChatMessageItem({
   message,
   isStreaming = false,

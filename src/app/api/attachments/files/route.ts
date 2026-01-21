@@ -30,6 +30,13 @@ const SIGNED_URL_EXPIRATION = 3600;
 /** Logger for attachments file listing operations. */
 const logger = createServerLogger("attachments.files");
 
+/**
+ * Validate that a user has owner or collaborator access to a trip.
+ *
+ * @param tripId - The numeric identifier of the trip to check access for
+ * @param userId - The ID of the requesting user
+ * @returns An HTTP error `Response` when access is denied or a database error occurs, `null` when access is granted
+ */
 async function ensureTripAccess(options: {
   supabase: TypedServerSupabase;
   tripId: number;

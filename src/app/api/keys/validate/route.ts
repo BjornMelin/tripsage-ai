@@ -141,11 +141,11 @@ function normalizeErrorReason(error: unknown): string {
 }
 
 /**
- * Generic validator using provider configuration map.
+ * Validates a provider API key by probing the provider's endpoint.
  *
- * @param service Provider identifier (openai|openrouter|anthropic|xai).
- * @param apiKey The plaintext API key to check.
- * @returns Validation result with is_valid and optional reason.
+ * @param service - Provider identifier: "openai", "openrouter", "anthropic", or "xai".
+ * @param apiKey - The plaintext API key to validate.
+ * @returns `{ isValid: true }` if the key is accepted; `{ isValid: false, reason: string }` otherwise.
  */
 async function validateProviderKey(
   service: string,
