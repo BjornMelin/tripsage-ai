@@ -28,9 +28,9 @@ export function mapProviderStatusToCode(status: number): PlannedErrorCode {
 
 function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
-  if (error instanceof DOMException && error.name === "AbortError") return true;
-  if (error instanceof Error && error.name === "AbortError") return true;
-  return false;
+  const name = (error as { name?: unknown }).name;
+  if (typeof name !== "string") return false;
+  return name === "AbortError" || name === "TimeoutError";
 }
 
 export function mapProviderExceptionToCode(error: unknown): PlannedErrorCode {
