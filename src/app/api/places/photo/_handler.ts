@@ -122,11 +122,16 @@ export async function handlePlacesPhoto(
 
   const contentType = response.headers.get("content-type") ?? "image/jpeg";
   const contentLengthHeader = response.headers.get("content-length");
-  const contentLength = contentLengthHeader
+  const parsedContentLength = contentLengthHeader
     ? Number.parseInt(contentLengthHeader, 10)
     : null;
-
-  const hasContentLength = contentLength !== null && Number.isFinite(contentLength);
+  const contentLength =
+    parsedContentLength !== null &&
+    Number.isFinite(parsedContentLength) &&
+    parsedContentLength >= 0
+      ? parsedContentLength
+      : null;
+  const hasContentLength = contentLength !== null;
 
   if (hasContentLength) {
     if (contentLength > MAX_PLACES_PHOTO_BYTES) {

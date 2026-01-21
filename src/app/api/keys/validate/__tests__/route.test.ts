@@ -295,10 +295,11 @@ describe("/api/keys/validate route", () => {
     expect(res.status).toBe(200);
   });
 
-  it("returns REQUEST_TIMEOUT when provider validation times out", async () => {
-    const fetchMock = vi
-      .fn<FetchLike>()
-      .mockRejectedValue(new DOMException("Timeout", "TimeoutError"));
+  it.each([
+    ["TimeoutError", new DOMException("Timeout", "TimeoutError")],
+    ["AbortError", Object.assign(new Error("Abort"), { name: "AbortError" })],
+  ] as const)("returns REQUEST_TIMEOUT when provider validation times out (%s)", async (_label, error) => {
+    const fetchMock = vi.fn<FetchLike>().mockRejectedValue(error);
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
     const { POST } = await import("../route");

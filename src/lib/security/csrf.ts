@@ -60,13 +60,22 @@ export function requireSameOrigin(
   req: NextRequest,
   options: SameOriginOptions = {}
 ): SameOriginResult {
-  const expectedOrigin = getOriginFromRequest(req);
+  const rawExpectedOrigin = getOriginFromRequest(req);
+  const expectedOrigin = normalizeOrigin(rawExpectedOrigin) ?? rawExpectedOrigin;
   const allowed = new Set<string>([expectedOrigin]);
   if (options.allowedOrigins) {
     for (const origin of options.allowedOrigins) {
       const normalized = normalizeOrigin(origin);
       if (normalized) allowed.add(normalized);
     }
+  }
+
+  const headerSecFetchSite = req.headers.get("sec-fetch-site");
+  if (headerSecFetchSite && headerSecFetchSite !== "same-origin") {
+    return {
+      ok: false,
+      reason: "Cross-site request blocked by Sec-Fetch-Site",
+    };
   }
 
   const headerOrigin = req.headers.get("origin");
