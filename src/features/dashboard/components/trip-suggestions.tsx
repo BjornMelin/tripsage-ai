@@ -121,11 +121,11 @@ function SuggestionCard({
   const getDifficultyColor = (difficulty?: TripSuggestion["difficulty"]) => {
     switch (difficulty) {
       case "easy":
-        return "text-green-600";
+        return "text-success";
       case "moderate":
-        return "text-yellow-600";
+        return "text-warning";
       case "challenging":
-        return "text-red-600";
+        return "text-destructive";
       default:
         return "text-muted-foreground";
     }
@@ -168,7 +168,7 @@ function SuggestionCard({
         </div>
         <div className="text-right">
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-            <StarIcon className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <StarIcon className="h-3 w-3 fill-warning text-warning" />
             <span>{suggestion.rating}</span>
           </div>
           <div className="text-lg font-semibold text-primary">
@@ -386,7 +386,7 @@ export function TripSuggestions({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {showMemoryBased && memoryBasedSuggestions.length > 0 && (
-            <BrainIcon className="h-5 w-5 text-purple-500" />
+            <BrainIcon className="h-5 w-5 text-highlight" />
           )}
           Trip Suggestions
         </CardTitle>
@@ -410,19 +410,19 @@ export function TripSuggestions({
             {/* Memory-based suggestions with special styling */}
             {memoryBasedSuggestions.length > 0 && (
               <>
-                <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
+                <div className="flex items-center gap-2 text-sm font-medium text-highlight">
                   <BrainIcon className="h-4 w-4" />
                   Personalized for You
                 </div>
                 {memoryBasedSuggestions.slice(0, 2).map((suggestion) => (
                   <div key={suggestion.id} className="relative">
                     <div className="absolute -top-2 -right-2 z-10">
-                      <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                      <Badge className="bg-highlight/20 text-highlight border-highlight/20">
                         <SparklesIcon className="h-3 w-3 mr-1" />
                         AI Match
                       </Badge>
                     </div>
-                    <div className="border border-purple-200 rounded-lg bg-purple-50/30">
+                    <div className="border border-highlight/20 rounded-lg bg-highlight/10">
                       <SuggestionCard
                         suggestion={suggestion}
                         planTripHref={buildCreateTripHref(suggestion.id)}

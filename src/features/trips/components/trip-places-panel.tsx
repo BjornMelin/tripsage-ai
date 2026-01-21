@@ -269,7 +269,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                         </div>
                         {typeof place.rating === "number" && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <StarIcon className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                            <StarIcon className="h-3.5 w-3.5 fill-warning text-warning" />
                             <span>{place.rating.toFixed(1)}</span>
                             {typeof place.userRatingCount === "number" && (
                               <span className="text-muted-foreground/70">

@@ -52,9 +52,9 @@ import { parseTripDate } from "@/lib/trips/parse-trip-date";
  * Matches trip status semantic colors.
  */
 const TRIP_STATUS_COLORS = {
-  active: "text-green-700", // aligned with active status
-  completed: "text-gray-600", // neutral completed state
-  upcoming: "text-blue-700", // aligned with info status
+  active: "text-success", // aligned with active status
+  completed: "text-muted-foreground", // neutral completed state
+  upcoming: "text-info", // aligned with info status
 } as const;
 
 const CONNECTED_MESSAGE = "Connected — live updates enabled";

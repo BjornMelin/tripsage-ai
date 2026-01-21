@@ -108,10 +108,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </Badge>
           {trip.visibility === "shared" ? (
-            <Badge
-              variant="outline"
-              className="border-sky-500/40 text-sky-700 dark:text-sky-300"
-            >
+            <Badge variant="outline" className="border-info/40 text-info">
               Shared
             </Badge>
           ) : trip.visibility === "public" ? (

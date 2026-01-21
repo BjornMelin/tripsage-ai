@@ -64,12 +64,12 @@ const ROLE_META: Record<
   { icon: typeof ShieldIcon; label: string; badge: string }
 > = {
   editor: {
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    badge: "bg-info/10 text-info",
     icon: ShieldIcon,
     label: "Editor",
   },
   owner: {
-    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    badge: "bg-warning/10 text-warning",
     icon: CrownIcon,
     label: "Owner",
   },
@@ -204,7 +204,7 @@ export function TripCollaboratorsPanel(props: {
             size="sm"
             onClick={handleCopyShareLink}
           >
-            <LinkIcon className="mr-2 h-4 w-4" />
+            <LinkIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             Copy Link
           </Button>
         </div>
@@ -267,9 +267,12 @@ export function TripCollaboratorsPanel(props: {
                 disabled={!canManage || inviteMutation.isPending}
               >
                 {inviteMutation.isPending ? (
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
                 ) : (
-                  <UserPlusIcon className="mr-2 h-4 w-4" />
+                  <UserPlusIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                 )}
                 Invite
               </Button>
@@ -308,7 +311,7 @@ export function TripCollaboratorsPanel(props: {
                 <div className="text-xs text-muted-foreground">Owner</div>
               </div>
             </div>
-            <Badge variant="outline" className="border-amber-500/40 text-amber-700">
+            <Badge variant="outline" className="border-warning/40 text-warning">
               Owner
             </Badge>
           </div>
@@ -368,7 +371,7 @@ export function TripCollaboratorsPanel(props: {
                     </Select>
                   ) : (
                     <Badge className={cn("gap-1", roleMeta.badge)}>
-                      <Icon className="h-3 w-3" />
+                      <Icon aria-hidden="true" className="h-3 w-3" />
                       {roleMeta.label}
                     </Badge>
                   )}
@@ -381,7 +384,7 @@ export function TripCollaboratorsPanel(props: {
                     onClick={() => setPendingRemoval(collaborator)}
                     disabled={removeMutation.isPending || (!canManage && !isSelf)}
                   >
-                    <Trash2Icon className="mr-2 h-4 w-4" />
+                    <Trash2Icon aria-hidden="true" className="mr-2 h-4 w-4" />
                     {isSelf && !canManage ? "Leave" : "Remove"}
                   </Button>
                 </div>
@@ -423,8 +426,11 @@ export function TripCollaboratorsPanel(props: {
             >
               {removeMutation.isPending ? (
                 <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                  Removing...
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
+                  Removing…
                 </>
               ) : (
                 "Confirm"

@@ -19,8 +19,10 @@ import { ROUTES } from "@/lib/routes";
 
 export default function DashboardSettingsPage() {
   return (
-    <main>
-      <h1 className="mb-8 text-3xl font-bold">Settings</h1>
+    <section aria-labelledby="dashboard-settings-title">
+      <h1 id="dashboard-settings-title" className="mb-8 text-3xl font-bold">
+        Settings
+      </h1>
 
       <div className="grid gap-6">
         <Card className="group transition-shadow hover:shadow-md">
@@ -50,6 +52,6 @@ export default function DashboardSettingsPage() {
           </CardFooter>
         </Card>
       </div>
-    </main>
+    </section>
   );
 }

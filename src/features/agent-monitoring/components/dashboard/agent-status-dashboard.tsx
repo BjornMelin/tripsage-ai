@@ -27,10 +27,10 @@ import { statusVariants, type ToneVariant } from "@/lib/variants/status";
 
 // Status colors aligned with statusVariants tone classes (static to avoid purge)
 const CONNECTION_STATUS_CLASSES = {
-  connecting: "bg-amber-100 text-amber-800",
-  error: "bg-red-100 text-red-800",
-  idle: "bg-slate-100 text-slate-700",
-  subscribed: "bg-green-100 text-green-800",
+  connecting: "bg-warning/20 text-warning",
+  error: "bg-destructive/20 text-destructive",
+  idle: "bg-muted text-muted-foreground",
+  subscribed: "bg-success/20 text-success",
 } as const;
 
 const AGENT_STATUS_TONE: Record<AgentStatusType, ToneVariant> = {

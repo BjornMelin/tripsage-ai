@@ -175,15 +175,15 @@ describe("QuickActions", () => {
     renderWithProviders(<QuickActions />);
 
     // Check that custom color classes are applied
-    const blueButton = document.querySelector(".bg-blue-50");
-    const greenButton = document.querySelector(".bg-green-50");
-    const purpleButton = document.querySelector(".bg-purple-50");
-    const orangeButton = document.querySelector(".bg-orange-50");
+    const infoButton = document.querySelector(".bg-info/10");
+    const successButton = document.querySelector(".bg-success/10");
+    const highlightButton = document.querySelector(".bg-highlight/10");
+    const warningButton = document.querySelector(".bg-warning/10");
 
-    expect(blueButton).toBeInTheDocument();
-    expect(greenButton).toBeInTheDocument();
-    expect(purpleButton).toBeInTheDocument();
-    expect(orangeButton).toBeInTheDocument();
+    expect(infoButton).toBeInTheDocument();
+    expect(successButton).toBeInTheDocument();
+    expect(highlightButton).toBeInTheDocument();
+    expect(warningButton).toBeInTheDocument();
   });
 });
 

@@ -45,21 +45,18 @@ import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { getBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
-/**
- * Alert colors for account status indicators.
- * Deliberately distinct from statusVariants to keep lightweight, Tailwind-only tokens here.
- */
+/** Alert colors for account status indicators aligned with semantic tokens. */
 const ALERT_COLORS = {
   danger: {
-    border: "border-red-200",
-    buttonHover: "bg-red-600 hover:bg-red-700",
-    title: "text-red-600",
+    border: "border-destructive/20",
+    buttonHover: "bg-destructive hover:bg-destructive/90",
+    title: "text-destructive",
   },
   warning: {
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    text: "text-amber-700",
-    title: "text-amber-800",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
+    title: "text-warning",
   },
 } as const;
 
