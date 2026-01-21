@@ -34,10 +34,13 @@ describe("ensureTripAccess", () => {
     expect(result).toBeNull();
   });
 
-  it("returns forbidden when user is neither owner nor collaborator", async () => {
+  it("returns forbidden when trip exists but user lacks access", async () => {
     const supabase = createMockSupabaseClient();
     const state = getSupabaseMockState(supabase);
-    state.selectByTable.set("trips", { data: [], error: null });
+    state.selectByTable.set("trips", {
+      data: [{ id: tripId, user_id: "someone-else" }],
+      error: null,
+    });
     state.selectByTable.set("trip_collaborators", { data: [], error: null });
 
     const result = await ensureTripAccess({ supabase, tripId, userId });
@@ -46,6 +49,22 @@ describe("ensureTripAccess", () => {
       expect(result.status).toBe(403);
       const body = (await result.json()) as { error?: string };
       expect(body.error).toBe("forbidden");
+    }
+  });
+
+  it("returns not found when trip does not exist", async () => {
+    const supabase = createMockSupabaseClient();
+    const state = getSupabaseMockState(supabase);
+    state.selectByTable.set("trips", { data: [], error: null });
+    state.selectByTable.set("trip_collaborators", { data: [], error: null });
+
+    const result = await ensureTripAccess({ supabase, tripId, userId });
+    expect(result).not.toBeNull();
+    if (result) {
+      expect(result.status).toBe(404);
+      const body = (await result.json()) as { error?: string; reason?: string };
+      expect(body.error).toBe("not_found");
+      expect(body.reason).toBe("Trip not found");
     }
   });
 

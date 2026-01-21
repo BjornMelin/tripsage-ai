@@ -606,10 +606,9 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       const csrfOptions: SameOriginOptions | null =
         csrf && typeof csrf === "object" ? csrf : null;
+      const isMutating = isMutatingMethod(req.method);
       const shouldCheckCsrf =
-        typeof csrf === "boolean"
-          ? csrf
-          : Boolean(csrfOptions) || (auth && isMutatingMethod(req.method));
+        isMutating && (typeof csrf === "boolean" ? csrf : Boolean(csrfOptions) || auth);
 
       if (shouldCheckCsrf) {
         if (!authCredentials) {

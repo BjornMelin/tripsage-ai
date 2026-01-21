@@ -1,6 +1,10 @@
 import "server-only";
 
-import { errorResponse, forbiddenResponse } from "@/lib/api/route-helpers";
+import {
+  errorResponse,
+  forbiddenResponse,
+  notFoundResponse,
+} from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -70,10 +74,32 @@ export async function ensureTripAccess(options: {
     });
   }
 
-  // If they are not a collaborator, they are forbidden
-  if (!collaboratorResult.data) {
-    return forbiddenResponse("You do not have access to this trip");
+  if (collaboratorResult.data) return null;
+
+  const { data: tripExists, error: existsError } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("id", tripId)
+    .maybeSingle();
+
+  if (existsError) {
+    logger.error("trip_access_existence_check_failed", {
+      error: existsError.message,
+      tripId,
+      userId,
+    });
+    return errorResponse({
+      err: new Error(existsError.message),
+      error: "internal",
+      reason: "Failed to validate trip access",
+      status: 500,
+    });
   }
 
-  return null;
+  if (!tripExists) {
+    return notFoundResponse("Trip");
+  }
+
+  // If they are not a collaborator, they are forbidden
+  return forbiddenResponse("You do not have access to this trip");
 }

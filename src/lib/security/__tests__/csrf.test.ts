@@ -1,7 +1,8 @@
 /** @vitest-environment node */
 
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import { requireSameOrigin } from "@/lib/security/csrf";
 
 /**
@@ -19,6 +20,10 @@ function makeRequest(url: string, headers?: Record<string, string>): NextRequest
 }
 
 describe("requireSameOrigin", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    __resetServerEnvCacheForTest();
+  });
   it("allows matching Origin header", () => {
     const req = makeRequest("https://app.example.com/api/test", {
       origin: "https://app.example.com",
@@ -146,5 +151,15 @@ describe("requireSameOrigin", () => {
       allowedOrigins: ["HTTPS://OTHER.EXAMPLE.NET"],
     });
     expect(result3.ok).toBe(true);
+  });
+
+  it("matches IPv6 origins with bracketed hosts", () => {
+    vi.stubEnv("APP_BASE_URL", "https://[::1]:3000");
+    __resetServerEnvCacheForTest();
+    const req = makeRequest("https://[::1]:3000/api/test", {
+      origin: "https://[::1]:3000",
+    });
+    const result = requireSameOrigin(req);
+    expect(result.ok).toBe(true);
   });
 });

@@ -36,9 +36,8 @@ function normalizeOrigin(input: string): string | null {
     // Produce a case-insensitive origin by lowercasing the scheme and host.
     // url.protocol already includes the trailing colon (e.g., "https:").
     const protocol = url.protocol.toLowerCase();
-    const hostname = url.hostname.toLowerCase();
-    const port = url.port;
-    return `${protocol}//${hostname}${port ? `:${port}` : ""}`;
+    const host = url.host.toLowerCase();
+    return `${protocol}//${host}`;
   } catch {
     return null;
   }

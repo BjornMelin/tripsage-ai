@@ -257,6 +257,24 @@ describe("/api/keys/validate route", () => {
     });
   });
 
+  it("returns NETWORK_ERROR when provider SDK shape is unexpected", async () => {
+    const malformedProvider = vi.fn(() => ({ config: undefined }));
+    mockCreateOpenAI.mockImplementation(() => malformedProvider);
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "openai" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
+    expect(res.status).toBe(200);
+  });
+
   it("returns NETWORK_ERROR for provider 429 responses", async () => {
     const fetchMock = vi
       .fn<FetchLike>()

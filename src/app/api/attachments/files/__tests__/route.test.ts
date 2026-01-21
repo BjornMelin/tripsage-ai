@@ -281,7 +281,7 @@ describe("/api/attachments/files", () => {
     ).toBe(true);
   });
 
-  it("should reject tripId when user is not a collaborator", async () => {
+  it("should return 404 when trip does not exist", async () => {
     const supabase = getApiRouteSupabaseMock();
     const state = getSupabaseMockState(supabase);
 
@@ -294,7 +294,7 @@ describe("/api/attachments/files", () => {
     });
 
     const res = await mod.GET(req, createRouteParamsContext());
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 
   it("should filter by chatMessageId when provided", async () => {
