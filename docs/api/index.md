@@ -98,7 +98,7 @@ See individual endpoint documentation for specific rate limit keys.
 The following rate limits are applied per authenticated user/IP address:
 
 | Endpoint Category | Rate Limit | Time Window | Notes |
-|-------------------|-----------|------------|-------|
+| ----------------- | ---------- | ----------- | ----- |
 | **Read Operations** (list, get) | 100 requests | 1 minute | Standard queries, filters |
 | **Write Operations** (create, update) | 50 requests | 1 minute | CREATE, PUT, PATCH operations |
 | **Delete Operations** | 30 requests | 1 minute | Destructive operations |
@@ -116,7 +116,7 @@ The API uses conventional HTTP response codes to indicate success or failure.
 ### HTTP Status Codes
 
 | Code | Status | Description |
-|------|--------|-------------|
+| ---- | ------ | ----------- |
 | `200` | OK | Request succeeded |
 | `201` | Created | Resource created successfully |
 | `204` | No Content | Success with no response body |
@@ -191,7 +191,7 @@ Pagination details are documented per endpoint where applicable.
 API resources are organized by domain:
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | [Auth](auth.md) | Authentication and login |
 | [Trips](trips.md) | Trip suggestions (read-only HTTP endpoint) |
 | [Agents](agents.md) | AI streaming agents (flights, accommodations, etc.) |
@@ -208,7 +208,7 @@ API resources are organized by domain:
 Internal endpoints for admin and system use:
 
 | Resource | Description |
-|----------|-------------|
+| -------- | ----------- |
 | [Agent Config](internal/config.md) | Agent configuration (admin-only) |
 | [Webhooks](internal/webhooks.md) | Database and file webhooks |
 | [Jobs](internal/jobs.md) | Background job handlers |
@@ -285,7 +285,7 @@ curl -N -X POST "http://localhost:3000/api/chat" \
 ## Related Guides
 
 | Guide | Description |
-|-------|-------------|
+| ------ | ----------- |
 | [Realtime](realtime-api.md) | Supabase Realtime with private channels |
 | [Error Codes](error-codes.md) | Detailed error reference and troubleshooting |
 

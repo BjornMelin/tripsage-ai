@@ -12,7 +12,7 @@ Add conversation memory.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `messages` | array | Yes | Array of message objects with `role` (system/user/assistant) and `content` (string) |
 | `context` | object | No | Additional context data (metadata, tags, etc.) |
 | `sessionId` | string | No | Optional session identifier for grouping conversations |
@@ -52,7 +52,7 @@ Search memories.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `query` | string | Yes | Search query |
 | `limit` | number | No | Maximum results (Minimum: 1, Maximum: 100, Default: 10) |
 
@@ -96,7 +96,7 @@ Get user memory data.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `userId` | string | Yes | User ID |
 
 ### Response
@@ -131,7 +131,7 @@ Delete all memories for a user.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `userId` | string | Yes | User ID |
 
 ### Response
@@ -162,7 +162,7 @@ Get memory context for a user.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `userId` | string | Yes | User ID |
 
 ### Response
@@ -206,7 +206,7 @@ Get memory statistics for a user.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `userId` | string | Yes | User ID |
 
 ### Response
@@ -241,7 +241,7 @@ Get memory preferences for a user.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `userId` | string | Yes | User ID |
 
 ### Response
@@ -276,7 +276,7 @@ Get memory insights for a user.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `userId` | string | Yes | User ID |
 
 ### Response

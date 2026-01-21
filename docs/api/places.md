@@ -14,7 +14,7 @@ Search for activities using Google Places Text Search.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `textQuery` | string | Yes | Search query (min 1 char) |
 | `maxResultCount` | number | No | Maximum results (default: 20, max: 20) |
 | `locationBias` | object | No | Location bias object |
@@ -75,7 +75,7 @@ Get activity/place details by Place ID.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `id` | string | Yes | Google Place ID |
 
 #### Response
@@ -134,7 +134,7 @@ Search for places using Google Places Text Search.
 Identical to `POST /api/activities/search` - see Activities section above for complete schema details.
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `textQuery` | string | Yes | Search query (min 1 char) |
 | `maxResultCount` | number | No | Maximum results (default: 20, max: 20) |
 | `locationBias` | object | No | Location bias {lat, lon, radiusMeters} |
@@ -194,13 +194,13 @@ Get place details by Place ID.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `id` | string | Yes | Google Place ID (with or without `places/` prefix) |
 
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `sessionToken` | string | No | Session token for autocomplete |
 
 #### Response
@@ -260,7 +260,7 @@ Get place photo by photo reference name.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `name` | string | Yes | Photo reference name |
 | `maxWidthPx` | number | No | Maximum width in pixels |
 | `maxHeightPx` | number | No | Maximum height in pixels |
@@ -294,7 +294,7 @@ Geocode an address or reverse geocode coordinates.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `address` | string | No | Address to geocode |
 | `lat` | number | No | Latitude (for reverse geocoding) |
 | `lng` | number | No | Longitude (for reverse geocoding) |
@@ -342,7 +342,7 @@ Get timezone for coordinates.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `lat` | number | Yes | Latitude |
 | `lng` | number | Yes | Longitude |
 | `timestamp` | number | No | Unix timestamp |
@@ -383,7 +383,7 @@ Get distance/duration matrix for multiple origins and destinations.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `origins` | array | Yes | Array of origin waypoints |
 | `destinations` | array | Yes | Array of destination waypoints |
 | `travelMode` | string | No | Travel mode (`DRIVE`, `WALK`, `BICYCLE`, `TRANSIT`) |
@@ -435,7 +435,7 @@ Multimodal route planner.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `origin` | object | Yes | Origin location (place ID or coordinates) |
 | `origin.placeId` | string | No | Google Place ID (e.g., `places/ChIJ...`) |
 | `origin.location` | object | No | Coordinates object |

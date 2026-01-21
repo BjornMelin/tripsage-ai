@@ -75,7 +75,7 @@ Streaming flight search agent.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `origin` | string | Yes | Origin airport IATA code (min 3 chars) |
 | `destination` | string | Yes | Destination airport IATA code (min 3 chars) |
 | `departureDate` | string | Yes | Departure date (YYYY-MM-DD) |
@@ -125,7 +125,7 @@ Streaming accommodation search agent.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `location` | string/object | Yes | Location string or geocoordinates {latitude, longitude} |
 | `checkIn` | string | Yes | Check-in date (YYYY-MM-DD) |
 | `checkOut` | string | Yes | Check-out date (YYYY-MM-DD) |
@@ -166,7 +166,7 @@ Destination research agent.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `interests` | array | Yes | Array of interests: adventure, culture, relaxation, nature, food, history, shopping, family, beach, mountain |
 | `travelStyle` | string | No | Travel style: relaxation, adventure, culture, family (default: balanced) |
 | `budget` | object/string | No | Budget constraints: {min: number, max: number} or "low"/"medium"/"high" |
@@ -205,7 +205,7 @@ Itinerary planning agent.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `destination` | string | Yes | Destination name or coordinates {latitude, longitude} |
 | `startDate` | string | No | Start date (YYYY-MM-DD) or ISO 8601 |
 | `endDate` | string | No | End date (YYYY-MM-DD) or ISO 8601 |
@@ -246,7 +246,7 @@ Budget planning agent that analyzes trip costs and provides spending breakdowns.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `destination` | string | Yes | Destination name or location |
 | `duration` | number | Yes | Trip duration in days |
 | `travelers` | number | Yes | Number of travelers |
@@ -300,7 +300,7 @@ Memory update agent that persists user memory records (preferences, trip history
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `records` | array | Yes | Memory records to persist (max: 25) |
 | `records[].content` | string | Yes | Memory content to store (min length: 1) |
 | `records[].category` | string | No | Category: `user_preference`, `trip_history`, `search_pattern`, `conversation_context`, `other` (unknown values default to `other`) |
@@ -346,7 +346,7 @@ Intent router agent that analyzes user queries and routes them to the appropriat
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `message` | string | Yes | User message or query to be analyzed and routed |
 | `conversationId` | string | No | Conversation ID for context continuity |
 | `context` | object | No | Additional context {location: string, previousIntent: string, sessionData: object} |
@@ -397,7 +397,7 @@ Generic AI streaming endpoint for testing and demo purposes. Disabled by default
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `prompt` | string | No | Prompt to send when `messages` is omitted (max 4000 chars) |
 | `messages` | array | No | Message array (max 16) with `{ role: one of system, user, assistant; content: string (max 2000 chars) }` |
 | `model` | string | No | One of `gpt-4o` or `gpt-4o-mini` (default: `gpt-4o`) |
