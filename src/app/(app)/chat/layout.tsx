@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { ReactNode } from "react";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { requireUser } from "@/lib/auth/server";
 import { ROUTES } from "@/lib/routes";
 
@@ -24,5 +25,9 @@ export default async function ChatLayout({
   children: ReactNode;
 }): Promise<ReactNode> {
   await requireUser({ redirectTo: ROUTES.chat });
-  return children;
+  return (
+    <main id={MAIN_CONTENT_ID} className="flex-1" tabIndex={-1}>
+      {children}
+    </main>
+  );
 }

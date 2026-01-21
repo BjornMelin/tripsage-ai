@@ -5,6 +5,7 @@
 import type { AuthUser } from "@schemas/stores";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { mapSupabaseUserToAuthUser, requireUser } from "@/lib/auth/server";
 import { ROUTES } from "@/lib/routes";
 import { SidebarNav } from "./sidebar-nav";
@@ -82,7 +83,9 @@ export function DashboardLayoutView({
             <SidebarNav items={navItems} />
           </div>
         </aside>
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        <main id={MAIN_CONTENT_ID} className="flex-1 p-6 overflow-y-auto" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     </div>
   );
