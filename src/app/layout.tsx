@@ -90,9 +90,9 @@ async function AppShell({ children }: { children: React.ReactNode }) {
           >
             Skip to main content
           </a>
-          <div id="main-content" className="flex flex-col min-h-screen">
+          <main id="main-content" className="flex flex-col min-h-screen" tabIndex={-1}>
             {children}
-          </div>
+          </main>
           <Toaster />
         </ThemeProvider>
       </PerformanceMonitor>
@@ -100,6 +100,13 @@ async function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Fallback component for the root AppShell.
+ *
+ * Displays a loading state while initial session and theme data are resolved.
+ *
+ * @returns Loading state JSX element.
+ */
 function AppShellFallback() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -111,6 +118,16 @@ function AppShellFallback() {
   );
 }
 
+/**
+ * Root layout component for the application.
+ *
+ * Provides the base HTML structure and wraps children in the AppShell.
+ * Utilizes Geist fonts and handles technical SEO defaults.
+ *
+ * @param props - Layout props.
+ * @param props.children - Page content.
+ * @returns The root HTML document structure.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

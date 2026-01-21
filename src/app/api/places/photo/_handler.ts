@@ -10,12 +10,25 @@ import { errorResponse } from "@/lib/api/route-helpers";
 import { getPlacePhoto } from "@/lib/google/client";
 import { GooglePlacesPhotoError } from "@/lib/google/errors";
 
+/**
+ * Dependencies for the Places Photo handler.
+ */
 export type PlacesPhotoDeps = {
   apiKey: string;
 };
 
 const MAX_PLACES_PHOTO_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Reads a response body into a Uint8Array with a byte size limit.
+ *
+ * Checks for size limits while reading to avoid excessive memory allocation.
+ *
+ * @param response - Fetch response to read.
+ * @param maxBytes - Maximum number of bytes allowed.
+ * @returns Buffer containing the response body.
+ * @throws Error with message 'payload_too_large' if limit exceeded.
+ */
 async function readResponseBodyBytesWithLimit(
   response: Response,
   maxBytes: number
@@ -58,6 +71,16 @@ async function readResponseBodyBytesWithLimit(
   return bytes;
 }
 
+/**
+ * Handles a request to proxy a Google Places photo.
+ *
+ * Validates existence, size limits, and content types before returning the image data.
+ * Supports both direct stream proxying and buffered reads for responses without content length.
+ *
+ * @param deps - Handler dependencies including API key.
+ * @param params - Validated request parameters.
+ * @returns Image response or standard error response.
+ */
 export async function handlePlacesPhoto(
   deps: PlacesPhotoDeps,
   params: PlacesPhotoRequest
@@ -132,7 +155,7 @@ export async function handlePlacesPhoto(
     });
   }
 
-  if (response.body && hasContentLength) {
+  if (hasContentLength) {
     return new NextResponse(response.body, { headers });
   }
 
@@ -141,9 +164,7 @@ export async function handlePlacesPhoto(
       response,
       MAX_PLACES_PHOTO_BYTES
     );
-    const body = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(body).set(bytes);
-    return new NextResponse(body, { headers });
+    return new NextResponse(bytes.buffer as ArrayBuffer, { headers });
   } catch (error) {
     if (error instanceof Error && error.message === "payload_too_large") {
       return errorResponse({
@@ -159,6 +180,4 @@ export async function handlePlacesPhoto(
       status: 502,
     });
   }
-
-  // Unreachable: all response paths should return above.
 }

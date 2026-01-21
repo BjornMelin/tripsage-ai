@@ -1,8 +1,12 @@
 /** @vitest-environment node */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+
+const DIRNAME = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(DIRNAME, "../../../../");
 
 const ROUTES = [
   "src/app/api/activities/search/route.ts",
@@ -13,7 +17,8 @@ const ROUTES = [
 describe("BotID protection for high-cost public routes", () => {
   for (const routePath of ROUTES) {
     it(`enables botId on ${routePath}`, () => {
-      const content = readFileSync(join(process.cwd(), routePath), "utf-8");
+      const resolvedPath = resolve(ROOT, routePath);
+      const content = readFileSync(resolvedPath, "utf-8");
       expect(content).toContain("botId: true");
     });
   }

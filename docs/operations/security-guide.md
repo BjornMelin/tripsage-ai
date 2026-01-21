@@ -65,7 +65,12 @@ USING (
 - **HTTPS**: Required in production
 - **CORS**: Properly configured origins
 - **CSRF**: Enforce same-origin checks (Origin/Referer) on cookie-authenticated mutating routes via `withApiGuards`
-  - **Production requirement**: Set `APP_BASE_URL` or `NEXT_PUBLIC_SITE_URL` so CSRF checks compare against a canonical origin (app throws if missing).
+  - **Production requirement**: Set a canonical origin environment variable so CSRF checks compare against a valid origin (app throws if missing).
+  - **Canonical Origin Precedence**: The runtime resolves the canonical origin by checking environment variables in this specific order:
+    1. `APP_BASE_URL` (Primary)
+    2. `NEXT_PUBLIC_SITE_URL`
+    3. `NEXT_PUBLIC_BASE_URL`
+    4. `NEXT_PUBLIC_APP_URL` (Last fallback)
 - **Monitoring**: Log authentication failures and suspicious activity
 - **Backups**: Regular encrypted database backups
 - **MFA Ops**:

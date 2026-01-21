@@ -114,6 +114,13 @@ type FetchLike = (
 
 type MockFetch = ReturnType<typeof vi.fn<FetchLike>>;
 
+/**
+ * Builds a mock AI provider for testing validation logic.
+ *
+ * @param fetchMock - Vi mock for the fetch implementation.
+ * @param baseUrl - Base URL for the provider API.
+ * @returns A mock provider function that returns a configured model.
+ */
 function buildProvider(fetchMock: MockFetch, baseUrl = "https://provider.test/") {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const config = {
@@ -291,7 +298,7 @@ describe("/api/keys/validate route", () => {
   it("returns REQUEST_TIMEOUT when provider validation times out", async () => {
     const fetchMock = vi
       .fn<FetchLike>()
-      .mockRejectedValue(new DOMException("Timeout", "AbortError"));
+      .mockRejectedValue(new DOMException("Timeout", "TimeoutError"));
     mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
     const { POST } = await import("../route");

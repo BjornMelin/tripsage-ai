@@ -14,18 +14,48 @@ export type SameOriginOptions = {
   allowedOrigins?: string[];
 };
 
+/**
+ * Result of a same-origin verification check.
+ */
 export type SameOriginResult = { ok: true } | { ok: false; reason: string };
 
+/**
+ * Normalizes an origin or referer string for comparison.
+ *
+ * Produces a stable format with lowercase scheme and host. Returns null
+ * if the input is empty, "null" (per RFC 6454), or an invalid URL.
+ *
+ * @param input - The origin or referer string to normalize.
+ * @returns Normalized origin or null.
+ */
 function normalizeOrigin(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed || trimmed.toLowerCase() === "null") return null;
   try {
-    return new URL(trimmed).origin;
+    const url = new URL(trimmed);
+    // Produce a case-insensitive origin by lowercasing the scheme and host.
+    // url.protocol already includes the trailing colon (e.g., "https:").
+    const protocol = url.protocol.toLowerCase();
+    const hostname = url.hostname.toLowerCase();
+    const port = url.port;
+    return `${protocol}//${hostname}${port ? `:${port}` : ""}`;
   } catch {
     return null;
   }
 }
 
+/**
+ * Enforces same-origin constraints on a request.
+ *
+ * Compares the request's Origin or Referer header against the expected
+ * application origin. Used to prevent CSRF on cookie-authenticated routes.
+ *
+ * Priority: Origin header > Referer header.
+ *
+ * @param req - The incoming Next.js request.
+ * @param options - Configuration for allowed origins and missing header behavior.
+ * @returns Success or a failure result with a reason.
+ */
 export function requireSameOrigin(
   req: NextRequest,
   options: SameOriginOptions = {}
