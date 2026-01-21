@@ -1,7 +1,9 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
+import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { ensureTripAccess } from "@/lib/trips/trip-access";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 
 describe("ensureTripAccess", () => {
@@ -65,6 +67,55 @@ describe("ensureTripAccess", () => {
       const body = (await result.json()) as { error?: string; reason?: string };
       expect(body.error).toBe("not_found");
       expect(body.reason).toBe("Trip not found");
+    }
+  });
+
+  it("returns 500 when existence check errors", async () => {
+    const buildTripQuery = () => {
+      const filters: Record<string, unknown> = {};
+      const query = {
+        eq: (key: string, value: unknown) => {
+          filters[key] = value;
+          return query;
+        },
+        maybeSingle: () => {
+          if ("user_id" in filters) {
+            return Promise.resolve({ data: null, error: null });
+          }
+          return Promise.resolve({
+            data: null,
+            error: { message: "existence query failed" },
+          });
+        },
+        select: () => query,
+      };
+      return query;
+    };
+
+    const buildCollaboratorQuery = () => {
+      const query = {
+        eq: (_key: string, _value: unknown) => query,
+        maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        select: () => query,
+      };
+      return query;
+    };
+
+    const supabase = unsafeCast<TypedServerSupabase>({
+      from: (table: string) => {
+        if (table === "trips") return buildTripQuery();
+        if (table === "trip_collaborators") return buildCollaboratorQuery();
+        throw new Error(`Unexpected table: ${table}`);
+      },
+    });
+
+    const result = await ensureTripAccess({ supabase, tripId, userId });
+    expect(result).not.toBeNull();
+    if (result) {
+      expect(result.status).toBe(500);
+      const body = (await result.json()) as { error?: string; reason?: string };
+      expect(body.error).toBe("internal");
+      expect(body.reason).toBe("Failed to validate trip access");
     }
   });
 

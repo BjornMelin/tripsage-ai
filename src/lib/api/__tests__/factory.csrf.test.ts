@@ -58,4 +58,22 @@ describe("withApiGuards CSRF gating", () => {
     expect(res.status).toBe(200);
     expect(REQUIRE_SAME_ORIGIN).toHaveBeenCalledTimes(1);
   });
+
+  it("bypasses CSRF checks when Authorization header is present", async () => {
+    const { withApiGuards } = await import("@/lib/api/factory");
+    const handler = withApiGuards({
+      auth: true,
+      botId: false,
+      csrf: true,
+    })(async () => new Response("ok", { status: 200 }));
+
+    const req = new NextRequest("http://localhost:3000/api/test", {
+      headers: { authorization: "Bearer test-token" },
+      method: "POST",
+    });
+    const res = await handler(req, createRouteParamsContext());
+
+    expect(res.status).toBe(200);
+    expect(REQUIRE_SAME_ORIGIN).not.toHaveBeenCalled();
+  });
 });
