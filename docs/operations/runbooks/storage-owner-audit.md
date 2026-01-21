@@ -11,7 +11,7 @@ Operational checklist to detect and remediate ownership mismatches between Supab
 ## Prerequisites
 
 - Supabase service-role key available for SQL execution.
-- Migrations applied from `supabase/migrations/20251122000000_base_schema.sql` (RLS + owner_id/owner coalesce in storage policies).
+- Migrations applied from `supabase/migrations/20260120000000_base_schema.sql` (RLS + owner_id/owner coalesce in storage policies).
 - Verify migration applied before running queries:
   - Column check: `SELECT column_name FROM information_schema.columns WHERE table_schema = 'storage' AND table_name = 'objects' AND column_name = 'owner_id';` should return one row.
   - Policy check: confirm RLS policies on `storage.objects` reference `owner`/`owner_id` (e.g., via `SELECT policyname, policydefinition FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects';`).

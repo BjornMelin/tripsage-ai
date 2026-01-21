@@ -6,6 +6,7 @@ import "server-only";
 
 import type { IncomingHttpHeaders } from "node:http";
 import { checkBotId } from "botid/server";
+import { getBotIdEnableCsv } from "@/lib/env/server-flags";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
@@ -36,6 +37,34 @@ export interface BotIdVerification {
 const ALLOWED_VERIFIED_BOT_CATEGORIES = ["ai_assistant"] as const;
 
 type AllowedBotCategory = (typeof ALLOWED_VERIFIED_BOT_CATEGORIES)[number];
+
+function normalizeCsvSet(value: string): Set<string> {
+  return new Set(
+    value
+      .split(",")
+      .map((part) => part.trim().toLowerCase())
+      .filter((part) => part.length > 0)
+  );
+}
+
+function getCurrentEnvironmentName(): string {
+  const vercelEnv = process.env.VERCEL_ENV?.trim();
+  if (vercelEnv) return vercelEnv;
+  const nodeEnv = process.env.NODE_ENV?.trim();
+  if (nodeEnv) return nodeEnv;
+  return "development";
+}
+
+/**
+ * Returns true when BotID checks should be enforced for the current runtime.
+ *
+ * The default configuration enables BotID for `production`, `preview`, and `test`.
+ * Local development skips BotID checks unless explicitly enabled via `BOTID_ENABLE`.
+ */
+export function isBotIdEnabledForCurrentEnvironment(): boolean {
+  const enabled = normalizeCsvSet(getBotIdEnableCsv());
+  return enabled.has(getCurrentEnvironmentName().toLowerCase());
+}
 
 /**
  * Error thrown when a bot is detected attempting to access a protected route.

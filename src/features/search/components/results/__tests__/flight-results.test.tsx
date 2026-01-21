@@ -225,7 +225,7 @@ describe("FlightResults", () => {
     const selectButton = screen.getByRole("button", { name: /select flight/i });
     fireEvent.click(selectButton);
 
-    expect(selectButton).toHaveTextContent("Selecting...");
+    expect(selectButton).toHaveTextContent("Selecting…");
 
     await waitFor(() => expect(selectButton).toHaveTextContent("Select Flight"));
     expect(telemetrySpy).toHaveBeenCalledWith(

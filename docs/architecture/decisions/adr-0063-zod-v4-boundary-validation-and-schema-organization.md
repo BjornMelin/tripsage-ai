@@ -1,6 +1,6 @@
 # ADR-0063: Zod v4 boundary validation and schema organization
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Status**: Accepted  
 **Date**: 2026-01-05  
 **Category**: fullstack  
@@ -64,11 +64,21 @@ Environment variables:
 - Server-side env is validated once per process and accessed via the canonical server-only entrypoint `src/lib/env.ts`.
 - Client-safe env access must use `src/lib/env/client.ts` to prevent accidental bundling of server secrets.
 
+### Date/time parsing (Postgres + ISO 8601)
+
+- Postgres `TIMESTAMPTZ` serialization often includes explicit timezone offsets (e.g., `+00:00`), not only `Z`.
+- Canonical datetime validation uses `primitiveSchemas.isoDateTime` (`src/domain/schemas/registry.ts`), implemented as `z.iso.datetime({ offset: true, ... })`.
+- Domain input schemas may accept date-only strings where user UX prefers dates (see SPEC-0102), but storage and API timestamps remain timezone-aware ISO strings.
+
 ## Consequences
 
 - Strong boundary safety and consistent error formatting.
 - Predictable API contracts for Server Actions, Route Handlers, and agent tools.
 - Slight upfront effort to keep schemas organized, but major long-term maintainability gain.
+
+## Post-acceptance updates (2026-01-19)
+
+- Standardized ISO datetime validation to accept timezone offsets (fixes Supabase/Postgres round-trips where timestamps serialize as `+00:00`).
 
 ## References
 
@@ -76,5 +86,6 @@ Environment variables:
 Zod v4 migration guide: https://zod.dev/v4/changelog
 Zod API reference: https://zod.dev/api
 Zod error customization: https://zod.dev/error-customization
+Zod ISO datetime options: https://zod.dev/api?id=iso-datetimes
 Zod strict vs loose object (JSON schema notes): https://zod.dev/json-schema
 ```

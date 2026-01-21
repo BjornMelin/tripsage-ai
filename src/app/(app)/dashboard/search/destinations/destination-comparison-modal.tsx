@@ -253,9 +253,9 @@ export function DestinationComparisonModal({
                         <div className="flex items-center gap-2">
                           <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden max-w-24">
                             <div
-                              className="h-full bg-primary transition-all"
+                              className="h-full w-full origin-left bg-primary transition-transform"
                               style={{
-                                width: `${clampedPopularity}%`,
+                                transform: `scaleX(${clampedPopularity / 100})`,
                               }}
                             />
                           </div>

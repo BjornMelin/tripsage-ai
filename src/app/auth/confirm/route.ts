@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { sanitizeAuthConfirmNextParam } from "@/lib/auth/confirm-next";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
 
 const ALLOWED_EMAIL_OTP_TYPES = new Set<string>([
   "email",
@@ -25,10 +26,36 @@ function parseEmailOtpType(value: string | null): EmailOtpType | null {
 }
 
 export async function GET(request: NextRequest) {
+  const logger = createServerLogger("auth-confirm");
   const { searchParams } = new URL(request.url);
+  const next = sanitizeAuthConfirmNextParam(searchParams.get("next"));
+
+  // Supabase may redirect here with an error payload (e.g., expired link) without token_hash/type.
+  // Route to a user-facing page instead of a non-existent /error path.
+  const error = searchParams.get("error");
+  const errorCode = searchParams.get("error_code");
+  if (error || errorCode) {
+    const params = new URLSearchParams({ error: "auth_confirm_failed", next });
+    if (errorCode) params.set("error_code", errorCode);
+    redirect(`/login?${params.toString()}`);
+  }
+
+  // Supabase OAuth + PKCE flows redirect with `code` to be exchanged for a session.
+  const code = searchParams.get("code");
+  if (code) {
+    const supabase = await createServerSupabase();
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    if (!exchangeError) {
+      redirect(next);
+    }
+    logger.warn("OAuth code exchange failed", {
+      error: exchangeError?.message ?? "unknown",
+      errorCode: exchangeError?.code ?? "unknown",
+    });
+  }
+
   const tokenHash = searchParams.get("token_hash");
   const type = parseEmailOtpType(searchParams.get("type"));
-  const next = sanitizeAuthConfirmNextParam(searchParams.get("next"));
 
   if (tokenHash && type) {
     const supabase = await createServerSupabase();
@@ -41,6 +68,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // On error, redirect to a friendly error page or home
-  redirect("/error");
+  const fallback = new URLSearchParams({ error: "auth_confirm_failed", next });
+  redirect(`/login?${fallback.toString()}`);
 }

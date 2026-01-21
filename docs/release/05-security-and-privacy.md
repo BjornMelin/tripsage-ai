@@ -43,6 +43,39 @@
 - Telemetry identifiers should be hashed/redacted; never log raw tokens, emails, or API keys.
 - File uploads must restrict size/type and enforce per-user access.
 
+## Supabase RLS + Storage (audit notes)
+
+**Source of truth:** `supabase/migrations/20260120000000_base_schema.sql` (squashed, pre-deployment).
+
+### User-scoped tables (examples)
+
+These tables are intended to be scoped to `auth.uid()` (either direct ownership or via trip collaboration helpers):
+
+- `public.trips`, `public.trip_collaborators`, `public.itinerary_items`
+- `public.chat_sessions`, `public.chat_messages`, `public.chat_tool_calls`
+- `public.saved_places`
+- `public.file_attachments`
+- `public.rag_documents` (readable by authenticated; managed by `service_role`)
+- `memories.sessions`, `memories.turns`, `memories.turn_embeddings`
+
+### Storage policies (attachments)
+
+- `supabase/config.toml` defines the `attachments` bucket as private.
+- Access to `storage.objects` is gated by `public.file_attachments` rows (“metadata is the authorization boundary”):
+  - Users can read attachments for trips they can access.
+  - Mutations are owner-only; identity fields (`bucket_name`, `file_path`, `user_id`) are guarded by the DB trigger.
+
+Operational validation:
+
+- See `docs/operations/runbooks/storage-owner-audit.md` for drift checks between `storage.objects` and `public.file_attachments`.
+- See `docs/runbooks/supabase.md` (“Attachments: file_attachments invariants”) for local SQL verification and rollback steps.
+
+### Webhooks (DB → app)
+
+- Webhook payloads are verified (HMAC/QStash signing) before processing.
+- Stripe webhooks are hardened per ADR-0070: signature verification with raw-body preservation, idempotency handling, rate limiting, and payment-event sensitivity.
+- Webhook handler expectations and payload shapes are documented in `docs/api/internal/webhooks.md` and the runbooks under `docs/operations/runbooks/`.
+
 ## Output
 
 Concrete findings and tasks will be tracked in `docs/tasks/INDEX.md` with P0/P1 labels.

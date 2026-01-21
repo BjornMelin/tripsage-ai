@@ -167,7 +167,7 @@ export function ActivitySearchForm({
             context: "ActivitySearchForm",
           }}
           submitLabel="Search Activities"
-          loadingLabel="Searching activities..."
+          loadingLabel="Searching activities…"
           recentItems={recentItems}
           recentLabel="Recent searches"
         >

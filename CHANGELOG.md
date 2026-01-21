@@ -298,32 +298,41 @@
 * **api:** Error type checking now uses code-based detection instead of instanceof.
 
 ## Summary
-- Consolidate NetworkError, TimeoutError, ValidationError into single ApiError class with error codes
-- Remove unused batch(), healthCheck(), sendChat() methods and interceptor system from ApiClient
-- Simplify useAuthenticatedApi hook by removing redundant error re-classification
+
+* Consolidate NetworkError, TimeoutError, ValidationError into single ApiError class with error codes
+* Remove unused batch(), healthCheck(), sendChat() methods and interceptor system from ApiClient
+* Simplify useAuthenticatedApi hook by removing redundant error re-classification
 
 ## Changes
 
 ### error-types.ts
-- Single ApiError class with ApiErrorCode discriminant (NETWORK_ERROR, TIMEOUT_ERROR, etc.)
-- Added static factory methods: ApiError.network(), ApiError.timeout(), ApiError.validation()
-- Code-based type guards: isNetworkError(), isTimeoutError(), isValidationErrorGuard()
-- handleApiError() normalizes all errors to ApiError
+
+* Single ApiError class with ApiErrorCode discriminant (NETWORK_ERROR, TIMEOUT_ERROR, etc.)
+* Added static factory methods: ApiError.network(), ApiError.timeout(), ApiError.validation()
+* Code-based type guards: isNetworkError(), isTimeoutError(), isValidationErrorGuard()
+* handleApiError() normalizes all errors to ApiError
 
 ### api-client.ts (-139 lines)
-- Removed batch() method (0 usage, zen.consensus decision)
-- Removed interceptor system (only no-op interceptors)
-- Removed healthCheck() and sendChat() trivial wrappers
+
+* Removed batch() method (0 usage, zen.consensus decision)
+
+* Removed interceptor system (only no-op interceptors)
+* Removed healthCheck() and sendChat() trivial wrappers
 
 ### use-authenticated-api.ts (-42 lines)
-- Simplified error handling - ApiClient already returns typed ApiError
-- Removed redundant error classification logic
+
+* Simplified error handling - ApiClient already returns typed ApiError
+
+* Removed redundant error classification logic
 
 ### Consumer updates
-- query-error-boundary.tsx: Use code-based error checks
-- trips/[id]/page.tsx: Use handleApiError() and code checks
+
+* query-error-boundary.tsx: Use code-based error checks
+
+* trips/[id]/page.tsx: Use handleApiError() and code checks
 
 ## Migration
+
 ```typescript
 // Before
 if (error instanceof NetworkError) { ... }
@@ -335,9 +344,11 @@ if (isNetworkError(error)) { ... }
 ```
 
 ## Impact
-- Net reduction: 151 lines removed
-- All 3031 tests passing
-- Type-check and lint clean
+
+* Net reduction: 151 lines removed
+
+* All 3031 tests passing
+* Type-check and lint clean
 
 ### Bug Fixes
 
@@ -743,8 +754,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Chat non-stream handler now relies on `persistMemoryTurn` internal handling instead of double-logging persistence errors (`frontend/src/app/api/chat/_handler.ts`).
 * Removed unreachable trip null guard after Supabase `.single()` when creating itinerary items, simplifying error handling (`frontend/src/app/api/itineraries/route.ts`).
 * ICS import errors once again return the raw parse message in `details` (no nested `{ details }` wrapper) when validation fails (`frontend/src/app/api/calendar/ics/import/route.ts`).
-* Restored chat RLS so trip collaborators can read shared sessions and assistant/system messages remain visible by scoping SELECT to session access instead of message authorship (`supabase/migrations/20251122000000_base_schema.sql`).
-* Supabase base migration now skips stub vault creation when `supabase_vault` is installed and disambiguates `agent_config_upsert`/`user_has_trip_access` parameters so `npx supabase migration up` and `npx supabase db lint` succeed locally (`supabase/migrations/20251122000000_base_schema.sql`).
+* Restored chat RLS so trip collaborators can read shared sessions and assistant/system messages remain visible by scoping SELECT to session access instead of message authorship (`supabase/migrations/20260120000000_base_schema.sql`).
+* Supabase base migration now skips stub vault creation when `supabase_vault` is installed and disambiguates `agent_config_upsert`/`user_has_trip_access` parameters so `npx supabase migration up` and `npx supabase db lint` succeed locally (`supabase/migrations/20260120000000_base_schema.sql`).
 * **Accommodation booking**: `bookAccommodation` now uses the real amount and currency from check-availability input, and returns the same `bookingId` that is stored in Supabase.
 * **Upcoming flights pricing**: `UpcomingFlights` renders prices using the flight currency instead of always prefixing USD.
 * **Vitest stability**: Frontend Vitest config now clamps CI workers and adds a sharded `test:ci` script that runs the full suite in smaller batches to avoid jsdom/V8 heap pressure.

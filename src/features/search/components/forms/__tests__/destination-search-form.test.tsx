@@ -22,7 +22,7 @@ vi.mock("@/hooks/use-memory", () => ({
 
 const TypeQuery = (value: string) => {
   const input = screen.getByPlaceholderText(
-    "Search for cities, countries, or landmarks..."
+    "Search for cities, countries, or landmarks…"
   );
   fireEvent.change(input, { target: { value } });
   return input as HTMLInputElement;

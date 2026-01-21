@@ -41,7 +41,7 @@ function getPrefixMismatchError(service: ApiKeyService, apiKey: string): string 
   }
 
   if (service === "openrouter") {
-    return `OpenRouter API keys must start with '${OPENROUTER_PREFIX}' (e.g., 'sk-or-v1-...').`;
+    return `OpenRouter API keys must start with '${OPENROUTER_PREFIX}' (e.g., 'sk-or-v1-…').`;
   }
 
   const expectedPrefix = getExpectedApiKeyPrefix(service);

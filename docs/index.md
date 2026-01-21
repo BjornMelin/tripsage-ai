@@ -67,8 +67,8 @@ cd tripsage-ai
 pnpm install
 
 # Configure environment
-cp .env.example .env
-# Edit .env with your Supabase, Upstash, and AI provider credentials
+cp .env.local.example .env.local
+# Edit .env.local with your Supabase, Upstash, and AI provider credentials
 
 # Start development server
 pnpm dev

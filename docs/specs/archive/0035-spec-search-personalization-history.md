@@ -24,7 +24,7 @@ Capture recent user search activity to personalize accommodations/flight suggest
 - Target window per feature:
 
 | Feature | Default days | Override | Notes |
-|---------|--------------|----------|-------|
+| :--- | :--- | :--- | :--- |
 | Flight search history | 90 | `SEARCH_PERSONALIZATION_TTL_FLIGHTS_DAYS` | Longer relevance for route planning |
 | Hotel search history | 30 | `SEARCH_PERSONALIZATION_TTL_HOTELS_DAYS` | Higher turnover; shorter window |
 
@@ -57,4 +57,4 @@ Capture recent user search activity to personalize accommodations/flight suggest
 ## References
 
 - ADR-0056 (Popular Routes - Flights)
-- pg_cron cleanup added in `supabase/migrations/20251122000000_base_schema.sql`
+- pg_cron cleanup added in `supabase/migrations/20260120000000_base_schema.sql`

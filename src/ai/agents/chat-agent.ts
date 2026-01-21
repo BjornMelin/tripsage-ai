@@ -176,7 +176,7 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
  * const { agent } = createChatAgent(deps, messages, { useCallOptions: true });
  * const stream = agent.stream({
  *   prompt: userMessage,
- *   options: { userId: "user_123", memorySummary: "..." },
+ *   options: { userId: "user_123", memorySummary: "…" },
  * });
  * ```
  */

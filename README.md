@@ -1,7 +1,7 @@
 # 🌟 TripSage AI
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![AI SDK v6](https://img.shields.io/badge/Vercel%20AI%20SDK-v6-blue.svg)](https://v6.ai-sdk.dev)
+[![AI SDK v6](https://img.shields.io/badge/Vercel%20AI%20SDK-v6-blue.svg)](https://ai-sdk.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-SSR-3fcf8e?logo=supabase)](https://supabase.com)
 [![Upstash](https://img.shields.io/badge/Upstash-Redis%20%7C%20QStash-00E9A3?logo=upstash)](https://upstash.com)
@@ -174,7 +174,7 @@ kubectl get pods -l app=tripsage-ai
 ### Environment Configuration
 
 | Variable | Description | Required |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |

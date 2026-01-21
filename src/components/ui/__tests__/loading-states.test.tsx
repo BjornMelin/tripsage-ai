@@ -25,9 +25,9 @@ describe("LoadingOverlay", () => {
   });
 
   it("displays message", () => {
-    render(<LoadingOverlay isVisible={true} message="Loading data..." />);
+    render(<LoadingOverlay isVisible={true} message="Loading data…" />);
 
-    expect(screen.getByText("Loading data...")).toBeInTheDocument();
+    expect(screen.getByText("Loading data…")).toBeInTheDocument();
   });
 
   it("displays progress bar", () => {
@@ -113,12 +113,12 @@ describe("LoadingButton", () => {
 
   it("shows loading text when loading", () => {
     render(
-      <LoadingButton isLoading={true} loadingText="Saving...">
+      <LoadingButton isLoading={true} loadingText="Saving…">
         Click me
       </LoadingButton>
     );
 
-    expect(screen.getByText("Saving...")).toBeInTheDocument();
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
     expect(screen.queryByText("Click me")).not.toBeInTheDocument();
   });
 
@@ -172,12 +172,12 @@ describe("LoadingContainer", () => {
 
   it("displays loading message", () => {
     render(
-      <LoadingContainer isLoading={true} loadingMessage="Loading data...">
+      <LoadingContainer isLoading={true} loadingMessage="Loading data…">
         <div>Content</div>
       </LoadingContainer>
     );
 
-    expect(screen.getByText("Loading data...")).toBeInTheDocument();
+    expect(screen.getByText("Loading data…")).toBeInTheDocument();
   });
 
   it("applies minimum height", () => {
@@ -207,13 +207,13 @@ describe("PageLoading", () => {
   it("renders with default message", () => {
     render(<PageLoading />);
 
-    expect(screen.getByText("Loading page...")).toBeInTheDocument();
+    expect(screen.getByText("Loading page…")).toBeInTheDocument();
   });
 
   it("renders with custom message", () => {
-    render(<PageLoading message="Loading application..." />);
+    render(<PageLoading message="Loading application…" />);
 
-    expect(screen.getByText("Loading application...")).toBeInTheDocument();
+    expect(screen.getByText("Loading application…")).toBeInTheDocument();
   });
 
   it("displays progress bar", () => {
@@ -224,15 +224,13 @@ describe("PageLoading", () => {
   });
 
   it("has correct accessibility attributes", () => {
-    render(<PageLoading message="Loading app..." />);
+    render(<PageLoading message="Loading app…" />);
 
     const all = screen.getAllByRole("status");
-    const wrapper = all.find(
-      (el) => el.getAttribute("aria-label") === "Loading app..."
-    );
+    const wrapper = all.find((el) => el.getAttribute("aria-label") === "Loading app…");
     expect(wrapper).toBeTruthy();
     expect(wrapper).toHaveAttribute("aria-live", "polite");
-    expect(wrapper).toHaveAttribute("aria-label", "Loading app...");
+    expect(wrapper).toHaveAttribute("aria-label", "Loading app…");
   });
 
   it("applies custom className", () => {

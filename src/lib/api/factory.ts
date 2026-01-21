@@ -23,6 +23,7 @@ import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import {
   checkAuthentication,
   errorResponse,
+  getAuthorization,
   getTrustedRateLimitIdentifier,
   parseJsonBody,
   requireUserId,
@@ -38,6 +39,7 @@ import {
   assertHumanOrThrow,
   BOT_DETECTED_RESPONSE,
   isBotDetectedError,
+  isBotIdEnabledForCurrentEnvironment,
 } from "@/lib/security/botid";
 import { secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
@@ -52,13 +54,53 @@ const apiFactoryLogger = createServerLogger("api.factory");
 export type DegradedMode = "fail_closed" | "fail_open";
 
 async function hasAuthCredentials(req: NextRequest): Promise<boolean> {
-  const authorization = req.headers.get("authorization");
+  const authorization = getAuthorization(req);
   if (authorization?.trim()) return true;
+
+  const isSupabaseSsrAuthCookieName = (cookieName: string): boolean => {
+    if (!cookieName.startsWith("sb-")) return false;
+    if (cookieName.endsWith("-auth-token")) return true;
+    return /-auth-token\.\d+$/.test(cookieName);
+  };
+
+  // Prefer request cookies when available (works in tests and Route Handlers).
+  try {
+    if (req.cookies.get("sb-access-token")?.value) return true;
+    if (req.cookies.get("sb-refresh-token")?.value) return true;
+    // Supabase SSR stores the session in a single cookie like `sb-<project>-auth-token`.
+    if (
+      req.cookies
+        .getAll()
+        .some(
+          (cookie) =>
+            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
+        )
+    ) {
+      return true;
+    }
+  } catch (error) {
+    // Fall back to cookies() store (best-effort).
+    apiFactoryLogger.info("Supabase SSR cookie detection failed", {
+      context: "isSupabaseSsrAuthCookieName",
+      error,
+    });
+  }
 
   try {
     const cookieStore = await cookies();
     if (cookieStore.get("sb-access-token")?.value) return true;
     if (cookieStore.get("sb-refresh-token")?.value) return true;
+    // Supabase SSR stores the session in a single cookie like `sb-<project>-auth-token`.
+    if (
+      cookieStore
+        .getAll()
+        .some(
+          (cookie) =>
+            isSupabaseSsrAuthCookieName(cookie.name) && Boolean(cookie.value?.trim())
+        )
+    ) {
+      return true;
+    }
   } catch (error) {
     // If cookies() is unavailable (unexpected in Route Handlers), fall back to header checks.
     apiFactoryLogger.warn("cookies_unavailable_in_route_handler", {
@@ -378,6 +420,8 @@ export async function enforceRateLimit(
 
     const limiter = new Ratelimit({
       analytics: false,
+      dynamicLimits: true,
+      ephemeralCache: false,
       limiter: Ratelimit.slidingWindow(
         config.limit,
         config.window as Parameters<typeof Ratelimit.slidingWindow>[1]
@@ -519,7 +563,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 
       // Handle BotID protection if configured (after auth, before rate limiting)
       // Bot traffic shouldn't count against rate limits
-      if (botIdConfig?.mode) {
+      if (botIdConfig?.mode && isBotIdEnabledForCurrentEnvironment()) {
         try {
           await assertHumanOrThrow(
             getSafeRouteKeyForTelemetry({

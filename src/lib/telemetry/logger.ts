@@ -152,7 +152,7 @@ function emitLog(
  *
  * @example
  * const logger = createServerLogger("api.keys", { redactKeys: ["apiKey"] });
- * logger.info("Key stored", { userId: "123", apiKey: "sk-..." }); // apiKey will be redacted
+ * logger.info("Key stored", { userId: "123", apiKey: "sk-…" }); // apiKey will be redacted
  */
 export function createServerLogger(
   scope: string,

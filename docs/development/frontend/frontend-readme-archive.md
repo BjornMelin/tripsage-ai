@@ -1,53 +1,29 @@
 # TripSage AI Frontend
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
-[![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript)](https://typescriptlang.org)
-[![AI SDK](https://img.shields.io/badge/AI_SDK-v6-orange)](https://ai-sdk.dev)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwind-css)](https://tailwindcss.com)
-[![Supabase](https://img.shields.io/badge/Supabase-SSR-3fcf8e?logo=supabase)](https://supabase.com)
-[![Vitest](https://img.shields.io/badge/Vitest-✓-6e9f18?logo=vitest)](https://vitest.dev)
-[![pnpm](https://img.shields.io/badge/pnpm-9+-f69220?logo=pnpm)](https://pnpm.io)
-
-**Production-ready AI travel assistant with agentic tool calling,
-RAG-enhanced search, streaming intelligence, and enterprise-grade
-security.**
-
-TripSage Frontend is a Next.js 16 application showcasing advanced AI SDK
-v6 integration patterns for production AI agents. It combines
-multi-provider LLM routing, agentic tool orchestration via MCP, hybrid
-RAG retrieval with reranking, and generative UI streaming—all with
-zero-trust security and server-side key management. From basic chat to
-multi-agent travel planning workflows with LangGraph.js state
-management, this frontend shows how to build autonomous agents for
-conversational AI applications.
-
 ## Core Capabilities
 
-### AI & Intelligence
+### AI & Intelligence Features
 
-- **Multi-Provider Routing**: Automatic provider selection across OpenAI,
-  Anthropic, xAI, and OpenRouter with fallback logic
-- **Agentic Tool Calling**: 15+ production tools via AI SDK v6 with Zod
-  schemas—web search, accommodations, flights (Duffel), activities
-  (Google Places), weather, maps, planning, and memory
-- **Hybrid RAG Pipeline**: Vector similarity (pgvector) + keyword search
-  with provider-based reranking (Cohere Rerank v3.5) for optimal
-  retrieval accuracy
-- **Structured Outputs**: Schema-first LLM responses with `generateObject`
-  for deterministic parsing and validation
-- **Generative UI**: Component-driven responses that stream rich UI
-  elements (itinerary cards, booking forms) beyond plain text
+- **Multi-Provider Model Registry**: Centralized resolution supporting OpenAI, Anthropic, OpenRouter, xAI (Grok), and TogetherAI.
+- **Hybrid RAG Pipeline**: Combines `pgvector` similarity search with **TogetherAI Reranking** (Mixedbread mxbai-rerank-large-v2) for ultra-accurate context retrieval.
+- **Tool Approval Flow**: Sensitive operations (e.g., flight booking) require explicit user approval via a deterministic Redis-backed status tracker (`src/ai/tools/server/approvals.ts`).
+- **Generative UI Framework**: Component-driven UI that streams rich interactive elements (Destination cards, Flight offers, Itinerary timelines) directly into the chat.
+- **Token Budgeting**: Dynamic token counting and clamping using `js-tiktoken` to respect model context windows and optimize costs.
 - **Memory & Checkpoints**: Conversation context management with LangGraph.js
-  state persistence and Supabase storage
+  state persistence and Supabase storage.
 
 ### Security & Compliance
 
-- **BYOK Architecture**: User API keys encrypted in Supabase Vault,
-  accessed only via SECURITY DEFINER RPCs with PostgREST JWT claims
-  validation
-- **Tool Approval Flows**: Sensitive operations (bookings, payments) pause
-  streaming and require explicit user approval before execution
+TripSage AI implements a defense-in-depth security model designed for sensitive agentic operations:
+
+- **BYOK (Bring Your Own Key)**: Users can provide API keys for AI providers, which are
+  stored securely in **Supabase Vault** and never accessed by the application backend outside of resolution.
+- **withApiGuards**: A unified factory for Next.js Route Handlers that centralizes:
+  - **MFA (Multi-Factor Authentication)**: Enforces MFA sessions for sensitive tool operations.
+  - **BotID Protection**: Blocks automated scraping and bot traffic using Vercel BotID (Kasada-powered).
+  - **Rate Limiting**: Distributed rate limiting using Upstash Redis with sliding window logic.
+  - **Bounded Payload Parsing**: Protects against DoS by enforcing strict request body size limits.
+- **Proxy Pattern**: Uses a dedicated proxy (`src/proxy.ts`) for CSP nonce generation and applying baseline security headers (HSTS, CSP, etc.).
 - **Token Budgeting**: Automatic counting (js-tiktoken), clamping, and
   usage tracking per provider to prevent overruns and control costs
 - **Rate Limiting**: Centralized Upstash Redis sliding-window limits per
@@ -70,39 +46,18 @@ conversational AI applications.
 - **Attachment Handling**: File uploads to Supabase Storage with signed
   URLs, content validation, and rate-limited ingestion
 
-### Developer Experience
+## Core Tech Stack
 
-- **AI SDK v6 Native**: Full migration from Python—TypeScript-first tools,
-  unified provider API, and strict Zod validation
-- **Type-Safe Everything**: End-to-end TypeScript with strict mode, Zod
-  schemas, and generated Supabase types
-- **High Test Coverage**: 85-90% Vitest coverage with isolated unit tests,
-  integration flows, and Playwright E2E scenarios
-- **Modern Tooling**: Biome for zero-config linting/formatting, TanStack
-  Query for data fetching, Zustand for state
+The application leverages a modern, high-performance stack optimized for agentic workflows and real-time interactions:
 
-## Tech Stack
-
-- **Framework**: Next.js 16 with React 19 and App Router
-- **AI SDK**: AI SDK v6 (core + React hooks + UI Elements)
-- **Providers**: OpenAI, Anthropic, xAI, OpenRouter (BYOK multi-provider)
-- **Language**: TypeScript 5.9 with strict mode
-- **Styling**: Tailwind CSS v4 with CSS-first config
-- **Data/Auth**: Supabase SSR auth with pgvector for embeddings (see
-  `docs/architecture/supabase-ssr-frontend.md` for factory and client usage)
-- **Ratelimit & Cache**: Upstash Redis for distributed rate limiting and
-  caching
-- **Types & Schemas**: Zod v3 for runtime validation
-- **UI Components**: Radix UI primitives with Tailwind styling
-- **State Management**: Zustand for client state
-- **Data Fetching**: TanStack Query v5 for server state management. All data
-  fetching hooks use `useQuery` and `useMutation` with the unified
-  `apiClient` from `useAuthenticatedApi()`.
-- **Testing**: Vitest (unit + integration) + Playwright (e2e)
-- **Code Quality**: Biome (single gate for linting/formatting)
-- **Observability**: OpenTelemetry with Trace Drains
-- **Package Manager**: pnpm ≥9.0.0
-- **Runtime**: Node.js ≥24
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, Turbopack, React Compiler stable)
+- **Library**: [React 19](https://react.dev/)
+- **Intelligence**: [AI SDK v6](https://sdk.vercel.ai/docs) (with `ToolLoopAgent` and Multi-Provider Routing)
+- **State Management**: [Zustand 5](https://github.com/pmndrs/zustand)
+- **Database / Auth**: [Supabase](https://supabase.com/) (SSR, Realtime, Vault)
+- **Middleware / Cache**: [Upstash Redis](https://upstash.com/) (Rate Limiting, Idempotency, Memory)
+- **Styling**: Vanilla CSS (CSS Variables, Flex/Grid)
+- **Observability**: [OpenTelemetry](https://opentelemetry.io/) (@vercel/otel)
 
 ## Code Quality & Patterns
 
@@ -114,26 +69,6 @@ This project follows strict DRY principles and established patterns:
   ([guide](../standards/standards.md#zustand-stores))
 - **Testing**: Centralized utilities in `src/test/`
   ([guide](../testing/testing.md))
-
-### Key Metrics
-
-- Factory adoption: 35/38 routes
-- Inline auth patterns remaining: 4 routes
-- Test suite status: failing (see [`docs/metrics.md`](../docs/metrics.md))
-
-See [metrics](../docs/metrics.md) and
-[performance](../docs/performance.md) for current status.
-
-## Quick Start
-
-```bash
-pnpm install  # Install dependencies
-pnpm dev      # Start development server
-pnpm test     # Run Vitest suite locally
-pnpm test:ci  # Run sharded Vitest suite (CI configuration)
-```
-
-Open [http://localhost:3000](http://localhost:3000) to view the app.
 
 ## Feature Showcase
 
@@ -290,196 +225,61 @@ crawlSite.execute({
 Results are cached in Redis for 6 hours (configurable via `fresh`
 parameter).
 
-### RAG-Enhanced Responses
-
-Hybrid retrieval combines vector similarity and keyword search for optimal
-accuracy:
-
-1. **Embedding**: Provider-based embeddings (OpenAI, Cohere) stored in
-   Supabase pgvector
-2. **Retrieval**: Hybrid query returns top-k candidates (vector +
-   keyword fusion)
-3. **Reranking**: Cohere Rerank v3.5 refines results for relevance
-4. **Caching**: Upstash Redis caches hot queries with short TTL
-5. **Indexing**: CLI and API routes for document ingestion with chunking
-
 ### Generative UI Streaming
 
-Stream rich, interactive components beyond text:
+Stream rich, interactive components directly into the chat using AI SDK v6:
 
 ```typescript
-// Server: Emit generative UI parts
-streamData({
-  type: 'itinerary-card',
-  data: { destinations: [...], activities: [...] }
-});
+// Server: return data that triggers UI components in the ai-elements registry
+return {
+  type: "destination-card",
+  data: {
+    name: "Paris",
+    rating: 4.8,
+    photos: ["..."]
+  }
+};
 
-// Client: Render component blocks
-<GenerativeMessage message={msg}>
-  {msg.content.type === 'itinerary-card' &&
-    <ItineraryCard {...msg.content.data} />}
-</GenerativeMessage>
+// Client: Components in src/components/ai-elements automatically handle structured data
+<MessageContent message={msg} />
+// Handles <DestinationCard />, <FlightCard />, <ItineraryTimeline />, etc.
 ```
 
 ### Tool Approval Flow
 
-Sensitive operations pause streaming and request user confirmation:
+Sensitive operations (e.g., booking a flight, modifying a calendar) pause streaming and require explicit user confirmation:
 
-1. Tool call detected (e.g., `book_accommodation`)
-2. Stream pauses, approval modal appears
-3. User approves/denies with context preview
-4. Stream resumes with tool execution or cancellation
+1. **Tool call detected**: The `bookAccommodation` tool requires approval.
+2. **Approval Request**: The backend uses `requireApproval` (backed by Redis).
+3. **UI Interaction**: The client receives an `approval_required` error code and displays a confirmation modal.
+4. **Execution**: Once approved, the tool call is re-submitted with the same idempotency key.
 
 ## Development Scripts
 
-### Core Commands
+### Operations CLI (`pnpm ops`)
+
+TripSage AI uses a consolidated CLI for infrastructure, AI, and test operations:
 
 ```bash
-pnpm dev          # Start development server
-pnpm build        # Production build
-pnpm build:analyze # Build with bundle analyzer
-pnpm start        # Start production server
+pnpm ops infra check supabase  # Check Auth and Storage health
+pnpm ops infra check upstash   # Test Redis and QStash connectivity
+pnpm ops ai check config       # Validate AI provider setups (OpenRouter, OpenAI, etc.)
+pnpm ops check all             # Full system health diagnostic
 ```
-
-### Code Quality
-
-```bash
-pnpm lint         # Lint code with Biome
-pnpm biome:fix    # Auto-fix linting and formatting issues
-pnpm type-check   # TypeScript type checking
-```
-
-### Testing
-
-```bash
-pnpm test           # Run tests (watch mode)
-pnpm test:run       # Run tests once
-pnpm test:short     # Run tests with short timeouts
-pnpm test:ui        # Run tests with UI
-pnpm test:coverage  # Run tests with coverage
-pnpm test:benchmark # Run performance benchmarks
-pnpm test:e2e:chromium # Run E2E tests (Chromium-only)
-pnpm test:e2e          # Run E2E tests (all configured browsers)
-```
-
-#### Performance Benchmarks
-
-The test suite includes performance benchmarking to ensure tests remain
-fast and maintainable:
-
-```bash
-pnpm test:benchmark
-```
-
-Runs vitest with JSON output, then analyzes results:
-
-- Calculates per-file durations and percentiles (P50, P90, P95)
-- Validates thresholds:
-  - Suite: <20s (configurable via `BENCHMARK_SUITE_THRESHOLD_MS`)
-  - Files: >500ms warning, >3.5s fail (configurable via
-    `BENCHMARK_FILE_WARNING_MS`, `BENCHMARK_FILE_FAIL_MS`)
-- Outputs `.vitest-reports/vitest-report.json` and `benchmark-summary.json`
-
-#### Test Failure Analysis
-
-```bash
-pnpm test:analyze      # Analyze failures from vitest JSON report
-pnpm test:analyze:all  # Full analysis with performance summary
-```
-
-Categorizes failures by type (route context, browser env, schema, async,
-mocks, behavior drift) for targeted debugging. Reads from
-`.vitest-reports/vitest-report.json` by default.
-
-### Operations CLI
-
-Consolidated infrastructure and AI configuration checks:
-
-```bash
-pnpm ops infra check supabase  # Supabase auth health + storage
-pnpm ops infra check upstash   # Redis ping + QStash probe
-pnpm ops ai check config       # AI Gateway/BYOK credential check
-pnpm ops check all             # Run all checks with summary
-```
-
-See `scripts/ops.ts` for implementation details.
 
 ### Utility Scripts
 
 | Script | Purpose |
 | ------ | ------- |
-| `scripts/run-benchmark.mjs` | Wrapper: runs vitest + benchmark analysis |
-| `scripts/benchmark-tests.ts` | Parses vitest JSON, calculates metrics |
-| `scripts/check-boundaries.mjs` | Detects server-only imports in client code |
-| `scripts/test-memory-monitor.mjs` | Memory/timing monitor for test runs |
-| `scripts/ops.ts` | Consolidated ops CLI (infra, AI, tests) |
+| `pnpm ops` | Main entry point for local and production operations. |
+| `vitest` | Modern, fast unit and integration testing suite. |
+| `scripts/check-boundaries.mjs` | ESLint/Import-based check to prevent server-only code in client bundles. |
+| `src/proxy.ts` | Development proxy for security headers and nonce generation. |
 
 ### Maintenance
 
 No Git hooks required in the app. Repository-level hooks are managed via
 pre-commit in the repo root.
-
-## Project Structure
-
-```text
-src/
-├── app/               # Next.js App Router
-│   ├── (auth)/        # Authentication routes
-│   ├── (dashboard)/   # Protected dashboard routes
-│   ├── api/           # API routes & handlers
-│   │   ├── chat/      # Chat API (streaming + non-streaming)
-│   │   ├── keys/      # BYOK management routes
-│   │   ├── rag/       # RAG indexing routes
-│   │   └── tools/     # Tool execution endpoints
-│   ├── auth/          # Auth callbacks
-│   ├── chat/          # Chat interface with AI Elements
-│   └── settings/      # User settings & API key management
-├── components/        # React components
-│   ├── ui/            # Reusable UI primitives (Radix + Tailwind)
-│   ├── features/      # Feature-specific components
-│   ├── layouts/       # Layout components
-│   ├── providers/     # React context providers
-│   ├── ai-elements/   # AI chat components (conversation, message, prompt)
-│   ├── generative/    # Generative UI components (cards, forms)
-│   └── error/         # Error boundaries
-├── lib/               # Core utilities
-│   ├── api/           # API clients
-│   ├── supabase/      # Database integration + RPC helpers
-│   ├── providers/     # AI provider registry & resolution
-│   ├── tools/         # Tool registry with Zod schemas
-│   │   ├── index.ts   # Unified tool exports
-│   │   ├── web.ts     # Web search and crawling
-│   │   ├── accommodations.ts # Accommodation tools + MCP
-│   │   ├── flights.ts # Flight search (Duffel)
-│   │   ├── weather.ts # Weather API tools
-│   │   ├── maps.ts    # Google Maps integration
-│   │   ├── planning.ts # Travel planning tools
-│   │   └── memory.ts  # Memory and conversation tools
-│   ├── rag/           # RAG retriever + indexer
-│   ├── schemas/       # Zod validation schemas
-│   ├── repositories/  # Data access layer
-│   ├── tokens/        # Token counting + budgeting
-│   └── telemetry/     # OpenTelemetry instrumentation
-├── hooks/             # Custom React hooks
-├── stores/            # Zustand state stores
-├── types/             # TypeScript definitions
-├── styles/            # Global styles & CSS
-├── __tests__/         # Unit tests
-└── test-utils/        # Testing utilities
-
-docs/                  # Documentation
-scripts/               # Build & utility scripts
-e2e/                   # End-to-end tests
-public/                # Static assets
-coverage/              # Test coverage reports
-test-results/          # Test artifacts
-package.json           # Dependencies & scripts
-biome.json             # Code formatting/linting
-tsconfig.json          # TypeScript configuration
-next.config.ts         # Next.js configuration
-vitest.config.ts       # Testing configuration
-playwright.config.ts   # E2E testing
-```
 
 ## Environment configuration
 
@@ -567,77 +367,6 @@ All HTTP requests use a single, Zod-enabled client at
 - Auth: use `useAuthenticatedApi()` which injects `Authorization` and
   calls `apiClient` internally.
 
-## Environment Variables
-
-Create a `.env.local` file:
-
-```bash
-# REQUIRED - Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # Server-only
-SUPABASE_JWT_SECRET=your_jwt_secret  # Server-only, required in production (>=16 chars)
-MFA_BACKUP_CODE_PEPPER=your_backup_code_pepper  # Server-only, >=16 chars; falls back to SUPABASE_JWT_SECRET if unset
-
-# REQUIRED - Rate Limiting & Caching
-UPSTASH_REDIS_REST_URL=your_upstash_rest_url
-UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
-
-# OPTIONAL - AI Provider Keys
-# Vercel AI Gateway (primary routing layer for multi-provider support)
-AI_GATEWAY_API_KEY=your_gateway_api_key  # Server-only
-# Server-only, optional override (createGateway baseURL). This repo pins v3/ai for
-# the OpenAI-compatible gateway endpoint; omit to use the SDK default (v1/ai).
-AI_GATEWAY_URL=https://ai-gateway.vercel.sh/v3/ai
-
-# Fallback provider keys (used when BYOK not configured, checked in preference order)
-OPENAI_API_KEY=your_openai_key  # Server-only
-OPENROUTER_API_KEY=your_openrouter_key  # Server-only
-ANTHROPIC_API_KEY=your_anthropic_key  # Server-only
-XAI_API_KEY=your_xai_key  # Server-only
-
-# OPTIONAL - External APIs (for tool functionality)
-# Weather
-OPENWEATHERMAP_API_KEY=your_openweathermap_key  # Server-only
-
-# Flights
-DUFFEL_ACCESS_TOKEN=your_duffel_token  # Server-only (preferred)
-DUFFEL_API_KEY=your_duffel_key  # Server-only (fallback)
-
-# Google Maps Platform
-GOOGLE_MAPS_SERVER_API_KEY=your_google_maps_server_key  # Server-only, IP+API restricted
-NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=your_browser_maps_key  # Client-safe, referrer-restricted
-
-# Web Search & Crawling (Firecrawl v2.5)
-FIRECRAWL_API_KEY=fc-your_firecrawl_key  # Server-only
-FIRECRAWL_BASE_URL=https://api.firecrawl.dev/v2  # Server-only, optional override
-
-# Accommodations (HTTP)
-# Server-only, HTTP fallback endpoint
-ACCOM_SEARCH_URL=your_accommodation_search_endpoint
-# Server-only, Bearer token for HTTP auth
-ACCOM_SEARCH_TOKEN=your_accommodation_search_token
-
-# OPTIONAL - Backend API Configuration
-BACKEND_API_URL=http://localhost:8001  # Server-only, backend API URL for attachments
-
-# OPTIONAL - Next.js Public Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000  # Client-safe, API base URL
-NEXT_PUBLIC_APP_NAME=TripSage  # Client-safe, app name (default: "TripSage")
-NEXT_PUBLIC_BASE_PATH=  # Client-safe, base path for subfolder deployments
-NEXT_PUBLIC_SITE_URL=https://your-site.example.com  # Client-safe, site URL
-
-# OPTIONAL - Analytics & Monitoring
-GOOGLE_ANALYTICS_ID=your_ga_id  # Client-safe
-MIXPANEL_TOKEN=your_mixpanel_token  # Client-safe
-POSTHOG_HOST=https://app.posthog.com  # Client-safe
-POSTHOG_KEY=your_posthog_key  # Client-safe
-
-# OPTIONAL - Development & Debugging
-ANALYZE=false  # Enable bundle analysis
-DEBUG=false  # Enable debug mode
-```
-
 ### BYOK + Gateway
 
 Resolution order per user:
@@ -679,144 +408,7 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-Telemetry:
-
-- Spans `providers.resolve` include attributes `{ path:
-  user-gateway|user-provider|team-gateway, baseUrlHost, baseUrlSource:
-  user|team, provider }`.
-
-## Architecture Highlights
-
-### AI SDK v6 Migration
-
-This frontend represents a complete migration from Python-based LangChain
-tools to AI SDK v6 TypeScript implementation:
-
-- **Before**: Python FastAPI routes with LangChain agents, custom
-  streaming, mixed provider wrappers
-- **After**: Next.js routes with AI SDK v6 `streamText`, Zod tools,
-  unified provider registry
-- **Benefits**: 50% less code, type-safe tools, native streaming,
-  simplified testing, edge runtime support
-
-### Security Model
-
-Zero-trust architecture with defense-in-depth:
-
-1. **BYOK**: User keys never touch client; routes import `"server-only"`
-   and run with `dynamic = "force-dynamic"` so secrets are always
-   processed per request and encrypted at rest in Supabase Vault
-2. **RLS**: Row Level Security enforces data isolation per user
-3. **Claims Validation**: PostgREST JWT claims guard all RPC calls
-4. **Rate Limiting**: Upstash Redis enforces sliding-window limits per
-   user/IP
-5. **PII Redaction**: OpenTelemetry spans automatically redact sensitive
-   data
-6. **Approval Gates**: Critical operations require explicit user consent
-
-### Observability
-
-Full-stack instrumentation without compromising privacy:
-
-- **Tracing**: OpenTelemetry spans track request flow across routes,
-  providers, tools
-- **Metrics**: Token usage, latency, error rates, cache hit ratios
-- **Logs**: Structured logging with correlation IDs and PII redaction
-- **Drains**: Trace data exported to OTEL collector for analysis
-
-## Further Reading
-
-### Development
-
-- [Development Guide](../core/development-guide.md)
-  - Frontend architecture & patterns
-- [Testing Guide](../testing/testing.md) - Testing
-  strategies & coverage requirements
-- [Code Standards](../standards/standards.md) - Code quality,
-  conventions, and Zod schema organization policy
-- [AI SDK Migration Prompts](../docs/prompts/ai-sdk/RUN-ORDER.md) -
-  Complete migration guide
-
-### API Integration
-
-- [API Reference](../docs/api/api-reference.md) - REST API documentation
-- [Realtime API](../docs/api/realtime-api.md) - Supabase realtime
-  integration
-- [Error Codes](../docs/api/error-codes.md) - API error handling
-  reference
-
-### Architecture Documentation
-
-- [System Overview](../docs/architecture/README.md) - High-level
-  architecture
-- [Data Architecture](../docs/architecture/data-architecture.md) -
-  Database & data flow design
-- [Storage Architecture](../docs/architecture/storage-architecture.md) -
-  File storage & caching
-
-### Operations
-
-- [Deployment Guide](../docs/operations/deployment-guide.md) - Production
-  deployment
-- [Security Guide](../docs/operations/security-guide.md) - Security
-  implementation
-- [Operators Reference](../docs/operations/operators-reference.md) - DevOps
-  operations
-
-### Decision Records
-
-- [Architecture Decisions](../docs/adrs/README.md) - Technical decision
-  history
-- [AI SDK v6 ADRs](../docs/adrs/adr-0023-adopt-ai-sdk-v6-foundations.md) -
-  AI SDK migration decisions
-- [Technical Debt](../docs/TECH_DEBT.md) - Known technical debt &
-  priorities
-
-## Key Architectural Decisions
-
-This frontend embodies several critical architectural decisions:
-
-- **[ADR-0023](../docs/adrs/adr-0023-adopt-ai-sdk-v6-foundations.md)**:
-  AI SDK v6 foundations with streaming and server-only secrets
-- **[ADR-0024](../docs/adrs/adr-0024-byok-routes-and-security.md)**:
-  BYOK architecture with Supabase Vault
-- **[ADR-0026](../docs/adrs/adr-0026-adopt-ai-elements-ui-chat.md)**:
-  AI Elements for standardized chat UI
-- **[ADR-0028](../docs/adrs/adr-0028-provider-registry.md)**: Multi-provider
-  registry with fallback and attribution
-- **[ADR-0031](../docs/adrs/adr-0031-nextjs-chat-api-ai-sdk-v6.md)**:
-  Next.js chat API with SSE and non-stream modes
-- **[ADR-0033](../docs/adrs/adr-0033-rag-advanced-v6.md)**: Hybrid RAG with
-  reranking
-- **[ADR-0034](../docs/adrs/adr-0034-structured-outputs-object-generation.md)**:
-  Structured outputs with `generateObject`
-
-## Conventions
-
-- Node version is sourced from the repo root `/.nvmrc` (`v24`).
-- Tailwind CSS v4 uses PostCSS plugin; a minimal `tailwind.config.mjs`
-  exists to satisfy shadcn tooling.
-- All linting/formatting via Biome; do not add ESLint/Prettier. Fix code
-  rather than relaxing rules.
-- Ignore rules are centralized in the repo root `.gitignore`.
-- Local quality gates:
-  - `pnpm biome:check && pnpm type-check && pnpm test:run`
-  - Optional UI: `pnpm test:ui`
-
-## Contributing
-
-See the [Development Guide](../docs/development/development-guide.md)
-for code standards, testing requirements, and PR workflow.
-
-## License
-
-MIT - See [LICENSE](../LICENSE) for details.
-
----
-
-**Built by Bjorn Melin** as an exploration of production AI application
-patterns with Next.js, AI SDK v6, modern TypeScript, and Vercel.
-
-- All data models are defined using Zod v4 schemas in `src/lib/schemas/`.
-  Types are inferred from these schemas (via `z.infer`) as the single
-  source of truth for both runtime validation and TypeScript types.
+- **Tracing**: OpenTelemetry spans track request flow across routes, providers, and tools (configured in `src/instrumentation.ts`).
+- **Metrics**: Real-time tracking of token usage (`js-tiktoken`), latency, and error rates via `fireAndForgetMetric`.
+- **Logs**: Structured JSON logging with PII redaction and secret masking (`redactErrorForLogging`).
+- **Distributed tracing**: Spans `providers.resolve` include attributes `{ strategy: user-vault|server-fallback|gateway, provider, model }`.

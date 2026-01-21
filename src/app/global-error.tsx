@@ -6,7 +6,9 @@
 
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
+import { getUserIdFromUserStore } from "@/lib/client/user-store";
 import { errorService } from "@/lib/error-service";
 import { fireAndForget } from "@/lib/utils";
 
@@ -19,21 +21,22 @@ export default function GlobalError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  error: unknown;
   reset: () => void;
 }) {
   useEffect(() => {
+    const normalized = normalizeThrownError(error);
     // Report the critical error
-    const errorReport = errorService.createErrorReport(error, undefined, {
+    const errorReport = errorService.createErrorReport(normalized, undefined, {
       sessionId: getSessionId(),
-      userId: getUserId(),
+      userId: getUserIdFromUserStore(),
     });
 
     fireAndForget(errorService.reportError(errorReport));
 
     // Log critical error in development (production uses errorService only)
     if (process.env.NODE_ENV === "development") {
-      console.error("CRITICAL: Global error boundary caught error:", error);
+      console.error("CRITICAL: Global error boundary caught error:", normalized);
     }
   }, [error]);
 
@@ -44,20 +47,4 @@ export default function GlobalError({
       </body>
     </html>
   );
-}
-
-/**
- * Gets the current user ID from the user store.
- *
- * @returns User ID or undefined if not available
- */
-function getUserId(): string | undefined {
-  try {
-    const userStore = (
-      window as typeof window & { userStore?: { user?: { id?: string } } }
-    ).userStore;
-    return userStore?.user?.id;
-  } catch {
-    return undefined;
-  }
 }

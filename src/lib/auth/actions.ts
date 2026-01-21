@@ -16,7 +16,11 @@ import { safeNextPath } from "@/lib/auth/redirect-server";
 import { getTrustedRateLimitIdentifierFromHeaders } from "@/lib/ratelimit/identifier";
 import type { RouteRateLimitKey } from "@/lib/ratelimit/routes";
 import { type FieldErrors, zodErrorToFieldErrors } from "@/lib/result";
-import { assertHumanOrThrow, isBotDetectedError } from "@/lib/security/botid";
+import {
+  assertHumanOrThrow,
+  isBotDetectedError,
+  isBotIdEnabledForCurrentEnvironment,
+} from "@/lib/security/botid";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { toAbsoluteUrl } from "@/lib/url/server-origin";
@@ -27,6 +31,7 @@ const logger = createServerLogger("auth.actions");
 async function enforceBotIdForAuthAction(
   actionName: string
 ): Promise<{ status: "error"; error: string } | null> {
+  if (!isBotIdEnabledForCurrentEnvironment()) return null;
   try {
     const requestHeaders = await headers();
     await assertHumanOrThrow(actionName, {
@@ -56,8 +61,10 @@ async function enforceRateLimitForAuthAction(
   const ipHash = getTrustedRateLimitIdentifierFromHeaders(requestHeaders);
   const identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
 
+  const degradedMode =
+    process.env.NODE_ENV === "development" ? "fail_open" : "fail_closed";
   const result = await enforceRateLimit(rateLimitKey, identifier, {
-    degradedMode: "fail_closed",
+    degradedMode,
   });
   if (!result) return null;
 

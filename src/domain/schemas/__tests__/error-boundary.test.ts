@@ -15,7 +15,7 @@ describe("errorBoundaryPropsSchema", () => {
     const validProps = {
       children: "test",
       fallback: () => null,
-      onError: (error: Error) => console.log(error),
+      onError: (error: unknown) => console.log(error),
     };
 
     expect(() => errorBoundaryPropsSchema.parse(validProps)).not.toThrow();

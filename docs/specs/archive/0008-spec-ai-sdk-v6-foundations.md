@@ -39,7 +39,7 @@
 ## Non-Functional
 
 - Linting: Ensure no new lint errors in added files; acknowledge 3rd-party component rules may differ.
-- Build: `pnpm build` must succeed with required public env set (e.g., `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
+- Build: `pnpm build` must succeed with required public env set (e.g., `NEXT_PUBLIC_SUPABASE_URL`, and either `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)).
 - Security: No server secrets referenced from client components; route emits no sensitive details.
 
 ## Out of Scope

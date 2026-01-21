@@ -31,7 +31,7 @@ specific features or components.
 ## Active Specifications
 
 | Spec | Title | Status | Date |
-|------|-------|--------|------|
+| :--- | :--- | :--- | :--- |
 | [SPEC-0100](active/0100-spec-application-architecture.md) | Application architecture (Next.js RSC + TanStack Query) | Final | 2026-01-05 |
 | [SPEC-0101](active/0101-spec-auth-and-session.md) | Auth and session | Final | 2026-01-05 |
 | [SPEC-0102](active/0102-spec-trips-domain.md) | Trips domain | Final | 2026-01-05 |
@@ -43,6 +43,7 @@ specific features or components.
 | [SPEC-0108](active/0108-spec-security-and-abuse-protection.md) | Security and abuse protection | Final | 2026-01-05 |
 | [SPEC-0109](active/0109-spec-testing-quality-and-ci.md) | Testing, quality, and CI | Final | 2026-01-05 |
 | [SPEC-0110](active/0110-spec-deployment-and-operations.md) | Deployment and operations (Vercel + Supabase + Upstash) | Final | 2026-01-05 |
+| [SPEC-0111](active/0111-spec-payments-and-stripe.md) | Payments and Stripe (server-only + webhooks) | Final | 2026-01-19 |
 
 ## Archived Specifications
 

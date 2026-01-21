@@ -173,12 +173,14 @@ describe("ErrorBoundary", () => {
       reset,
       retry,
     }: {
-      error?: Error;
+      error?: unknown;
       reset?: () => void;
       retry?: () => void;
     }) => (
       <div>
-        <div data-testid="err">{error?.message}</div>
+        <div data-testid="err">
+          {error instanceof Error ? error.message : "unknown"}
+        </div>
         {retry && (
           <button type="button" onClick={retry} aria-label="try-again">
             Try Again
@@ -245,10 +247,16 @@ describe("ErrorBoundary", () => {
      * @param reset - Function to reset the error boundary state.
      * @returns Custom error UI component.
      */
-    const CustomFallback = ({ error, reset }: { error: Error; reset?: () => void }) => (
+    const CustomFallback = ({
+      error,
+      reset,
+    }: {
+      error: unknown;
+      reset?: () => void;
+    }) => (
       <div>
         <h1>Custom Error UI</h1>
-        <p>{error.message}</p>
+        <p>{error instanceof Error ? error.message : "unknown"}</p>
         <button
           type="button"
           onClick={

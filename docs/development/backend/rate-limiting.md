@@ -32,6 +32,17 @@ References:
 - <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
 - <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
 
+## Dynamic limits (global)
+
+TripSage enables Upstash “dynamic limits” support by setting `dynamicLimits: true` when constructing `Ratelimit` instances (API routes, webhooks, AI tools). This allows operators to set a global limit at runtime via Upstash dynamic limit APIs (`setDynamicLimit`, `getDynamicLimit`) and adds one Redis command per rate-limit check.
+
+Note: When `dynamicLimits` is enabled on a `Ratelimit` instance, the default ephemeral cache can keep identifiers marked as blocked until their reset timestamp expires. Raising limits at runtime via `setDynamicLimit`/`getDynamicLimit` may not take immediate effect for those cached blocked identifiers; clear the ephemeral cache or wait for expiry if you need immediate impact.
+
+References:
+
+- <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods>
+- ADR-0032: `docs/architecture/decisions/adr-0032-centralized-rate-limiting.md`
+
 ## Redis access (canonical)
 
 Always obtain Redis via `getRedis()`:

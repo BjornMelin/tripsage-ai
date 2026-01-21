@@ -4,7 +4,9 @@ Task-focused guide for Supabase operations. For schema/design context, see `../.
 
 ## Scope & Prerequisites
 
-- Supabase CLI installed and authenticated (`supabase --version`, `supabase login`).
+- Supabase CLI available:
+  - Local: use repo scripts (`pnpm supabase:*`) which run a pinned CLI via `pnpm dlx` (no global install required).
+  - Remote ops: install the CLI (or use `pnpm dlx supabase@<version>`) and authenticate (`supabase login`).
 - Access to project `project-ref`, service role key, and Vault-enabled Supabase project.
 - Local env ready for this repo (PNPM, Node, `supabase` directory present).
 
@@ -12,16 +14,36 @@ Task-focused guide for Supabase operations. For schema/design context, see `../.
 
 ### Local Dev Stack
 
-1. Start services: `supabase start`
-2. Reset and apply migrations: `supabase db reset`
-3. (Alt) Apply canonical schema to external Postgres: `cd supabase && psql "$DATABASE_URL" -f schema.sql`
+Use the pinned Supabase CLI via repo scripts:
+
+1. Start services: `pnpm supabase:start`
+2. Reset and apply migrations: `pnpm supabase:db:reset` (skips `supabase/seed.sql`; use `pnpm supabase:seed:*`)
+3. Print local URLs/keys: `pnpm supabase:status`
+4. (Optional) One-shot bootstrap: `pnpm supabase:bootstrap`
+5. (Optional) Seed deterministic data:
+   - `pnpm supabase:seed:dev` (UI development dataset)
+   - `pnpm supabase:seed:e2e` (Playwright/E2E dataset)
+   - `pnpm supabase:seed:payments` (payments/Stripe dataset)
+   - `pnpm supabase:seed:calendar` (calendar/OAuth dataset)
+   - `pnpm supabase:seed:edge-cases` (validation/error-path dataset)
+   - `pnpm supabase:reset:*` scripts (reset + seed): `dev`, `e2e`, `payments`, `calendar`, `edge-cases`
+6. (Alt) Apply canonical schema to external Postgres: `cd supabase && psql "$DATABASE_URL" -f schema.sql`
+
+Local sign-up confirmation:
+
+- Supabase local uses Inbucket by default (sometimes shown as Mailpit in `pnpm supabase:status`) (see `supabase/config.toml` `[inbucket]`).
+- Open `http://localhost:54324` and click the confirmation link for the user you created.
 
 ### New Supabase Project
 
 1. Create project in dashboard; capture `project-ref` and DB URL.
 2. Link repo: `supabase link --project-ref <project-ref>`
 3. Push schema + seed: `supabase db push --include-seed`
-4. Generate types after changes: `supabase gen types typescript --local > src/lib/supabase/database.types.ts`
+4. Generate types after changes:
+   - Local (recommended for PRs): `pnpm supabase:bootstrap && pnpm supabase:typegen`
+   - Remote (if you must typegen without local Supabase):
+     `pnpm dlx supabase@2.72.8 gen types --lang typescript --project-id <project-ref> --schema auth --schema public --schema memories --schema storage > src/lib/supabase/database.types.ts`
+     (requires `SUPABASE_ACCESS_TOKEN` in your shell)
 
 ### Required Environment Variables
 
@@ -221,7 +243,7 @@ Automate drift detection with `scripts/operators/verify_webhook_secret.sh`; it f
 ## Webhook Types
 
 | Webhook | Trigger Tables | Route | Purpose |
-|---------|---------------|-------|---------|
+| --- | --- | --- | --- |
 | Trips | `trip_collaborators` | `/api/hooks/trips` | Enqueue collaborator notifications via QStash |
 | Cache | `trips`, `flights`, `accommodations`, `search_*`, `chat_*` | `/api/hooks/cache` | Bump cache tag versions in Upstash Redis |
 | Files | `file_attachments` | `/api/hooks/files` | Process file uploads |
@@ -230,7 +252,7 @@ Automate drift detection with `scripts/operators/verify_webhook_secret.sh`; it f
 ## Realtime Operations
 
 | Topic Pattern | Access | Use Case |
-|--------------|--------|----------|
+| --- | --- | --- |
 | `user:{user_id}` | Subject user only | Per-user notifications, agent status |
 | `session:{session_id}` | Session owner + trip collaborators | Chat session updates, typing indicators |
 | `trip:{trip_id}` | Trip owner + collaborators | Trip collaboration events |
@@ -339,7 +361,7 @@ WHERE schemaname = 'public'
 - [ ] All 5 providers functional (OpenAI, Anthropic, xAI, OpenRouter, Gateway)
 - [ ] Webhook GUCs match `HMAC_SECRET`; verification script passes
 - [ ] Required env vars present (Supabase, Redis/QStash, HMAC, Resend, AI keys)
-- [ ] Migrations applied (consolidated: `20251122000000_base_schema.sql`); types regenerated
+- [ ] Migrations applied (consolidated: `20260120000000_base_schema.sql`); types regenerated
 - [ ] RLS policies active on: `api_keys`, `api_gateway_configs`, `user_settings`
 - [ ] Vector indexes healthy; no critical slow queries in `pg_stat_statements`
 

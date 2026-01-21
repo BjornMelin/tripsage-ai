@@ -8,6 +8,9 @@ import Stripe from "stripe";
 import { getServerEnvVar } from "@/lib/env/server";
 import { getRequiredServerOrigin } from "@/lib/url/server-origin";
 
+let stripeClient: Stripe | null = null;
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-12-15.clover";
+
 /**
  * Get or create Stripe client instance.
  *
@@ -15,14 +18,20 @@ import { getRequiredServerOrigin } from "@/lib/url/server-origin";
  * @throws {Error} If STRIPE_SECRET_KEY is not configured
  */
 export function getStripeClient(): Stripe {
-  const secretKey = getServerEnvVar("STRIPE_SECRET_KEY");
+  if (stripeClient) return stripeClient;
+
+  const secretKey = getServerEnvVar("STRIPE_SECRET_KEY").trim();
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY environment variable is required");
   }
-  // Use default API version (latest) - explicitly setting causes type mismatch
-  return new Stripe(secretKey, {
+
+  // Pin API version to avoid dashboard changes impacting behavior. Update this when
+  // upgrading the Stripe SDK/types.
+  stripeClient = new Stripe(secretKey, {
+    apiVersion: STRIPE_API_VERSION,
     typescript: true,
   });
+  return stripeClient;
 }
 
 /**

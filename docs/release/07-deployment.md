@@ -28,10 +28,10 @@ Common operational env vars (non-exhaustive, names only):
 - Supabase: `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`
 - Upstash Redis: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 - Upstash QStash: `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
-- AI gateway/providers: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `EMBEDDINGS_API_KEY`
+- AI gateway/providers: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `TOGETHER_AI_API_KEY`, `EMBEDDINGS_API_KEY`
 - Search/crawl: `FIRECRAWL_API_KEY`, `FIRECRAWL_BASE_URL`
 - Maps/weather: `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `OPENWEATHERMAP_API_KEY`
-- Payments: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- Payments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - Email: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`
 - Security: `HMAC_SECRET`, `MFA_BACKUP_CODE_PEPPER`, `TELEMETRY_AI_DEMO_KEY`, `COLLAB_WEBHOOK_URL`
 - Flags: `ENABLE_AI_DEMO`, `DEBUG`, `ANALYZE`
@@ -64,8 +64,9 @@ Source of truth lives in `supabase/migrations/`.
 
 Local:
 
-- `supabase start`
-- `supabase db reset --debug`
+- `pnpm supabase:bootstrap`
+- `pnpm supabase:reset:dev` (optional seed)
+- `pnpm supabase:typegen` (after migration changes)
 
 Prod:
 
@@ -74,10 +75,14 @@ Prod:
 
 Database → Vercel webhooks are documented in `docs/operations/supabase-webhooks.md`.
 
+### Supabase CLI upgrades (local dev)
+
+Supabase recommends stopping local containers and deleting data volumes before upgrading the CLI to ensure local services can apply internal migrations on a clean state (`supabase stop --no-backup`). This repo pins the Supabase CLI only for the direct CLI scripts (`supabase:status`, `supabase:typegen`) via `pnpm dlx supabase@2.72.8`; the other Supabase-related scripts run via `tsx scripts/supabase/*.ts` and do not pin the CLI version.
+
 ## References (full URLs)
 
-- Next.js deployment docs: https://nextjs.org/docs/app/building-your-application/deploying
-- Vercel Next.js docs: https://vercel.com/docs/frameworks/nextjs
-- Supabase docs: https://supabase.com/docs
-- Upstash docs: https://upstash.com/docs
-- Supabase CLI: https://supabase.com/docs/guides/cli
+- Next.js deployment docs: <https://nextjs.org/docs/app/building-your-application/deploying>
+- Vercel Next.js docs: <https://vercel.com/docs/frameworks/nextjs>
+- Supabase docs: <https://supabase.com/docs>
+- Upstash docs: <https://upstash.com/docs>
+- Supabase CLI: <https://supabase.com/docs/guides/cli>

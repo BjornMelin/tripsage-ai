@@ -15,11 +15,9 @@ vi.mock("ai", () => ({
   embed: mockEmbed,
 }));
 
-// Mock OpenAI provider
-vi.mock("@ai-sdk/openai", () => ({
-  openai: {
-    embeddingModel: vi.fn(() => "mock-embedding-model"),
-  },
+vi.mock("@/lib/ai/embeddings/text-embedding-model", () => ({
+  getTextEmbeddingModel: () => "mock-embedding-model",
+  TEXT_EMBEDDING_DIMENSIONS: 1536,
 }));
 
 // Mock telemetry
@@ -38,11 +36,31 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 // Mock reranker
-vi.mock("../reranker", () => ({
-  createReranker: () => ({
-    rerank: mockRerank,
-  }),
-}));
+vi.mock("../reranker", () => {
+  class NoOpReranker {
+    // biome-ignore lint/suspicious/useAwait: Interface requires async signature
+    async rerank(
+      _query: string,
+      documents: unknown[],
+      topN: number
+    ): Promise<unknown[]> {
+      // Align with real NoOpReranker: return documents sorted by combinedScore
+      const docs = documents as Array<{ combinedScore: number }>;
+      const effectiveTopN = Math.min(topN, docs.length);
+      return [...docs]
+        .sort((a, b) => b.combinedScore - a.combinedScore)
+        .slice(0, effectiveTopN);
+    }
+  }
+
+  return {
+    createReranker: (config?: { provider?: string }) => {
+      if (config?.provider === "noop") return new NoOpReranker();
+      return { rerank: mockRerank };
+    },
+    NoOpReranker,
+  };
+});
 
 // Import after mocks
 import { retrieveDocuments, semanticSearch } from "../retriever";

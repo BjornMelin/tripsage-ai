@@ -115,7 +115,7 @@ describe("FlightCard", () => {
     expect(screen.getByRole("button", { name: /select flight/i })).toBeDisabled();
   });
 
-  it("shows Selecting... when isOptimisticSelecting", () => {
+  it("shows Selecting… when isOptimisticSelecting", () => {
     render(<FlightCard {...defaultProps} isOptimisticSelecting />);
 
     expect(screen.getByRole("button", { name: /selecting/i })).toBeInTheDocument();

@@ -61,6 +61,7 @@ function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
   if (!redis) return undefined;
   return new Ratelimit({
     analytics: true,
+    dynamicLimits: true,
     limiter: Ratelimit.slidingWindow(20, "1 m"),
     prefix: "ratelimit:tools:web-search-batch",
     redis,

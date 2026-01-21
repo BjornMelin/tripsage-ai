@@ -1,6 +1,11 @@
 # Environment Setup Guide (local development)
 
-Copy the root `.env.example` to `.env`, then follow the checklists below to populate every variable. Copy root `.env.test.example` to `.env.test` for local/CI test runs. All service-specific env files are derived from the root templates.
+For local Next.js development, copy the root `.env.local.example` to `.env.local`, then follow the checklists below to populate the required variables. Copy `.env.test.example` to `.env.test` for local/CI test runs.
+
+Notes:
+
+- `.env.example` remains the canonical reference template for deployment/onboarding, but Next.js local development should use `.env.local`.
+- Never commit `.env.local` (it contains secrets); commit templates only.
 
 ## Core & Supabase
 
@@ -39,6 +44,8 @@ Copy the root `.env.example` to `.env`, then follow the checklists below to popu
   - `ANTHROPIC_API_KEY` — <https://console.anthropic.com>
   - `XAI_API_KEY` — <https://console.x.ai>
   - `OPENROUTER_API_KEY` — <https://openrouter.ai/keys>
+- Reranking provider (optional; used by RAG search):
+  - `TOGETHER_AI_API_KEY` — <https://www.together.ai>
 - Optional:
   - `EMBEDDINGS_API_KEY` (internal key for `/api/embeddings`; required, otherwise the endpoint is disabled)
 
@@ -71,6 +78,7 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 
 - Stripe keys (<https://dashboard.stripe.com/apikeys>):
   - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET` (<https://dashboard.stripe.com/webhooks>)
   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
 ## Email / notifications
@@ -104,8 +112,9 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 
 > **Note**: This is a reusable onboarding template. Copy and complete when setting up a new development environment.
 
-- [ ] `.env` copied from root `.env.example`
-- [ ] `.env.test` copied from root `.env.test.example` for local/CI test runs
+- [ ] `.env.local` copied from root `.env.local.example` (Next.js local dev)
+- [ ] `.env` copied from root `.env.example` (optional — only if you need shared defaults/legacy workflows)
+- [ ] `.env.test` copied from root `.env.test.example` (local/CI test runs)
 - [ ] Supabase URL + public key (publishable or anon) + service role key present
 - [ ] Upstash Redis REST URL + token present
 - [ ] QStash token + signing keys present

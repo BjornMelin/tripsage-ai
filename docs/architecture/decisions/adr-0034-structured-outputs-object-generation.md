@@ -26,5 +26,5 @@ Consequences
 
 References
 
-- Generating Structured Data: <https://v6.ai-sdk.dev/docs/ai-sdk-core/generating-structured-data>
+- Generating Structured Data: <https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data>
 - AI SDK UI Object Generation: <https://ai-sdk.dev/docs/ai-sdk-ui/object-generation>

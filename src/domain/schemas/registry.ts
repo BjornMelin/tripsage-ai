@@ -7,7 +7,7 @@ import { z } from "zod";
 /**
  * Base primitive schemas with enhanced validation (Zod v4 patterns)
  * Uses top-level helpers: z.email(), z.uuid(), z.url(), z.iso.datetime()
- * Uses unified error option: { error: "..." }
+ * Uses unified error option: { error: "…" }
  */
 export const primitiveSchemas = {
   email: z.email({ error: "Invalid email address" }),
@@ -26,7 +26,9 @@ export const primitiveSchemas = {
     .regex(/^[A-Z]{3}$/, {
       error: "Invalid currency code format (must be 3 uppercase letters)",
     }),
-  isoDateTime: z.iso.datetime({ error: "Invalid datetime format" }),
+  // Postgres commonly serializes timestamps with timezone offsets (+00:00), not just `Z`.
+  // Zod reference: `z.iso.datetime({ offset: true })` (zod@4.x): https://zod.dev/api?id=iso-datetimes
+  isoDateTime: z.iso.datetime({ error: "Invalid datetime format", offset: true }),
 
   // Array schemas with Zod v4 improved generics
   nonEmptyArray: <T>(schema: z.ZodType<T>) =>

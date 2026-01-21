@@ -120,7 +120,7 @@ describe("security/api-key-validation", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toBe(
-        "OpenRouter API keys must start with 'sk-or-' (e.g., 'sk-or-v1-...')."
+        "OpenRouter API keys must start with 'sk-or-' (e.g., 'sk-or-v1-…')."
       );
     }
   });
@@ -138,7 +138,7 @@ describe("security/api-key-validation", () => {
     ["openai", "OpenAI API keys must start with 'sk-'."],
     [
       "openrouter",
-      "OpenRouter API keys must start with 'sk-or-' (e.g., 'sk-or-v1-...').",
+      "OpenRouter API keys must start with 'sk-or-' (e.g., 'sk-or-v1-…').",
     ],
     ["xai", "xAI API keys must start with 'xai-'."],
   ] as const)("rejects invalid key prefixes for %s", (service, expectedError) => {

@@ -206,7 +206,7 @@ export function ActiveSessionsList({ sessions }: ActiveSessionsListProps) {
                 disabled={pendingIds.has(session.id)}
                 onClick={() => handleTerminate(session.id)}
               >
-                {pendingIds.has(session.id) ? "Terminating..." : "Terminate"}
+                {pendingIds.has(session.id) ? "Terminating…" : "Terminate"}
               </Button>
             )}
           </div>

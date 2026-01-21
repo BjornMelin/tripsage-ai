@@ -1752,6 +1752,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      inbound_webhook_receipts: {
+        Row: {
+          body_sha256: string;
+          error_code: string | null;
+          error_message: string | null;
+          handler: string;
+          headers_subset: Json;
+          id: string;
+          idempotency_key: string | null;
+          received_at: string;
+          request_id: string | null;
+          result_status: number;
+          signature_valid: boolean;
+          source: string;
+        };
+        Insert: {
+          body_sha256: string;
+          error_code?: string | null;
+          error_message?: string | null;
+          handler: string;
+          headers_subset?: Json;
+          id?: string;
+          idempotency_key?: string | null;
+          received_at?: string;
+          request_id?: string | null;
+          result_status: number;
+          signature_valid?: boolean;
+          source: string;
+        };
+        Update: {
+          body_sha256?: string;
+          error_code?: string | null;
+          error_message?: string | null;
+          handler?: string;
+          headers_subset?: Json;
+          id?: string;
+          idempotency_key?: string | null;
+          received_at?: string;
+          request_id?: string | null;
+          result_status?: number;
+          signature_valid?: boolean;
+          source?: string;
+        };
+        Relationships: [];
+      };
       itinerary_items: {
         Row: {
           booking_status: string | null;
@@ -1910,7 +1955,7 @@ export type Database = {
       rag_documents: {
         Row: {
           chat_id: string | null;
-          chunk_index: number | null;
+          chunk_index: number;
           content: string;
           created_at: string;
           embedding: string | null;
@@ -1925,7 +1970,7 @@ export type Database = {
         };
         Insert: {
           chat_id?: string | null;
-          chunk_index?: number | null;
+          chunk_index?: number;
           content: string;
           created_at?: string;
           embedding?: string | null;
@@ -1940,7 +1985,7 @@ export type Database = {
         };
         Update: {
           chat_id?: string | null;
-          chunk_index?: number | null;
+          chunk_index?: number;
           content?: string;
           created_at?: string;
           embedding?: string | null;
@@ -1963,6 +2008,47 @@ export type Database = {
           },
           {
             foreignKeyName: "rag_documents_trip_id_fkey";
+            columns: ["trip_id"];
+            isOneToOne: false;
+            referencedRelation: "trips";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      saved_places: {
+        Row: {
+          created_at: string;
+          id: number;
+          place_id: string;
+          place_snapshot: Json;
+          provider: string;
+          trip_id: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: never;
+          place_id: string;
+          place_snapshot?: Json;
+          provider?: string;
+          trip_id: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: never;
+          place_id?: string;
+          place_snapshot?: Json;
+          provider?: string;
+          trip_id?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_places_trip_id_fkey";
             columns: ["trip_id"];
             isOneToOne: false;
             referencedRelation: "trips";
@@ -2153,47 +2239,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      saved_places: {
-        Row: {
-          created_at: string | null;
-          id: number;
-          place_id: string;
-          place_snapshot: Json;
-          provider: string;
-          trip_id: number;
-          updated_at: string | null;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string | null;
-          id?: never;
-          place_id: string;
-          place_snapshot?: Json;
-          provider?: string;
-          trip_id: number;
-          updated_at?: string | null;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string | null;
-          id?: never;
-          place_id?: string;
-          place_snapshot?: Json;
-          provider?: string;
-          trip_id?: number;
-          updated_at?: string | null;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "saved_places_trip_id_fkey";
-            columns: ["trip_id"];
-            isOneToOne: false;
-            referencedRelation: "trips";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       trip_collaborators: {
         Row: {
           created_at: string | null;
@@ -2341,6 +2386,7 @@ export type Database = {
           id: string;
           last_error: string | null;
           payload: Json;
+          updated_at: string;
         };
         Insert: {
           config_id?: string | null;
@@ -2351,6 +2397,7 @@ export type Database = {
           id?: string;
           last_error?: string | null;
           payload: Json;
+          updated_at?: string;
         };
         Update: {
           config_id?: string | null;
@@ -2361,6 +2408,7 @@ export type Database = {
           id?: string;
           last_error?: string | null;
           payload?: Json;
+          updated_at?: string;
         };
         Relationships: [
           {

@@ -396,7 +396,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           bgColor: colors.bgColor,
           borderColor: colors.borderColor,
           color: colors.textColor,
-          description: "Establishing connection...",
+          description: "Establishing connection…",
           icon: <Loader2Icon className="h-4 w-4 animate-spin" />,
           label: "Connecting",
           variant: "default" as const,
@@ -472,7 +472,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             <Badge
               variant={config.variant}
               className={cn(
-                "flex items-center gap-2 cursor-pointer transition-all duration-200",
+                "flex items-center gap-2 cursor-pointer transition-colors duration-200",
                 config.color,
                 className
               )}
@@ -551,7 +551,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
 
   // Detailed variant - full card with metrics
   return (
-    <Card className={cn("transition-all duration-300", className)}>
+    <Card className={cn("transition-colors duration-300", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">

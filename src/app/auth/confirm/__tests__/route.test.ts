@@ -20,8 +20,17 @@ const VERIFY_MOCK = vi.hoisted(
     >
 );
 
+const EXCHANGE_MOCK = vi.hoisted(
+  () =>
+    vi.fn(() => Promise.resolve({ error: null })) as MockInstance<
+      (code: string) => Promise<{ error: Error | null }>
+    >
+);
+
 vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({ auth: { verifyOtp: VERIFY_MOCK } })),
+  createServerSupabase: vi.fn(async () => ({
+    auth: { exchangeCodeForSession: EXCHANGE_MOCK, verifyOtp: VERIFY_MOCK },
+  })),
 }));
 
 // Mock next/navigation redirect helper
@@ -41,6 +50,7 @@ import { GET } from "../route";
 describe("auth/confirm route", () => {
   beforeEach(() => {
     VERIFY_MOCK.mockClear();
+    EXCHANGE_MOCK.mockClear();
     REDIRECT_MOCK.mockClear();
   });
 
@@ -52,6 +62,40 @@ describe("auth/confirm route", () => {
     await GET(req);
     expect(VERIFY_MOCK).toHaveBeenCalledWith({ token_hash: "thash", type: "email" });
     expect(REDIRECT_MOCK).toHaveBeenCalledWith("/dashboard/trips?tab=mine");
+  });
+
+  it("exchanges code for session and redirects to next path", async () => {
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?code=abc123&next=%2Fdashboard",
+    });
+    await GET(req);
+    expect(EXCHANGE_MOCK).toHaveBeenCalledWith("abc123");
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects to login when code exchange fails", async () => {
+    EXCHANGE_MOCK.mockResolvedValueOnce({ error: new Error("invalid_grant") });
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?code=bad_code&next=%2Fdashboard",
+    });
+    await GET(req);
+    expect(EXCHANGE_MOCK).toHaveBeenCalledWith("bad_code");
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith(
+      "/login?error=auth_confirm_failed&next=%2Fdashboard"
+    );
+  });
+
+  it("redirects to login when Supabase provides an error payload", async () => {
+    const req = createMockNextRequest({
+      method: "GET",
+      url: "https://app.example.com/auth/confirm?error=access_denied&error_code=otp_expired&next=%2Fdashboard",
+    });
+    await GET(req);
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith(
+      "/login?error=auth_confirm_failed&next=%2Fdashboard&error_code=otp_expired"
+    );
   });
 
   it.each([
@@ -101,6 +145,8 @@ describe("auth/confirm route", () => {
       url: "https://app.example.com/auth/confirm?token_hash=bad&type=email",
     });
     await GET(req);
-    expect(REDIRECT_MOCK).toHaveBeenCalledWith("/error");
+    expect(REDIRECT_MOCK).toHaveBeenCalledWith(
+      "/login?error=auth_confirm_failed&next=%2Fdashboard"
+    );
   });
 });

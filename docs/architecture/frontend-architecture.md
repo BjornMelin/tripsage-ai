@@ -4,28 +4,28 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 ## Platform Overview
 
-- Next.js `^16.1.1` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
+- Next.js `^16.1.3` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
 - TypeScript `^5.9.3`, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
 - AI SDK v6 (`ai@6.0.39`, `@ai-sdk/react@3.0.41`) is the only LLM transport.
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
 - UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
-- Payments/Email: Stripe `^20.1.0`, Resend `^6.6.0`.
+- Payments/Email: Stripe `20.2.0`, Resend `^6.7.0`.
 - Calendar/Scheduling: `ical-generator@10.0.0` with Google Calendar REST integration in `src/lib/calendar`.
 
 ## Library Details (from `package.json`)
 
 > Keep this list high-level to avoid docs drift; use `package.json` as the source of truth for exact semver ranges.
 
-- **Framework:** `next@^16.1.1`, `react@^19.2.3`, `typescript@^5.9.3`
+- **Framework:** `next@^16.1.3`, `react@^19.2.3`, `typescript@^5.9.3`
 - **AI SDK v6:** `ai@6.0.39`, `@ai-sdk/react@3.0.41`, connectors `@ai-sdk/openai@3.0.12`, `@ai-sdk/anthropic@3.0.15`, `@ai-sdk/xai@3.0.26`, `@ai-sdk/togetherai@2.0.13`
-- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.89.0`
-- **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.12`
-- **Caching/Jobs:** `@upstash/redis@^1.36.0`, `@upstash/ratelimit@2.0.7`, `@upstash/qstash@^2.8.4`
-- **UI:** Radix primitives, `tailwindcss@^4.1.18`, `lucide-react@^0.562.0`, `motion@^12.23.26`, `class-variance-authority@^0.7.1`, `clsx@^2.1.1`
-- **Forms/Validation:** `react-hook-form@^7.69.0`, `zod@^4.2.1`, `@hookform/resolvers@^5.2.2`
+- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.90.1`
+- **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.19`
+- **Caching/Jobs:** `@upstash/redis@^1.36.0`, `@upstash/ratelimit@2.0.8`, `@upstash/qstash@^2.8.4`
+- **UI:** Radix primitives, `tailwindcss@^4.1.18`, `lucide-react@^0.562.0`, `motion@12.27.0`, `class-variance-authority@^0.7.1`, `clsx@^2.1.1`
+- **Forms/Validation:** `react-hook-form@^7.71.1`, `zod@^4.3.5`, `@hookform/resolvers@^5.2.2`
 - **Observability:** `@vercel/otel@^2.1.0`, `@opentelemetry/*` (wrappers in `src/lib/telemetry`; see `docs/development/backend/observability.md`)
-- **Testing/Tooling:** `vitest@^4.0.16`, `@playwright/test@^1.57.0`, `@biomejs/biome@^2.3.10`, `pnpm boundary:check`
+- **Testing/Tooling:** `vitest@^4.0.17`, `@playwright/test@^1.57.0`, `@biomejs/biome@^2.3.11`, `pnpm boundary:check`
 
 ## Project Layout
 
@@ -92,7 +92,7 @@ TripSage uses a **three-tier caching architecture**. Choose the right tier based
 ### Decision Matrix
 
 | Data Type | Access Pattern | Cache Tier | Reason |
-| --- | --- | --- | --- |
+| :--- | :--- | :--- | :--- |
 | Per-user data | Auth required | Upstash Redis | Dynamic, user-scoped |
 | Public global data | No auth | Next.js Cache Components | HTTP-level, CDN cacheable |
 | Client state | Interactive | TanStack Query | Deduplication, SWR |

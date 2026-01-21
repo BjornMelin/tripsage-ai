@@ -4,7 +4,6 @@
 
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import type {
   IndexerConfig,
   RagDocument,
@@ -15,6 +14,10 @@ import type {
 import { indexerConfigSchema } from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
+import {
+  getTextEmbeddingModel,
+  TEXT_EMBEDDING_DIMENSIONS,
+} from "@/lib/ai/embeddings/text-embedding-model";
 import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -23,12 +26,30 @@ import { RagLimitError } from "./errors";
 import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
+const EMBED_TIMEOUT_BASE_MS = 30_000;
+const EMBED_TIMEOUT_PER_CHUNK_MS = 100;
 
 /** Token to character ratio approximation (conservative). */
 const CHARS_PER_TOKEN = 4;
 /** Max chunks per embedding batch to prevent runaway costs and respect API limits. */
 const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
 
+/**
+ * Computes a dynamic timeout for embedding requests based on chunk count and parallelism.
+ *
+ * @param chunkCount - Number of chunks being embedded.
+ * @param maxParallelCalls - Configured maximum parallel model calls.
+ * @returns Timeout duration in milliseconds.
+ */
+function getEmbedTimeoutMs(chunkCount: number, maxParallelCalls: number): number {
+  const parallelCalls = Math.max(1, maxParallelCalls);
+  const rounds = Math.ceil(chunkCount / parallelCalls);
+  return Math.max(EMBED_TIMEOUT_BASE_MS, rounds * EMBED_TIMEOUT_PER_CHUNK_MS);
+}
+
+/**
+ * Contextual data for chunk limit enforcement logs and errors.
+ */
 interface ChunkLimitContext {
   batchStartIndex: number;
   chunkOverlap: number;
@@ -36,6 +57,13 @@ interface ChunkLimitContext {
   documentCount: number;
 }
 
+/**
+ * Enforces the maximum number of chunks allowed per embedding batch to prevent runaway costs.
+ *
+ * @param count - Actual number of chunks to be processed.
+ * @param context - Metadata for logging and error reporting.
+ * @throws {RagLimitError} If the chunk count exceeds MAX_CHUNKS_PER_EMBED_BATCH.
+ */
 function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
   if (count <= MAX_CHUNKS_PER_EMBED_BATCH) return;
   logger.warn("chunk_limit_exceeded", {
@@ -48,6 +76,30 @@ function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
     chunkCount: count,
     limit: MAX_CHUNKS_PER_EMBED_BATCH,
   });
+}
+
+/**
+ * Validates that all generated embeddings match the expected vector dimensionality.
+ *
+ * @param embeddings - List of embedding vectors to validate.
+ * @param expectedDim - Required number of dimensions (e.g., 1536).
+ * @param context - Optional description for error reporting.
+ * @throws {Error} If any embedding has an incorrect dimension count.
+ */
+function assertEmbeddingDimensions(
+  embeddings: readonly number[][],
+  expectedDim: number,
+  context?: string
+): void {
+  for (let i = 0; i < embeddings.length; i += 1) {
+    const embedding = embeddings[i];
+    if (!embedding || embedding.length !== expectedDim) {
+      const contextSuffix = context ? ` (${context})` : "";
+      throw new Error(
+        `Embedding dimension mismatch${contextSuffix} at index ${i}: expected ${expectedDim}, got ${embedding?.length ?? -1}`
+      );
+    }
+  }
 }
 
 /**
@@ -159,7 +211,7 @@ export interface IndexDocumentsParams {
  * @example
  * ```typescript
  * const result = await indexDocuments({
- *   documents: [{ content: "Travel guide...", metadata: { type: "guide" } }],
+ *   documents: [{ content: "Travel guide…", metadata: { type: "guide" } }],
  *   supabase,
  *   config: { namespace: "travel_tips", chunkSize: 512 }
  * });
@@ -181,6 +233,7 @@ export async function indexDocuments(
         "rag.indexer.chunk_overlap": config.chunkOverlap,
         "rag.indexer.chunk_size": config.chunkSize,
         "rag.indexer.document_count": documents.length,
+        "rag.indexer.max_parallel_calls": config.maxParallelCalls,
         "rag.indexer.namespace": config.namespace,
         "rag.indexer.trip_id_present": Boolean(tripId),
       },
@@ -247,7 +300,7 @@ export async function indexDocuments(
 }
 
 /**
- * Internal batch indexing parameters.
+ * Parameters for internal batch processing of documents.
  */
 interface IndexBatchParams {
   batch: RagDocument[];
@@ -260,7 +313,7 @@ interface IndexBatchParams {
 }
 
 /**
- * Internal batch indexing result.
+ * Result of a single batch indexing operation.
  */
 interface IndexBatchResult {
   chunksCreated: number;
@@ -339,7 +392,11 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
 
   // Generate embeddings for all chunks in batch
   const { embeddings } = await embedMany({
-    model: openai.embeddingModel("text-embedding-3-small"),
+    abortSignal: AbortSignal.timeout(
+      getEmbedTimeoutMs(allChunks.length, config.maxParallelCalls)
+    ),
+    maxParallelCalls: config.maxParallelCalls,
+    model: getTextEmbeddingModel(),
     values: allChunks.map((c) => c.chunk),
   });
 
@@ -348,6 +405,8 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       `Embedding count mismatch: expected ${allChunks.length}, got ${embeddings.length}`
     );
   }
+
+  assertEmbeddingDimensions(embeddings, TEXT_EMBEDDING_DIMENSIONS, "indexBatch");
 
   // Prepare rows for upsert
   const rows: Database["public"]["Tables"]["rag_documents"]["Insert"][] = allChunks.map(

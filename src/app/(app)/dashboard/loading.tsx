@@ -14,7 +14,7 @@ export default function DashboardLoading() {
   return (
     <LoadingContainer
       isLoading={true}
-      loadingMessage="Loading your dashboard..."
+      loadingMessage="Loading your dashboard…"
       minHeight="400px"
       className="p-6"
     >

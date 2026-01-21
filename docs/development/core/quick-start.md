@@ -7,7 +7,7 @@ Canonical path to get TripSage running locally, with the minimal commands and th
 - **Runtime:** Node.js ≥24 and pnpm ≥9 (`npm install -g pnpm`)
 - **Tooling:** Git
 - **Accounts/keys:** Supabase project, Upstash Redis (and QStash if you test jobs), at least one model key (AI Gateway recommended)
-- **Optional:** Docker (for containers), PostgreSQL local alt, Playwright browsers for E2E
+- **Optional:** Docker (required for local Supabase; optional if using a hosted Supabase project), Playwright browsers for E2E
 
 ## Stack Snapshot (for context)
 
@@ -36,13 +36,37 @@ pnpm install
 1) Copy env templates:
 
     ```bash
-    cp .env.example .env
+    cp .env.local.example .env.local
     cp .env.test.example .env.test
     ```
 
-2) Set minimum variables to boot Next.js + tests:
+2) (Recommended) Start local Supabase:
+
+    ```bash
+    pnpm supabase:bootstrap
+    pnpm supabase:status
+    ```
+
+    Copy the printed local values into `.env.local`:
+
+    - `NEXT_PUBLIC_SUPABASE_URL`
+    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+    - `SUPABASE_SERVICE_ROLE_KEY` (use the `sb_secret_...` key from `pnpm supabase:status`)
+    - (Recommended) `SUPABASE_JWT_SECRET` (use the `JWT_SECRET` value from `pnpm supabase:status`)
+
+    Seed deterministic data for the scenario you’re working on:
+
+    - `pnpm supabase:reset:dev`
+    - `pnpm supabase:reset:e2e`
+    - `pnpm supabase:reset:payments`
+    - `pnpm supabase:reset:calendar`
+    - `pnpm supabase:reset:edge-cases`
+
+3) Set minimum variables to boot Next.js + tests:
 
 ```bash
+# Put these in `.env.local` for Next.js local development.
+
 # URLs
 APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -50,14 +74,14 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3000
 
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
 # Set ONE of these public keys:
 # - Preferred: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (sb_publishable_...)
 # - Legacy: NEXT_PUBLIC_SUPABASE_ANON_KEY
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-SUPABASE_JWT_SECRET=your-jwt-secret
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+SUPABASE_JWT_SECRET=local-dev-jwt-secret-min-32-chars-xxxxxxxxxxxxxxxx
 
 # Redis / QStash
 UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
@@ -73,12 +97,20 @@ ANTHROPIC_API_KEY=your-anthropic-key
 XAI_API_KEY=your-xai-key
 OPENROUTER_API_KEY=your-openrouter-key
 
+# RAG reranking (optional; if unset, reranking degrades to no-op)
+TOGETHER_AI_API_KEY=your-togetherai-key
+
+# Embeddings note:
+# - If AI_GATEWAY_API_KEY or OPENAI_API_KEY is set, RAG/memory use real embeddings (`openai/text-embedding-3-small`, 1536-d).
+# - If unset, the app uses a deterministic 1536-d fallback so local dev + tests remain runnable (not semantically meaningful).
+
 # Maps (optional but required for map UI tests)
 GOOGLE_MAPS_SERVER_API_KEY=your-server-key
 NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY=your-browser-key
 ```
 
 See [Environment Setup](env-setup.md) for full provider lists (Stripe, Resend, travel APIs, analytics) and a ready-to-run checklist.
+For a reproducible local Supabase + seeded RAG smoke test, see [Local Supabase + RAG E2E](local-supabase-rag-e2e.md).
 
 ## Run
 
@@ -93,6 +125,28 @@ Visit <http://localhost:3000> and sign in via Supabase auth.
 ```bash
 pnpm biome:check && pnpm type-check
 pnpm test
+```
+
+## Build
+
+```bash
+pnpm build
+```
+
+## E2E (Playwright)
+
+TripSage’s Playwright E2E suite starts its own dev server and uses a mock Supabase Auth HTTP server by default (it does not require a running local Supabase instance).
+
+```bash
+pnpm exec playwright install chromium
+pnpm test:e2e:chromium
+```
+
+If you want to run the app against a real local Supabase database for manual E2E/QA (recommended for RAG/attachments), use:
+
+```bash
+pnpm supabase:reset:dev
+pnpm dev
 ```
 
 ## Development Workflow

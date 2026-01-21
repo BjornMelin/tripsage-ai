@@ -95,6 +95,23 @@ Troubleshooting: restart TS server, confirm path mapping, run `pnpm type-check` 
 - Formatter/linter: Biome. Use `pnpm biome:fix` to apply fixes and format code.
 - Keep schemas, types, and exports documented with concise JSDoc when public.
 
+## UI and Accessibility
+
+TripSage aligns UI implementation with Vercel Web Interface Guidelines:
+
+- Use typographic ellipsis `…` for loading/progress states (e.g., “Loading…”, “Saving…”).
+- Avoid `transition-all`; prefer explicit transition properties (e.g., `transition-colors`, `transition-transform`, `transition-[opacity,box-shadow]`).
+- Preserve focus visibility (no `outline: none` without an accessible replacement).
+- Use semantic elements:
+  - navigation: `Link`/`<a>`.
+  - actions: `<button>`.
+  - avoid `div` + `onClick` for interactive controls.
+
+References:
+
+- <https://vercel.com/design/guidelines>
+- <https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/AGENTS.md>
+
 ## Zod Schemas (v4)
 
 - Single source per domain under `@schemas/*`; co-locate tool input schemas with the domain file when specific, but prefer shared domain files when consumed by multiple layers (route + tool + UI). Use section markers (`// ===== CORE SCHEMAS =====`, `// ===== TOOL INPUT SCHEMAS =====`).

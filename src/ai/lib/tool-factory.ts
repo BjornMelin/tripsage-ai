@@ -640,6 +640,7 @@ async function enforceRateLimit<InputValue>(
   if (!limiter) {
     limiter = new Ratelimit({
       analytics: false,
+      dynamicLimits: true,
       limiter: Ratelimit.slidingWindow(config.limit, config.window as RateLimitWindow),
       prefix: limiterNamespace,
       redis,

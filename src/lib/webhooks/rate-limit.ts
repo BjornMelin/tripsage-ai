@@ -108,6 +108,7 @@ export async function checkWebhookRateLimitWithPolicy(
 
   const rateLimiter = new Ratelimit({
     analytics: true,
+    dynamicLimits: true,
     limiter: Ratelimit.slidingWindow(100, "1 m"),
     prefix: "webhook:rl",
     redis,

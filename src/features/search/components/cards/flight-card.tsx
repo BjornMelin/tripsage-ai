@@ -103,7 +103,7 @@ export function FlightCard({
     <Card
       data-testid={`flight-card-${flight.id}`}
       className={cn(
-        "relative transition-all duration-200 hover:shadow-md",
+        "relative transition-[box-shadow,opacity] duration-200 hover:shadow-md",
         isSelected && "ring-2 ring-blue-500",
         isOptimisticSelecting && "opacity-75"
       )}
@@ -268,7 +268,7 @@ export function FlightCard({
                   className="w-full"
                   size={viewMode === "grid" ? "sm" : "default"}
                 >
-                  {isOptimisticSelecting ? "Selecting..." : "Select Flight"}
+                  {isOptimisticSelecting ? "Selecting…" : "Select Flight"}
                 </Button>
 
                 <Button

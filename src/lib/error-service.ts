@@ -9,6 +9,7 @@ import {
   type ErrorServiceConfig,
   errorReportSchema,
 } from "@schemas/errors";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { secureId } from "@/lib/security/random";
 import {
   type ErrorSpanMetadata,
@@ -177,16 +178,17 @@ class ErrorService {
    * Create error report from error and additional info
    */
   createErrorReport(
-    error: Error,
+    error: unknown,
     errorInfo?: { componentStack?: string },
     additionalInfo?: Partial<ErrorReport>
   ): ErrorReport {
+    const normalized = normalizeThrownError(error);
     return {
       error: {
-        digest: (error as Error & { digest?: string }).digest,
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
+        digest: normalized.digest,
+        message: normalized.message,
+        name: normalized.name,
+        stack: normalized.stack,
       },
       errorInfo: errorInfo
         ? {

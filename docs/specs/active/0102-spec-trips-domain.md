@@ -1,8 +1,8 @@
 # SPEC-0102: Trips domain (CRUD, itinerary, collaboration)
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Status**: Final  
-**Date**: 2026-01-05
+**Date**: 2026-01-19
 
 ## Goals
 
@@ -59,6 +59,11 @@ Validation:
 - Zod schemas for all inputs and patches
 - Strict enums for itinerary item types (see `src/domain/schemas/trips.ts` `itineraryItemTypeSchema`).
   - Allowed values: `activity`, `meal`, `transport`, `accommodation`, `event`, `other`
+- Date inputs:
+  - User-facing trip date fields accept either:
+    - date-only (`YYYY-MM-DD`)
+    - ISO 8601 datetime strings (timezone-aware)
+  - Actions normalize to the canonical storage format expected by Supabase/Postgres; timestamp fields remain `TIMESTAMPTZ` ISO strings.
 
 Error handling:
 
@@ -73,3 +78,13 @@ Testing
   - Unauthorized access attempts (read and write)
   - Removing the last owner is rejected
   - Concurrent edits by multiple collaborators (last-write-wins or conflict strategy as implemented)
+
+## Post-acceptance updates (2026-01-19)
+
+- Fixed schema correctness issues discovered during an end-to-end Trips create-flow validation:
+  - Postgres/Supabase timestamps serialize with timezone offsets; runtime validation now accepts offsets (`primitiveSchemas.isoDateTime` uses `z.iso.datetime({ offset: true })`).
+  - Supabase `trips` JSON columns `flexibility` and `search_metadata` are treated as nullable to match the generated database types (`Json | null`).
+- Verified the dashboard trip creation flow end-to-end with `agent-browser`:
+  - create trip in UI
+  - confirm success toast
+  - navigate to trip detail page.

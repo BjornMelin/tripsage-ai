@@ -15,11 +15,9 @@ vi.mock("ai", () => ({
   embedMany: vi.fn(),
 }));
 
-// Mock OpenAI provider
-vi.mock("@ai-sdk/openai", () => ({
-  openai: {
-    embeddingModel: vi.fn(() => "mock-embedding-model"),
-  },
+vi.mock("@/lib/ai/embeddings/text-embedding-model", () => ({
+  getTextEmbeddingModel: () => "mock-embedding-model",
+  TEXT_EMBEDDING_DIMENSIONS: 1536,
 }));
 
 // Mock telemetry
@@ -185,13 +183,13 @@ describe("indexDocuments", () => {
 
     vi.mocked(embedMany)
       .mockResolvedValueOnce({
-        embeddings: chunks1.map((_, idx) => [idx]),
+        embeddings: chunks1.map((_, idx) => Array(1536).fill(idx)),
         usage: { tokens: 0 },
         values: chunks1,
         warnings: [],
       })
       .mockResolvedValueOnce({
-        embeddings: chunks2.map((_, idx) => [idx + 1000]),
+        embeddings: chunks2.map((_, idx) => Array(1536).fill(idx + 1000)),
         usage: { tokens: 0 },
         values: chunks2,
         warnings: [],

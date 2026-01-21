@@ -280,7 +280,7 @@ export interface PageLoadingProps {
  * Page loading component - convenience wrapper for full page loading
  */
 export const PageLoading = React.forwardRef<HTMLDivElement, PageLoadingProps>(
-  ({ message = "Loading page...", progress, className, ...props }, ref) => {
+  ({ message = "Loading page…", progress, className, ...props }, ref) => {
     return (
       <LoadingOverlay
         ref={ref}

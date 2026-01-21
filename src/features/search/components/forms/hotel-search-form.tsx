@@ -249,7 +249,7 @@ export function HotelSearchForm({
             context: "HotelSearchForm",
           }}
           submitLabel="Search Hotels"
-          loadingLabel="Searching hotels..."
+          loadingLabel="Searching hotels…"
           disableSubmitWhenInvalid
           className="space-y-6"
           popularItems={popularItems}

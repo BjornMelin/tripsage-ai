@@ -279,7 +279,7 @@ export function FlightSearchForm({
             context: "FlightSearchForm",
           }}
           submitLabel="Search Flights"
-          loadingLabel="Searching flights..."
+          loadingLabel="Searching flights…"
           disableSubmitWhenInvalid
           className="space-y-6"
           popularItems={popularItems}

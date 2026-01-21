@@ -654,7 +654,7 @@ export const BudgetForm = ({
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add any additional notes about this budget..."
+                      placeholder="Add any additional notes about this budget…"
                       className="resize-none"
                       rows={3}
                       {...field}

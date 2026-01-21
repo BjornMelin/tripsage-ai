@@ -24,7 +24,7 @@ import { handleRagIndex } from "./_handler";
  * curl -X POST /api/rag/index \
  *   -H "Content-Type: application/json" \
  *   -d '{
- *     "documents": [{ "content": "Travel guide..." }],
+ *     "documents": [{ "content": "Travel guide…" }],
  *     "namespace": "travel_tips",
  *     "chunkSize": 512
  *   }'

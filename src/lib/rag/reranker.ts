@@ -8,6 +8,7 @@ import { togetherai } from "@ai-sdk/togetherai";
 import type { RagSearchResult, RerankerConfig } from "@schemas/rag";
 import { rerankerConfigSchema } from "@schemas/rag";
 import { rerank } from "ai";
+import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -37,10 +38,8 @@ export interface Reranker {
  * Together.ai reranker using Mixedbread mxbai-rerank-large-v2.
  *
  * Features:
- * - 100x cheaper than Cohere ($0.002/1k vs $0.05/1k queries)
  * - Native AI SDK v6 support via @ai-sdk/togetherai
  * - 100+ languages, 8K context, code/SQL support
- * - ELO 1468 quality (competitive for RAG)
  */
 export class TogetherReranker implements Reranker {
   private readonly config: RerankerConfig;
@@ -150,6 +149,12 @@ export function createReranker(config: Partial<RerankerConfig> = {}): Reranker {
 
   switch (parsedConfig.provider) {
     case "together":
+      // If Together isn't configured, degrade to no-op reranking to avoid
+      // repeated provider errors and unnecessary latency/cost.
+      if (!getServerEnvVarWithFallback("TOGETHER_AI_API_KEY", undefined)) {
+        logger.warn("together_reranking_disabled_missing_key");
+        return new NoOpReranker();
+      }
       return new TogetherReranker(parsedConfig);
     case "noop":
       return new NoOpReranker();

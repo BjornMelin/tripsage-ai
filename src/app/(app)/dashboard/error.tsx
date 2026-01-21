@@ -6,13 +6,11 @@
 
 import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
+import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
+import { getUserIdFromUserStore } from "@/lib/client/user-store";
 import { errorService } from "@/lib/error-service";
 import { fireAndForget } from "@/lib/utils";
-
-interface ExtendedWindow extends Window {
-  userStore?: { user?: { id?: string } };
-}
 
 /**
  * Dashboard-level error boundary
@@ -22,37 +20,24 @@ export default function DashboardError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  error: unknown;
   reset: () => void;
 }) {
   useEffect(() => {
+    const normalized = normalizeThrownError(error);
     // Report the dashboard error
-    const errorReport = errorService.createErrorReport(error, undefined, {
+    const errorReport = errorService.createErrorReport(normalized, undefined, {
       sessionId: getSessionId(),
-      userId: getUserId(),
+      userId: getUserIdFromUserStore(),
     });
 
     fireAndForget(errorService.reportError(errorReport));
 
     // Log error in development
     if (process.env.NODE_ENV === "development") {
-      console.error("Dashboard error boundary caught error:", error);
+      console.error("Dashboard error boundary caught error:", normalized);
     }
   }, [error]);
 
   return <ErrorFallback error={error} reset={reset} />;
-}
-
-/**
- * Gets the current user ID from the user store.
- *
- * @returns User ID or undefined if not available
- */
-function getUserId(): string | undefined {
-  try {
-    const userStore = (window as ExtendedWindow).userStore;
-    return userStore?.user?.id;
-  } catch {
-    return undefined;
-  }
 }

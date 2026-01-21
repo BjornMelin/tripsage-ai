@@ -8,6 +8,10 @@ This guide covers tracing, structured logging, and operational alerts for the Ne
 
 Use custom spans/events from `@/lib/telemetry/*` for application-level operations and stable naming/attributes.
 
+Notes:
+
+- Some Node instrumentations rely on `import-in-the-middle`/`require-in-the-middle`. We keep these dependencies directly resolvable from the server runtime and validate this with `src/lib/telemetry/__tests__/import-in-the-middle-resolve.test.ts`.
+
 ## Approved Telemetry & Logging Entrypoints
 
 Server code must use these helpers exclusively. Direct usage of `@opentelemetry/api` or `console.*` in server modules is prohibited except in:
@@ -71,7 +75,7 @@ AI SDK v6 calls should set `experimental_telemetry` with a stable `functionId`. 
 Current `functionId` values in this codebase:
 
 | Function ID | Location | Notes |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `agent.{agentType}` | `src/ai/agents/agent-factory.ts` | ToolLoopAgent instances |
 | `router.classifyUserMessage` | `src/ai/agents/router-agent.ts` | Message classification |
 | `agent.memory.summarize` | `src/ai/agents/memory-agent.ts` | Memory write summary |
@@ -95,7 +99,7 @@ Span names are stable. Attributes must be low-cardinality and must not contain s
 **Factory spans (`src/lib/supabase/factory.ts`):**
 
 | Span name | When |
-| --- | --- |
+| :--- | :--- |
 | `supabase.init` | `createServerSupabase()` |
 | `middleware.supabase.init` | `createMiddlewareSupabase()` (tracing usually disabled) |
 | `supabase.auth.getUser` | `getCurrentUser()` |
@@ -103,7 +107,7 @@ Span names are stable. Attributes must be low-cardinality and must not contain s
 **CRUD spans (`src/lib/supabase/typed-helpers.ts`):**
 
 | Span name | Helper |
-| --- | --- |
+| :--- | :--- |
 | `supabase.insert` | `insertSingle` |
 | `supabase.update` | `updateSingle` |
 | `supabase.select` | `getSingle`, `getMaybeSingle` |
@@ -123,10 +127,10 @@ Common attributes:
 Cache helpers in `src/lib/cache/upstash.ts` emit spans:
 
 | Span name | Operation | Notes |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `cache.get` | get | Sets `cache.hit` and `cache.parse_error` |
-| `cache.get_safe` | get | Sets `cache.status` (`hit`/`miss`/`invalid`), `cache.has_schema`, and `cache.validation_failed` |
-| `cache.set` | set | Sets `cache.ttl_seconds` and `cache.value_bytes` |
+| `cache.get_safe` | get | Sets `cache.status` (`hit`/`miss`/`invalid`/`unavailable`), `cache.has_schema`, and `cache.validation_failed` |
+| `cache.set` | set | Sets `cache.ttl_seconds` and `cache.value_bytes` (and `cache.status=unavailable` on errors) |
 | `cache.delete` | delete | Sets `cache.deleted_count` |
 | `cache.delete_many` | delete | Sets `cache.key_count` and `cache.deleted_count` |
 
@@ -136,16 +140,21 @@ Common attributes:
 - `cache.operation`: `"get" | "set" | "delete"`
 - `cache.namespace`: low-cardinality namespace derived from the key
 - `cache.key_length`: key length (we intentionally do not record raw keys)
-- `cache.unavailable`: `true` when Redis is not configured
+- `cache.status`: `"unavailable"` when Redis is not configured or when a Redis operation throws (helpers fail open; callers treat this as a cache miss)
+- `cache.error_name`: error class name when a Redis operation throws (no raw keys recorded)
 - `cache.has_schema`: `true` when a schema is provided (`cache.get_safe`)
 - `cache.validation_failed`: `true` when schema validation fails (`cache.get_safe`)
+
+Notes:
+
+- Redis command errors from Upstash may include full command payloads (including keys). The cache helpers sanitize these error messages before recording them in telemetry to avoid leaking keys.
 
 ### QStash
 
 QStash helpers emit spans for enqueue operations:
 
 | Span name | Location |
-| --- | --- |
+| :--- | :--- |
 | `qstash.enqueue` | `src/lib/qstash/client.ts` |
 
 Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt`
@@ -322,18 +331,18 @@ recordTelemetryEvent("api.keys.validation_error", {
 - Use appropriate severity levels: "error", "warning", "info"
 - Prefer `createServerLogger` over `recordTelemetryEvent` for most logging needs
 
-| Event                      | Severity | Attributes                | Trigger                                                   |
-|----------------------------|----------|---------------------------|-----------------------------------------------------------|
-| `api.keys.parse_error`     | error    | `message`, `operation`    | JSON parsing failures in keys API                        |
-| `api.keys.auth_error`      | error    | `message`, `operation`    | Authentication failures in keys API                      |
-| `api.keys.validation_error`| warning  | `field`, `message`        | Zod validation failures in keys API                      |
-| `api.keys.post_error`      | error    | `message`, `operation`    | General POST errors in keys API                          |
-| `api.keys.get_error`       | error    | `message`, `operation`    | GET errors in keys API                                   |
-| `api.keys.rate_limit_config_error` | error | `hasToken`, `hasUrl`, `message` | Rate limiter configuration missing in production        |
-| `api.keys.delete_error`    | error    | `message`, `service`, `operation` | Key deletion failures                                    |
-| `api.keys.validate_provider_error` | error | `message`, `provider`, `reason` | Provider key validation failures                         |
-| `api.keys.validate.parse_error` | error | `message` | JSON parsing in validate API                             |
-| `api.keys.validate.post_error` | error | `message` | General errors in validate API                           |
+| Event | Severity | Attributes | Trigger |
+| :--- | :--- | :--- | :--- |
+| `api.keys.parse_error` | error | `message`, `operation` | JSON parsing failures in keys API |
+| `api.keys.auth_error` | error | `message`, `operation` | Authentication failures in keys API |
+| `api.keys.validation_error` | warning | `field`, `message` | Zod validation failures in keys API |
+| `api.keys.post_error` | error | `message`, `operation` | General POST errors in keys API |
+| `api.keys.get_error` | error | `message`, `operation` | GET errors in keys API |
+| `api.keys.rate_limit_config_error` | error | `hasToken`, `hasUrl`, `message` | Rate limiter configuration missing in production |
+| `api.keys.delete_error` | error | `message`, `service`, `operation` | Key deletion failures |
+| `api.keys.validate_provider_error` | error | `message`, `provider`, `reason` | Provider key validation failures |
+| `api.keys.validate.parse_error` | error | `message` | JSON parsing in validate API |
+| `api.keys.validate.post_error` | error | `message` | General errors in validate API |
 
 ## Operational alerts (paging)
 
@@ -365,13 +374,13 @@ emitOperationalAlert("webhook.verification_failed", {
 
 ### Operational alerts
 
-| Event                      | Severity | Attributes                | Trigger                                                   |
-|----------------------------|----------|---------------------------|-----------------------------------------------------------|
-| `redis.unavailable`        | error    | `feature` (cache module)  | `warnRedisUnavailable` when Upstash credentials missing   |
+| Event | Severity | Attributes | Trigger |
+| :--- | :--- | :--- | :--- |
+| `redis.unavailable` | error | `feature` (cache module) | `warnRedisUnavailable` when Upstash credentials missing |
 | `webhook.verification_failed` | warning | `reason` (`missing_secret_env`, `missing_signature`, `body_read_error`, `invalid_signature`, `invalid_json`, `invalid_payload_shape`, `payload_too_large`) | `parseAndVerify` failures before processing payloads |
-| `ratelimit.degraded`       | error    | `reason`, `degradedMode`, plus `rateLimitKey` (API) or `feature` + `route` (webhooks) | Fail-open fallback when rate limiting cannot be enforced |
-| `idempotency.degraded`     | error    | `namespace`, `reason`, `degradedMode` | Fail-open fallback when idempotency cannot be enforced |
-| `ai_demo.stream`           | info     | `status`, `has_detail`, `detail_length`, optional HMAC `detail_hash` | Privileged AI demo alert emission (gated) |
+| `ratelimit.degraded` | error | `reason`, `degradedMode`, plus `rateLimitKey` (API) or `feature` + `route` (webhooks) | Fail-open fallback when rate limiting cannot be enforced |
+| `idempotency.degraded` | error | `namespace`, `reason`, `degradedMode` | Fail-open fallback when idempotency cannot be enforced |
+| `ai_demo.stream` | info | `status`, `has_detail`, `detail_length`, optional HMAC `detail_hash` | Privileged AI demo alert emission (gated) |
 
 ### Adding telemetry events
 
@@ -404,5 +413,5 @@ emitOperationalAlert("webhook.verification_failed", {
 
 - `docs/architecture/decisions/adr-0046-otel-tracing-frontend.md`
 - Vercel OTEL: <https://vercel.com/docs/observability/otel-overview>
-- AI SDK telemetry: <https://v6.ai-sdk.dev/docs/ai-sdk-core/telemetry>
+- AI SDK telemetry: <https://ai-sdk.dev/docs/ai-sdk-core/telemetry>
 - OpenTelemetry JS: <https://opentelemetry.io/docs/languages/js/>

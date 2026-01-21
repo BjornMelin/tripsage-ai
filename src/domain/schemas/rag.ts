@@ -28,7 +28,7 @@ export type RagNamespace = z.infer<typeof ragNamespaceSchema>;
  * Zod schema for document metadata.
  * Arbitrary key-value pairs for filtering and context.
  */
-export const ragMetadataSchema = z.looseRecord(z.string(), z.unknown()).default({});
+export const ragMetadataSchema = z.record(z.string(), z.unknown()).default({});
 
 /** TypeScript type for document metadata. */
 export type RagMetadata = z.infer<typeof ragMetadataSchema>;
@@ -37,7 +37,7 @@ export type RagMetadata = z.infer<typeof ragMetadataSchema>;
  * Zod schema for a single document to be indexed.
  * Contains content, optional ID, and metadata for filtering.
  */
-export const ragDocumentSchema = z.object({
+export const ragDocumentSchema = z.strictObject({
   content: z.string().min(1, { error: "Document content cannot be empty" }),
   id: primitiveSchemas.uuid.optional(),
   metadata: ragMetadataSchema.optional(),
@@ -51,7 +51,7 @@ export type RagDocument = z.infer<typeof ragDocumentSchema>;
  * Zod schema for a document chunk with embedding.
  * Represents a processed chunk ready for storage.
  */
-export const ragChunkSchema = z.object({
+export const ragChunkSchema = z.strictObject({
   chunkIndex: z.number().int().nonnegative(),
   content: z.string().min(1),
   embedding: z
@@ -70,7 +70,7 @@ export type RagChunk = z.infer<typeof ragChunkSchema>;
  * Zod schema for search results before reranking.
  * Includes hybrid search scores.
  */
-export const ragSearchResultSchema = z.object({
+export const ragSearchResultSchema = z.strictObject({
   chunkIndex: z.number().int().nonnegative(),
   combinedScore: z.number().min(0),
   content: z.string(),
@@ -97,12 +97,13 @@ export const MAX_RAG_INDEX_TOTAL_CONTENT_CHARS = 250_000;
  * Validates batch document indexing parameters.
  */
 export const ragIndexRequestSchema = z
-  .object({
+  .strictObject({
     chunkOverlap: z.number().int().min(0).max(500).default(100),
     chunkSize: z.number().int().min(100).max(2000).default(512),
     documents: z.array(ragDocumentSchema).min(1).max(100, {
       error: "Maximum 100 documents per batch",
     }),
+    maxParallelCalls: z.number().int().min(1).max(10).default(2),
     namespace: ragNamespaceSchema.default("default"),
   })
   .refine(
@@ -126,13 +127,13 @@ export type RagIndexRequest = z.infer<typeof ragIndexRequestSchema>;
  * by the hybrid ranking function. Defaults are 0.3 and 0.7 respectively; they
  * do not need to sum to 1.0.
  */
-export const ragSearchRequestSchema = z.object({
+export const ragSearchRequestSchema = z.strictObject({
   keywordWeight: z.number().min(0).max(1).default(0.3),
   limit: z.number().int().min(1).max(50).default(10),
   namespace: ragNamespaceSchema.optional(),
   query: z.string().min(1, { error: "Search query cannot be empty" }),
   semanticWeight: z.number().min(0).max(1).default(0.7),
-  threshold: z.number().min(0).max(1).default(0.7),
+  threshold: z.number().min(0).max(1).default(0.0),
   useReranking: z.boolean().default(true),
 });
 
@@ -146,7 +147,7 @@ export type RagSearchRequest = z.infer<typeof ragSearchRequestSchema>;
  * Zod schema for failed document in index response.
  * Tracks which documents failed and why.
  */
-export const ragIndexFailedDocSchema = z.object({
+export const ragIndexFailedDocSchema = z.strictObject({
   error: z.string(),
   index: z.number().int().nonnegative(),
 });
@@ -158,7 +159,7 @@ export type RagIndexFailedDoc = z.infer<typeof ragIndexFailedDocSchema>;
  * Zod schema for POST /api/rag/index response.
  * Includes counts and failed document details.
  */
-export const ragIndexResponseSchema = z.object({
+export const ragIndexResponseSchema = z.strictObject({
   chunksCreated: z.number().int().nonnegative(),
   failed: z.array(ragIndexFailedDocSchema),
   indexed: z.number().int().nonnegative(),
@@ -174,7 +175,7 @@ export type RagIndexResponse = z.infer<typeof ragIndexResponseSchema>;
  * Zod schema for POST /api/rag/search response.
  * Includes results and performance metadata.
  */
-export const ragSearchResponseSchema = z.object({
+export const ragSearchResponseSchema = z.strictObject({
   latencyMs: z.number().nonnegative(),
   query: z.string(),
   rerankingApplied: z.boolean(),
@@ -193,11 +194,11 @@ export type RagSearchResponse = z.infer<typeof ragSearchResponseSchema>;
  * Schema for ragSearch tool input.
  * Validates RAG search parameters for AI tools.
  */
-export const ragSearchInputSchema = z.object({
+export const ragSearchInputSchema = z.strictObject({
   limit: z.number().int().min(1).max(20).default(5),
   namespace: ragNamespaceSchema.optional(),
   query: z.string().min(1, { error: "Query is required" }),
-  threshold: z.number().min(0).max(1).default(0.7),
+  threshold: z.number().min(0).max(1).default(0.0),
 });
 
 /** TypeScript type for RAG search tool input. */
@@ -206,7 +207,7 @@ export type RagSearchInput = z.infer<typeof ragSearchInputSchema>;
 // ===== TOOL OUTPUT SCHEMAS =====
 // Schemas for RAG tool output validation
 
-export const ragSearchToolResultSchema = z.object({
+export const ragSearchToolResultSchema = z.strictObject({
   chunkIndex: z.number().int().nonnegative(),
   content: z.string(),
   metadata: ragMetadataSchema,
@@ -215,7 +216,7 @@ export const ragSearchToolResultSchema = z.object({
   sourceId: z.string().nullable(),
 });
 
-export const ragSearchToolOutputSchema = z.object({
+export const ragSearchToolOutputSchema = z.strictObject({
   latencyMs: z.number().nonnegative(),
   results: z.array(ragSearchToolResultSchema),
   total: z.number().int().nonnegative(),
@@ -227,10 +228,34 @@ export type RagSearchToolOutput = z.infer<typeof ragSearchToolOutputSchema>;
 // Schemas for internal RAG operations
 
 /**
+ * Cached search result entry stored in RAG search cache.
+ */
+export const cachedRagSearchResultSchema = z.strictObject({
+  chunkIndex: z.number().int(),
+  combinedScore: z.number(),
+  id: z.string(),
+  keywordRank: z.number(),
+  rerankScore: z.number().optional(),
+  similarity: z.number(),
+});
+
+/**
+ * Cached RAG search payload stored in Upstash.
+ */
+export const cachedRagSearchEntrySchema = z.strictObject({
+  rerankingApplied: z.boolean(),
+  results: z.array(cachedRagSearchResultSchema),
+  total: z.number().int(),
+  version: z.literal(1),
+});
+
+export type CachedRagSearchEntry = z.infer<typeof cachedRagSearchEntrySchema>;
+
+/**
  * Zod schema for reranker configuration.
  * Used to configure the pluggable reranker.
  */
-export const rerankerConfigSchema = z.object({
+export const rerankerConfigSchema = z.strictObject({
   maxRetries: z.number().int().min(0).max(3).default(2),
   provider: z.enum(["together", "noop"]).default("together"),
   timeout: z.number().int().min(100).max(5000).default(700),
@@ -244,7 +269,7 @@ export type RerankerConfig = z.infer<typeof rerankerConfigSchema>;
  * Zod schema for rerank result.
  * Output from the reranking operation.
  */
-export const rerankResultSchema = z.object({
+export const rerankResultSchema = z.strictObject({
   index: z.number().int().nonnegative(),
   relevanceScore: z.number().min(0).max(1),
 });
@@ -256,10 +281,11 @@ export type RerankResult = z.infer<typeof rerankResultSchema>;
  * Zod schema for indexer configuration.
  * Used to configure document chunking and embedding.
  */
-export const indexerConfigSchema = z.object({
+export const indexerConfigSchema = z.strictObject({
   batchSize: z.number().int().min(1).max(100).default(10),
   chunkOverlap: z.number().int().min(0).max(500).default(100),
   chunkSize: z.number().int().min(100).max(2000).default(512),
+  maxParallelCalls: z.number().int().min(1).max(10).default(2),
   namespace: ragNamespaceSchema.default("default"),
 });
 
@@ -270,12 +296,12 @@ export type IndexerConfig = z.infer<typeof indexerConfigSchema>;
  * Zod schema for retriever configuration.
  * Used to configure hybrid search behavior.
  */
-export const retrieverConfigSchema = z.object({
+export const retrieverConfigSchema = z.strictObject({
   keywordWeight: z.number().min(0).max(1).default(0.3),
   limit: z.number().int().min(1).max(100).default(10),
   namespace: ragNamespaceSchema.optional(),
   semanticWeight: z.number().min(0).max(1).default(0.7),
-  threshold: z.number().min(0).max(1).default(0.7),
+  threshold: z.number().min(0).max(1).default(0.0),
   useReranking: z.boolean().default(true),
 });
 

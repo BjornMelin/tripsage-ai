@@ -223,7 +223,7 @@ describe("HotelCard", () => {
     expect(screen.getByRole("button", { name: /view details/i })).toBeDisabled();
   });
 
-  it("shows Selecting... when isOptimisticSelecting", () => {
+  it("shows Selecting… when isOptimisticSelecting", () => {
     render(<HotelCard {...defaultProps} isOptimisticSelecting />);
 
     expect(screen.getByRole("button", { name: /selecting/i })).toBeInTheDocument();

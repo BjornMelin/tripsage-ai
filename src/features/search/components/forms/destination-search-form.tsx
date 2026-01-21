@@ -243,7 +243,7 @@ export function DestinationSearchForm({
             context: "DestinationSearchForm",
           }}
           submitLabel="Search Destinations"
-          loadingLabel="Searching destinations..."
+          loadingLabel="Searching destinations…"
           className="space-y-6"
           popularItems={popularItems}
           popularLabel="Popular Destinations"

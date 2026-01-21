@@ -32,13 +32,18 @@ Update user settings.
 #### Request Body (POST /api/user-settings)
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ---- | ---- | ---- | ---- |
 | `theme` | string | No | UI theme preference (`light`, `dark`, `auto`) |
 | `language` | string | No | Language preference (ISO 639-1 code) |
 | `timezone` | string | No | Timezone (IANA timezone identifier) |
-| `notifications` | object | No | Notification settings {email, push, inApp} |
-| `privacy` | object | No | Privacy settings {profileVisible, shareActivity} |
-| `preferences` | object | No | Custom preferences (key-value pairs) |
+| `notifications` | object | No | Notification channel preferences |
+| `notifications.email` | boolean | No | Enable email notifications |
+| `notifications.push` | boolean | No | Enable push notifications |
+| `notifications.inApp` | boolean | No | Enable in-app notifications |
+| `privacy` | object | No | Data privacy and visibility controls |
+| `privacy.profileVisible` | boolean | No | Public profile visibility |
+| `privacy.shareActivity` | boolean | No | Shared activity visibility |
+| `preferences` | object | No | Custom key-value pairs (arbitrary JSON) |
 
 #### Response (POST /api/user-settings)
 
@@ -57,6 +62,10 @@ Update user settings.
   "privacy": {
     "profileVisible": false,
     "shareActivity": false
+  },
+  "preferences": {
+    "currency": "USD",
+    "units": "metric"
   },
   "updatedAt": "2025-01-20T15:30:00Z"
 }
@@ -85,13 +94,13 @@ Generate and (optionally) persist embeddings for internal ingestion workflows.
 #### Headers (POST /api/embeddings)
 
 | Header | Required | Description |
-|--------|----------|-------------|
+| ----- | ---- | ---- |
 | `x-internal-key` | Yes | Must match `EMBEDDINGS_API_KEY` |
 
 #### Request Body (POST /api/embeddings)
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | ---- | ---- |
 | `text` | string | No | Text to embed (max 8000 characters) |
 | `property` | object | No | Optional property payload used to derive text |
 | `property.id` | string | No | When present, embedding is upserted to `accommodation_embeddings` |
@@ -102,7 +111,11 @@ Generate and (optionally) persist embeddings for internal ingestion workflows.
 
 #### Notes
 
-- The embedding model is currently fixed to `text-embedding-3-small` (1536 dimensions).
+- The embedding model is selected server-side and always returns `1536` dimensions:
+  - AI Gateway: `openai/text-embedding-3-small`
+  - Direct OpenAI: `text-embedding-3-small`
+  - Offline/dev fallback: `tripsage/deterministic-embedding-1536-v1` (not semantically meaningful)
+- Selection prioritizes `AI_GATEWAY_API_KEY`, then `OPENAI_API_KEY`, then falls back to deterministic embeddings.
 - The endpoint is disabled unless `EMBEDDINGS_API_KEY` is set.
 
 #### Response (POST /api/embeddings)
@@ -112,7 +125,7 @@ Generate and (optionally) persist embeddings for internal ingestion workflows.
 ```json
 {
   "success": true,
-  "modelId": "text-embedding-3-small",
+  "modelId": "openai/text-embedding-3-small",
   "embedding": [0.0234, -0.0156, 0.0423, -0.0089, 0.0312, 0.0178],
   "id": "property-123",
   "persisted": true,
@@ -120,7 +133,7 @@ Generate and (optionally) persist embeddings for internal ingestion workflows.
 }
 ```
 
-The `embedding` array continues to 1536 numeric values.
+The `embedding` array continues to 1536 numeric values. The `modelId` format varies by provider: AI Gateway uses `openai/...`, Direct OpenAI uses `text-embedding-3-small`, and Deterministic uses `tripsage/...`.
 
 #### Errors (POST /api/embeddings)
 
@@ -187,7 +200,7 @@ List user files.
 #### Query Parameters (GET /api/attachments/files)
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| ----------- | ---- | -------- | ----------- |
 | `limit` | number | No | Max results (default: 20, max: 100) |
 | `offset` | number | No | Results to skip (default: 0) |
 | `type` | string | No | File type filter (e.g., "image", "pdf", "video") |
@@ -243,13 +256,13 @@ Privileged endpoint to emit an operational alert for AI demo events (disabled by
 #### Headers (POST /api/telemetry/ai-demo)
 
 | Header | Required | Description |
-|--------|----------|-------------|
+| ----- | ---- | ---- |
 | `x-internal-key` | Yes | Must match `TELEMETRY_AI_DEMO_KEY` |
 
 #### Request Body (POST /api/telemetry/ai-demo)
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | ---- | ---- |
 | `status` | string | Yes | One of `success` or `error` |
 | `detail` | string | No | Detail string (max 2000 characters) |
 
@@ -286,7 +299,7 @@ Captures client-side booking interactions (e.g., URL resolution and fallbacks).
 #### Request Body (POST /api/telemetry/activities)
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | ---- | ---- |
 | `eventName` | string | Yes | Regex: `/^[a-z][a-z0-9._]{0,99}$/i` |
 | `attributes` | object | No | Up to 25 entries (string/number/boolean) |
 | `level` | string | No | One of `info`, `warning`, `error` (default: `info`) |

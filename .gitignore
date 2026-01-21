@@ -1,5 +1,8 @@
 .env
 .env-*
+.env.local
+.env.local.*
+!.env.local.example
 
 
 # Node
@@ -80,6 +83,7 @@ screenshots/
 
 # Frontend build
 .next/
+tmp/
 out/
 dist/
 *.tsbuildinfo
@@ -187,6 +191,7 @@ benchmark-*.json
 # IDE and editor temporary files
 **/.history/
 **/*.tmp
+**/.tmp-*
 **/*.temp
 **/.scratch/
 **/scratch.*
@@ -238,7 +243,6 @@ scan-results/
 **/*.rej
 **/.git/COMMIT_EDITMSG.backup
 
-.env.local
 .env.production
 .env.development
 .env.test
@@ -252,13 +256,12 @@ scan-results/
 .agent/
 supabase/.temp/
 
-docs/prompts/
 # Generated review artifacts
-
 docs/implementation/
-
-# Archived docs not part of source
-
+docs/tasks/
+docs/prompts/
+docs/reviews/
+docs/plans/
 
 # Frontend workspace (consolidated from frontend/.gitignore)
 next-env.d.ts

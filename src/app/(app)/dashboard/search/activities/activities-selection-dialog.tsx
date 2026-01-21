@@ -69,7 +69,7 @@ export function ActivitiesSelectionDialog({
             disabled={isPending}
             className="flex-1"
           >
-            {isPending ? "Loading..." : "Add to Trip"}
+            {isPending ? "Loading…" : "Add to Trip"}
           </Button>
           <Button variant="secondary" onClick={onBookActivity} className="flex-1">
             Book Now

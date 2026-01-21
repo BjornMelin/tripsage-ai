@@ -123,7 +123,7 @@ describe("/api/embeddings", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 401 when internal key is invalid", async () => {
+  it("returns 403 when internal key is invalid", async () => {
     const res = await route.POST(
       createMockNextRequest({
         body: { text: "hello world" },
@@ -133,7 +133,7 @@ describe("/api/embeddings", () => {
       }),
       createRouteParamsContext()
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 
   it("returns 400 on missing input", async () => {

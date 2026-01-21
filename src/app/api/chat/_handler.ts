@@ -1023,7 +1023,7 @@ export async function handleChat(
         });
       };
 
-      writeStatus({ kind: "start", label: "Thinking..." });
+      writeStatus({ kind: "start", label: "Thinking…" });
 
       let stepCount = 0;
 

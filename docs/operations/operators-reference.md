@@ -11,20 +11,20 @@ All runtime is Next.js 16 with AI SDK v6 route handlers.
 
 ## Environment Variables
 
-Align with root `.env.example`:
+Align with root `.env.local.example` for local development (Next.js loads `.env.local`), and with `.env.example` as the canonical reference template for deployment/onboarding:
 
 | Category | Variables |
-|----------|-----------|
+| :--- | :--- |
 | Core | `NODE_ENV`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_BASE_PATH` |
 | Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` |
 | Upstash | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` |
-| AI | `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY` |
-| External | `GOOGLE_MAPS_SERVER_API_KEY`, `OPENWEATHERMAP_API_KEY`, `DUFFEL_ACCESS_TOKEN`, `RESEND_API_KEY` |
+| AI | `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `TOGETHER_AI_API_KEY`, `EMBEDDINGS_API_KEY` |
+| External | `GOOGLE_MAPS_SERVER_API_KEY`, `OPENWEATHERMAP_API_KEY`, `DUFFEL_ACCESS_TOKEN`, `RESEND_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
 
 ## Start and Verify
 
 ```bash
-cp .env.example .env
+cp .env.local.example .env.local
 pnpm install
 pnpm dev
 ```

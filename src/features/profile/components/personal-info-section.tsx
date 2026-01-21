@@ -419,7 +419,7 @@ export function PersonalInfoSection() {
 
             <div className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                {form.formState.isSubmitting ? "Saving…" : "Save Changes"}
               </Button>
             </div>
           </form>

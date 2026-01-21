@@ -1,23 +1,61 @@
-# ADR: Centralized Rate Limiting in Next.js (Upstash)
+# ADR-0032: Centralized rate limiting (Next.js + Upstash)
 
-Status: Accepted
+**Version**: 1.1.0  
+**Status**: Accepted  
+**Date**: 2025-11-02  
+**Category**: Platform / Security  
+**Domain**: Rate limiting / Abuse controls  
+**Related ADRs**: ADR-0046, ADR-0047, ADR-0062, ADR-0067, ADR-0068  
+**Related Specs**: SPEC-0108, SPEC-0109, SPEC-0110
 
-Context
+## Context
 
-- Prior FastAPI SlowAPI limiter exists; dual backends cause drift and uneven limits. Next.js 16 App Router is canonical for APIs.
+- TripSage previously had multiple rate-limiting strategies across runtimes, which creates drift and uneven enforcement.
+- Next.js App Router (Route Handlers + Server Actions) is the canonical runtime for APIs.
+- Rate limiting must be:
+  - centralized and consistent
+  - request-scoped (no module-scope clients in Route Handlers)
+  - safe (hashed identifiers; no raw IPs/user IDs)
+  - observable (headers + telemetry)
+  - resilient (explicit degraded-mode policy)
 
-Decision
+## Decision
 
-- Centralize rate limiting in Next.js using Upstash (`@upstash/ratelimit` + `@upstash/redis`).
-- Identifier: prefer a stable **hashed** user identifier when authenticated (e.g., `user:${sha256(user.id)}`); otherwise use a **hashed** client IP derived from trusted headers. Never use raw IP/user IDs as Upstash identifiers.
-- Budgets per category: chat (60/min), tools sensitive (20/min), BYOK CRUD (10/min), validation (20/min).
-- Expose `Retry-After` on 429. Record counters in OTel as attributes.
-- Explicit degraded-mode policy (fail-open vs fail-closed):
-  - Privileged/cost-bearing endpoints must **fail closed** (`503 rate_limit_unavailable`) when rate limiting cannot be enforced.
-  - Non-privileged endpoints may **fail open** for availability, but must emit a deduped operational alert (`ratelimit.degraded`).
-  - Treat Upstash timeouts (`success: true`, `reason: "timeout"`) as degraded infrastructure and apply the same policy (Upstash allows-by-default on timeout).
+- Centralize all server-side rate limiting in Next.js using Upstash:
+  - `@upstash/ratelimit` for algorithms and counters
+  - `@upstash/redis` for backing storage (HTTP client)
+- Canonical configuration lives in `src/lib/ratelimit/routes.ts` and is consumed by:
+  - API routes: `src/lib/api/factory.ts` (`withApiGuards({ rateLimit: ... })`)
+  - Webhooks: `src/lib/webhooks/rate-limit.ts`
+  - AI tools: `src/ai/lib/tool-factory.ts`
 
-Rationale (Decision Framework)
+### Identifier policy (mandatory)
+
+- Prefer a stable **hashed** user identifier when authenticated (e.g., `user:${sha256(user.id)}`).
+- Otherwise use a **hashed** client IP derived from trusted headers.
+- Never pass raw IPs or raw user IDs to Upstash.
+- Canonical identifier helpers:
+  - `src/lib/ratelimit/identifier.ts`
+  - `src/lib/http/ip.ts`
+
+### Response headers (HTTP)
+
+- Attach standard headers on 429 responses:
+  - `X-RateLimit-Limit`
+  - `X-RateLimit-Remaining`
+  - `X-RateLimit-Reset` (milliseconds)
+  - `Retry-After` (seconds)
+- Canonical helpers: `src/lib/ratelimit/headers.ts`
+
+### Degraded-mode policy (fail-open vs fail-closed)
+
+Privileged/cost-bearing endpoints must **fail closed** (`503 rate_limit_unavailable`) when rate limiting cannot be enforced (missing Redis config, Redis unavailable, enforcement errors).
+
+Non-privileged endpoints may **fail open** for availability, but must emit a deduped operational alert (`ratelimit.degraded`).
+
+Upstash timeout behavior is treated as degraded infrastructure: `success: true` with `reason: "timeout"` still triggers the same degraded-mode policy.
+
+## Rationale (Decision Framework)
 
 - Leverage (35%): 9.5 — managed service, library-first.
 - Value (30%): 9.0 — consistent user experience and protection.
@@ -25,15 +63,32 @@ Rationale (Decision Framework)
 - Adapt (10%): 8.8 — portable keys; Edge-safe.
 - Weighted total: 9.27/10 (≥ 9.0 threshold).
 
-Consequences
+## Consequences
 
-- Remove Python SlowAPI limiter and configs after migration.
-- Introduce shared helper `lib/ratelimit.ts` and route wrappers.
-- Add tests for headers and enforcement.
+### Positive
 
-References
+- One enforcement policy and one set of helpers across API routes, webhooks, and tools.
+- Explicit degraded-mode behavior reduces ambiguity during Upstash outages/timeouts.
+- Consistent telemetry and headers improve operability.
 
-- Upstash template: <https://vercel.com/templates/next.js/ratelimit-with-upstash-redis>
+### Negative
+
+- Adds a hard dependency on Upstash for strict enforcement on privileged routes.
+
+### Neutral
+
+- Rate limiting remains an application-layer guard; database policies (RLS) remain the source of truth for authorization.
+
+## Post-acceptance updates (2026-01-19)
+
+- Enabled Upstash "global dynamic limit" support by setting `dynamicLimits: true` in all `Ratelimit` constructors used by the app (API routes, webhooks, AI tools). This allows operators to set a global limit at runtime via Upstash dynamic limit methods (`setDynamicLimit` / `getDynamicLimit`). Note: dynamicLimits adds one Redis command per rate-limit check, increasing operational costs. Also be aware that the ephemeral cache may continue denying requests for users previously over limit, even after raising limits, until the cache entry resets.
+
+  **Mitigating ephemeralCache latency:** If you plan to frequently adjust limits at runtime, consider disabling `ephemeralCache` in the `Ratelimit` constructor to ensure raised limits take effect immediately. This trades higher Redis load and potential latency for immediate visibility of limit changes.
+
+## References
+
+- Upstash Next.js template: <https://vercel.com/templates/next.js/ratelimit-with-upstash-redis>
 - Upstash Ratelimit (TS) – Timeout behavior: <https://upstash.com/docs/redis/sdks/ratelimit-ts/features#timeout>
 - Upstash Ratelimit (TS) – `limit()` response (`reason: "timeout"`): <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods#limit>
-- Next.js Edge guidance: <https://nextjs.org/blog/next-16#proxyts-formerly-middlewarets>
+- Upstash Ratelimit (TS) – Dynamic limit methods: <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods>
+- ADR-0067 (Upstash Redis/QStash), ADR-0068 (abuse controls), ADR-0047 (runtime policy)

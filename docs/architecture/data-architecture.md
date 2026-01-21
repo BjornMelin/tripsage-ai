@@ -79,5 +79,4 @@ flowchart LR
 
 ## What Is Out of Scope
 
-- Legacy FastAPI/Python data paths and services are removed and unsupported.
 - Alternative databases or data lakes are not part of the current system.

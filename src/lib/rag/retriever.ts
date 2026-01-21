@@ -4,18 +4,22 @@
 
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import type { RagSearchResponse, RagSearchResult, RetrieverConfig } from "@schemas/rag";
 import { retrieverConfigSchema } from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embed } from "ai";
+import {
+  getTextEmbeddingModel,
+  TEXT_EMBEDDING_DIMENSIONS,
+} from "@/lib/ai/embeddings/text-embedding-model";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { toPgvector } from "./pgvector";
-import { createReranker, type Reranker } from "./reranker";
+import { createReranker, NoOpReranker, type Reranker } from "./reranker";
 
 const logger = createServerLogger("rag.retriever");
+const EMBED_TIMEOUT_MS = 2_000;
 
 /**
  * Retrieve parameters for the core retrieval function.
@@ -61,6 +65,15 @@ export async function retrieveDocuments(
 
   const startTime = performance.now();
 
+  const reranker =
+    customReranker ??
+    (config.useReranking
+      ? createReranker({ provider: "together", timeout: 700 })
+      : createReranker({ provider: "noop" }));
+  const shouldRerank =
+    !(reranker instanceof NoOpReranker) &&
+    (config.useReranking || customReranker !== undefined);
+
   return withTelemetrySpan(
     "rag.retriever.retrieve_documents",
     {
@@ -70,19 +83,20 @@ export async function retrieveDocuments(
         "rag.retriever.namespace": config.namespace ?? "all",
         "rag.retriever.semantic_weight": config.semanticWeight,
         "rag.retriever.threshold": config.threshold,
-        "rag.retriever.use_reranking": config.useReranking,
+        "rag.retriever.use_reranking": shouldRerank,
       },
     },
     async () => {
       // Generate query embedding
       const { embedding } = await embed({
-        model: openai.embeddingModel("text-embedding-3-small"),
+        abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+        model: getTextEmbeddingModel(),
         value: query,
       });
 
-      if (embedding.length !== 1536) {
+      if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
         throw new Error(
-          `Query embedding dimension mismatch: expected 1536, got ${embedding.length}`
+          `Query embedding dimension mismatch: expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length}`
         );
       }
 
@@ -93,7 +107,7 @@ export async function retrieveDocuments(
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
         keyword_weight: config.keywordWeight,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
-        match_count: config.useReranking ? config.limit * 2 : config.limit,
+        match_count: shouldRerank ? config.limit * 2 : config.limit,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
         match_threshold: config.threshold,
         // biome-ignore lint/style/useNamingConvention: RPC parameter name
@@ -125,13 +139,12 @@ export async function retrieveDocuments(
       let finalResults: RagSearchResult[];
       let rerankingApplied = false;
 
-      if (config.useReranking && results.length > 0) {
-        const reranker =
-          customReranker ?? createReranker({ provider: "together", timeout: 700 });
-
+      if (shouldRerank && results.length > 0) {
         try {
           finalResults = await reranker.rerank(query, results, config.limit);
-          rerankingApplied = true;
+          rerankingApplied = finalResults.some(
+            (row) => typeof row.rerankScore === "number"
+          );
         } catch (error) {
           // Graceful fallback: use original results
           logger.warn("reranking_fallback", {
@@ -187,13 +200,14 @@ export async function semanticSearch(params: {
 
   // Generate query embedding
   const { embedding } = await embed({
-    model: openai.embeddingModel("text-embedding-3-small"),
+    abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    model: getTextEmbeddingModel(),
     value: query,
   });
 
-  if (embedding.length !== 1536) {
+  if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
     throw new Error(
-      `Query embedding dimension mismatch: expected 1536, got ${embedding.length}`
+      `Query embedding dimension mismatch: expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length}`
     );
   }
 

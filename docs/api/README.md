@@ -254,7 +254,7 @@ pnpm biome:fix
 | `@supabase/ssr` | ^0.8.0 | Supabase SSR cookie handling |
 | `@supabase/supabase-js` | ^2.90.1 | Supabase client |
 | `@upstash/redis` | ^1.36.1 | Redis client |
-| `@upstash/ratelimit` | 2.0.7 | Rate limiting |
+| `@upstash/ratelimit` | 2.0.8 | Rate limiting |
 | `@tanstack/react-query` | ^5.90.19 | Data fetching/caching |
 | `zod` | ^4.3.5 | Schema validation |
 | `@opentelemetry/api` | ^1.9.0 | Observability |

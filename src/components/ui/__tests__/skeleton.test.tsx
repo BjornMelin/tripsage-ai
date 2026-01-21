@@ -12,7 +12,7 @@ describe("Skeleton", () => {
     const skeleton = screen.getByTestId("skeleton");
     expect(skeleton).toBeInTheDocument();
     expect(skeleton).toHaveAttribute("role", "status");
-    expect(skeleton).toHaveAttribute("aria-label", "Loading content...");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading content…");
   });
 
   it("applies custom width and height", () => {

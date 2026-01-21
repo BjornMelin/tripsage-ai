@@ -1,0 +1,9 @@
+Hello TripSage.
+
+This is a deterministic seed attachment for local development.
+
+Key features exercised:
+- Supabase Storage upload/download
+- Attachment ingestion job
+- RAG indexing + retrieval (pgvector)
+

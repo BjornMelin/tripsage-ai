@@ -141,3 +141,4 @@ await bumpTag(CACHE_TAG_SEARCH);
 - Multi-tenant: include tenant identifiers in either the tag or the per-key suffix if isolation is needed.
 - Always use `versionedKey()` for reads and writes - never construct keys manually.
 - When invalidating, bump tags instead of manually deleting keys for O(1) invalidation.
+- Redis outages: JSON cache helpers (`getCachedJson*`, `setCachedJson`, `deleteCachedJson*`) are best-effort and fail open (errors are recorded in telemetry and treated as cache miss/unavailable). Do not rely on Redis for correctness guarantees; use idempotency/rate-limit helpers where strict behavior is required.
