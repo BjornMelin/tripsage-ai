@@ -1,5 +1,0 @@
-
-> tripsage-ai-frontend@1.22.5 biome:check /home/bjorn/repos/agents/tripsage-ai
-> biome check ./src ./e2e ./scripts
-
-Checked 1068 files in 440ms. No fixes applied.
