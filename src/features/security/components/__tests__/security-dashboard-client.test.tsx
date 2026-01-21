@@ -48,9 +48,9 @@ describe("LocalTime", () => {
 describe("SecurityEventsList", () => {
   it("renders event details and risk label", () => {
     const riskColor = {
-      high: "text-red-600",
-      low: "text-green-600",
-      medium: "text-yellow-600",
+      high: "text-destructive",
+      low: "text-success",
+      medium: "text-warning",
     };
     render(
       <SecurityEventsList
@@ -70,7 +70,7 @@ describe("SecurityEventsList", () => {
     );
 
     expect(screen.getByText("Suspicious login")).toBeInTheDocument();
-    expect(screen.getByText("high")).toHaveClass("text-red-600");
+    expect(screen.getByText("high")).toHaveClass("text-destructive");
     expect(screen.getByText("1.1.1.1")).toBeInTheDocument();
   });
 });

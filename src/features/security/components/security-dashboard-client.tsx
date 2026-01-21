@@ -17,10 +17,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
-// Local status colors; consider lifting to shared tokens if reused elsewhere
+// Local status colors aligned with semantic tokens
 const STATUS_TEXT_COLORS = {
-  active: "text-green-600",
-  success: "text-emerald-600",
+  active: "text-success",
+  success: "text-success",
 } as const;
 
 /** Local time props. */
