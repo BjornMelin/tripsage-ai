@@ -1,3 +1,30 @@
+## [1.27.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.26.0...v1.27.0) (2026-01-21)
+
+### Features
+
+* add stripe webhook to .env.example ([aa0ae63](https://github.com/BjornMelin/tripsage-ai/commit/aa0ae6362d9c70458d518abdbe2bc940ef217a47))
+* align `...` in all files per react and web design best practices ([5fba0d0](https://github.com/BjornMelin/tripsage-ai/commit/5fba0d05715c6a1e86f3f335d630efea9e28c558))
+* **auth:** enhance Supabase SSR auth-token handling for chunked cookies ([aac877a](https://github.com/BjornMelin/tripsage-ai/commit/aac877a10b6091657f069fe21fa8e9ae54079f93))
+* **migrations:** consolidate RLS hardening and trip collaboration policies ([6bbea7b](https://github.com/BjornMelin/tripsage-ai/commit/6bbea7bd91b47b3893771bc7600433addb7f0d28))
+* **payments:** add Stripe webhook handler ([1641c24](https://github.com/BjornMelin/tripsage-ai/commit/1641c2495197cb1e532941ad83c6a44c6b0c0911))
+* **rag:** add maxParallelCalls to indexing configuration and update related schemas ([693cbb3](https://github.com/BjornMelin/tripsage-ai/commit/693cbb3286b50c184517815fd3641750f2453837))
+* short-circuited cache hits with empty RAG results so they return immediately without Supabase rehydration or recomputation, and added coverage for the empty-cache path. ([c52b576](https://github.com/BjornMelin/tripsage-ai/commit/c52b576307bfe29ef18591fae06971a480b3c6cb))
+* **supabase:** add bootstrap, db reset, start, stop, and storage management scripts ([7683754](https://github.com/BjornMelin/tripsage-ai/commit/76837549a2b429c6e5347c870a4d67dee7137ce4))
+* **supabase:** add deterministic local seed data ([c75ebd3](https://github.com/BjornMelin/tripsage-ai/commit/c75ebd320c7cc9be1ffe448287cff5827c974f30))
+
+### Bug Fixes
+
+* **app:** batch seed deletes and preserve cache totals ([12de231](https://github.com/BjornMelin/tripsage-ai/commit/12de2316586ef6637cd0f59495e808a9d99e7f87))
+* **auth:** improve confirm redirect handling ([81c2041](https://github.com/BjornMelin/tripsage-ai/commit/81c20411694cc4a0ea4bdced04a8876bedd7dfe1))
+* **cache:** make Upstash JSON cache fail-open ([df79a16](https://github.com/BjornMelin/tripsage-ai/commit/df79a163527d1a40421acaacee97203817720a91))
+* **deps:** restore pnpm override pins ([b97ebdc](https://github.com/BjornMelin/tripsage-ai/commit/b97ebdc193b7cc6ae955bbc421f998aa15b63658))
+* **review:** address pr feedback ([a681323](https://github.com/BjornMelin/tripsage-ai/commit/a681323887e131dea4b745a6d88c9dc1cc582df3))
+* **review:** resolve PR 640 feedback ([3aa5594](https://github.com/BjornMelin/tripsage-ai/commit/3aa55942ffcaeca6ed225a32838c0f101b4febbb))
+* **review:** resolve remaining PR comments ([7cf0612](https://github.com/BjornMelin/tripsage-ai/commit/7cf06125d2ee962dc21e1d08b113c86952401f2a))
+* **schemas:** align datetime offsets and json nulls ([2191233](https://github.com/BjornMelin/tripsage-ai/commit/2191233af2b94228a13e2eebc85b818f06295a9f))
+* **security:** gate BotID by environment ([5a2a4f6](https://github.com/BjornMelin/tripsage-ai/commit/5a2a4f6951180ab741ea07d98713e5108436e2da))
+* **ui:** align components with guidelines ([f9d8d19](https://github.com/BjornMelin/tripsage-ai/commit/f9d8d194879f33bbc1b8b248d2c5fc819498a32f))
+
 ## [1.26.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.25.0...v1.26.0) (2026-01-19)
 
 ### Features
