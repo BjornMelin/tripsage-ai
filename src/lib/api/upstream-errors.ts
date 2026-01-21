@@ -20,7 +20,8 @@ const DEFAULT_MAX_DETAIL_LENGTH = 200;
  * `maxDetailLength` (defaults to 200). For statuses >= 500 or < 400, or when `details`
  * is missing/blank, the base message is returned.
  *
- * @param options - Formatting options including `service`, `status`, optional `details`, and optional `maxDetailLength` (defaults to 200)
+ * @param options - Formatting options including `service`, `status`, optional `details`,
+ *   and optional `maxDetailLength` (defaults to 200)
  * @returns The formatted error reason string
  */
 export function formatUpstreamErrorReason(options: UpstreamErrorOptions): string {

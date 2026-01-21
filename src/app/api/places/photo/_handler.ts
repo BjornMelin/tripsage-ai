@@ -80,8 +80,9 @@ async function readResponseBodyBytesWithLimit(
  *
  * @param deps - Handler dependencies; must include `apiKey` used to call the Places API
  * @param params - Validated request parameters for the photo fetch
- * @returns The HTTP Response containing the proxied image with appropriate caching and content headers,
- *          or an error response describing the failure (e.g., size limit exceeded or external API error)
+ * @returns The HTTP Response containing the proxied image with appropriate caching
+ *   and content headers, or an error response describing the failure (e.g.,
+ *   size limit exceeded or external API error)
  */
 export async function handlePlacesPhoto(
   deps: PlacesPhotoDeps,

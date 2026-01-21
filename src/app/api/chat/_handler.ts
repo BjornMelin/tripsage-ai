@@ -348,7 +348,7 @@ async function ensureChatSession(options: {
  *
  * @param allowEphemeral - If true, a database insert failure is treated as a non-fatal event: the function logs a warning and returns `{ ok: true, id: -1 }` instead of an error response.
  * @param metadata - Arbitrary JSON metadata to store with the message.
- * @returns `{ ok: true; id: number }` on successful persistence (or `{ ok: true; id: -1 }` when `allowEphemeral` is true and persistence was skipped), or `{ ok: false; res: Response }` when persistence fails and ephemeral mode is not allowed. 
+ * @returns `{ ok: true; id: number }` on successful persistence (or `{ ok: true; id: -1 }` when `allowEphemeral` is true and persistence was skipped), or `{ ok: false; res: Response }` when persistence fails and ephemeral mode is not allowed.
  */
 async function persistChatMessage(options: {
   allowEphemeral?: boolean;
@@ -801,13 +801,23 @@ function mergeAssistantMetadata(
 }
 
 /**
- * Orchestrates a chat request: validates input, hydrates session/history/memory, persists user and assistant placeholders, runs a bounded tool loop with the AI provider, and returns a streaming assistant response.
+ * Orchestrates a chat request: validates input, hydrates session/history/memory,
+ * persists user and assistant placeholders, runs a bounded tool loop with the
+ * AI provider, and returns a streaming assistant response.
  *
- * This handler supports submitting new messages and regenerating prior assistant responses, enforces token budgeting, manages tool execution checkpoints, updates persistence state as the stream progresses, and returns a streaming HTTP Response that emits UI message parts for the assistant.
+ * This handler supports submitting new messages and regenerating prior assistant
+ * responses, enforces token budgeting, manages tool execution checkpoints,
+ * updates persistence state as the stream progresses, and returns a streaming
+ * HTTP Response that emits UI message parts for the assistant.
  *
- * @param deps - Server-side dependencies (database client, provider resolver, logger, clock, memory cache, and config) required to process the chat.
- * @param payload - Chat request payload (messages, trigger, session/message identifiers, model hints, token settings, user/connection info, and abort signal).
- * @returns A Response that streams assistant UI message parts (including status, tool steps, partial content, and final finish/abort metadata) or an error response when validation/provider/session/history/token budget checks fail.
+ * @param deps - Server-side dependencies (database client, provider resolver,
+ *   logger, clock, memory cache, and config) required to process the chat.
+ * @param payload - Chat request payload (messages, trigger, session/message
+ *   identifiers, model hints, token settings, user/connection info, and abort
+ *   signal).
+ * @returns A Response that streams assistant UI message parts (including status,
+ *   tool steps, partial content, and final finish/abort metadata) or an error
+ *   response when validation/provider/session/history/token budget checks fail.
  */
 export async function handleChat(
   deps: ChatDeps,

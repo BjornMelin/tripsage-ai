@@ -36,7 +36,8 @@ export function vaultUnavailableResponse(reason: string, err?: unknown): Respons
 /**
  * Map a provider HTTP status code to a PlannedErrorCode.
  *
- * 429 and any status >= 500 map to `NETWORK_ERROR`; statuses from 400 through 499 map to `INVALID_KEY`; all other statuses map to `NETWORK_ERROR`.
+ * 429 and any status >= 500 map to `NETWORK_ERROR`; statuses from 400 through
+ * 499 map to `INVALID_KEY`; all other statuses map to `NETWORK_ERROR`.
  *
  * @param status - HTTP status code returned by the provider
  * @returns The corresponding planned error code (`INVALID_KEY` or `NETWORK_ERROR`)

@@ -35,7 +35,8 @@ const logger = createServerLogger("attachments.files");
  *
  * @param tripId - The numeric identifier of the trip to check access for
  * @param userId - The ID of the requesting user
- * @returns An HTTP error `Response` when access is denied or a database error occurs, `null` when access is granted
+ * @returns An HTTP error `Response` when access is denied or a database error
+ *   occurs, `null` when access is granted
  */
 async function ensureTripAccess(options: {
   supabase: TypedServerSupabase;

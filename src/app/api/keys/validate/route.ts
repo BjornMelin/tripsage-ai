@@ -145,7 +145,8 @@ function normalizeErrorReason(error: unknown): string {
  *
  * @param service - Provider identifier: "openai", "openrouter", "anthropic", or "xai".
  * @param apiKey - The plaintext API key to validate.
- * @returns `{ isValid: true }` if the key is accepted; `{ isValid: false, reason: string }` otherwise.
+ * @returns `{ isValid: true }` if the key is accepted;
+ *   `{ isValid: false, reason: string }` otherwise.
  */
 async function validateProviderKey(
   service: string,

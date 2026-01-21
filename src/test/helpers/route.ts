@@ -15,8 +15,11 @@ import { applyOriginHeader } from "./origin";
 /**
  * Create a mock NextRequest including headers and cookies for use in route handler tests.
  *
- * @param options - Configuration for the mock request: `body` (request body), `cookies` (name→value map), `headers` (name→value map), `method` (HTTP method), `searchParams` (query params map), and `url` (full request URL)
- * @returns A NextRequest-like instance constructed with the provided options, suitable for testing Next.js route handlers
+ * @param options - Configuration for the mock request: `body` (request body),
+ *   `cookies` (name→value map), `headers` (name→value map), `method` (HTTP method),
+ *   `searchParams` (query params map), and `url` (full request URL)
+ * @returns A NextRequest-like instance constructed with the provided options,
+ *   suitable for testing Next.js route handlers
  */
 export function createMockNextRequest(options: {
   body?: unknown;

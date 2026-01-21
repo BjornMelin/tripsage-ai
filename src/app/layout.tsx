@@ -115,7 +115,8 @@ function AppShellFallback() {
 }
 
 /**
- * Defines the application's root HTML structure, applies Geist fonts, and wraps page content with the AppShell.
+ * Defines the application's root HTML structure, applies Geist fonts,
+ * and wraps page content with the AppShell.
  *
  * @param props.children - Page content to render inside the app shell.
  * @returns The root HTML element tree for the application.
