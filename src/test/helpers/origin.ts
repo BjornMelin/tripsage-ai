@@ -41,7 +41,8 @@ export function resolveTestOrigin(fallback: string): string {
  *
  * @param headers - The Headers object to modify.
  * @param method - The HTTP method of the request.
- * @param requestUrl - The full request URL (used for fallback origin).
+ * @param requestUrl - The full request URL (must be absolute, e.g. "http://" or "https://")
+ *   because it is parsed with `new URL(requestUrl)`.
  */
 export function applyOriginHeader(
   headers: Headers,

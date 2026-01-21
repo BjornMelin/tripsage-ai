@@ -67,18 +67,6 @@ export function requireSameOrigin(
     }
   }
 
-  const headerSecFetchSite = req.headers.get("sec-fetch-site");
-  if (
-    headerSecFetchSite &&
-    headerSecFetchSite !== "same-origin" &&
-    headerSecFetchSite !== "same-site"
-  ) {
-    return {
-      ok: false,
-      reason: "Request blocked by Sec-Fetch-Site (not same-origin or same-site)",
-    };
-  }
-
   const headerOrigin = req.headers.get("origin");
   const headerReferer = req.headers.get("referer");
   const candidate =
@@ -95,6 +83,18 @@ export function requireSameOrigin(
   }
 
   if (!allowed.has(actualOrigin)) {
+    const headerSecFetchSite = req.headers.get("sec-fetch-site");
+    if (
+      headerSecFetchSite &&
+      headerSecFetchSite !== "same-origin" &&
+      headerSecFetchSite !== "same-site"
+    ) {
+      return {
+        ok: false,
+        reason: "Request blocked by Sec-Fetch-Site (not same-origin or same-site)",
+      };
+    }
+
     return { ok: false, reason: "Request origin does not match expected origin" };
   }
 

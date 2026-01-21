@@ -65,6 +65,31 @@ describe("requireSameOrigin", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("allows cross-site requests when origin is in allowedOrigins", () => {
+    const req = makeRequest("https://app.example.com/api/test", {
+      origin: "https://partner.example.com",
+      "sec-fetch-site": "cross-site",
+    });
+    const result = requireSameOrigin(req, {
+      allowedOrigins: ["https://partner.example.com"],
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("blocks cross-site requests when origin is not allowlisted", () => {
+    const req = makeRequest("https://app.example.com/api/test", {
+      origin: "https://evil.example.net",
+      "sec-fetch-site": "cross-site",
+    });
+    const result = requireSameOrigin(req);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(
+        "Request blocked by Sec-Fetch-Site (not same-origin or same-site)"
+      );
+    }
+  });
+
   it("rejects malformed Origin header", () => {
     const req = makeRequest("https://app.example.com/api/test", {
       origin: "not-a-valid-url",

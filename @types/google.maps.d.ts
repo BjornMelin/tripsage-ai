@@ -226,7 +226,7 @@ interface PlacePhoto {
   getURI(options?: { maxWidth?: number; maxHeight?: number }): string;
   authorAttributions: PlaceAttribution[];
   widthPx: number;
-  heightPx: number;
+  heightPx?: number;
 }
 
 /** Attribution for photos and reviews. */

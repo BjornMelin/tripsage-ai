@@ -611,15 +611,15 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           ? csrf
           : Boolean(csrfOptions) || (auth && isMutatingMethod(req.method));
 
-      if (
-        auth &&
-        shouldCheckCsrf &&
-        authCredentials?.hasCookie &&
-        !authCredentials.hasAuthorization
-      ) {
-        const originResult = requireSameOrigin(req, csrfOptions ?? undefined);
-        if (!originResult.ok) {
-          return forbiddenResponse(originResult.reason);
+      if (shouldCheckCsrf) {
+        if (!authCredentials) {
+          authCredentials = await getAuthCredentials(req);
+        }
+        if (authCredentials.hasCookie && !authCredentials.hasAuthorization) {
+          const originResult = requireSameOrigin(req, csrfOptions ?? undefined);
+          if (!originResult.ok) {
+            return forbiddenResponse(originResult.reason);
+          }
         }
       }
 

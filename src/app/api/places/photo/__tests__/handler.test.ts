@@ -40,6 +40,29 @@ describe("handlePlacesPhoto", () => {
     MOCK_GET_PLACE_PHOTO.mockReset();
   });
 
+  it("returns 502 when upstream response is ok but body is null", async () => {
+    MOCK_GET_PLACE_PHOTO.mockResolvedValue(
+      new Response(null, {
+        headers: { "content-type": "image/jpeg" },
+        status: 200,
+      })
+    );
+
+    const res = await handlePlacesPhoto({ apiKey: "test" }, params);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("external_api_error");
+  });
+
+  it("returns 502 when upstream request fails with a generic error", async () => {
+    MOCK_GET_PLACE_PHOTO.mockRejectedValue(new Error("Network failure"));
+
+    const res = await handlePlacesPhoto({ apiKey: "test" }, params);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("external_api_error");
+  });
+
   it("returns 413 when content-length exceeds limit", async () => {
     MOCK_GET_PLACE_PHOTO.mockResolvedValue(
       createStreamResponse(new Uint8Array([1]), {
