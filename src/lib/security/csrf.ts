@@ -17,7 +17,9 @@ export type SameOriginOptions = {
 /**
  * Result of a same-origin verification check.
  */
-export type SameOriginResult = { ok: true } | { ok: false; reason: string };
+export type SameOriginResult =
+  | { ok: true }
+  | { ok: false; reason: string; response?: Response };
 
 /**
  * Normalizes an origin or referer string for comparison.

@@ -2,6 +2,8 @@
 
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { errorResponse } from "@/lib/api/route-helpers";
+import type { SameOriginResult } from "@/lib/security/csrf";
 import {
   createRouteParamsContext,
   mockApiRouteAuthUser,
@@ -9,7 +11,9 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 
-const REQUIRE_SAME_ORIGIN = vi.hoisted(() => vi.fn(() => ({ ok: true })));
+const REQUIRE_SAME_ORIGIN = vi.hoisted(() =>
+  vi.fn<() => SameOriginResult>(() => ({ ok: true }))
+);
 
 vi.mock("server-only", () => ({}));
 
@@ -56,6 +60,35 @@ describe("withApiGuards CSRF gating", () => {
     const res = await handler(req, createRouteParamsContext());
 
     expect(res.status).toBe(200);
+    expect(REQUIRE_SAME_ORIGIN).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns CSRF error response when same-origin check fails", async () => {
+    const { withApiGuards } = await import("@/lib/api/factory");
+    const handler = withApiGuards({
+      auth: true,
+      botId: false,
+      csrf: true,
+    })(async () => new Response("ok", { status: 200 }));
+
+    const failureResponse = errorResponse({
+      error: "forbidden",
+      reason: "CSRF blocked",
+      status: 403,
+    });
+
+    REQUIRE_SAME_ORIGIN.mockReturnValueOnce({
+      ok: false,
+      reason: "CSRF blocked",
+      response: failureResponse,
+    });
+
+    const req = new NextRequest("http://localhost:3000/api/test", {
+      method: "POST",
+    });
+    const res = await handler(req, createRouteParamsContext());
+
+    expect(res.status).toBe(failureResponse.status);
     expect(REQUIRE_SAME_ORIGIN).toHaveBeenCalledTimes(1);
   });
 

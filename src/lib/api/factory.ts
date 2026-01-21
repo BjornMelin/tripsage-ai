@@ -617,6 +617,9 @@ export function withApiGuards<SchemaType extends z.ZodType>(
         if (authCredentials.hasCookie && !authCredentials.hasAuthorization) {
           const originResult = requireSameOrigin(req, csrfOptions ?? undefined);
           if (!originResult.ok) {
+            if (originResult.response) {
+              return originResult.response;
+            }
             return forbiddenResponse(originResult.reason);
           }
         }
