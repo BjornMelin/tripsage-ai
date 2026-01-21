@@ -143,7 +143,7 @@ function normalizeErrorReason(error: unknown): string {
 /**
  * Validates a provider API key by probing the provider's endpoint.
  *
- * @param service - Provider identifier: "openai", "openrouter", "anthropic", or "xai".
+ * @param service - Provider identifier: "openai", "openrouter", "anthropic", "xai", or "gateway".
  * @param apiKey - The plaintext API key to validate.
  * @returns `{ isValid: true }` if the key is accepted;
  *   `{ isValid: false, reason: string }` otherwise.
