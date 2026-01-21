@@ -235,7 +235,7 @@ export function CalendarEventList({
                         href={event.htmlLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline"
+                        className="text-sm text-primary hover:underline"
                       >
                         View in Google Calendar
                       </a>
