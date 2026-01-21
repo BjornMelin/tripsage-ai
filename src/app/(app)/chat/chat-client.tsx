@@ -384,7 +384,7 @@ export function ChatClient(): ReactElement {
             className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
             data-testid="chat-stream-status"
           >
-            <span className="inline-flex size-2 animate-pulse rounded-full bg-emerald-500/70" />
+            <span className="inline-flex size-2 animate-pulse rounded-full bg-success/70" />
             <span>
               {streamStatus.step ? `Step ${streamStatus.step}: ` : ""}
               {streamStatus.label}

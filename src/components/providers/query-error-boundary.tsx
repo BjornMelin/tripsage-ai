@@ -143,11 +143,11 @@ function RecordTelemetry(error: Error, info: ErrorInfo, meta: ErrorMeta) {
 }
 
 const VARIANT_STYLES: Record<ErrorVariant, string> = {
-  auth: "border-amber-200 bg-amber-50 text-amber-800",
-  default: "border-gray-200 bg-gray-50 text-gray-800",
-  network: "border-amber-200 bg-amber-50 text-amber-800",
-  permission: "border-red-200 bg-red-50 text-red-800",
-  server: "border-red-200 bg-red-50 text-red-800",
+  auth: "border-warning/20 bg-warning/10 text-warning",
+  default: "border-border bg-muted text-foreground",
+  network: "border-warning/20 bg-warning/10 text-warning",
+  permission: "border-destructive/20 bg-destructive/10 text-destructive",
+  server: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const VARIANT_DISPLAY: Record<
@@ -155,27 +155,27 @@ const VARIANT_DISPLAY: Record<
   { icon: JSX.Element; message: string; title: string }
 > = {
   auth: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-amber-700" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-warning" />,
     message: "Please log in to continue.",
     title: "Authentication Required",
   },
   default: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-destructive" />,
     message: "Something went wrong. Please try again.",
     title: "Something went wrong",
   },
   network: {
-    icon: <WifiOffIcon className="h-8 w-8 text-amber-700" />,
+    icon: <WifiOffIcon className="h-8 w-8 text-warning" />,
     message: "Please check your internet connection and try again.",
     title: "Connection Error",
   },
   permission: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-destructive" />,
     message: "You don't have permission to access this resource.",
     title: "Access Denied",
   },
   server: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
+    icon: <AlertTriangleIcon className="h-8 w-8 text-destructive" />,
     message: "Our servers are experiencing issues. Please try again later.",
     title: "Server Error",
   },
