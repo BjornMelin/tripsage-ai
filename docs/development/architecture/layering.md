@@ -37,6 +37,7 @@ safer.
 | **App** | ✅ | ✅ | ✅ | ✅ |
 
 Notes:
+
 - Domain **must not** import `next/*` or anything under `src/app/**`.
 - Domain importing Lib/Infra is legacy and should be burned down over time.
 - Domain schemas (`src/domain/schemas/**`) **must not** import Lib/Infra at all.
@@ -45,11 +46,13 @@ Notes:
 ## Examples
 
 Allowed:
+
 - `src/ai/tools/server/accommodations.ts` → `@domain/accommodations/service`
 - `src/app/api/flights/search/route.ts` → `@domain/flights/service`, `@/lib/telemetry/span`
 - `src/app/agents/page.tsx` → `@ai/agents/chat-agent`
 
 Forbidden:
+
 - `src/domain/trips/service.ts` → `next/headers`
 - `src/domain/search/service.ts` → `@/app/api/search/route`
 - `src/lib/supabase/server.ts` → `@ai/tools/server/web-search`
@@ -57,6 +60,7 @@ Forbidden:
 ## Enforcement
 
 CI enforces boundaries via `scripts/check-boundaries.mjs`:
+
 - Domain → App/Next imports are blocked.
 - Domain schemas → Lib/Infra/Next/`server-only` imports are blocked.
 - Client components importing server-only modules are blocked.
