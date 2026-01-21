@@ -57,7 +57,7 @@ test.describe("Loading States", () => {
 
     // Dashboard metrics uses client-side Skeleton components (role="status").
     const skeleton = page
-      .locator('[role="status"][aria-label="Loading content..."]')
+      .locator('[role="status"][aria-label="Loading content…"]')
       .first();
     await expect(skeleton).toBeVisible({ timeout: 15000 });
 
@@ -73,7 +73,7 @@ test.describe("Loading States", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     const skeleton = page
-      .locator('[role="status"][aria-label="Loading content..."]')
+      .locator('[role="status"][aria-label="Loading content…"]')
       .first();
     await expect(skeleton).toBeVisible({ timeout: 15000 });
   });
