@@ -64,10 +64,9 @@ function StatusIcon({
   hasError: boolean;
   size?: string;
 }) {
-  if (hasError) return <AlertTriangleIcon className={`${size} text-amber-600`} />;
-  if (isConnected)
-    return <WifiIcon className={`${size} text-green-600 animate-pulse`} />;
-  return <WifiOffIcon className={`${size} text-red-600`} />;
+  if (hasError) return <AlertTriangleIcon className={`${size} text-warning`} />;
+  if (isConnected) return <WifiIcon className={`${size} text-success animate-pulse`} />;
+  return <WifiOffIcon className={`${size} text-destructive`} />;
 }
 
 /**
@@ -201,9 +200,9 @@ export function ConnectionStatusMonitor() {
                 >
                   <div className="flex items-center space-x-2">
                     {connection.status === "connected" ? (
-                      <CheckCircleIcon className="h-3 w-3 text-green-500" />
+                      <CheckCircleIcon className="h-3 w-3 text-success" />
                     ) : (
-                      <XCircleIcon className="h-3 w-3 text-red-500" />
+                      <XCircleIcon className="h-3 w-3 text-destructive" />
                     )}
                     <span className="text-xs font-medium">{connection.table}</span>
                   </div>
@@ -225,7 +224,7 @@ export function ConnectionStatusMonitor() {
                 <Separator />
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <AlertTriangleIcon className="h-4 w-4 text-yellow-500" />
+                    <AlertTriangleIcon className="h-4 w-4 text-warning" />
                     <span className="text-sm font-medium">Last Error</span>
                   </div>
                   <p className="text-xs text-muted-foreground">

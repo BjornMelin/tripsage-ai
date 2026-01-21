@@ -44,11 +44,11 @@ import { getToneColors, type ToneVariant } from "@/lib/variants/status";
  * Maps connection status to statusVariants tones for consistent styling.
  */
 const CONNECTION_STATUS_TONE: Record<ConnectionStatus, ToneVariant> = {
-  connected: "active", // green
-  connecting: "info", // blue
-  disconnected: "unknown", // slate
-  error: "error", // red
-  reconnecting: "pending", // amber
+  connected: "active", // success
+  connecting: "info", // info
+  disconnected: "unknown", // muted
+  error: "error", // destructive
+  reconnecting: "pending", // warning
 };
 
 /**
@@ -66,23 +66,23 @@ const GetStatusColors = (status: ConnectionStatus) => {
 };
 
 const QUALITY_COLORS = {
-  excellent: "text-green-700",
-  fair: "text-amber-700",
-  good: "text-blue-700",
-  poor: "text-red-700",
+  excellent: "text-success",
+  fair: "text-warning",
+  good: "text-info",
+  poor: "text-destructive",
 } as const;
 
 const METRIC_ICON_COLORS = {
-  bandwidth: "text-green-700",
-  latency: "text-blue-700",
-  packetLoss: "text-amber-700",
-  uptime: "text-purple-700",
+  bandwidth: "text-success",
+  latency: "text-info",
+  packetLoss: "text-warning",
+  uptime: "text-highlight",
 } as const;
 
 const OPTIMIZATION_ICON_COLORS = {
-  bandwidth: "text-blue-700",
-  latency: "text-red-700",
-  packetLoss: "text-amber-700",
+  bandwidth: "text-info",
+  latency: "text-destructive",
+  packetLoss: "text-warning",
 } as const;
 
 // Type for the connection status
@@ -154,7 +154,7 @@ const DefaultAnalytics: ConnectionAnalytics = {
  * @returns The quality color
  */
 const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
-  return QUALITY_COLORS[quality] ?? "text-gray-700";
+  return QUALITY_COLORS[quality] ?? "text-muted-foreground";
 };
 /**
  * Get the signal icon for the connection status
@@ -240,7 +240,7 @@ const ConnectionQualityIndicator: React.FC<{ metrics: NetworkMetrics }> = ({
             key={key}
             className={cn(
               "w-1 rounded-full",
-              qualityScore >= threshold ? "bg-green-700" : "bg-gray-300"
+              qualityScore >= threshold ? "bg-success" : "bg-muted/60"
             )}
             style={{ height: `${height}px` }}
             initial={{ opacity: 0, scaleY: 0 }}
@@ -601,7 +601,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <div className="text-center p-2 rounded-lg bg-muted">
                         <ActivityIcon
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
@@ -621,7 +621,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <div className="text-center p-2 rounded-lg bg-muted">
                         <ZapIcon
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
@@ -641,7 +641,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <div className="text-center p-2 rounded-lg bg-muted">
                         <RouterIcon
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
@@ -661,7 +661,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <div className="text-center p-2 rounded-lg bg-muted">
                         <MonitorIcon
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",

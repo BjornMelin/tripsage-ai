@@ -361,15 +361,24 @@ export function OptimisticTripUpdates({
       case "pending":
         return (
           <Loader2Icon
+            aria-hidden="true"
             className={`h-4 w-4 animate-spin ${UPDATE_STATUS_COLORS.pending}`}
           />
         );
       case "success":
         return (
-          <CheckCircleIcon className={`h-4 w-4 ${UPDATE_STATUS_COLORS.success}`} />
+          <CheckCircleIcon
+            aria-hidden="true"
+            className={`h-4 w-4 ${UPDATE_STATUS_COLORS.success}`}
+          />
         );
       case "error":
-        return <AlertCircleIcon className={`h-4 w-4 ${UPDATE_STATUS_COLORS.error}`} />;
+        return (
+          <AlertCircleIcon
+            aria-hidden="true"
+            className={`h-4 w-4 ${UPDATE_STATUS_COLORS.error}`}
+          />
+        );
     }
   };
 
@@ -391,7 +400,7 @@ export function OptimisticTripUpdates({
     return (
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Badge className={className}>
-          <Icon className="h-3 w-3 mr-1" />
+          <Icon aria-hidden="true" className="h-3 w-3 mr-1" />
           {label}
         </Badge>
         {!canEdit && (
@@ -415,7 +424,7 @@ export function OptimisticTripUpdates({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-destructive">
-              <AlertCircleIcon className="h-5 w-5" />
+              <AlertCircleIcon aria-hidden="true" className="h-5 w-5" />
               <span>Unable to load trip</span>
             </CardTitle>
             <CardDescription>
@@ -434,8 +443,8 @@ export function OptimisticTripUpdates({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Loader2Icon className="h-5 w-5 animate-spin" />
-              <span>Loading trip...</span>
+              <Loader2Icon aria-hidden="true" className="h-5 w-5 animate-spin" />
+              <span>Loading trip…</span>
             </CardTitle>
             <CardDescription>
               Fetching the latest trip details and real-time connection status.
@@ -453,7 +462,7 @@ export function OptimisticTripUpdates({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertCircleIcon className="h-5 w-5" />
+              <AlertCircleIcon aria-hidden="true" className="h-5 w-5" />
               <span>No trip found</span>
             </CardTitle>
             <CardDescription>
@@ -472,7 +481,7 @@ export function OptimisticTripUpdates({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <MapPinIcon className="h-5 w-5" />
+            <MapPinIcon aria-hidden="true" className="h-5 w-5" />
             <span>Trip Details</span>
           </CardTitle>
           <CardDescription>
@@ -518,7 +527,7 @@ export function OptimisticTripUpdates({
 
             <div className="space-y-2">
               <Label htmlFor={budgetInputId} className="flex items-center space-x-2">
-                <DollarSignIcon className="h-4 w-4" />
+                <DollarSignIcon aria-hidden="true" className="h-4 w-4" />
                 <span>Budget</span>
                 {getFieldStatus("budget")}
               </Label>
@@ -537,7 +546,7 @@ export function OptimisticTripUpdates({
 
             <div className="space-y-2">
               <Label htmlFor={travelersInputId} className="flex items-center space-x-2">
-                <UsersIcon className="h-4 w-4" />
+                <UsersIcon aria-hidden="true" className="h-4 w-4" />
                 <span>Travelers</span>
                 {getFieldStatus("travelers")}
               </Label>
@@ -558,7 +567,7 @@ export function OptimisticTripUpdates({
 
           <div className="space-y-2">
             <Label className="flex items-center space-x-2">
-              <CalendarIcon className="h-4 w-4" />
+              <CalendarIcon aria-hidden="true" className="h-4 w-4" />
               <span>Trip Dates</span>
             </Label>
             <div className="grid grid-cols-2 gap-4">
@@ -581,7 +590,7 @@ export function OptimisticTripUpdates({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <ClockIcon className="h-5 w-5" />
+            <ClockIcon aria-hidden="true" className="h-5 w-5" />
             <span>Recent Updates</span>
           </CardTitle>
         </CardHeader>
@@ -641,7 +650,7 @@ export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <UsersIcon className="h-5 w-5" />
+          <UsersIcon aria-hidden="true" className="h-5 w-5" />
           <span>Active Collaborators</span>
           <Badge variant="secondary">Coming soon</Badge>
         </CardTitle>
