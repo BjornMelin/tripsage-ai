@@ -30,8 +30,9 @@ import { RatingStars } from "./rating-stars";
 /** Get price history icon based on trend */
 export function PriceHistoryIcon({ trend }: { trend: string }) {
   if (trend === "falling")
-    return <TrendingUpIcon className="h-3 w-3 text-green-500 rotate-180" />;
-  if (trend === "rising") return <TrendingUpIcon className="h-3 w-3 text-red-500" />;
+    return <TrendingUpIcon className="h-3 w-3 text-success rotate-180" />;
+  if (trend === "rising")
+    return <TrendingUpIcon className="h-3 w-3 text-destructive" />;
   return null;
 }
 
@@ -67,7 +68,7 @@ export function HotelCard({
       {/* AI Recommendation Badge */}
       {hotel.ai.recommendation >= 8 && (
         <div className="absolute top-3 left-3 z-10">
-          <Badge className="bg-purple-500 text-white">
+          <Badge className="bg-highlight text-highlight-foreground">
             <ZapIcon className="h-3 w-3 mr-1" />
             AI Pick
           </Badge>
@@ -78,14 +79,14 @@ export function HotelCard({
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-3 right-3 z-10 bg-white/80 hover:bg-white"
+        className="absolute top-3 right-3 z-10 bg-background/80 hover:bg-background"
         onClick={onToggleWishlist}
         aria-label={isSaved ? "Remove from wishlist" : "Save to wishlist"}
       >
         <HeartIcon
           className={cn(
             "h-4 w-4",
-            isSaved ? "fill-red-500 text-red-500" : "text-gray-600"
+            isSaved ? "fill-destructive text-destructive" : "text-muted-foreground"
           )}
         />
       </Button>
@@ -124,7 +125,7 @@ export function HotelCard({
           {/* Deals Banner */}
           {hotel.pricing.deals && (
             <div className="absolute bottom-2 left-2">
-              <Badge className="bg-red-500 text-white text-xs">
+              <Badge className="bg-destructive text-destructive-foreground text-xs">
                 Save ${hotel.pricing.deals.savings}
               </Badge>
             </div>
@@ -152,7 +153,7 @@ export function HotelCard({
                   <span className="text-sm font-medium">
                     {hotel.userRating.toFixed(1)}
                   </span>
-                  <StarIcon className="h-3 w-3 fill-current text-yellow-500" />
+                  <StarIcon className="h-3 w-3 fill-current text-warning" />
                   <span className="text-xs text-muted-foreground">
                     ({hotel.reviewCount.toLocaleString()} reviews)
                   </span>
@@ -192,14 +193,14 @@ export function HotelCard({
           {/* Special Features */}
           <div className="mb-3 space-y-2">
             {hotel.allInclusive?.available && (
-              <Badge className="bg-orange-100 text-orange-800">
+              <Badge className="bg-warning/20 text-warning">
                 <SparklesIcon className="h-3 w-3 mr-1" />
                 All-Inclusive {hotel.allInclusive.tier}
               </Badge>
             )}
 
             {hotel.sustainability.certified && (
-              <Badge className="bg-green-100 text-green-800">
+              <Badge className="bg-success/20 text-success">
                 <ShieldIcon className="h-3 w-3 mr-1" />
                 Eco-Certified
               </Badge>
@@ -252,12 +253,12 @@ export function HotelCard({
 
             {/* AI Recommendation */}
             {hotel.ai.recommendation >= 7 && (
-              <div className="mb-3 p-2 bg-purple-50 rounded text-xs">
-                <div className="flex items-center gap-1 font-medium text-purple-800">
+              <div className="mb-3 p-2 bg-highlight/10 rounded text-xs">
+                <div className="flex items-center gap-1 font-medium text-highlight">
                   <ZapIcon className="h-3 w-3" />
                   AI Recommendation: {hotel.ai.recommendation}/10
                 </div>
-                <div className="text-purple-600 mt-1">{hotel.ai.reason}</div>
+                <div className="text-highlight/80 mt-1">{hotel.ai.reason}</div>
               </div>
             )}
 

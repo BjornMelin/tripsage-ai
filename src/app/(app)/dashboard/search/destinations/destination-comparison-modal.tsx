@@ -187,7 +187,7 @@ export function DestinationComparisonModal({
                     {typeof destination.rating === "number" &&
                     Number.isFinite(destination.rating) ? (
                       <div className="flex items-center gap-1">
-                        <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <StarIcon className="h-4 w-4 fill-warning text-warning" />
                         <span className="font-medium">
                           {destination.rating.toFixed(1)}
                         </span>

@@ -24,20 +24,20 @@ import { formatCurrency, formatDurationMinutes } from "../common/format";
 
 /**
  * Flight-specific semantic colors aligned with statusVariants.
- * - Price trends: green (down/good), red (up/bad)
- * - Deal indicators: green (success/active)
- * - Emissions: green (low), amber (average), red (high)
- * - UI accents: blue (info), red (urgent)
+ * - Price trends: success (down/good), destructive (up/bad)
+ * - Deal indicators: success (positive)
+ * - Emissions: success (low), warning (average), destructive (high)
+ * - UI accents: info/ destructive for urgency
  */
 export const FLIGHT_COLORS = {
-  airlineIcon: "bg-blue-50 text-blue-700",
-  dealBadge: "bg-green-50 text-green-700",
-  emissionHigh: "bg-red-500",
-  emissionLow: "bg-green-500",
-  emissionMedium: "bg-amber-500",
-  priceTrendDown: "text-green-700",
-  priceTrendUp: "text-red-700",
-  promotionBadge: "bg-red-600 text-white",
+  airlineIcon: "bg-info/10 text-info",
+  dealBadge: "bg-success/10 text-success",
+  emissionHigh: "bg-destructive",
+  emissionLow: "bg-success",
+  emissionMedium: "bg-warning",
+  priceTrendDown: "text-success",
+  priceTrendUp: "text-destructive",
+  promotionBadge: "bg-destructive text-destructive-foreground",
 } as const;
 
 /** Price change icon component */
@@ -60,9 +60,9 @@ export function PredictionBadge({
   prediction: FlightResult["prediction"];
 }) {
   const colors = {
-    buy_now: "bg-green-100 text-green-800 border-green-200",
-    neutral: "bg-gray-100 text-gray-800 border-gray-200",
-    wait: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    buy_now: "bg-success/20 text-success border-success/20",
+    neutral: "bg-muted text-muted-foreground border-border",
+    wait: "bg-warning/20 text-warning border-warning/20",
   };
 
   const text = {
@@ -104,7 +104,7 @@ export function FlightCard({
       data-testid={`flight-card-${flight.id}`}
       className={cn(
         "relative transition-[box-shadow,opacity] duration-200 hover:shadow-md",
-        isSelected && "ring-2 ring-blue-500",
+        isSelected && "ring-2 ring-info/50",
         isOptimisticSelecting && "opacity-75"
       )}
     >
@@ -301,7 +301,7 @@ export function FlightCard({
               onChange={onToggleComparison}
               aria-label="Compare this flight"
               data-testid="compare-checkbox"
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-info rounded focus:ring-info/50"
             />
           </div>
         </div>

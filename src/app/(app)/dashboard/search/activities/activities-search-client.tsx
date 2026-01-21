@@ -52,9 +52,9 @@ const MAX_COMPARISON_ITEMS = 3;
  * - AI suggestions: purple (distinct from verified results)
  */
 const ACTIVITY_COLORS = {
-  aiSuggestionBadge: "bg-purple-100",
-  aiSuggestionIcon: "text-purple-500",
-  successIcon: "text-green-700",
+  aiSuggestionBadge: "bg-highlight/20",
+  aiSuggestionIcon: "text-highlight",
+  successIcon: "text-success",
 } as const;
 
 /** Activity search client component props. */
@@ -425,7 +425,7 @@ export default function ActivitiesSearchClient({
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TicketIcon className="h-5 w-5" />
+                    <TicketIcon aria-hidden="true" className="h-5 w-5" />
                     Search Activities
                   </CardTitle>
                 </CardHeader>
@@ -491,8 +491,11 @@ export default function ActivitiesSearchClient({
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <SearchIcon className="h-5 w-5 animate-pulse" />
-                      Searching activities...
+                      <SearchIcon
+                        aria-hidden="true"
+                        className="h-5 w-5 animate-pulse"
+                      />
+                      Searching activities…
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -504,7 +507,7 @@ export default function ActivitiesSearchClient({
               {/* Error State */}
               {searchError && (
                 <Alert variant="destructive">
-                  <AlertCircleIcon className="h-4 w-4" />
+                  <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
                   <AlertTitle>Search Error</AlertTitle>
                   <AlertDescription>
                     {searchError.message || "Something went wrong"}
@@ -518,6 +521,7 @@ export default function ActivitiesSearchClient({
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                       <CheckCircleIcon
+                        aria-hidden="true"
                         className={`h-5 w-5 ${ACTIVITY_COLORS.successIcon}`}
                       />
                       {activities.length} Activities Found
@@ -535,6 +539,7 @@ export default function ActivitiesSearchClient({
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <CheckCircleIcon
+                            aria-hidden="true"
                             className={`h-5 w-5 ${ACTIVITY_COLORS.successIcon}`}
                           />
                           <h3 className="text-lg font-semibold">Verified Activities</h3>
@@ -559,6 +564,7 @@ export default function ActivitiesSearchClient({
                           <div>
                             <div className="flex items-center gap-2 mb-4">
                               <SparklesIcon
+                                aria-hidden="true"
                                 className={`h-5 w-5 ${ACTIVITY_COLORS.aiSuggestionIcon}`}
                               />
                               <h3 className="text-lg font-semibold">
@@ -593,7 +599,10 @@ export default function ActivitiesSearchClient({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {allAi && (
                         <div className="col-span-full flex items-center gap-2 text-sm text-muted-foreground">
-                          <SparklesIcon className="h-4 w-4 text-purple-500" />
+                          <SparklesIcon
+                            aria-hidden="true"
+                            className="h-4 w-4 text-highlight"
+                          />
                           <span>All results are AI-generated suggestions</span>
                         </div>
                       )}
@@ -616,7 +625,10 @@ export default function ActivitiesSearchClient({
                   <CardContent className="text-center py-12">
                     <div className="flex flex-col items-center gap-4">
                       <div className="rounded-full bg-muted p-4">
-                        <SearchIcon className="h-8 w-8 text-muted-foreground" />
+                        <SearchIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-muted-foreground"
+                        />
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-lg font-semibold">No activities found</h3>
@@ -636,7 +648,10 @@ export default function ActivitiesSearchClient({
                   <CardContent className="text-center py-12">
                     <div className="flex flex-col items-center gap-4">
                       <div className="rounded-full bg-background p-4 shadow-sm">
-                        <TicketIcon className="h-8 w-8 text-primary" />
+                        <TicketIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-primary"
+                        />
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-lg font-semibold">
@@ -665,7 +680,7 @@ export default function ActivitiesSearchClient({
                     disabled={comparisonList.size < 2}
                     className="shadow-lg"
                   >
-                    <TicketIcon className="h-4 w-4 mr-2" />
+                    <TicketIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                     Compare ({comparisonList.size})
                   </Button>
                 </TooltipTrigger>

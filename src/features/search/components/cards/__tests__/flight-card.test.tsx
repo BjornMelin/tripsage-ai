@@ -146,7 +146,7 @@ describe("FlightCard", () => {
     const { container } = render(<FlightCard {...defaultProps} isSelected />);
 
     const card = container.querySelector('[data-testid="flight-card-f1"]');
-    expect(card).toHaveClass("ring-2", "ring-blue-500");
+    expect(card).toHaveClass("ring-2", "ring-info/50");
   });
 
   it("applies opacity style when isOptimisticSelecting", () => {
@@ -249,14 +249,17 @@ describe("PredictionBadge", () => {
 
 describe("FLIGHT_COLORS", () => {
   it.each([
-    { key: "airlineIcon" as const, value: "bg-blue-50 text-blue-700" },
-    { key: "dealBadge" as const, value: "bg-green-50 text-green-700" },
-    { key: "emissionLow" as const, value: "bg-green-500" },
-    { key: "emissionMedium" as const, value: "bg-amber-500" },
-    { key: "emissionHigh" as const, value: "bg-red-500" },
-    { key: "priceTrendDown" as const, value: "text-green-700" },
-    { key: "priceTrendUp" as const, value: "text-red-700" },
-    { key: "promotionBadge" as const, value: "bg-red-600 text-white" },
+    { key: "airlineIcon" as const, value: "bg-info/10 text-info" },
+    { key: "dealBadge" as const, value: "bg-success/10 text-success" },
+    { key: "emissionLow" as const, value: "bg-success" },
+    { key: "emissionMedium" as const, value: "bg-warning" },
+    { key: "emissionHigh" as const, value: "bg-destructive" },
+    { key: "priceTrendDown" as const, value: "text-success" },
+    { key: "priceTrendUp" as const, value: "text-destructive" },
+    {
+      key: "promotionBadge" as const,
+      value: "bg-destructive text-destructive-foreground",
+    },
   ])("exports $key as $value", ({ key, value }) => {
     expect(FLIGHT_COLORS[key]).toBe(value);
   });

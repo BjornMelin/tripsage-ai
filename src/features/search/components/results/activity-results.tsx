@@ -323,7 +323,7 @@ export function ActivityResults({
             className={cn(
               "relative",
               selectedForComparison.has(activity.id) &&
-                "ring-2 ring-blue-500 rounded-lg",
+                "ring-2 ring-info/50 rounded-lg",
               optimisticSelecting.has(activity.id) && "opacity-75"
             )}
           >
@@ -333,7 +333,9 @@ export function ActivityResults({
               onCompare={onCompare ? () => handleCompare(activity) : undefined}
             />
             {selectedForComparison.has(activity.id) && (
-              <Badge className="absolute top-2 right-2 bg-blue-500">Selected</Badge>
+              <Badge className="absolute top-2 right-2 bg-info text-info-foreground">
+                Selected
+              </Badge>
             )}
           </div>
         ))}

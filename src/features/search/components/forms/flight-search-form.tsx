@@ -243,8 +243,8 @@ export function FlightSearchForm({
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <PlaneIcon className="h-5 w-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-full bg-info/20 flex items-center justify-center">
+              <PlaneIcon className="h-5 w-5 text-info" />
             </div>
             <div>
               <CardTitle className="text-xl">Find Flights</CardTitle>
@@ -258,7 +258,7 @@ export function FlightSearchForm({
             <div className="hidden md:flex items-center gap-2">
               <Badge
                 variant="secondary"
-                className="bg-green-50 text-green-700 border-green-200"
+                className="bg-success/10 text-success border-success/20"
               >
                 <SparklesIcon className="h-3 w-3 mr-1" />
                 Smart Bundle: Save up to {smartBundles.total}
@@ -301,14 +301,14 @@ export function FlightSearchForm({
               ? (_form, _state) => (
                   <>
                     <Separator />
-                    <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
+                    <div className="bg-gradient-to-r from-info/10 to-success/10 p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <SparklesIcon className="h-5 w-5 text-blue-600" />
+                          <SparklesIcon className="h-5 w-5 text-info" />
                           <h3 className="font-semibold text-sm">Smart Trip Bundle</h3>
                           <Badge
                             variant="secondary"
-                            className="bg-green-100 text-green-700"
+                            className="bg-success/20 text-success"
                           >
                             Save {smartBundles.total}
                           </Badge>
@@ -320,19 +320,19 @@ export function FlightSearchForm({
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div className="text-center">
                           <div className="font-medium">Flight + Hotel</div>
-                          <div className="text-green-600 font-semibold">
+                          <div className="text-success font-semibold">
                             Save {smartBundles.hotel}
                           </div>
                         </div>
                         <div className="text-center">
                           <div className="font-medium">+ Car Rental</div>
-                          <div className="text-green-600 font-semibold">
+                          <div className="text-success font-semibold">
                             Save {smartBundles.car}
                           </div>
                         </div>
                         <div className="text-center">
                           <div className="font-medium">Total Savings</div>
-                          <div className="text-green-600 font-semibold text-lg">
+                          <div className="text-success font-semibold text-lg">
                             {smartBundles.total}
                           </div>
                         </div>
@@ -386,7 +386,10 @@ export function FlightSearchForm({
                         <FormLabel className="text-sm font-medium">From</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <MapPinIcon
+                              aria-hidden="true"
+                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                            />
                             <Input
                               placeholder="Departure city or airport"
                               className="pl-10"
@@ -407,8 +410,9 @@ export function FlightSearchForm({
                       onClick={handleSwapAirports}
                       disabled={state.isSubmitting}
                       className="rounded-full bg-background border-2 shadow-md hover:shadow-lg transition-shadow"
+                      aria-label="Swap origin and destination"
                     >
-                      <ArrowRightIcon className="h-4 w-4" />
+                      <ArrowRightIcon aria-hidden="true" className="h-4 w-4" />
                     </Button>
                   </div>
 
@@ -420,7 +424,10 @@ export function FlightSearchForm({
                         <FormLabel className="text-sm font-medium">To</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <MapPinIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <MapPinIcon
+                              aria-hidden="true"
+                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                            />
                             <Input
                               placeholder="Destination city or airport"
                               className="pl-10"

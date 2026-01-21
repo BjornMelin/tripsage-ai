@@ -317,13 +317,21 @@ export function DestinationAutocompleteField({
                   className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                   {isLoadingSuggestions ? (
-                    <div className="p-3 text-sm text-muted-foreground">
+                    <output
+                      className="p-3 text-sm text-muted-foreground"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
                       Loading suggestions…
-                    </div>
+                    </output>
                   ) : suggestionsError ? (
-                    <div className="p-3 text-sm text-destructive">
+                    <output
+                      className="p-3 text-sm text-destructive"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
                       {suggestionsError}
-                    </div>
+                    </output>
                   ) : suggestions.length > 0 ? (
                     suggestions.map((suggestion, index) => (
                       <div
@@ -332,7 +340,7 @@ export function DestinationAutocompleteField({
                         role="option"
                         id={`destination-suggestion-${suggestion.placeId}`}
                         aria-selected={activeSuggestionIndex === index}
-                        className="w-full text-left p-3 hover:bg-accent focus:bg-accent focus:outline-none border-b border-border last:border-b-0 data-[active=true]:bg-accent"
+                        className="w-full min-w-0 text-left p-3 hover:bg-accent focus:bg-accent focus:outline-none border-b border-border last:border-b-0 data-[active=true]:bg-accent"
                         tabIndex={-1}
                         onMouseDown={(event) => {
                           event.preventDefault();
@@ -343,16 +351,22 @@ export function DestinationAutocompleteField({
                         }}
                         data-active={activeSuggestionIndex === index}
                       >
-                        <div className="font-medium text-sm">{suggestion.mainText}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="font-medium text-sm truncate">
+                          {suggestion.mainText}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
                           {suggestion.secondaryText}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="p-3 text-sm text-muted-foreground">
+                    <output
+                      className="p-3 text-sm text-muted-foreground"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
                       No suggestions found.
-                    </div>
+                    </output>
                   )}
                 </div>
               )}

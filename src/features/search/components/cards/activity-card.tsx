@@ -44,25 +44,25 @@ export function ActivityCard({
             className="w-full h-48 object-cover"
           />
         ) : (
-          <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-            <MapPinIcon className="h-12 w-12 text-gray-400" />
+          <div className="w-full h-48 bg-muted flex items-center justify-center">
+            <MapPinIcon className="h-12 w-12 text-muted-foreground" />
           </div>
         )}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
-          <Badge variant="secondary" className="bg-white/90">
+          <Badge variant="secondary" className="bg-background/90">
             {activity.type}
           </Badge>
           {sourceLabel && (
             <Badge
               variant={activity.id.startsWith("ai_fallback:") ? "outline" : "default"}
-              className="bg-white/90 text-xs"
+              className="bg-background/90 text-xs"
             >
               {sourceLabel}
             </Badge>
           )}
         </div>
         <div className="absolute top-2 right-2">
-          <Badge variant="outline" className="bg-white/90">
+          <Badge variant="outline" className="bg-background/90">
             {formatCurrency(activity.price)}
           </Badge>
         </div>

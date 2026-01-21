@@ -138,7 +138,7 @@ export function ActivityComparisonModal({
                 {activities.map((activity) => (
                   <TableCell key={activity.id}>
                     <div className="flex items-center gap-1">
-                      <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <StarIcon className="h-4 w-4 fill-warning text-warning" />
                       <span>{activity.rating ?? "N/A"}</span>
                     </div>
                   </TableCell>

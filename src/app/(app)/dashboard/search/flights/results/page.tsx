@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
  * - Price display: green (indicates value/good deal)
  */
 const FLIGHT_RESULTS_COLORS = {
-  priceDisplay: "text-green-700",
+  priceDisplay: "text-success",
 } as const;
 
 export default function FlightResultsPage() {
@@ -95,7 +95,7 @@ export default function FlightResultsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PlaneIcon className="h-5 w-5" />
+              <PlaneIcon aria-hidden="true" className="h-5 w-5" />
               Flight Search Results
             </CardTitle>
             <CardDescription>
@@ -130,7 +130,7 @@ export default function FlightResultsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <span>Searching for flights...</span>
+                <span>Searching for flights…</span>
                 <span>{searchProgress}%</span>
               </div>
             </CardContent>
@@ -144,7 +144,7 @@ export default function FlightResultsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <FilterIcon className="h-4 w-4" />
+                  <FilterIcon aria-hidden="true" className="h-4 w-4" />
                   Filters
                 </CardTitle>
               </CardHeader>
@@ -208,7 +208,10 @@ export default function FlightResultsPage() {
                           </div>
                           <div className="flex items-center">
                             <div className="w-16 h-px bg-border" />
-                            <ArrowRightIcon className="h-3 w-3 mx-1 text-muted-foreground" />
+                            <ArrowRightIcon
+                              aria-hidden="true"
+                              className="h-3 w-3 mx-1 text-muted-foreground"
+                            />
                             <div className="w-16 h-px bg-border" />
                           </div>
                           <div className="text-xs text-muted-foreground">

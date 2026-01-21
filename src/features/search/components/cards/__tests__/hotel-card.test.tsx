@@ -241,7 +241,7 @@ describe("HotelCard", () => {
   it("shows filled heart when isSaved", () => {
     const { container } = render(<HotelCard {...defaultProps} isSaved />);
 
-    const heartIcon = container.querySelector("svg.fill-red-500");
+    const heartIcon = container.querySelector("svg.fill-destructive");
     expect(heartIcon).toBeInTheDocument();
   });
 
@@ -289,13 +289,13 @@ describe("PriceHistoryIcon", () => {
   it("renders down icon for falling prices", () => {
     const { container } = render(<PriceHistoryIcon trend="falling" />);
     const icon = container.querySelector("svg");
-    expect(icon).toHaveClass("rotate-180", "text-green-500");
+    expect(icon).toHaveClass("rotate-180", "text-success");
   });
 
   it("renders up icon for rising prices", () => {
     const { container } = render(<PriceHistoryIcon trend="rising" />);
     const icon = container.querySelector("svg");
-    expect(icon).toHaveClass("text-red-500");
+    expect(icon).toHaveClass("text-destructive");
     expect(icon).not.toHaveClass("rotate-180");
   });
 
