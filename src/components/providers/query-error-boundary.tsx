@@ -202,7 +202,8 @@ function QueryErrorFallback({
   const showLogin = meta.variant === "auth";
   const message = meta.variant === "default" ? errorMessage : display.message;
   const resolvedLoginHref = loginHref ?? "/login";
-  const isInternalLoginHref = resolvedLoginHref.startsWith("/");
+  const isInternalLoginHref =
+    resolvedLoginHref.startsWith("/") && !resolvedLoginHref.startsWith("//");
 
   return (
     <div

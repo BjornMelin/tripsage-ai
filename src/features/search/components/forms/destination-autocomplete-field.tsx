@@ -314,14 +314,16 @@ export function DestinationAutocompleteField({
                 <div
                   id={suggestionsListId}
                   role="listbox"
-                  className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                  className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                   {isLoadingSuggestions ? (
-                    <div className="p-3 text-sm text-gray-500">
+                    <div className="p-3 text-sm text-muted-foreground">
                       Loading suggestions…
                     </div>
                   ) : suggestionsError ? (
-                    <div className="p-3 text-sm text-red-600">{suggestionsError}</div>
+                    <div className="p-3 text-sm text-destructive">
+                      {suggestionsError}
+                    </div>
                   ) : suggestions.length > 0 ? (
                     suggestions.map((suggestion, index) => (
                       <div
@@ -330,7 +332,7 @@ export function DestinationAutocompleteField({
                         role="option"
                         id={`destination-suggestion-${suggestion.placeId}`}
                         aria-selected={activeSuggestionIndex === index}
-                        className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 data-[active=true]:bg-gray-50"
+                        className="w-full text-left p-3 hover:bg-accent focus:bg-accent focus:outline-none border-b border-border last:border-b-0 data-[active=true]:bg-accent"
                         tabIndex={-1}
                         onMouseDown={(event) => {
                           event.preventDefault();
@@ -342,13 +344,13 @@ export function DestinationAutocompleteField({
                         data-active={activeSuggestionIndex === index}
                       >
                         <div className="font-medium text-sm">{suggestion.mainText}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {suggestion.secondaryText}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="p-3 text-sm text-gray-500">
+                    <div className="p-3 text-sm text-muted-foreground">
                       No suggestions found.
                     </div>
                   )}

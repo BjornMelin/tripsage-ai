@@ -1,6 +1,5 @@
 /**
- * @fileoverview Defensive patch for `performance.measure()` to avoid browser errors
- * in prerender-related flows.
+ * @fileoverview Defensive patch for performance.measure to avoid browser errors.
  */
 
 "use client";

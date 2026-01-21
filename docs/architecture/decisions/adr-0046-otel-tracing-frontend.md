@@ -30,7 +30,7 @@ We adopt a Vercel-first server setup + a minimal, standards-based browser setup:
 ### Client (Browser)
 
 - Initialize OpenTelemetry Web tracing via `initTelemetry()` (`src/lib/telemetry/client.ts`), invoked from `TelemetryProvider` (`src/components/providers/telemetry-provider.tsx`) in the root layout.
-- Use `WebTracerProvider({ spanProcessors: [...] })` with `BatchSpanProcessor` and `OTLPTraceExporter` for browser traces.
+- Use `WebTracerProvider({ spanProcessors: […] })` with `BatchSpanProcessor` and `OTLPTraceExporter` for browser traces.
 - Normalize `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` to ensure the exporter URL ends with `/v1/traces`.
 - Prevent self-instrumentation by adding the exporter URL to `FetchInstrumentation.ignoreUrls`.
 - Propagate `traceparent` only for same-origin requests to enable browser → server trace correlation.

@@ -215,7 +215,7 @@ Client-side OpenTelemetry is minimal and focused on distributed tracing and erro
   - **Idempotent** (safe under React Strict Mode)
   - **Server-safe** (no-op when `window` is unavailable)
   - **Non-blocking** (initialization is fire-and-forget; failures are swallowed)
-- **Provider setup:** Uses `WebTracerProvider({ spanProcessors: [...] })` with a `BatchSpanProcessor` and `OTLPTraceExporter`.
+- **Provider setup:** Uses `WebTracerProvider({ spanProcessors: […] })` with a `BatchSpanProcessor` and `OTLPTraceExporter`.
 - **Endpoint normalization:** `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` is normalized to ensure the exporter URL ends with `/v1/traces` (trailing slashes removed).
 - **Self-instrumentation prevention:** Exporter traffic is excluded via `FetchInstrumentation.ignoreUrls` to avoid span loops/noise.
 - **Context propagation:** `traceparent` is propagated only to same-origin fetches to correlate browser → server traces without leaking trace headers to third parties.
@@ -250,7 +250,7 @@ const logger = createServerLogger("api.keys", {
 });
 
 // In a route handler
-logger.info("Key stored", { userId: "123", apiKey: "sk-..." }); // apiKey redacted
+logger.info("Key stored", { userId: "123", apiKey: "sk-…" }); // apiKey redacted
 logger.error("Validation failed", { field: "email", message: "Invalid format" });
 logger.warn("Rate limit approaching", { remaining: 5 });
 ```
