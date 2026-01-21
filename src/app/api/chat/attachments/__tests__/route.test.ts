@@ -140,6 +140,10 @@ describe("/api/chat/attachments (signed uploads)", () => {
     const supabase = getApiRouteSupabaseMock();
     const state = getSupabaseMockState(supabase);
     const tripId = 42;
+    state.selectByTable.set("trips", {
+      data: [{ id: tripId, user_id: userId }],
+      error: null,
+    });
     const mod = await import("../route");
 
     const req = new NextRequest("http://localhost/api/chat/attachments", {

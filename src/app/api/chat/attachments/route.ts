@@ -23,6 +23,7 @@ import {
 import { bumpTag } from "@/lib/cache/tags";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
+import { ensureTripAccess } from "@/lib/trips/trip-access";
 
 /** Storage bucket name for attachments. */
 const STORAGE_BUCKET = "attachments";
@@ -95,6 +96,16 @@ export const POST = withApiGuards({
   );
   if (!validation.ok) return validation.error;
   const body = validation.data;
+
+  // Validate trip access if provided
+  if (body.tripId !== undefined) {
+    const accessResult = await ensureTripAccess({
+      supabase,
+      tripId: body.tripId,
+      userId,
+    });
+    if (accessResult) return accessResult;
+  }
 
   const uploads: AttachmentSignedUpload[] = [];
   const insertedIds: string[] = [];

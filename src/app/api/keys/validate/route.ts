@@ -57,6 +57,14 @@ const OPENAI_BASE_URL = "https://api.openai.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 const XAI_BASE_URL = "https://api.x.ai/v1";
+/**
+ * Timeout for key validation requests.
+ *
+ * NOTE: AbortSignal.timeout(VALIDATE_TIMEOUT_MS) only cancels the fetch at the
+ * application/promise level and does not override undici’s internal connect
+ * timeout (which defaults to ~10s), so callers should configure a Dispatcher
+ * when strict connect-level timing is required.
+ */
 const VALIDATE_TIMEOUT_MS = 5_000;
 
 const validateKeyRequestSchema = postKeyBodySchema.pick({

@@ -68,10 +68,14 @@ export function requireSameOrigin(
   }
 
   const headerSecFetchSite = req.headers.get("sec-fetch-site");
-  if (headerSecFetchSite && headerSecFetchSite !== "same-origin") {
+  if (
+    headerSecFetchSite &&
+    headerSecFetchSite !== "same-origin" &&
+    headerSecFetchSite !== "same-site"
+  ) {
     return {
       ok: false,
-      reason: "Cross-site request blocked by Sec-Fetch-Site",
+      reason: "Request blocked by Sec-Fetch-Site (not same-origin or same-site)",
     };
   }
 

@@ -26,10 +26,19 @@ const DEFAULT_MAX_DETAIL_LENGTH = 200;
  */
 export function formatUpstreamErrorReason(options: UpstreamErrorOptions): string {
   const { service, status, details } = options;
-  const maxDetailLength = options.maxDetailLength ?? DEFAULT_MAX_DETAIL_LENGTH;
   const base = `${service} error: ${status}`;
 
   if (status >= 500 || status < 400) {
+    return base;
+  }
+
+  const rawMax = Number(options.maxDetailLength);
+  const resolvedMaxDetailLength =
+    options.maxDetailLength !== undefined && Number.isFinite(rawMax) && rawMax >= 0
+      ? Math.floor(rawMax)
+      : DEFAULT_MAX_DETAIL_LENGTH;
+
+  if (resolvedMaxDetailLength === 0) {
     return base;
   }
 
@@ -37,7 +46,9 @@ export function formatUpstreamErrorReason(options: UpstreamErrorOptions): string
   if (!trimmed) return base;
 
   const truncated =
-    trimmed.length > maxDetailLength ? trimmed.slice(0, maxDetailLength) : trimmed;
+    trimmed.length > resolvedMaxDetailLength
+      ? trimmed.slice(0, resolvedMaxDetailLength)
+      : trimmed;
 
   return `${base}. Details: ${truncated}`;
 }

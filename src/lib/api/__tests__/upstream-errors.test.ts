@@ -23,4 +23,34 @@ describe("formatUpstreamErrorReason", () => {
     });
     expect(reason).toBe("Time Zone API error: 502");
   });
+
+  it("returns base message when maxDetailLength is zero", () => {
+    const reason = formatUpstreamErrorReason({
+      details: "should be dropped",
+      maxDetailLength: 0,
+      service: "Routes API",
+      status: 400,
+    });
+    expect(reason).toBe("Routes API error: 400");
+  });
+
+  it("defaults maxDetailLength when provided value is invalid", () => {
+    const details = "x".repeat(250);
+    const reason = formatUpstreamErrorReason({
+      details,
+      maxDetailLength: Number.NaN,
+      service: "Routes API",
+      status: 400,
+    });
+    expect(reason).toBe(`Routes API error: 400. Details: ${"x".repeat(200)}`);
+  });
+
+  it("returns base message when details are blank", () => {
+    const reason = formatUpstreamErrorReason({
+      details: "   ",
+      service: "Routes API",
+      status: 400,
+    });
+    expect(reason).toBe("Routes API error: 400");
+  });
 });
