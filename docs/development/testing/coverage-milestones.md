@@ -1,5 +1,9 @@
 # Coverage Milestones
 
+<!-- TODO: Delete this document once we have time to ensure if there is
+any value in it, to incorporate it into the testing docs and solidify and
+future proof the testing coverage requirements -->
+
 This document defines the **current coverage baseline**, what is **enforced in CI**, and how we
 intend to **raise thresholds over time** without blocking merges on unrelated work.
 
@@ -19,7 +23,7 @@ Run locally:
 Computed from `coverage/coverage-final.json` emitted by `pnpm test:coverage`.
 
 | Scope | Statements | Branches | Functions | Lines |
-|---|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: |
 | Global (`src/**`, excluding tests) | 71.51% | 57.78% | 71.32% | 73.22% |
 
 ### Critical surfaces (2025-12-22)
@@ -29,7 +33,7 @@ This check also fails if any file in the critical-surface scopes is missing from
 coverage output (prevents “unmeasured” critical modules).
 
 | Surface | Statements | Branches | Functions | Lines |
-|---|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: |
 | Auth (`src/app/auth/**`, `src/lib/auth/**`) | 80.00% | 54.55% | 91.67% | 81.45% |
 | Payments (`src/lib/payments/**`) | 100.00% | 100.00% | 100.00% | 100.00% |
 | Keys (`src/app/api/keys/**`) | 78.67% | 67.11% | 77.78% | 79.86% |
