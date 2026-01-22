@@ -36,16 +36,16 @@ export function PriceHistoryIcon({
     return (
       <TrendingUpIcon
         aria-hidden="true"
-        className="h-3 w-3 text-success rotate-180"
         {...props}
+        className={cn("h-3 w-3 text-success rotate-180", props.className)}
       />
     );
   if (trend === "rising")
     return (
       <TrendingUpIcon
         aria-hidden="true"
-        className="h-3 w-3 text-destructive"
         {...props}
+        className={cn("h-3 w-3 text-destructive", props.className)}
       />
     );
   return null;
