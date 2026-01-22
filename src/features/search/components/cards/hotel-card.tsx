@@ -261,10 +261,7 @@ export function HotelCard({
                   <span className="text-xl font-bold">
                     {formatCurrency(hotel.pricing.pricePerNight)}
                   </span>
-                  <PriceHistoryIcon
-                    aria-hidden="true"
-                    trend={hotel.pricing.priceHistory}
-                  />
+                  <PriceHistoryIcon trend={hotel.pricing.priceHistory} />
                 </div>
                 <div className="text-xs text-muted-foreground">per night</div>
                 <div className="text-sm font-medium">
