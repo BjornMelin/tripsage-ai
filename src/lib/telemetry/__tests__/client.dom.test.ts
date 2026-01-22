@@ -111,11 +111,13 @@ describe("initTelemetry", () => {
     // initTelemetry performs async initialization via a fire-and-forget promise.
     // Under full-suite load, a single microtask/tick is not always sufficient.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    const deadline = Date.now() + 1000;
-    while (OTLP_TRACE_EXPORTER.mock.calls.length < expectedExporterCalls) {
-      if (Date.now() > deadline) break;
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
+    await vi.waitFor(
+      () =>
+        expect(OTLP_TRACE_EXPORTER.mock.calls.length).toBeGreaterThanOrEqual(
+          expectedExporterCalls
+        ),
+      { timeout: 1000 }
+    );
   }
 
   it("should initialize telemetry only once (singleton pattern)", async () => {

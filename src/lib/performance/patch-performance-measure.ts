@@ -57,7 +57,11 @@ export function patchPerformanceMeasureForPrerender(): void {
       // Some browsers throw during prerender-related measurements. We treat those
       // as non-fatal and fall back to a best-effort measure to avoid noisy console
       // errors and unhandled exceptions in the app shell.
-      if (error instanceof Error && error.message.includes("negative time stamp")) {
+      if (
+        error instanceof Error &&
+        // Browser-dependent message; we intentionally match the literal string defensively.
+        error.message.includes("negative time stamp")
+      ) {
         return originalMeasure(name);
       }
       throw error;
