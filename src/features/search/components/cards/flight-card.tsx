@@ -45,11 +45,17 @@ export function PriceChangeIcon({ change }: { change?: "up" | "down" | "stable" 
   if (change === "down")
     return (
       <TrendingUpIcon
+        aria-hidden="true"
         className={cn("h-3 w-3 rotate-180", FLIGHT_COLORS.priceTrendDown)}
       />
     );
   if (change === "up")
-    return <TrendingUpIcon className={cn("h-3 w-3", FLIGHT_COLORS.priceTrendUp)} />;
+    return (
+      <TrendingUpIcon
+        aria-hidden="true"
+        className={cn("h-3 w-3", FLIGHT_COLORS.priceTrendUp)}
+      />
+    );
   return null;
 }
 
@@ -113,7 +119,7 @@ export function FlightCard({
         {flight.promotions && (
           <div className="absolute top-0 left-6 transform -translate-y-1/2">
             <Badge className={FLIGHT_COLORS.promotionBadge}>
-              <ZapIcon className="h-3 w-3 mr-1" />
+              <ZapIcon aria-hidden="true" className="h-3 w-3 mr-1" />
               {flight.promotions.description}
             </Badge>
           </div>
@@ -129,7 +135,7 @@ export function FlightCard({
                   FLIGHT_COLORS.airlineIcon
                 )}
               >
-                <PlaneIcon className="h-4 w-4" />
+                <PlaneIcon aria-hidden="true" className="h-4 w-4" />
               </div>
               <div>
                 <p className="font-medium text-sm">{flight.airline}</p>
@@ -158,7 +164,10 @@ export function FlightCard({
               <div className="flex-1 mx-4">
                 <div className="relative">
                   <div className="h-0.5 bg-muted-foreground/30 w-full" />
-                  <PlaneIcon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <PlaneIcon
+                    aria-hidden="true"
+                    className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                  />
                 </div>
                 <div className="text-center mt-2">
                   <p className="text-xs font-medium">
@@ -191,19 +200,19 @@ export function FlightCard({
               <div className="mt-4 flex items-center justify-center gap-4 text-xs">
                 {flight.amenities.includes("wifi") && (
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    <WifiIcon className="h-3 w-3" />
+                    <WifiIcon aria-hidden="true" className="h-3 w-3" />
                     WiFi
                   </div>
                 )}
                 {flight.amenities.includes("meals") && (
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    <UtensilsIcon className="h-3 w-3" />
+                    <UtensilsIcon aria-hidden="true" className="h-3 w-3" />
                     Meals
                   </div>
                 )}
                 {flight.amenities.includes("entertainment") && (
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    <MonitorIcon className="h-3 w-3" />
+                    <MonitorIcon aria-hidden="true" className="h-3 w-3" />
                     Entertainment
                   </div>
                 )}
@@ -218,7 +227,7 @@ export function FlightCard({
                 <span className="text-2xl font-bold">
                   {formatCurrency(flight.price.total)}
                 </span>
-                <PriceChangeIcon change={flight.price.priceChange} />
+                <PriceChangeIcon aria-hidden="true" change={flight.price.priceChange} />
               </div>
               <p className="text-xs text-muted-foreground mb-2">per person</p>
 
@@ -227,7 +236,7 @@ export function FlightCard({
                   variant="secondary"
                   className={cn("mb-2", FLIGHT_COLORS.dealBadge)}
                 >
-                  <StarIcon className="h-3 w-3 mr-1" />
+                  <StarIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                   Great Deal
                 </Badge>
               )}
@@ -254,7 +263,7 @@ export function FlightCard({
 
                   {(flight.flexibility.changeable || flight.flexibility.refundable) && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <ShieldIcon className="h-3 w-3" />
+                      <ShieldIcon aria-hidden="true" className="h-3 w-3" />
                       {flight.flexibility.refundable ? "Refundable" : "Changeable"}
                     </div>
                   )}
@@ -279,12 +288,15 @@ export function FlightCard({
                 >
                   {isSelected ? (
                     <>
-                      <HeartIcon className="h-3 w-3 mr-1 fill-current" />
+                      <HeartIcon
+                        aria-hidden="true"
+                        className="h-3 w-3 mr-1 fill-current"
+                      />
                       Selected
                     </>
                   ) : (
                     <>
-                      <HeartIcon className="h-3 w-3 mr-1" />
+                      <HeartIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                       Compare
                     </>
                   )}
@@ -310,7 +322,7 @@ export function FlightCard({
         {viewMode === "list" && flight.prediction.priceAlert !== "neutral" && (
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ZapIcon className="h-3 w-3" />
+              <ZapIcon aria-hidden="true" className="h-3 w-3" />
               <span>AI Prediction: {flight.prediction.reason}</span>
             </div>
           </div>

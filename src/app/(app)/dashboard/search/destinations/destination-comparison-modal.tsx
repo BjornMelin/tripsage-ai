@@ -135,7 +135,7 @@ export function DestinationComparisonModal({
                         onClick={() => onRemove(destination.id)}
                         aria-label={`Remove ${destination.name} from comparison`}
                       >
-                        <XIcon className="h-3 w-3" />
+                        <XIcon aria-hidden="true" className="h-3 w-3" />
                       </Button>
                     </div>
                   </TableHead>
@@ -146,7 +146,10 @@ export function DestinationComparisonModal({
               <TableRow>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    <GlobeIcon className="h-4 w-4 text-muted-foreground" />
+                    <GlobeIcon
+                      aria-hidden="true"
+                      className="h-4 w-4 text-muted-foreground"
+                    />
                     Type
                   </div>
                 </TableCell>
@@ -162,7 +165,10 @@ export function DestinationComparisonModal({
               <TableRow>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    <MapPinIcon className="h-4 w-4 text-muted-foreground" />
+                    <MapPinIcon
+                      aria-hidden="true"
+                      className="h-4 w-4 text-muted-foreground"
+                    />
                     Location
                   </div>
                 </TableCell>
@@ -178,7 +184,10 @@ export function DestinationComparisonModal({
               <TableRow>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    <StarIcon className="h-4 w-4 text-muted-foreground" />
+                    <StarIcon
+                      aria-hidden="true"
+                      className="h-4 w-4 text-muted-foreground"
+                    />
                     Rating
                   </div>
                 </TableCell>
@@ -187,7 +196,10 @@ export function DestinationComparisonModal({
                     {typeof destination.rating === "number" &&
                     Number.isFinite(destination.rating) ? (
                       <div className="flex items-center gap-1">
-                        <StarIcon className="h-4 w-4 fill-warning text-warning" />
+                        <StarIcon
+                          aria-hidden="true"
+                          className="h-4 w-4 fill-warning text-warning"
+                        />
                         <span className="font-medium">
                           {destination.rating.toFixed(1)}
                         </span>

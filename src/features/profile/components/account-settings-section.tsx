@@ -294,7 +294,7 @@ export function AccountSettingsSection() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MailIcon className="h-5 w-5" />
+            <MailIcon aria-hidden="true" className="h-5 w-5" />
             Email Settings
           </CardTitle>
           <CardDescription>
@@ -308,7 +308,7 @@ export function AccountSettingsSection() {
             <Badge variant={isEmailVerified ? "default" : "secondary"}>
               {isEmailVerified ? (
                 <>
-                  <CheckIcon className="h-3 w-3 mr-1" />
+                  <CheckIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                   Verified
                 </>
               ) : (
@@ -460,7 +460,7 @@ export function AccountSettingsSection() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="flex items-center gap-2">
-                <Trash2Icon className="h-4 w-4" />
+                <Trash2Icon aria-hidden="true" className="h-4 w-4" />
                 Delete Account
               </Button>
             </AlertDialogTrigger>

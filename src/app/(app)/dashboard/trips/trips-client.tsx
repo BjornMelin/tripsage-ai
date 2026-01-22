@@ -451,7 +451,7 @@ export default function TripsClient({ userId }: { userId: string }) {
           onValueChange={(value) => setFilterBy(value as FilterOption)}
         >
           <SelectTrigger aria-label="Filter trips" className="w-full md:w-40">
-            <FilterIcon className="h-4 w-4 mr-2" />
+            <FilterIcon aria-hidden="true" className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -489,7 +489,7 @@ export default function TripsClient({ userId }: { userId: string }) {
             onClick={() => setViewMode("grid")}
             className="rounded-r-none"
           >
-            <GridIcon className="h-4 w-4" />
+            <GridIcon aria-hidden="true" className="h-4 w-4" />
           </Button>
           <Button
             type="button"
@@ -501,7 +501,7 @@ export default function TripsClient({ userId }: { userId: string }) {
             onClick={() => setViewMode("list")}
             className="rounded-l-none"
           >
-            <ListIcon className="h-4 w-4" />
+            <ListIcon aria-hidden="true" className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -510,7 +510,10 @@ export default function TripsClient({ userId }: { userId: string }) {
       {filteredAndSortedTrips.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <SearchIcon
+              aria-hidden="true"
+              className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+            />
             <h3 className="text-lg font-semibold mb-2">No trips found</h3>
             <p className="text-muted-foreground mb-4">
               Try adjusting your search or filter criteria
@@ -592,7 +595,10 @@ export default function TripsClient({ userId }: { userId: string }) {
             >
               {deleteTripMutation.isPending ? (
                 <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
                   Deleting…
                 </>
               ) : (

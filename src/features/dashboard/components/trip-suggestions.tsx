@@ -156,19 +156,22 @@ function SuggestionCard({
             </h4>
             {suggestion.trending && (
               <Badge variant="secondary" className="text-xs">
-                <SparklesIcon className="h-3 w-3 mr-1" />
+                <SparklesIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                 Trending
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <MapPinIcon className="h-3 w-3" />
+            <MapPinIcon aria-hidden="true" className="h-3 w-3" />
             <span>{suggestion.destination}</span>
           </div>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-            <StarIcon className="h-3 w-3 fill-warning text-warning" />
+            <StarIcon
+              aria-hidden="true"
+              className="h-3 w-3 fill-warning text-warning"
+            />
             <span>{suggestion.rating}</span>
           </div>
           <div className="text-lg font-semibold text-primary">
@@ -184,7 +187,7 @@ function SuggestionCard({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <ClockIcon className="h-3 w-3" />
+            <ClockIcon aria-hidden="true" className="h-3 w-3" />
             <span>{suggestion.duration} days</span>
           </div>
           <div className="flex items-center gap-1">
@@ -233,7 +236,7 @@ function EmptyState() {
   return (
     <div className="text-center py-8">
       <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
-        <SparklesIcon className="h-6 w-6 text-muted-foreground" />
+        <SparklesIcon aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
       </div>
       <p className="text-sm text-muted-foreground mb-4">
         Get personalized trip suggestions based on your preferences.
@@ -386,7 +389,7 @@ export function TripSuggestions({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {showMemoryBased && memoryBasedSuggestions.length > 0 && (
-            <BrainIcon className="h-5 w-5 text-highlight" />
+            <BrainIcon aria-hidden="true" className="h-5 w-5 text-highlight" />
           )}
           Trip Suggestions
         </CardTitle>
@@ -411,14 +414,14 @@ export function TripSuggestions({
             {memoryBasedSuggestions.length > 0 && (
               <>
                 <div className="flex items-center gap-2 text-sm font-medium text-highlight">
-                  <BrainIcon className="h-4 w-4" />
+                  <BrainIcon aria-hidden="true" className="h-4 w-4" />
                   Personalized for You
                 </div>
                 {memoryBasedSuggestions.slice(0, 2).map((suggestion) => (
                   <div key={suggestion.id} className="relative">
                     <div className="absolute -top-2 -right-2 z-10">
                       <Badge className="bg-highlight/20 text-highlight border-highlight/20">
-                        <SparklesIcon className="h-3 w-3 mr-1" />
+                        <SparklesIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                         AI Match
                       </Badge>
                     </div>
@@ -457,7 +460,7 @@ export function TripSuggestions({
           {showMemoryBased && (
             <Button className="flex-1" variant="outline" asChild>
               <Link href="/profile">
-                <TrendingUpIcon className="h-4 w-4 mr-2" />
+                <TrendingUpIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                 View Insights
               </Link>
             </Button>

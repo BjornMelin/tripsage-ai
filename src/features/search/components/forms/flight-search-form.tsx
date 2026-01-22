@@ -292,7 +292,7 @@ export function FlightSearchForm({
               className="w-full sm:w-auto px-6"
               type="button"
             >
-              <ClockIcon className="h-4 w-4 mr-2" />
+              <ClockIcon aria-hidden="true" className="h-4 w-4 mr-2" />
               Flexible Dates
             </Button>
           }
@@ -394,7 +394,7 @@ export function FlightSearchForm({
                               className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
                             />
                             <Input
-                              placeholder="Departure city or airport"
+                              placeholder="Departure city or airport…"
                               className="pl-10"
                               {...field}
                             />
@@ -432,7 +432,7 @@ export function FlightSearchForm({
                               className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
                             />
                             <Input
-                              placeholder="Destination city or airport"
+                              placeholder="Destination city or airport…"
                               className="pl-10"
                               {...field}
                             />
@@ -453,7 +453,10 @@ export function FlightSearchForm({
                         <FormLabel className="text-sm font-medium">Departure</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <CalendarIcon
+                              aria-hidden="true"
+                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                            />
                             <Input type="date" className="pl-10" {...field} />
                           </div>
                         </FormControl>
@@ -471,7 +474,10 @@ export function FlightSearchForm({
                           <FormLabel className="text-sm font-medium">Return</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <CalendarIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <CalendarIcon
+                                aria-hidden="true"
+                                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                              />
                               <Input type="date" className="pl-10" {...field} />
                             </div>
                           </FormControl>
@@ -491,7 +497,10 @@ export function FlightSearchForm({
                         <FormLabel className="text-sm font-medium">Adults</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <UsersIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <UsersIcon
+                              aria-hidden="true"
+                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                            />
                             <Select
                               value={field.value.toString()}
                               onValueChange={(value) =>

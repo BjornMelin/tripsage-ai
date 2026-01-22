@@ -178,14 +178,17 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
         <CardHeader className="relative">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_120%_at_10%_0%,hsl(var(--primary)/0.12)_0%,transparent_55%),radial-gradient(70%_100%_at_90%_20%,hsl(var(--secondary)/0.14)_0%,transparent_60%)]" />
           <CardTitle className="relative flex items-center gap-2">
-            <SearchIcon className="h-5 w-5" />
+            <SearchIcon aria-hidden="true" className="h-5 w-5" />
             Search places
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
-              <MapPinIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <MapPinIcon
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -206,7 +209,10 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
             >
               {isSearching ? (
                 <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
                   Searching
                 </>
               ) : (
@@ -269,7 +275,10 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                         </div>
                         {typeof place.rating === "number" && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <StarIcon className="h-3.5 w-3.5 fill-warning text-warning" />
+                            <StarIcon
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 fill-warning text-warning"
+                            />
                             <span>{place.rating.toFixed(1)}</span>
                             {typeof place.userRatingCount === "number" && (
                               <span className="text-muted-foreground/70">
@@ -313,7 +322,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                             rel="noopener noreferrer"
                             aria-label="Open in Maps"
                           >
-                            <ExternalLinkIcon className="h-4 w-4" />
+                            <ExternalLinkIcon aria-hidden="true" className="h-4 w-4" />
                           </a>
                         </Button>
                       )}
@@ -323,7 +332,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                         onClick={() => fireAndForget(handleSavePlace(place))}
                         className="gap-2"
                       >
-                        <BookmarkPlusIcon className="h-4 w-4" />
+                        <BookmarkPlusIcon aria-hidden="true" className="h-4 w-4" />
                         {isSaved ? "Saved" : "Save"}
                       </Button>
                     </div>
@@ -340,7 +349,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,hsl(var(--primary)/0.08),transparent_65%)]" />
           <CardTitle className="relative flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
-              <BookmarkPlusIcon className="h-5 w-5" />
+              <BookmarkPlusIcon aria-hidden="true" className="h-5 w-5" />
               Saved places
             </span>
             <Badge variant="secondary">{savedPlaces.length}</Badge>
@@ -414,7 +423,10 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                               rel="noopener noreferrer"
                               aria-label="Open in Maps"
                             >
-                              <ExternalLinkIcon className="h-4 w-4" />
+                              <ExternalLinkIcon
+                                aria-hidden="true"
+                                className="h-4 w-4"
+                              />
                             </a>
                           </Button>
                         )}
@@ -427,7 +439,10 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                           }
                           aria-label="Remove saved place"
                         >
-                          <Trash2Icon className="h-4 w-4 text-muted-foreground group-hover:text-destructive" />
+                          <Trash2Icon
+                            aria-hidden="true"
+                            className="h-4 w-4 text-muted-foreground group-hover:text-destructive"
+                          />
                         </Button>
                       </div>
                     </div>

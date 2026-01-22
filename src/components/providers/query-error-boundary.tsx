@@ -155,27 +155,27 @@ const VARIANT_DISPLAY: Record<
   { icon: JSX.Element; message: string; title: string }
 > = {
   auth: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-warning" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-warning" />,
     message: "Please log in to continue.",
     title: "Authentication Required",
   },
   default: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-destructive" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-destructive" />,
     message: "Something went wrong. Please try again.",
     title: "Something went wrong",
   },
   network: {
-    icon: <WifiOffIcon className="h-8 w-8 text-warning" />,
+    icon: <WifiOffIcon aria-hidden="true" className="h-8 w-8 text-warning" />,
     message: "Please check your internet connection and try again.",
     title: "Connection Error",
   },
   permission: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-destructive" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-destructive" />,
     message: "You don't have permission to access this resource.",
     title: "Access Denied",
   },
   server: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-destructive" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-destructive" />,
     message: "Our servers are experiencing issues. Please try again later.",
     title: "Server Error",
   },
@@ -228,7 +228,7 @@ function QueryErrorFallback({
           disabled={!meta.isRetryable}
           aria-label="Try Again"
         >
-          <RefreshCwIcon className="h-4 w-4" />
+          <RefreshCwIcon aria-hidden="true" className="h-4 w-4" />
           Try Again
         </Button>
 
@@ -379,9 +379,9 @@ export function InlineQueryError({
       data-error-retryable={meta.isRetryable}
     >
       {meta.variant === "network" ? (
-        <WifiOffIcon className="h-4 w-4 shrink-0" />
+        <WifiOffIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
       ) : (
-        <AlertTriangleIcon className="h-4 w-4 shrink-0" />
+        <AlertTriangleIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
       )}
 
       <span className="flex-1">{errorMessage}</span>
@@ -396,7 +396,7 @@ export function InlineQueryError({
           aria-label="Try Again"
           disabled={!meta.isRetryable}
         >
-          <RefreshCwIcon className="h-3 w-3" />
+          <RefreshCwIcon aria-hidden="true" className="h-3 w-3" />
         </Button>
       )}
     </div>

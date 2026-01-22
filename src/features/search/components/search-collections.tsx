@@ -135,7 +135,7 @@ export function SearchCollections({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <FolderIcon className="h-4 w-4" />
+              <FolderIcon aria-hidden="true" className="h-4 w-4" />
               Collections
             </CardTitle>
             <CardDescription className="text-xs mt-1">
@@ -145,7 +145,7 @@ export function SearchCollections({
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
-                <FolderPlusIcon className="h-4 w-4 mr-1" />
+                <FolderPlusIcon aria-hidden="true" className="h-4 w-4 mr-1" />
                 New
               </Button>
             </DialogTrigger>
@@ -212,6 +212,7 @@ export function SearchCollections({
                   >
                     <div className="flex items-center gap-2">
                       <FolderIcon
+                        aria-hidden="true"
                         className={`h-4 w-4 ${isExpanded ? "text-primary" : "text-muted-foreground"}`}
                       />
                       <div>
@@ -229,19 +230,19 @@ export function SearchCollections({
                           className="h-8 w-8 p-0"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreHorizontalIcon className="h-4 w-4" />
+                          <MoreHorizontalIcon aria-hidden="true" className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => startEditing(collection)}>
-                          <PencilIcon className="h-4 w-4 mr-2" />
+                          <PencilIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => handleDeleteCollection(collection.id)}
                         >
-                          <TrashIcon className="h-4 w-4 mr-2" />
+                          <TrashIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -285,7 +286,7 @@ export function SearchCollections({
                                 }
                                 title="Remove from collection"
                               >
-                                <TrashIcon className="h-3 w-3" />
+                                <TrashIcon aria-hidden="true" className="h-3 w-3" />
                               </Button>
                             </div>
                           ))}
@@ -402,7 +403,7 @@ export function AddToCollectionDropdown({
       <DropdownMenuTrigger asChild>
         {trigger || (
           <Button variant="ghost" size="sm">
-            <PlusIcon className="h-4 w-4 mr-1" />
+            <PlusIcon aria-hidden="true" className="h-4 w-4 mr-1" />
             Add to Collection
           </Button>
         )}
@@ -415,7 +416,7 @@ export function AddToCollectionDropdown({
                 key={collection.id}
                 onClick={() => handleAddToCollection(collection.id)}
               >
-                <FolderIcon className="h-4 w-4 mr-2" />
+                <FolderIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                 {collection.name}
               </DropdownMenuItem>
             ))}
@@ -429,7 +430,6 @@ export function AddToCollectionDropdown({
               placeholder="Collection name"
               value={newCollectionName}
               onChange={(e) => setNewCollectionName(e.target.value)}
-              autoFocus
             />
             <div className="flex gap-1">
               <Button
@@ -452,7 +452,7 @@ export function AddToCollectionDropdown({
           </div>
         ) : (
           <DropdownMenuItem onClick={() => setIsCreating(true)}>
-            <FolderPlusIcon className="h-4 w-4 mr-2" />
+            <FolderPlusIcon aria-hidden="true" className="h-4 w-4 mr-2" />
             New Collection
           </DropdownMenuItem>
         )}

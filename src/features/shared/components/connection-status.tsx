@@ -163,10 +163,11 @@ const GetQualityColor = (quality: NetworkMetrics["quality"]) => {
  * @returns The signal icon
  */
 const GetSignalIcon = (strength: number) => {
-  if (strength >= 80) return <SignalHighIcon className="h-4 w-4" />;
-  if (strength >= 60) return <SignalMediumIcon className="h-4 w-4" />;
-  if (strength >= 40) return <SignalLowIcon className="h-4 w-4" />;
-  return <SignalIcon className="h-4 w-4" />;
+  if (strength >= 80) return <SignalHighIcon aria-hidden="true" className="h-4 w-4" />;
+  if (strength >= 60)
+    return <SignalMediumIcon aria-hidden="true" className="h-4 w-4" />;
+  if (strength >= 40) return <SignalLowIcon aria-hidden="true" className="h-4 w-4" />;
+  return <SignalIcon aria-hidden="true" className="h-4 w-4" />;
 };
 
 /**
@@ -276,6 +277,7 @@ const NetworkOptimizationSuggestions: React.FC<{
         description: "Consider switching to a closer server location",
         icon: (
           <TrendingDownIcon
+            aria-hidden="true"
             className={cn("h-4 w-4", OPTIMIZATION_ICON_COLORS.latency)}
           />
         ),
@@ -289,6 +291,7 @@ const NetworkOptimizationSuggestions: React.FC<{
         description: "Network connection may be unstable",
         icon: (
           <AlertTriangleIcon
+            aria-hidden="true"
             className={cn("h-4 w-4", OPTIMIZATION_ICON_COLORS.packetLoss)}
           />
         ),
@@ -302,6 +305,7 @@ const NetworkOptimizationSuggestions: React.FC<{
         description: "Consider reducing data frequency",
         icon: (
           <TrendingUpIcon
+            aria-hidden="true"
             className={cn("h-4 w-4", OPTIMIZATION_ICON_COLORS.bandwidth)}
           />
         ),
@@ -316,7 +320,7 @@ const NetworkOptimizationSuggestions: React.FC<{
 
   return (
     <Alert className="mt-3">
-      <InfoIcon className="h-4 w-4" />
+      <InfoIcon aria-hidden="true" className="h-4 w-4" />
       <AlertDescription>
         <div className="space-y-2">
           {suggestions.map((suggestion) => (
@@ -387,7 +391,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           borderColor: colors.borderColor,
           color: colors.textColor,
           description: "Real-time connection active",
-          icon: <CheckCircle2Icon className="h-4 w-4" />,
+          icon: <CheckCircle2Icon aria-hidden="true" className="h-4 w-4" />,
           label: "Connected",
           variant: "default" as const,
         };
@@ -397,7 +401,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           borderColor: colors.borderColor,
           color: colors.textColor,
           description: "Establishing connection…",
-          icon: <Loader2Icon className="h-4 w-4 animate-spin" />,
+          icon: <Loader2Icon aria-hidden="true" className="h-4 w-4 animate-spin" />,
           label: "Connecting",
           variant: "default" as const,
         };
@@ -407,7 +411,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           borderColor: colors.borderColor,
           color: colors.textColor,
           description: `Attempt ${analytics.reconnectCount + 1}`,
-          icon: <RefreshCwIcon className="h-4 w-4 animate-spin" />,
+          icon: <RefreshCwIcon aria-hidden="true" className="h-4 w-4 animate-spin" />,
           label: "Reconnecting",
           variant: "default" as const,
         };
@@ -417,7 +421,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           borderColor: colors.borderColor,
           color: colors.textColor,
           description: "No real-time connection",
-          icon: <WifiOffIcon className="h-4 w-4" />,
+          icon: <WifiOffIcon aria-hidden="true" className="h-4 w-4" />,
           label: "Disconnected",
           variant: "default" as const,
         };
@@ -427,7 +431,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           borderColor: colors.borderColor,
           color: colors.textColor,
           description: "Failed to establish connection",
-          icon: <AlertTriangleIcon className="h-4 w-4" />,
+          icon: <AlertTriangleIcon aria-hidden="true" className="h-4 w-4" />,
           label: "Connection Error",
           variant: "destructive" as const,
         };
@@ -437,7 +441,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           borderColor: defaultColors.borderColor,
           color: defaultColors.textColor,
           description: "Status unknown",
-          icon: <WifiIcon className="h-4 w-4" />,
+          icon: <WifiIcon aria-hidden="true" className="h-4 w-4" />,
           label: "Unknown",
           variant: "default" as const,
         };
@@ -540,7 +544,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
 
           {(status === "error" || status === "disconnected") && onReconnect && (
             <Button variant="outline" size="sm" onClick={onReconnect} className="ml-4">
-              <RefreshCwIcon className="h-3 w-3 mr-1" />
+              <RefreshCwIcon aria-hidden="true" className="h-3 w-3 mr-1" />
               Reconnect
             </Button>
           )}
@@ -580,7 +584,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             {status === "connected" && <ConnectionQualityIndicator metrics={metrics} />}
             {(status === "error" || status === "disconnected") && onReconnect && (
               <Button variant="outline" size="sm" onClick={onReconnect}>
-                <RefreshCwIcon className="h-4 w-4 mr-1" />
+                <RefreshCwIcon aria-hidden="true" className="h-4 w-4 mr-1" />
                 Reconnect
               </Button>
             )}
@@ -603,6 +607,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                     <TooltipTrigger asChild>
                       <div className="text-center p-2 rounded-lg bg-muted">
                         <ActivityIcon
+                          aria-hidden="true"
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
                             METRIC_ICON_COLORS.latency
@@ -623,6 +628,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                     <TooltipTrigger asChild>
                       <div className="text-center p-2 rounded-lg bg-muted">
                         <ZapIcon
+                          aria-hidden="true"
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
                             METRIC_ICON_COLORS.bandwidth
@@ -643,6 +649,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                     <TooltipTrigger asChild>
                       <div className="text-center p-2 rounded-lg bg-muted">
                         <RouterIcon
+                          aria-hidden="true"
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
                             METRIC_ICON_COLORS.packetLoss
@@ -663,6 +670,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                     <TooltipTrigger asChild>
                       <div className="text-center p-2 rounded-lg bg-muted">
                         <MonitorIcon
+                          aria-hidden="true"
                           className={cn(
                             "h-4 w-4 mx-auto mb-1",
                             METRIC_ICON_COLORS.uptime

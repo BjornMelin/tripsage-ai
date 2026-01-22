@@ -167,7 +167,7 @@ export const AgentStatusDashboard = ({
             </Badge>
             {connectionError && (
               <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertTriangleIcon className="h-3.5 w-3.5" />
+                <AlertTriangleIcon aria-hidden="true" className="h-3.5 w-3.5" />
                 {connectionError}
               </Badge>
             )}
@@ -178,9 +178,9 @@ export const AgentStatusDashboard = ({
                 className="flex items-center gap-2"
               >
                 {isMonitoring ? (
-                  <PauseCircleIcon className="h-4 w-4" />
+                  <PauseCircleIcon aria-hidden="true" className="h-4 w-4" />
                 ) : (
-                  <PlayCircleIcon className="h-4 w-4" />
+                  <PlayCircleIcon aria-hidden="true" className="h-4 w-4" />
                 )}
                 {isMonitoring ? "Pause" : "Resume"}
               </Button>
@@ -189,7 +189,7 @@ export const AgentStatusDashboard = ({
                 variant="outline"
                 className="flex items-center gap-2"
               >
-                <RefreshCwIcon className="h-4 w-4" /> Reconnect
+                <RefreshCwIcon aria-hidden="true" className="h-4 w-4" /> Reconnect
               </Button>
             </div>
           </div>
@@ -200,7 +200,10 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
+            <ActivityIcon
+              aria-hidden="true"
+              className="h-4 w-4 text-muted-foreground"
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeAgents.length}</div>
@@ -212,7 +215,10 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Progress</CardTitle>
-            <GaugeCircleIcon className="h-4 w-4 text-muted-foreground" />
+            <GaugeCircleIcon
+              aria-hidden="true"
+              className="h-4 w-4 text-muted-foreground"
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.averageProgress}%</div>
@@ -222,7 +228,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks In Flight</CardTitle>
-            <UsersIcon className="h-4 w-4 text-muted-foreground" />
+            <UsersIcon aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.inProgressTasks}</div>
@@ -232,7 +238,10 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Retry Count</CardTitle>
-            <RefreshCwIcon className="h-4 w-4 text-muted-foreground" />
+            <RefreshCwIcon
+              aria-hidden="true"
+              className="h-4 w-4 text-muted-foreground"
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{retryCount}</div>
@@ -246,7 +255,7 @@ export const AgentStatusDashboard = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UsersIcon className="h-5 w-5" /> Agents
+            <UsersIcon aria-hidden="true" className="h-5 w-5" /> Agents
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -288,7 +297,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CpuIcon className="h-5 w-5" /> Recent Resource Usage
+              <CpuIcon aria-hidden="true" className="h-5 w-5" /> Recent Resource Usage
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -315,7 +324,7 @@ export const AgentStatusDashboard = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ActivityIcon className="h-5 w-5" /> Recent Activity
+              <ActivityIcon aria-hidden="true" className="h-5 w-5" /> Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">

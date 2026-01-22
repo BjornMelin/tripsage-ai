@@ -340,11 +340,17 @@ export function DestinationAutocompleteField({
                         role="option"
                         id={`destination-suggestion-${suggestion.placeId}`}
                         aria-selected={activeSuggestionIndex === index}
-                        className="w-full min-w-0 text-left p-3 hover:bg-accent focus:bg-accent focus:outline-none border-b border-border last:border-b-0 data-[active=true]:bg-accent"
+                        className="w-full min-w-0 text-left p-3 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background border-b border-border last:border-b-0 data-[active=true]:bg-accent"
                         tabIndex={-1}
                         onMouseDown={(event) => {
                           event.preventDefault();
                           handleSuggestionSelect(suggestion);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleSuggestionSelect(suggestion);
+                          }
                         }}
                         onMouseEnter={() => {
                           setActiveSuggestionIndex(index);

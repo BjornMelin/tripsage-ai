@@ -186,7 +186,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
-                <AlertCircleIcon className="h-4 w-4" />
+                <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -197,7 +197,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 id={emailFieldId}
                 name="email"
                 type="email"
-                placeholder="john@example.com"
+                placeholder="john@example.com…"
                 required
                 autoComplete="email"
                 disabled={isLoading}

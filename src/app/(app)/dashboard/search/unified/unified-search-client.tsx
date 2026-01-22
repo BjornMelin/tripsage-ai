@@ -23,7 +23,7 @@ import {
   UsersIcon,
   ZapIcon,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -64,7 +64,6 @@ export default function UnifiedSearchClient({
   onSearchFlights,
   onSearchHotels,
 }: UnifiedSearchClientProps) {
-  const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
@@ -291,12 +290,10 @@ export default function UnifiedSearchClient({
                   </span>
                 </div>
                 <div className="pt-2 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => router.push(`${ROUTES.dashboard.search}/flights`)}
-                    variant="outline"
-                  >
-                    Open flight search
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`${ROUTES.dashboard.search}/flights`}>
+                      Open flight search
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -333,12 +330,10 @@ export default function UnifiedSearchClient({
                   </span>
                 </div>
                 <div className="pt-2 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => router.push(`${ROUTES.dashboard.search}/hotels`)}
-                    variant="outline"
-                  >
-                    Open hotel search
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`${ROUTES.dashboard.search}/hotels`}>
+                      Open hotel search
+                    </Link>
                   </Button>
                 </div>
               </div>

@@ -445,7 +445,7 @@ export function DestinationSearchForm({
                     <FormItem>
                       <FormLabel>Language (optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. en, fr, es" {...field} />
+                        <Input placeholder="e.g. en, fr, es…" {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">
                         ISO language code
@@ -462,7 +462,7 @@ export function DestinationSearchForm({
                     <FormItem>
                       <FormLabel>Region (optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. us, uk, fr" {...field} />
+                        <Input placeholder="e.g. us, uk, fr…" {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">
                         ISO region code

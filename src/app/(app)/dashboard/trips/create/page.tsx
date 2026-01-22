@@ -224,7 +224,7 @@ export default function CreateTripPage() {
             <h2 className="text-3xl font-bold tracking-tight">Plan New Trip</h2>
             {suggestionId && (
               <Badge variant="secondary" className="gap-1">
-                <SparklesIcon className="h-3.5 w-3.5" />
+                <SparklesIcon aria-hidden="true" className="h-3.5 w-3.5" />
                 Using suggestion
               </Badge>
             )}
@@ -237,7 +237,7 @@ export default function CreateTripPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
             <Link href="/dashboard">
-              <ArrowLeftIcon className="mr-2 h-4 w-4" />
+              <ArrowLeftIcon aria-hidden="true" className="mr-2 h-4 w-4" />
               Dashboard
             </Link>
           </Button>
@@ -261,7 +261,7 @@ export default function CreateTripPage() {
               <div className="rounded-lg border bg-muted/20 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <SparklesIcon className="h-4 w-4 text-primary" />
+                    <SparklesIcon aria-hidden="true" className="h-4 w-4 text-primary" />
                     <span>Suggestion</span>
                     <span className="font-mono text-xs text-muted-foreground">
                       {suggestionId}
@@ -270,7 +270,10 @@ export default function CreateTripPage() {
 
                   {suggestionState.kind === "loading" && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2Icon
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 animate-spin"
+                      />
                       Loading details…
                     </div>
                   )}
@@ -429,12 +432,15 @@ export default function CreateTripPage() {
                   <Button type="submit" disabled={!canSubmit} className="sm:min-w-40">
                     {isSubmitting ? (
                       <>
-                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2Icon
+                          aria-hidden="true"
+                          className="mr-2 h-4 w-4 animate-spin"
+                        />
                         Creating…
                       </>
                     ) : (
                       <>
-                        <CheckIcon className="mr-2 h-4 w-4" />
+                        <CheckIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                         Create Trip
                       </>
                     )}

@@ -121,6 +121,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               name="email"
               type="email"
               autoComplete="email"
+              spellCheck={false}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -181,9 +182,9 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             data-testid="password-signup"
           >
             {registerPending ? (
-              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2Icon aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <MailIcon className="mr-2 h-4 w-4" />
+              <MailIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             )}
             Create account
           </Button>
@@ -196,7 +197,8 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             disabled={oauthLoading || registerPending}
             data-testid="oauth-github"
           >
-            <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
+            <SiGithub aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
+            GitHub
           </Button>
           <Button
             variant="outline"
@@ -205,7 +207,8 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             disabled={oauthLoading || registerPending}
             data-testid="oauth-google"
           >
-            <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google
+            <SiGoogle aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
+            Google
           </Button>
         </div>
       </CardContent>

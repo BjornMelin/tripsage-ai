@@ -51,7 +51,7 @@ export function TripItineraryPanel({
           </p>
         </div>
         <Button type="button" onClick={onAdd}>
-          <PlusIcon className="mr-2 h-4 w-4" />
+          <PlusIcon aria-hidden="true" className="mr-2 h-4 w-4" />
           Add item
         </Button>
       </div>
@@ -60,7 +60,7 @@ export function TripItineraryPanel({
         <CardContent className="pt-6">
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
-              <Loader2Icon className="h-5 w-5 animate-spin" />
+              <Loader2Icon aria-hidden="true" className="h-5 w-5 animate-spin" />
               Loading itinerary…
             </div>
           ) : error ? (
@@ -131,7 +131,7 @@ export function TripItineraryPanel({
                           onClick={() => onDelete(item.id)}
                           disabled={isDeleting}
                         >
-                          <Trash2Icon className="h-4 w-4" />
+                          <Trash2Icon aria-hidden="true" className="h-4 w-4" />
                           <span className="sr-only">Delete</span>
                         </Button>
                       </div>

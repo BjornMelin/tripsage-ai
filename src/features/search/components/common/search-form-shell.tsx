@@ -255,7 +255,7 @@ export function SearchFormShell<
 
         {(submissionError || error) && (
           <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
+            <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
             <AlertDescription>{submissionError || error}</AlertDescription>
           </Alert>
         )}
@@ -268,12 +268,12 @@ export function SearchFormShell<
           >
             {isPending ? (
               <>
-                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2Icon aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
                 {loadingLabel}
               </>
             ) : (
               <>
-                <SearchIcon className="mr-2 h-4 w-4" />
+                <SearchIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                 {submitLabel}
               </>
             )}

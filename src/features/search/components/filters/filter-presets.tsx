@@ -130,7 +130,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <BookmarkIcon className="h-4 w-4" />
+              <BookmarkIcon aria-hidden="true" className="h-4 w-4" />
               Filter Presets
             </CardTitle>
             <CardDescription className="text-xs mt-1">
@@ -149,7 +149,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                     : "Apply some filters first"
                 }
               >
-                <PlusIcon className="h-4 w-4 mr-1" />
+                <PlusIcon aria-hidden="true" className="h-4 w-4 mr-1" />
                 Save
               </Button>
             </DialogTrigger>
@@ -215,7 +215,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                 >
                   <div className="flex items-center gap-2">
                     {activePreset?.id === preset.id && (
-                      <CheckIcon className="h-3 w-3 text-primary" />
+                      <CheckIcon aria-hidden="true" className="h-3 w-3 text-primary" />
                     )}
                     <span className="text-sm font-medium">{preset.name}</span>
                     {preset.isBuiltIn && (
@@ -239,7 +239,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <span className="sr-only">Open menu</span>
-                        <PencilIcon className="h-3 w-3" />
+                        <PencilIcon aria-hidden="true" className="h-3 w-3" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-40 p-1" align="end">
@@ -249,7 +249,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                         className="w-full justify-start"
                         onClick={() => startEditing(preset)}
                       >
-                        <PencilIcon className="h-3 w-3 mr-2" />
+                        <PencilIcon aria-hidden="true" className="h-3 w-3 mr-2" />
                         Edit
                       </Button>
                       <Button
@@ -258,7 +258,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                         className="w-full justify-start"
                         onClick={() => handleDuplicatePreset(preset.id, preset.name)}
                       >
-                        <PlusIcon className="h-3 w-3 mr-2" />
+                        <PlusIcon aria-hidden="true" className="h-3 w-3 mr-2" />
                         Duplicate
                       </Button>
                       <AlertDialog>
@@ -268,7 +268,7 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                             size="sm"
                             className="w-full justify-start text-destructive hover:text-destructive"
                           >
-                            <TrashIcon className="h-3 w-3 mr-2" />
+                            <TrashIcon aria-hidden="true" className="h-3 w-3 mr-2" />
                             Delete
                           </Button>
                         </AlertDialogTrigger>

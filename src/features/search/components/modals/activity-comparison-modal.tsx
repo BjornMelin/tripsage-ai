@@ -81,7 +81,7 @@ export function ActivityComparisonModal({
                         onClick={() => onRemove(activity.id)}
                         aria-label={`Remove ${activity.name} from comparison`}
                       >
-                        <XIcon className="h-3 w-3" />
+                        <XIcon aria-hidden="true" className="h-3 w-3" />
                       </Button>
                     </div>
                   </TableHead>

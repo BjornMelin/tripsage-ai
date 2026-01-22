@@ -64,9 +64,13 @@ function StatusIcon({
   hasError: boolean;
   size?: string;
 }) {
-  if (hasError) return <AlertTriangleIcon className={`${size} text-warning`} />;
-  if (isConnected) return <WifiIcon className={`${size} text-success animate-pulse`} />;
-  return <WifiOffIcon className={`${size} text-destructive`} />;
+  if (hasError)
+    return <AlertTriangleIcon aria-hidden="true" className={`${size} text-warning`} />;
+  if (isConnected)
+    return (
+      <WifiIcon aria-hidden="true" className={`${size} text-success animate-pulse`} />
+    );
+  return <WifiOffIcon aria-hidden="true" className={`${size} text-destructive`} />;
 }
 
 /**
@@ -145,6 +149,7 @@ export function ConnectionStatusMonitor() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <StatusIcon
+              aria-hidden="true"
               isConnected={connectionStatus.isConnected}
               hasError={!!connectionStatus.lastError}
             />
@@ -155,7 +160,7 @@ export function ConnectionStatusMonitor() {
             size="sm"
             onClick={() => setShowDetails(!showDetails)}
           >
-            <ActivityIcon className="h-4 w-4" />
+            <ActivityIcon aria-hidden="true" className="h-4 w-4" />
           </Button>
         </div>
 
@@ -184,9 +189,9 @@ export function ConnectionStatusMonitor() {
                 disabled={isReconnecting}
               >
                 {isReconnecting ? (
-                  <RefreshCwIcon className="h-3 w-3 animate-spin" />
+                  <RefreshCwIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
                 ) : (
-                  <RefreshCwIcon className="h-3 w-3" />
+                  <RefreshCwIcon aria-hidden="true" className="h-3 w-3" />
                 )}
                 {isReconnecting ? "Reconnecting…" : "Reconnect All"}
               </Button>
@@ -200,9 +205,15 @@ export function ConnectionStatusMonitor() {
                 >
                   <div className="flex items-center space-x-2">
                     {connection.status === "connected" ? (
-                      <CheckCircleIcon className="h-3 w-3 text-success" />
+                      <CheckCircleIcon
+                        aria-hidden="true"
+                        className="h-3 w-3 text-success"
+                      />
                     ) : (
-                      <XCircleIcon className="h-3 w-3 text-destructive" />
+                      <XCircleIcon
+                        aria-hidden="true"
+                        className="h-3 w-3 text-destructive"
+                      />
                     )}
                     <span className="text-xs font-medium">{connection.table}</span>
                   </div>
@@ -224,7 +235,10 @@ export function ConnectionStatusMonitor() {
                 <Separator />
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <AlertTriangleIcon className="h-4 w-4 text-warning" />
+                    <AlertTriangleIcon
+                      aria-hidden="true"
+                      className="h-4 w-4 text-warning"
+                    />
                     <span className="text-sm font-medium">Last Error</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -273,7 +287,12 @@ export function ConnectionStatusIndicator() {
 
   return (
     <div className="flex items-center space-x-2">
-      <StatusIcon isConnected={isConnected} hasError={hasError} size="h-3 w-3" />
+      <StatusIcon
+        aria-hidden="true"
+        isConnected={isConnected}
+        hasError={hasError}
+        size="h-3 w-3"
+      />
       <span className="text-xs text-muted-foreground">
         {isConnected ? "Live" : "Offline"}
       </span>
