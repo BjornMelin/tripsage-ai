@@ -18,6 +18,7 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { Response } from "@/components/ai-elements/response";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 
 /**
  * Render the AI SDK v6 demo page.
@@ -125,7 +126,7 @@ export default function AiDemoPage() {
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <main id={MAIN_CONTENT_ID} className="flex h-full flex-col" tabIndex={-1}>
       <Conversation className="min-h-[60vh]">
         <ConversationContent>
           {error ? (
@@ -157,6 +158,6 @@ export default function AiDemoPage() {
           </PromptInputFooter>
         </PromptInput>
       </div>
-    </div>
+    </main>
   );
 }

@@ -97,6 +97,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
               name="email"
               type="email"
               autoComplete="email"
+              spellCheck={false}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -125,9 +126,9 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             data-testid="password-login"
           >
             {loginPending ? (
-              <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2Icon aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <MailIcon className="mr-2 h-4 w-4" />
+              <MailIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             )}
             Continue with email
           </Button>
@@ -147,6 +148,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
                 autoComplete="one-time-code"
                 maxLength={6}
                 pattern="\d{6}"
+                spellCheck={false}
                 required
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
@@ -166,7 +168,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
               data-testid="mfa-verify"
             >
               {mfaPending ? (
-                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2Icon aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Verify code
             </Button>
@@ -180,7 +182,8 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             disabled={oauthLoading || loginPending || mfaPending || !!mfaStep}
             data-testid="oauth-github"
           >
-            <SiGithub className="mr-2 h-4 w-4" /> Continue with GitHub
+            <SiGithub aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
+            GitHub
           </Button>
           <Button
             variant="outline"
@@ -189,7 +192,8 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             disabled={oauthLoading || loginPending || mfaPending || !!mfaStep}
             data-testid="oauth-google"
           >
-            <SiGoogle className="mr-2 h-4 w-4" /> Continue with Google
+            <SiGoogle aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
+            Google
           </Button>
         </div>
       </CardContent>

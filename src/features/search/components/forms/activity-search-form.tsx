@@ -181,7 +181,7 @@ export function ActivitySearchForm({
                     <FormItem>
                       <FormLabel>Destination</FormLabel>
                       <FormControl>
-                        <Input placeholder="City, region, or destination" {...field} />
+                        <Input placeholder="City, region, or destination…" {...field} />
                       </FormControl>
                       <FormDescription>
                         Enter city name, region, or specific destination

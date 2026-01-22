@@ -195,7 +195,7 @@ Terminate a specific session.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `sessionId` | string | Yes | Session ID |
 
 #### Response
@@ -222,7 +222,7 @@ Get security metrics.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `window` | string | No | Time window: `24h`, `7d`, `30d` (default: `7d`) |
 
 #### Response
@@ -242,7 +242,7 @@ Get security metrics.
 #### Response Schema
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `totalSessions` | number | Total number of sessions |
 | `activeSessions` | number | Number of currently active sessions |
 | `loginAttempts` | number | Total login attempts in the period |
@@ -267,7 +267,7 @@ Get security events.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `page` | number | No | Page number for pagination (default: `1`) |
 | `limit` | number | No | Results per page (default: `20`, max: `100`) |
 
@@ -301,7 +301,7 @@ Get security events.
 #### Response Schema
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `id` | string | Event ID (UUID) |
 | `type` | string | Event type (login_attempt, failed_login, account_change, permission_change, etc.) |
 | `severity` | string | Severity level: `info`, `warning`, `critical` |
@@ -338,7 +338,7 @@ Get aggregated dashboard metrics.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `window` | string | No | Time window: `24h`, `7d`, `30d`, `all` (default: `7d`). Note: `window=all` returns aggregated lifetime metrics and may produce large responses; clients should prefer bounded windows or pagination |
 
 #### Response

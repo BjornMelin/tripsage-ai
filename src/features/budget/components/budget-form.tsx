@@ -269,7 +269,7 @@ export const BudgetForm = ({
     <Card className={cn("w-full max-w-4xl mx-auto", className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CalculatorIcon className="h-5 w-5" />
+          <CalculatorIcon aria-hidden="true" className="h-5 w-5" />
           Create Budget
         </CardTitle>
       </CardHeader>
@@ -325,7 +325,7 @@ export const BudgetForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    <DollarSignIcon className="h-4 w-4" />
+                    <DollarSignIcon aria-hidden="true" className="h-4 w-4" />
                     Total Budget Amount
                   </FormLabel>
                   <FormControl>
@@ -423,7 +423,7 @@ export const BudgetForm = ({
                     onClick={addCategory}
                     disabled={categories.length >= ExpenseCategories.length}
                   >
-                    <PlusIcon className="h-4 w-4 mr-1" />
+                    <PlusIcon aria-hidden="true" className="h-4 w-4 mr-1" />
                     Add Category
                   </Button>
                 </div>
@@ -529,7 +529,7 @@ export const BudgetForm = ({
                             onClick={() => removeCategory(categoryIndex)}
                             disabled={categories.length <= 1}
                           >
-                            <XIcon className="h-4 w-4" />
+                            <XIcon aria-hidden="true" className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -579,7 +579,7 @@ export const BudgetForm = ({
 
                 {remainingAmount < 0 && (
                   <Alert className="mt-3">
-                    <AlertCircleIcon className="h-4 w-4" />
+                    <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
                     <AlertDescription className="text-sm">
                       You've allocated more than your total budget. Please adjust your
                       category amounts.
@@ -668,7 +668,7 @@ export const BudgetForm = ({
             {/* Form Validation Summary */}
             {!form.isFormComplete && (
               <Alert>
-                <AlertCircleIcon className="h-4 w-4" />
+                <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
                 <AlertDescription>
                   Please complete all required fields before submitting.
                   {form.validationState.validationErrors.length > 0 && (
@@ -701,12 +701,15 @@ export const BudgetForm = ({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    <Loader2Icon
+                      aria-hidden="true"
+                      className="mr-2 h-4 w-4 animate-spin"
+                    />
+                    Creating…
                   </>
                 ) : (
                   <>
-                    <TrendingUpIcon className="mr-2 h-4 w-4" />
+                    <TrendingUpIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                     Create Budget
                   </>
                 )}

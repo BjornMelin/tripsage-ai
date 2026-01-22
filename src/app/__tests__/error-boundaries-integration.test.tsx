@@ -4,6 +4,7 @@ import type { ErrorReport } from "@schemas/errors";
 import { screen } from "@testing-library/react";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { render } from "@/test/test-utils";
 import DashboardError from "../(app)/dashboard/error";
 import AuthError from "../(auth)/error";
@@ -128,6 +129,14 @@ describe("Next.js Error Boundaries Integration", () => {
           "This page has encountered an error and cannot be displayed properly."
         )
       ).toBeInTheDocument();
+    });
+
+    it("should render a main landmark with the skip-link target", () => {
+      render(<ErrorComponent error={mockError} reset={mockReset} />);
+
+      const main = screen.getByRole("main");
+      expect(main).toHaveAttribute("id", MAIN_CONTENT_ID);
+      expect(main).toHaveAttribute("tabindex", "-1");
     });
 
     it("should report error on mount", async () => {

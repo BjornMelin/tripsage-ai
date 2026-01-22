@@ -28,7 +28,7 @@ export function RatingStars({ value, max = 5 }: { value: number; max?: number })
         <StarIcon
           key={star.key}
           aria-hidden="true"
-          className={`h-3 w-3 ${star.filled ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+          className={`h-3 w-3 ${star.filled ? "fill-warning text-warning" : "text-muted-foreground"}`}
         />
       ))}
     </div>

@@ -211,9 +211,15 @@ In the Upstash Console, use `qstash.message_id` to find the DLQ-forwarded messag
 
 Client-side OpenTelemetry is minimal and focused on distributed tracing and error reporting:
 
-- **Initialization:** `initTelemetry()` from `@/lib/telemetry/client` sets up WebTracerProvider and FetchInstrumentation. This is automatically called via `TelemetryProvider` in the root layout. It enables:
-  - Automatic tracing of fetch requests to API routes
-  - Trace context propagation via `traceparent` headers (distributed tracing from client → server)
+- **Initialization:** `initTelemetry()` from `@/lib/telemetry/client` sets up browser tracing. It is called via `TelemetryProvider` in the root layout and is:
+  - **Idempotent** (safe under React Strict Mode)
+  - **Server-safe** (no-op when `window` is unavailable)
+  - **Non-blocking** (initialization is fire-and-forget; failures are swallowed)
+- **Provider setup:** Uses `WebTracerProvider({ spanProcessors: […] })` with a `BatchSpanProcessor` and `OTLPTraceExporter`.
+- **Endpoint normalization:** `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` is normalized to ensure the exporter URL ends with `/v1/traces` (trailing slashes removed).
+- **Self-instrumentation prevention:** Exporter traffic is excluded via `FetchInstrumentation.ignoreUrls` to avoid span loops/noise.
+- **Context propagation:** `traceparent` is propagated only to same-origin fetches to correlate browser → server traces without leaking trace headers to third parties.
+- **Async context robustness:** Uses `ZoneContextManager` (via `zone.js`) to improve context propagation for async browser flows. `zone.js` is only loaded when browser tracing is enabled.
 - **Error recording:** `recordClientErrorOnActiveSpan()` from `@/lib/telemetry/client-errors` records client-side errors on active spans, linking errors to traces.
 
 **Important:** Client-side telemetry is intentionally small. Do not import server-only helpers (`@/lib/telemetry/span`, `@/lib/telemetry/logger`) from client code. Use `recordClientErrorOnActiveSpan` to link client errors to in-flight traces; use `withClientTelemetrySpan` only for rare, client-only spans.
@@ -221,7 +227,13 @@ Client-side OpenTelemetry is minimal and focused on distributed tracing and erro
 **Configuration:**
 
 ```bash
+# If unset, browser tracing is disabled (recommended in production unless you have a collector/trace drain).
+# Either is accepted (client normalizes to `/v1/traces`)
+NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+# or
 NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+# (also accepted)
+NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces/
 ```
 
 ## Structured logging
@@ -238,7 +250,7 @@ const logger = createServerLogger("api.keys", {
 });
 
 // In a route handler
-logger.info("Key stored", { userId: "123", apiKey: "sk-..." }); // apiKey redacted
+logger.info("Key stored", { userId: "123", apiKey: "sk-…" }); // apiKey redacted
 logger.error("Validation failed", { field: "email", message: "Invalid format" });
 logger.warn("Rate limit approaching", { remaining: 5 });
 ```

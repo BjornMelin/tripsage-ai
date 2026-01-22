@@ -7,7 +7,7 @@ Internal endpoints for admin operations and system integrations. These endpoints
 Internal endpoints fall into three categories:
 
 | Category | Description | Authentication |
-|----------|-------------|----------------|
+| -------- | ----------- | -------------- |
 | [Agent Config](config.md) | Agent configuration management | Admin user |
 | [Webhooks](webhooks.md) | Database and file event handlers | Webhook signature |
 | [Jobs](jobs.md) | Background job handlers | QStash signature |

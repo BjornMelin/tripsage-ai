@@ -1,11 +1,12 @@
 /**
- * @fileoverview Query error boundary with OTEL-backed telemetry. Refer to docs/development/observability.md for tracing and alerting standards.
+ * @fileoverview Query error boundary with OTEL-backed telemetry. Refer to docs/development/backend/observability.md for tracing and alerting standards.
  */
 
 "use client";
 
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { AlertTriangleIcon, RefreshCwIcon, WifiOffIcon } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType, ErrorInfo, JSX, ReactNode } from "react";
 import { useRef } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
@@ -142,11 +143,11 @@ function RecordTelemetry(error: Error, info: ErrorInfo, meta: ErrorMeta) {
 }
 
 const VARIANT_STYLES: Record<ErrorVariant, string> = {
-  auth: "border-amber-200 bg-amber-50 text-amber-800",
-  default: "border-gray-200 bg-gray-50 text-gray-800",
-  network: "border-amber-200 bg-amber-50 text-amber-800",
-  permission: "border-red-200 bg-red-50 text-red-800",
-  server: "border-red-200 bg-red-50 text-red-800",
+  auth: "border-warning/20 bg-warning/10 text-warning",
+  default: "border-border bg-muted text-foreground",
+  network: "border-warning/20 bg-warning/10 text-warning",
+  permission: "border-destructive/20 bg-destructive/10 text-destructive",
+  server: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const VARIANT_DISPLAY: Record<
@@ -154,27 +155,27 @@ const VARIANT_DISPLAY: Record<
   { icon: JSX.Element; message: string; title: string }
 > = {
   auth: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-amber-700" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-warning" />,
     message: "Please log in to continue.",
     title: "Authentication Required",
   },
   default: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-destructive" />,
     message: "Something went wrong. Please try again.",
     title: "Something went wrong",
   },
   network: {
-    icon: <WifiOffIcon className="h-8 w-8 text-amber-700" />,
+    icon: <WifiOffIcon aria-hidden="true" className="h-8 w-8 text-warning" />,
     message: "Please check your internet connection and try again.",
     title: "Connection Error",
   },
   permission: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-destructive" />,
     message: "You don't have permission to access this resource.",
     title: "Access Denied",
   },
   server: {
-    icon: <AlertTriangleIcon className="h-8 w-8 text-red-700" />,
+    icon: <AlertTriangleIcon aria-hidden="true" className="h-8 w-8 text-destructive" />,
     message: "Our servers are experiencing issues. Please try again later.",
     title: "Server Error",
   },
@@ -200,6 +201,9 @@ function QueryErrorFallback({
   const display = VARIANT_DISPLAY[meta.variant];
   const showLogin = meta.variant === "auth";
   const message = meta.variant === "default" ? errorMessage : display.message;
+  const resolvedLoginHref = loginHref ?? "/login";
+  const isInternalLoginHref =
+    resolvedLoginHref.startsWith("/") && !resolvedLoginHref.startsWith("//");
 
   return (
     <div
@@ -216,6 +220,7 @@ function QueryErrorFallback({
 
       <div className="flex items-center gap-2">
         <Button
+          type="button"
           onClick={onRetry}
           variant="outline"
           size="sm"
@@ -223,19 +228,17 @@ function QueryErrorFallback({
           disabled={!meta.isRetryable}
           aria-label="Try Again"
         >
-          <RefreshCwIcon className="h-4 w-4" />
+          <RefreshCwIcon aria-hidden="true" className="h-4 w-4" />
           Try Again
         </Button>
 
         {showLogin && (
-          <Button
-            onClick={() => {
-              window.location.href = loginHref ?? "/login";
-            }}
-            size="sm"
-            className="ml-2"
-          >
-            Go to Login
+          <Button asChild size="sm" className="ml-2">
+            {isInternalLoginHref ? (
+              <Link href={resolvedLoginHref}>Go to Login</Link>
+            ) : (
+              <a href={resolvedLoginHref}>Go to Login</a>
+            )}
           </Button>
         )}
       </div>
@@ -376,15 +379,16 @@ export function InlineQueryError({
       data-error-retryable={meta.isRetryable}
     >
       {meta.variant === "network" ? (
-        <WifiOffIcon className="h-4 w-4 shrink-0" />
+        <WifiOffIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
       ) : (
-        <AlertTriangleIcon className="h-4 w-4 shrink-0" />
+        <AlertTriangleIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
       )}
 
       <span className="flex-1">{errorMessage}</span>
 
       {retry && (
         <Button
+          type="button"
           onClick={retry}
           variant="outline"
           size="sm"
@@ -392,7 +396,7 @@ export function InlineQueryError({
           aria-label="Try Again"
           disabled={!meta.isRetryable}
         >
-          <RefreshCwIcon className="h-3 w-3" />
+          <RefreshCwIcon aria-hidden="true" className="h-3 w-3" />
         </Button>
       )}
     </div>

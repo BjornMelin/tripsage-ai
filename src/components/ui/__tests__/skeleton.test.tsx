@@ -66,11 +66,11 @@ describe("Skeleton", () => {
   it("applies different variants", () => {
     const { rerender } = render(<Skeleton variant="light" data-testid="skeleton" />);
     let skeleton = screen.getByTestId("skeleton");
-    expect(skeleton).toHaveClass("bg-slate-50");
+    expect(skeleton).toHaveClass("bg-muted/60");
 
     rerender(<Skeleton variant="medium" data-testid="skeleton" />);
     skeleton = screen.getByTestId("skeleton");
-    expect(skeleton).toHaveClass("bg-slate-200");
+    expect(skeleton).toHaveClass("bg-muted/80");
 
     rerender(<Skeleton variant="rounded" data-testid="skeleton" />);
     skeleton = screen.getByTestId("skeleton");

@@ -45,21 +45,18 @@ import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { getBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
-/**
- * Alert colors for account status indicators.
- * Deliberately distinct from statusVariants to keep lightweight, Tailwind-only tokens here.
- */
+/** Alert colors for account status indicators aligned with semantic tokens. */
 const ALERT_COLORS = {
   danger: {
-    border: "border-red-200",
-    buttonHover: "bg-red-600 hover:bg-red-700",
-    title: "text-red-600",
+    border: "border-destructive/20",
+    buttonHover: "bg-destructive hover:bg-destructive/90",
+    title: "text-destructive",
   },
   warning: {
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    text: "text-amber-700",
-    title: "text-amber-800",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
+    title: "text-warning",
   },
 } as const;
 
@@ -297,7 +294,7 @@ export function AccountSettingsSection() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MailIcon className="h-5 w-5" />
+            <MailIcon aria-hidden="true" className="h-5 w-5" />
             Email Settings
           </CardTitle>
           <CardDescription>
@@ -311,7 +308,7 @@ export function AccountSettingsSection() {
             <Badge variant={isEmailVerified ? "default" : "secondary"}>
               {isEmailVerified ? (
                 <>
-                  <CheckIcon className="h-3 w-3 mr-1" />
+                  <CheckIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                   Verified
                 </>
               ) : (
@@ -463,7 +460,7 @@ export function AccountSettingsSection() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="flex items-center gap-2">
-                <Trash2Icon className="h-4 w-4" />
+                <Trash2Icon aria-hidden="true" className="h-4 w-4" />
                 Delete Account
               </Button>
             </AlertDialogTrigger>

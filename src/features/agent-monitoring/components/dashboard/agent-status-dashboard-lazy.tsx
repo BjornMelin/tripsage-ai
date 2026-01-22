@@ -14,9 +14,7 @@ const AgentStatusDashboard = dynamic(
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="text-sm text-muted-foreground mt-2">
-            Loading agent dashboard...
-          </p>
+          <p className="text-sm text-muted-foreground mt-2">Loading agent dashboard…</p>
         </div>
       </div>
     ),

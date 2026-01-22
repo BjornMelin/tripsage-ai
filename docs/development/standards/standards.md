@@ -100,12 +100,20 @@ Troubleshooting: restart TS server, confirm path mapping, run `pnpm type-check` 
 TripSage aligns UI implementation with Vercel Web Interface Guidelines:
 
 - Use typographic ellipsis `…` for loading/progress states (e.g., “Loading…”, “Saving…”).
+- Prefer semantic color tokens (`bg-success`, `text-warning`, `bg-info`, `text-highlight`, `bg-overlay/50`) over hard-coded color families to ensure light/dark parity.
 - Avoid `transition-all`; prefer explicit transition properties (e.g., `transition-colors`, `transition-transform`, `transition-[opacity,box-shadow]`).
 - Preserve focus visibility (no `outline: none` without an accessible replacement).
 - Use semantic elements:
   - navigation: `Link`/`<a>`.
   - actions: `<button>`.
   - avoid `div` + `onClick` for interactive controls.
+- Default button type is `button` unless explicitly submitting a form.
+- Decorative icons must set `aria-hidden="true"`; only meaningful icons should be labeled.
+- Prefer `DropdownMenu` for user/account menus so items render as `role="menuitem"` inside `role="menu"`.
+- Provide a skip link and a single main landmark (`<main id="main-content" tabIndex={-1}>`).
+- Use consistent truncation utilities (`truncate`, `line-clamp-*`) for ellipsis.
+- Dialog overlays should use `bg-overlay/50` for consistent light/dark theming.
+- Mobile tap highlight is disabled globally; do not reintroduce browser default highlights.
 
 References:
 

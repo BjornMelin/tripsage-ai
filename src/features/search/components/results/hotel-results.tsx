@@ -216,13 +216,16 @@ export function HotelResults({
   if (results.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <Building2Icon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <Building2Icon
+          aria-hidden="true"
+          className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+        />
         <h3 className="text-lg font-semibold mb-2">No hotels found</h3>
         <p className="text-muted-foreground mb-4">
           Try adjusting your search criteria or dates
         </p>
         <Button variant="outline">
-          <RefreshCwIcon className="h-4 w-4 mr-2" />
+          <RefreshCwIcon aria-hidden="true" className="h-4 w-4 mr-2" />
           Modify Search
         </Button>
       </Card>
@@ -239,11 +242,11 @@ export function HotelResults({
             <Separator orientation="vertical" className="h-4" />
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm">
-                <FilterIcon className="h-4 w-4 mr-2" />
+                <FilterIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                 Filters
               </Button>
               <Button variant="ghost" size="sm" onClick={toggleDirection}>
-                <ArrowUpDownIcon className="h-4 w-4 mr-2" />
+                <ArrowUpDownIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                 Sort: {formatSortLabel(sortBy)} ({formatDirectionLabel(sortDirection)})
               </Button>
               <Button variant="outline" size="sm" onClick={cycleSort}>
@@ -258,14 +261,14 @@ export function HotelResults({
               size="sm"
               onClick={() => setViewMode("list")}
             >
-              <ListIcon className="h-4 w-4" />
+              <ListIcon aria-hidden="true" className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("grid")}
             >
-              <Grid3X3Icon className="h-4 w-4" />
+              <Grid3X3Icon aria-hidden="true" className="h-4 w-4" />
             </Button>
             {showMap && (
               <Button
@@ -273,7 +276,7 @@ export function HotelResults({
                 size="sm"
                 onClick={() => setViewMode("map")}
               >
-                <MapIcon className="h-4 w-4" />
+                <MapIcon aria-hidden="true" className="h-4 w-4" />
               </Button>
             )}
           </div>

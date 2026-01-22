@@ -73,11 +73,16 @@ export function Navbar() {
             size="icon"
             className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
+            aria-label={
+              mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
+            }
           >
             {mobileMenuOpen ? (
-              <XIcon className="h-5 w-5" />
+              <XIcon aria-hidden="true" className="h-5 w-5" />
             ) : (
-              <MenuIcon className="h-5 w-5" />
+              <MenuIcon aria-hidden="true" className="h-5 w-5" />
             )}
           </Button>
         </div>
@@ -85,7 +90,7 @@ export function Navbar() {
 
       {/* Mobile navigation */}
       {mobileMenuOpen && (
-        <nav className="md:hidden py-4 border-t">
+        <nav id="mobile-navigation" className="md:hidden py-4 border-t">
           <div className="container flex flex-col space-y-3">
             {NavItems.map((item) => (
               <Link

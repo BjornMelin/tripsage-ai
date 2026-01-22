@@ -20,8 +20,8 @@ import { cn } from "@/lib/utils";
  * errors use red (aligned with urgency.high/status.error).
  */
 const AGENT_COLORS = {
-  active: "text-green-700",
-  error: "text-red-700",
+  active: "text-success",
+  error: "text-destructive",
 } as const;
 
 /** Unified connection status for UI state management. */

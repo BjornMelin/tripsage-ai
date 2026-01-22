@@ -133,13 +133,13 @@ export function ResultsControlsBar<S extends string>({
               disabled={!onOpenFilters}
               aria-label={onOpenFilters ? "Open filters" : "Filters unavailable"}
             >
-              <FilterIcon className="h-4 w-4 mr-2" />
+              <FilterIcon aria-hidden="true" className="h-4 w-4 mr-2" />
               Filters
             </Button>
             <Select value={sortBy} onValueChange={(value) => onSortChange(value as S)}>
               <SelectTrigger aria-label={`Sort ${resultLabel}`} className="w-40 h-9">
                 <div className="flex items-center gap-2">
-                  <ArrowUpDownIcon className="h-4 w-4" />
+                  <ArrowUpDownIcon aria-hidden="true" className="h-4 w-4" />
                   <SelectValue placeholder="Sort" />
                 </div>
               </SelectTrigger>
@@ -171,7 +171,7 @@ export function ResultsControlsBar<S extends string>({
             data-state={viewMode === "list" ? "on" : "off"}
             aria-label="List view"
           >
-            <ListIcon className="h-4 w-4" />
+            <ListIcon aria-hidden="true" className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === "grid" ? "default" : "outline"}
@@ -181,7 +181,7 @@ export function ResultsControlsBar<S extends string>({
             data-state={viewMode === "grid" ? "on" : "off"}
             aria-label="Grid view"
           >
-            <Grid3X3Icon className="h-4 w-4" />
+            <Grid3X3Icon aria-hidden="true" className="h-4 w-4" />
           </Button>
           {showMapView && (
             <Button
@@ -192,7 +192,7 @@ export function ResultsControlsBar<S extends string>({
               data-state={viewMode === "map" ? "on" : "off"}
               aria-label="Map view"
             >
-              <MapIcon className="h-4 w-4" />
+              <MapIcon aria-hidden="true" className="h-4 w-4" />
             </Button>
           )}
         </fieldset>

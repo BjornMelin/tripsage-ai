@@ -125,7 +125,7 @@ function PopularDestinationCard({
         <Building2Icon className="h-16 w-16 text-primary/30" />
         <div className="absolute top-3 right-3">
           <Badge variant="secondary" className="text-xs flex items-center gap-1">
-            <StarIcon className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <StarIcon className="h-3 w-3 fill-warning text-warning" />
             {rating}
           </Badge>
         </div>

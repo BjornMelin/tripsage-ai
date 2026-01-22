@@ -50,9 +50,9 @@ import { cn } from "@/lib/utils";
  * Uses 500 weight to align with TREND_COLORS for consistency across cards.
  */
 const SPENDING_TREND_COLORS = {
-  decreasing: "text-green-500",
-  increasing: "text-red-500",
-  stable: "text-gray-500",
+  decreasing: "text-success",
+  increasing: "text-destructive",
+  stable: "text-muted-foreground",
 } as const;
 
 export function PersonalizationInsights({
@@ -116,11 +116,23 @@ export function PersonalizationInsights({
   ) => {
     switch (trend) {
       case "increasing":
-        return <TrendingUpIcon className={`h-4 w-4 ${colorMap.increasing}`} />;
+        return (
+          <TrendingUpIcon
+            aria-hidden="true"
+            className={`h-4 w-4 ${colorMap.increasing}`}
+          />
+        );
       case "decreasing":
-        return <TrendingDownIcon className={`h-4 w-4 ${colorMap.decreasing}`} />;
+        return (
+          <TrendingDownIcon
+            aria-hidden="true"
+            className={`h-4 w-4 ${colorMap.decreasing}`}
+          />
+        );
       default:
-        return <BarChart3Icon className={`h-4 w-4 ${colorMap.stable}`} />;
+        return (
+          <BarChart3Icon aria-hidden="true" className={`h-4 w-4 ${colorMap.stable}`} />
+        );
     }
   };
 
@@ -157,7 +169,7 @@ export function PersonalizationInsights({
         {travelPersonality && (
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <UserIcon className="h-5 w-5 text-blue-500" />
+              <UserIcon aria-hidden="true" className="h-5 w-5 text-info" />
               Travel Personality
             </h3>
             <Card>
@@ -170,7 +182,7 @@ export function PersonalizationInsights({
                     </p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-500">
+                    <div className="text-2xl font-bold text-info">
                       {Math.round(travelPersonality.confidence * 100)}%
                     </div>
                     <div className="text-xs text-muted-foreground">Confidence</div>
@@ -198,13 +210,13 @@ export function PersonalizationInsights({
         {stats && (
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <BarChart3Icon className="h-5 w-5 text-green-500" />
+              <BarChart3Icon aria-hidden="true" className="h-5 w-5 text-success" />
               Memory Statistics
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6 text-center">
-                  <div className="text-2xl font-bold text-blue-500">
+                  <div className="text-2xl font-bold text-info">
                     {stats.totalMemories}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Memories</div>
@@ -216,7 +228,7 @@ export function PersonalizationInsights({
                 .map(([type, count]) => (
                   <Card key={type}>
                     <CardContent className="pt-6 text-center">
-                      <div className="text-2xl font-bold text-purple-500">{count}</div>
+                      <div className="text-2xl font-bold text-highlight">{count}</div>
                       <div className="text-sm text-muted-foreground capitalize">
                         {type}
                       </div>
@@ -231,7 +243,7 @@ export function PersonalizationInsights({
         {destinationPreferences?.topDestinations && (
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <MapPinIcon className="h-5 w-5 text-red-500" />
+              <MapPinIcon aria-hidden="true" className="h-5 w-5 text-highlight" />
               Favorite Destinations
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -247,7 +259,7 @@ export function PersonalizationInsights({
                     </div>
                     {dest.satisfactionScore && (
                       <div className="flex items-center gap-2 mt-2">
-                        <StarIcon className="h-4 w-4 text-yellow-500" />
+                        <StarIcon aria-hidden="true" className="h-4 w-4 text-warning" />
                         <span className="text-sm">
                           {dest.satisfactionScore.toFixed(1)}/5
                         </span>
@@ -262,7 +274,7 @@ export function PersonalizationInsights({
 
         <div>
           <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <LightbulbIcon className="h-5 w-5 text-amber-500" />
+            <LightbulbIcon aria-hidden="true" className="h-5 w-5 text-warning" />
             Recent Memories
           </h3>
           {recentMemoriesLoading ? (
@@ -294,7 +306,7 @@ export function PersonalizationInsights({
                             }
                             type="button"
                           >
-                            <CopyIcon className="h-3.5 w-3.5" />
+                            <CopyIcon aria-hidden="true" className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : null}
@@ -326,7 +338,7 @@ export function PersonalizationInsights({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <DollarSignIcon className="h-5 w-5 text-green-500" />
+          <DollarSignIcon aria-hidden="true" className="h-5 w-5 text-success" />
           Budget Analysis
         </h3>
 
@@ -342,7 +354,7 @@ export function PersonalizationInsights({
                   ([category, amount]) => (
                     <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-500" />
+                        <div className="w-3 h-3 rounded-full bg-info" />
                         <span className="capitalize font-medium">{category}</span>
                       </div>
                       <span className="font-mono">
@@ -411,7 +423,7 @@ export function PersonalizationInsights({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <LightbulbIcon className="h-5 w-5 text-yellow-500" />
+          <LightbulbIcon aria-hidden="true" className="h-5 w-5 text-warning" />
           Personalized Recommendations
         </h3>
 
@@ -424,7 +436,7 @@ export function PersonalizationInsights({
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <TargetIcon className="h-4 w-4 text-blue-500" />
+                    <TargetIcon aria-hidden="true" className="h-4 w-4 text-info" />
                     <Badge variant="outline" className="capitalize">
                       {rec.type}
                     </Badge>
@@ -475,7 +487,7 @@ export function PersonalizationInsights({
     return (
       <div className={cn("space-y-6", className)}>
         <Alert>
-          <InfoIcon className="h-4 w-4" />
+          <InfoIcon aria-hidden="true" className="h-4 w-4" />
           <AlertDescription>
             Unable to load personalization insights. Please try refreshing the page.
           </AlertDescription>
@@ -490,7 +502,7 @@ export function PersonalizationInsights({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <BrainIcon className="h-6 w-6 text-purple-500" />
+            <BrainIcon aria-hidden="true" className="h-6 w-6 text-highlight" />
             Personalization Insights
           </h2>
           <p className="text-muted-foreground">
@@ -506,12 +518,13 @@ export function PersonalizationInsights({
             disabled={insightsLoading}
           >
             <RefreshCwIcon
+              aria-hidden="true"
               className={cn("h-4 w-4 mr-2", insightsLoading && "animate-spin")}
             />
             Refresh
           </Button>
           <Button variant="outline" size="sm">
-            <SettingsIcon className="h-4 w-4 mr-2" />
+            <SettingsIcon aria-hidden="true" className="h-4 w-4 mr-2" />
             Preferences
           </Button>
         </div>

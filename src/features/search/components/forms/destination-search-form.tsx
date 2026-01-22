@@ -11,7 +11,7 @@ import {
   destinationSearchParamsSchema,
 } from "@schemas/search";
 import { ClockIcon, StarIcon, TrendingUpIcon } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -32,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import { useMemoryContext } from "@/hooks/use-memory";
-import { initTelemetry } from "@/lib/telemetry/client";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
@@ -121,10 +120,6 @@ export function DestinationSearchForm({
     },
     {}
   );
-
-  useEffect(() => {
-    initTelemetry();
-  }, []);
 
   const watchedTypes = form.watch("types");
   const watchedLimit = form.watch("limit");
@@ -260,7 +255,7 @@ export function DestinationSearchForm({
               {showMemoryRecommendations && memoryContext?.context && (
                 <div className="space-y-3">
                   <FormLabel className="text-sm font-medium flex items-center gap-2">
-                    <StarIcon className="h-4 w-4 text-yellow-500" />
+                    <StarIcon className="h-4 w-4 text-warning" />
                     Your Favorite Destinations
                   </FormLabel>
                   <div className="flex flex-wrap gap-2">
@@ -270,7 +265,7 @@ export function DestinationSearchForm({
                         <Badge
                           key={destination}
                           variant="outline"
-                          className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
+                          className="cursor-pointer hover:bg-warning/10 hover:border-warning/30 transition-colors border-warning/20 text-warning"
                           onClick={() =>
                             handleQuickSelectDestination({ query: destination })
                           }
@@ -288,7 +283,7 @@ export function DestinationSearchForm({
                 memoryContext?.context?.travelPatterns?.frequentDestinations && (
                   <div className="space-y-3">
                     <FormLabel className="text-sm font-medium flex items-center gap-2">
-                      <TrendingUpIcon className="h-4 w-4 text-blue-500" />
+                      <TrendingUpIcon className="h-4 w-4 text-info" />
                       Your Travel Patterns
                     </FormLabel>
                     <div className="flex flex-wrap gap-2">
@@ -298,7 +293,7 @@ export function DestinationSearchForm({
                           <Badge
                             key={destination}
                             variant="outline"
-                            className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
+                            className="cursor-pointer hover:bg-info/10 hover:border-info/30 transition-colors border-info/20 text-info"
                             onClick={() =>
                               handleQuickSelectDestination({ query: destination })
                             }
@@ -315,7 +310,7 @@ export function DestinationSearchForm({
               {showMemoryRecommendations && memoryContext?.context?.recentMemories && (
                 <div className="space-y-3">
                   <FormLabel className="text-sm font-medium flex items-center gap-2">
-                    <ClockIcon className="h-4 w-4 text-green-500" />
+                    <ClockIcon className="h-4 w-4 text-success" />
                     Recent Memories
                   </FormLabel>
                   <div className="flex flex-wrap gap-2">
@@ -336,7 +331,7 @@ export function DestinationSearchForm({
                           <Badge
                             key={memory.content}
                             variant="outline"
-                            className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
+                            className="cursor-pointer hover:bg-success/10 hover:border-success/30 transition-colors border-success/20 text-success"
                             onClick={() =>
                               handleQuickSelectDestination({ query: destination })
                             }
@@ -407,7 +402,7 @@ export function DestinationSearchForm({
                           />
                           <div className="flex-1">
                             <div className="font-medium text-sm">{type.label}</div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                               {type.description}
                             </div>
                           </div>
@@ -450,7 +445,7 @@ export function DestinationSearchForm({
                     <FormItem>
                       <FormLabel>Language (optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. en, fr, es" {...field} />
+                        <Input placeholder="e.g. en, fr, es…" {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">
                         ISO language code
@@ -467,7 +462,7 @@ export function DestinationSearchForm({
                     <FormItem>
                       <FormLabel>Region (optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. us, uk, fr" {...field} />
+                        <Input placeholder="e.g. us, uk, fr…" {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">
                         ISO region code

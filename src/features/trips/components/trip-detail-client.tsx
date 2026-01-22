@@ -245,7 +245,7 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
       <div className="container mx-auto py-10">
         <Card>
           <CardContent className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-            <Loader2Icon className="h-5 w-5 animate-spin" />
+            <Loader2Icon aria-hidden="true" className="h-5 w-5 animate-spin" />
             Loading trip…
           </CardContent>
         </Card>
@@ -264,7 +264,7 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
             <p>{tripQuery.error.message}</p>
             <Button asChild variant="outline">
               <Link href="/dashboard/trips">
-                <ChevronLeftIcon className="mr-2 h-4 w-4" />
+                <ChevronLeftIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                 Back to trips
               </Link>
             </Button>
@@ -285,7 +285,7 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
             <p>The trip may have been deleted or you no longer have access.</p>
             <Button asChild variant="outline">
               <Link href="/dashboard/trips">
-                <ChevronLeftIcon className="mr-2 h-4 w-4" />
+                <ChevronLeftIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                 Back to trips
               </Link>
             </Button>
@@ -315,19 +315,19 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
       >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="itinerary" className="gap-2">
-            <PlusIcon className="h-4 w-4" />
+            <PlusIcon aria-hidden="true" className="h-4 w-4" />
             Itinerary
           </TabsTrigger>
           <TabsTrigger value="places" className="gap-2">
-            <MapPinnedIcon className="h-4 w-4" />
+            <MapPinnedIcon aria-hidden="true" className="h-4 w-4" />
             Places
           </TabsTrigger>
           <TabsTrigger value="collaborators" className="gap-2">
-            <UsersIcon className="h-4 w-4" />
+            <UsersIcon aria-hidden="true" className="h-4 w-4" />
             Collaborators
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
-            <SettingsIcon className="h-4 w-4" />
+            <SettingsIcon aria-hidden="true" className="h-4 w-4" />
             Settings
           </TabsTrigger>
         </TabsList>
@@ -356,7 +356,7 @@ export function TripDetailClient({ tripId, userId }: TripDetailClientProps) {
             <CardContent>
               {collaboratorsQuery.isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
-                  <Loader2Icon className="h-5 w-5 animate-spin" />
+                  <Loader2Icon aria-hidden="true" className="h-5 w-5 animate-spin" />
                   Loading collaborators…
                 </div>
               ) : collaboratorsQuery.error ? (

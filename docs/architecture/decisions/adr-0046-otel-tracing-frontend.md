@@ -1,8 +1,8 @@
 # ADR-0046: OTEL Tracing for Next.js 16 Route Handlers
 
-**Version**: 1.0.0  
-**Status**: Proposed  
-**Date**: 2025-11-20  
+**Version**: 1.1.0  
+**Status**: Accepted  
+**Date**: 2026-01-21  
 **Category**: Observability  
 **Domain**: Tracing / Telemetry  
 **Related ADRs**: ADR-0031, ADR-0032, ADR-0040, ADR-0041  
@@ -10,35 +10,49 @@
 
 ## Context
 
-- OTEL dependencies are present (`@opentelemetry/api`, `@vercel/otel`), but no ADR defines route tracing standards.
-- Project rule: server code must use `withTelemetrySpan()`/`withTelemetrySpanSync()` from `@/lib/telemetry/span` (server-only) and `createServerLogger()` from `@/lib/telemetry/logger`; `console.*` is discouraged.
-- We need consistent span attributes for AI SDK routes, Supabase SSR, and Upstash/QStash calls.
-- Client components use `@/lib/telemetry/client` for client-side OTEL Web initialization and no-op helpers that match the server API surface.
+- The app runs on Next.js App Router (Node 24.x) and deploys to Vercel, where server-side tracing must remain compatible with Vercel features (Session Tracing / Trace Drains).
+- We need consistent server-side span/event patterns for route handlers, server actions, AI SDK calls, Supabase SSR, and Upstash/QStash.
+- We also want optional client-side tracing to correlate browser actions to server route spans via `traceparent`, without impacting UX or leaking PII.
 
 ## Decision
 
-- All Next.js route handlers and server utilities must wrap business logic in `withTelemetrySpan` (`withTelemetrySpanSync` for sync).  
-- Standard span attributes: `svc: "frontend"`, `route`, `operation`, `provider`, `model`, `tool`, `user_tier`, `cache_hit`, `ratelimit_bucket`.
-- Emit structured logs via `createServerLogger()` within spans; prohibit bare `console.*` outside client components/tests.
-- Instrument external calls (Supabase, Upstash, QStash, AI Gateway) using OTEL context propagation; attach `traceparent` when supported.
-- Sampling: default parent-based; allow per-route overrides for high-traffic endpoints (`ai.stream`, `chat.stream`) via config file in `src/lib/telemetry/config.ts`.
+We adopt a Vercel-first server setup + a minimal, standards-based browser setup:
+
+### Server (Vercel / Next.js)
+
+- Use `@vercel/otel` via the Next.js instrumentation hook at `src/instrumentation.ts`.
+- Keep server code free of direct OpenTelemetry API calls except in telemetry infrastructure (`src/lib/telemetry/*` and `src/lib/supabase/factory.ts`).
+- Server spans/events/logs are emitted through the repository helpers:
+  - `withTelemetrySpan()` / `withTelemetrySpanSync()` (`src/lib/telemetry/span.ts`)
+  - `recordTelemetryEvent()` and error helpers
+  - `createServerLogger()` (`src/lib/telemetry/logger.ts`)
+
+### Client (Browser)
+
+- Initialize OpenTelemetry Web tracing via `initTelemetry()` (`src/lib/telemetry/client.ts`), invoked from `TelemetryProvider` (`src/components/providers/telemetry-provider.tsx`) in the root layout.
+- Use `WebTracerProvider({ spanProcessors: […] })` with `BatchSpanProcessor` and `OTLPTraceExporter` for browser traces.
+- Normalize `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` to ensure the exporter URL ends with `/v1/traces`.
+- Prevent self-instrumentation by adding the exporter URL to `FetchInstrumentation.ignoreUrls`.
+- Propagate `traceparent` only for same-origin requests to enable browser → server trace correlation.
+- Use `ZoneContextManager` (via `zone.js`) to improve async context propagation in the browser.
+- Use `semconvStabilityOptIn: "http/dup"` for safer HTTP semantic convention migration (emit stable + legacy attributes).
 
 ## Consequences
 
 ### Positive
 
-- Uniform tracing across AI routes and infra calls; easier debugging and SLO tracking.  
-- Standard span attributes and logging improve correlation and incident response.  
-- Encourages consistent telemetry hygiene (no stray console logs).
+- Uniform tracing across AI routes and infra calls; easier debugging and incident response.
+- Vercel-native server tracing (Trace Drains / Session Tracing) stays supported.
+- Client → server correlation works for same-origin fetches via `traceparent`.
 
 ### Negative
 
-- Minor performance overhead from spans and logging; mitigated by sampling.  
-- Requires code changes across existing handlers/tests to adopt wrappers.
+- Minor overhead from spans and logging; mitigated by upstream sampling and batching.
+- Client bundle cost for `zone.js` is paid only when client telemetry is initialized (loaded outside the critical bundle via `TelemetryProvider`).
 
 ### Neutral
 
-- Does not change business logic; observational concern only.
+- Observability is additive; it does not change business logic.
 
 ## Alternatives Considered
 
@@ -52,6 +66,9 @@ Rejected: insufficient visibility into AI/tool calls, cache/ratelimit interactio
 
 ## References
 
-- OpenTelemetry API docs  
-- Vercel OTEL runtime guidance  
-- ADR-0031 (AI API), ADR-0032 (rate limiting), ADR-0040/0041 (webhooks)
+- Next.js OpenTelemetry guide: <https://nextjs.org/docs/app/building-your-application/optimizing/open-telemetry>
+- Next.js instrumentation hook: <https://nextjs.org/docs/app/guides/instrumentation>
+- Vercel instrumentation: <https://vercel.com/docs/tracing/instrumentation>
+- OpenTelemetry JS browser setup: <https://opentelemetry.io/docs/languages/js/getting-started/browser/>
+- OpenTelemetry JS manual instrumentation: <https://opentelemetry.io/docs/languages/js/instrumentation/>
+- OpenTelemetry JS releases: <https://github.com/open-telemetry/opentelemetry-js/releases>

@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Metric } from "web-vitals";
+import { patchPerformanceMeasureForPrerender } from "@/lib/performance/patch-performance-measure";
 
 interface PerformanceMetrics {
   loadTime: number;
@@ -130,17 +131,48 @@ export function useWebVitals(handler?: (metric: Metric) => void) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Dynamically import web-vitals to avoid increasing bundle size
-    import("web-vitals")
-      .then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
-        onCLS(stableHandler);
-        onINP(stableHandler);
-        onFCP(stableHandler);
-        onLCP(stableHandler);
-        onTTFB(stableHandler);
-      })
-      .catch(() => {
-        // Silently fail if web-vitals is not available
+    patchPerformanceMeasureForPrerender();
+
+    let isCancelled = false;
+
+    const init = () => {
+      // Dynamically import web-vitals to avoid increasing bundle size.
+      // Some browsers may throw when measuring during prerender; we defer init
+      // until activation to avoid noisy `performance.measure` errors.
+      import("web-vitals")
+        .then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
+          if (isCancelled) return;
+          onCLS(stableHandler);
+          onINP(stableHandler);
+          onFCP(stableHandler);
+          onLCP(stableHandler);
+          onTTFB(stableHandler);
+        })
+        .catch(() => {
+          // Silently fail if web-vitals is not available
+        });
+    };
+
+    if ("prerendering" in document && document.prerendering) {
+      const handlePrerenderingChange = () => {
+        if (isCancelled) return;
+        init();
+      };
+
+      document.addEventListener("prerenderingchange", handlePrerenderingChange, {
+        once: true,
       });
+
+      return () => {
+        isCancelled = true;
+        document.removeEventListener("prerenderingchange", handlePrerenderingChange);
+      };
+    }
+
+    init();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [stableHandler]);
 }

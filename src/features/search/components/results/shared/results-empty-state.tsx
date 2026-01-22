@@ -60,7 +60,7 @@ export function ResultsEmptyState({
         aria-disabled={!onAction}
         title={onAction ? undefined : `${actionLabel} unavailable`}
       >
-        <RefreshCwIcon className="h-4 w-4 mr-2" />
+        <RefreshCwIcon aria-hidden="true" className="h-4 w-4 mr-2" />
         {actionLabel}
       </Button>
     </Card>

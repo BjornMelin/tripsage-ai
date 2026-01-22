@@ -16,7 +16,6 @@ import {
   SparklesIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type React from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +60,6 @@ function getSearchPath(searchType: SearchType): string {
 /** Search hub client component. */
 export default function SearchHubClient() {
   const { recentSearches } = useSearchHistoryStore();
-  const router = useRouter();
 
   // Get the 6 most recent searches
   const displayedSearches = recentSearches.slice(0, 6);
@@ -73,10 +71,10 @@ export default function SearchHubClient() {
    * @param params - The parameters to repeat the search with.
    * @returns void
    */
-  const handleRepeatSearch = (
+  const getRepeatSearchHref = (
     searchType: SearchType,
     params: RepeatSearchParams
-  ): void => {
+  ): string => {
     const basePath = getSearchPath(searchType);
     const queryParams = new URLSearchParams();
 
@@ -90,7 +88,7 @@ export default function SearchHubClient() {
     const url = queryParams.toString()
       ? `${basePath}?${queryParams.toString()}`
       : basePath;
-    router.push(url);
+    return url;
   };
 
   return (
@@ -102,7 +100,7 @@ export default function SearchHubClient() {
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <SearchIcon className="h-5 w-5" />
+                  <SearchIcon aria-hidden="true" className="h-5 w-5" />
                   Search Options
                 </CardTitle>
                 <CardDescription>
@@ -123,25 +121,25 @@ export default function SearchHubClient() {
                         title="Find Flights"
                         description="Search for flights to any destination"
                         href={`${ROUTES.dashboard.search}/flights`}
-                        icon={<PlaneIcon className="h-5 w-5" />}
+                        icon={<PlaneIcon aria-hidden="true" className="h-5 w-5" />}
                       />
                       <SearchQuickOptionCard
                         title="Book Hotels"
                         description="Find accommodations for your stay"
                         href={`${ROUTES.dashboard.search}/hotels`}
-                        icon={<HotelIcon className="h-5 w-5" />}
+                        icon={<HotelIcon aria-hidden="true" className="h-5 w-5" />}
                       />
                       <SearchQuickOptionCard
                         title="Discover Activities"
                         description="Explore things to do at your destination"
                         href={`${ROUTES.dashboard.search}/activities`}
-                        icon={<SparklesIcon className="h-5 w-5" />}
+                        icon={<SparklesIcon aria-hidden="true" className="h-5 w-5" />}
                       />
                       <SearchQuickOptionCard
                         title="Browse Destinations"
                         description="Get inspired for your next trip"
                         href={`${ROUTES.dashboard.search}/destinations`}
-                        icon={<MapPinIcon className="h-5 w-5" />}
+                        icon={<MapPinIcon aria-hidden="true" className="h-5 w-5" />}
                       />
                     </div>
                   </TabsContent>
@@ -150,7 +148,10 @@ export default function SearchHubClient() {
                       <CardContent className="flex items-center justify-between py-4">
                         <div className="flex items-center gap-3">
                           <div className="rounded-full bg-primary/10 p-2">
-                            <PlaneIcon className="h-5 w-5 text-primary" />
+                            <PlaneIcon
+                              aria-hidden="true"
+                              className="h-5 w-5 text-primary"
+                            />
                           </div>
                           <div>
                             <p className="font-medium">Flight Search</p>
@@ -172,7 +173,10 @@ export default function SearchHubClient() {
                       <CardContent className="flex items-center justify-between py-4">
                         <div className="flex items-center gap-3">
                           <div className="rounded-full bg-primary/10 p-2">
-                            <HotelIcon className="h-5 w-5 text-primary" />
+                            <HotelIcon
+                              aria-hidden="true"
+                              className="h-5 w-5 text-primary"
+                            />
                           </div>
                           <div>
                             <p className="font-medium">Hotel Search</p>
@@ -194,7 +198,10 @@ export default function SearchHubClient() {
                       <CardContent className="flex items-center justify-between py-4">
                         <div className="flex items-center gap-3">
                           <div className="rounded-full bg-primary/10 p-2">
-                            <SparklesIcon className="h-5 w-5 text-primary" />
+                            <SparklesIcon
+                              aria-hidden="true"
+                              className="h-5 w-5 text-primary"
+                            />
                           </div>
                           <div>
                             <p className="font-medium">Activity Search</p>
@@ -218,7 +225,7 @@ export default function SearchHubClient() {
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <HistoryIcon className="h-5 w-5" />
+                  <HistoryIcon aria-hidden="true" className="h-5 w-5" />
                   Recent Searches
                 </CardTitle>
                 <CardDescription>Your most recent search queries</CardDescription>
@@ -227,7 +234,10 @@ export default function SearchHubClient() {
                 {displayedSearches.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="rounded-full bg-muted p-4 w-fit mx-auto mb-4">
-                      <SearchIcon className="h-8 w-8 text-muted-foreground" />
+                      <SearchIcon
+                        aria-hidden="true"
+                        className="h-8 w-8 text-muted-foreground"
+                      />
                     </div>
                     <p className="text-sm text-muted-foreground">
                       No recent searches yet. Start exploring to build your search
@@ -236,24 +246,24 @@ export default function SearchHubClient() {
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayedSearches.map((search) => (
-                      <RecentSearchCard
-                        key={search.id}
-                        title={getSearchTitle(search.params)}
-                        type={search.searchType}
-                        date={new Date(search.timestamp).toLocaleDateString()}
-                        onRepeat={() => {
-                          const safeParams = Object.fromEntries(
-                            Object.entries(search.params).filter(
-                              ([_key, value]) =>
-                                value == null ||
-                                ["string", "number", "boolean"].includes(typeof value)
-                            )
-                          ) as RepeatSearchParams;
-                          handleRepeatSearch(search.searchType, safeParams);
-                        }}
-                      />
-                    ))}
+                    {displayedSearches.map((search) => {
+                      const safeParams = Object.fromEntries(
+                        Object.entries(search.params).filter(
+                          ([_key, value]) =>
+                            value == null ||
+                            ["string", "number", "boolean"].includes(typeof value)
+                        )
+                      ) as RepeatSearchParams;
+                      return (
+                        <RecentSearchCard
+                          key={search.id}
+                          title={getSearchTitle(search.params)}
+                          type={search.searchType}
+                          date={new Date(search.timestamp).toLocaleDateString()}
+                          href={getRepeatSearchHref(search.searchType, safeParams)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -297,15 +307,15 @@ function getSearchTitle(params: Record<string, unknown>): string {
 function getSearchTypeIcon(type: SearchType): React.ReactNode {
   switch (type) {
     case "flight":
-      return <PlaneIcon className="h-3 w-3" />;
+      return <PlaneIcon aria-hidden="true" className="h-3 w-3" />;
     case "accommodation":
-      return <HotelIcon className="h-3 w-3" />;
+      return <HotelIcon aria-hidden="true" className="h-3 w-3" />;
     case "activity":
-      return <SparklesIcon className="h-3 w-3" />;
+      return <SparklesIcon aria-hidden="true" className="h-3 w-3" />;
     case "destination":
-      return <MapPinIcon className="h-3 w-3" />;
+      return <MapPinIcon aria-hidden="true" className="h-3 w-3" />;
     default:
-      return <SearchIcon className="h-3 w-3" />;
+      return <SearchIcon aria-hidden="true" className="h-3 w-3" />;
   }
 }
 
@@ -350,12 +360,12 @@ function RecentSearchCard({
   title,
   type,
   date,
-  onRepeat,
+  href,
 }: {
   title: string;
   type: SearchType;
   date: string;
-  onRepeat: () => void;
+  href: string;
 }) {
   return (
     <Card className="h-full hover:bg-accent/50 transition-colors group">
@@ -374,7 +384,7 @@ function RecentSearchCard({
       <CardContent>
         <div className="flex justify-between items-center">
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <ClockIcon className="h-3 w-3" />
+            <ClockIcon aria-hidden="true" className="h-3 w-3" />
             {date}
           </p>
           <Tooltip>
@@ -383,10 +393,12 @@ function RecentSearchCard({
                 variant="ghost"
                 size="sm"
                 className="text-xs h-auto py-1 px-2 text-primary"
-                onClick={onRepeat}
+                asChild
               >
-                <RefreshCwIcon className="h-3 w-3 mr-1" />
-                Search again
+                <Link href={href}>
+                  <RefreshCwIcon aria-hidden="true" className="h-3 w-3 mr-1" />
+                  Search again
+                </Link>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Repeat this search</TooltipContent>

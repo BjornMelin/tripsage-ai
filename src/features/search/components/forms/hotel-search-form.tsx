@@ -213,8 +213,8 @@ export function HotelSearchForm({
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <Building2Icon aria-hidden className="h-5 w-5 text-green-600" />
+            <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+              <Building2Icon aria-hidden className="h-5 w-5 text-success" />
             </div>
             <div>
               <CardTitle className="text-xl">Find Hotels</CardTitle>
@@ -228,7 +228,7 @@ export function HotelSearchForm({
             <div className="hidden md:flex items-center gap-2">
               <Badge
                 variant="secondary"
-                className="bg-orange-50 text-orange-700 border-orange-200"
+                className="bg-warning/10 text-warning border-warning/20"
               >
                 <TrendingUpIcon aria-hidden className="h-3 w-3 mr-1" />
                 All-Inclusive Era trending
@@ -260,19 +260,16 @@ export function HotelSearchForm({
               ? (_form, _state) => (
                   <>
                     <Separator />
-                    <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border">
+                    <div className="bg-gradient-to-r from-warning/10 to-accent/10 p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <SparklesIcon
-                            aria-hidden
-                            className="h-5 w-5 text-orange-600"
-                          />
+                          <SparklesIcon aria-hidden className="h-5 w-5 text-warning" />
                           <h3 className="font-semibold text-sm">
                             All-Inclusive Hotels
                           </h3>
                           <Badge
                             variant="secondary"
-                            className="bg-orange-100 text-orange-700"
+                            className="bg-warning/20 text-warning"
                           >
                             Save 35%
                           </Badge>

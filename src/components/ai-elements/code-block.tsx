@@ -75,9 +75,9 @@ export function CodeBlock({
           variant="ghost"
         >
           {copied ? (
-            <CheckIcon className="size-3.5" />
+            <CheckIcon aria-hidden="true" className="size-3.5" />
           ) : (
-            <CopyIcon className="size-3.5" />
+            <CopyIcon aria-hidden="true" className="size-3.5" />
           )}
         </Button>
       </div>

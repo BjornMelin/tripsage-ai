@@ -4,23 +4,71 @@
 
 "use client";
 
-import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import {
+  type ContextManager,
+  type Span,
+  SpanStatusCode,
+  type Tracer,
+  trace,
+} from "@opentelemetry/api";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
-import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { resourceFromAttributes } from "@opentelemetry/resources";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
-import { getClientEnvVarWithFallback } from "@/lib/env/client";
+import { getClientEnv } from "@/lib/env/client";
+import { fireAndForget } from "@/lib/utils";
 import {
   buildSanitizedErrorForTelemetry,
   sanitizeClientErrorMessage,
 } from "./client-sanitize";
+import { TELEMETRY_SERVICE_NAME } from "./constants";
 
 /**
  * Module-level flag to prevent double-initialization.
  * React Strict Mode calls effects twice, so we guard against re-initialization.
  */
 let isInitialized = false;
+
+function normalizeOtlpTracesUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = "";
+    parsed.search = "";
+
+    const withoutTrailingSlashes = parsed.pathname.replace(/\/+$/, "");
+    const basePathname = withoutTrailingSlashes;
+
+    let normalizedPathname = basePathname.endsWith("/v1/traces")
+      ? basePathname
+      : `${basePathname}/v1/traces`;
+    normalizedPathname = normalizedPathname.replace(/\/{2,}/g, "/");
+
+    if (normalizedPathname === "") normalizedPathname = "/v1/traces";
+    if (!normalizedPathname.startsWith("/"))
+      normalizedPathname = `/${normalizedPathname}`;
+
+    parsed.pathname = normalizedPathname;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Gets an OpenTelemetry tracer for client spans.
+ *
+ * @param name - Optional tracer name; defaults to `client`.
+ * @returns Tracer instance (no-op until a tracer provider is registered).
+ */
+export function getTracer(name = "client"): Tracer {
+  return trace.getTracer(name);
+}
 
 /**
  * Runs a client-side operation inside an OTEL span. No-op safe if tracing is not initialized.
@@ -35,7 +83,7 @@ export async function withClientTelemetrySpan<T>(
   attributes: Record<string, string | number | boolean> | undefined,
   fn: () => Promise<T> | T
 ): Promise<T> {
-  const tracer = trace.getTracer("client");
+  const tracer = getTracer();
   let span: Span | undefined;
   try {
     span = tracer.startSpan(name, { attributes });
@@ -67,12 +115,72 @@ export async function withClientTelemetrySpan<T>(
  *
  * @returns OTLP endpoint URL
  */
-function getOtlpEndpoint(): string {
-  // Use validated client environment variable
-  return getClientEnvVarWithFallback(
-    "NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT",
-    "http://localhost:4318/v1/traces"
-  ) as string;
+function getOtlpEndpoint(): string | null {
+  const endpoint = getClientEnv().NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT;
+  if (!endpoint) return null;
+  return normalizeOtlpTracesUrl(endpoint);
+}
+
+async function startClientTelemetry(): Promise<void> {
+  const otlpTracesUrl = getOtlpEndpoint();
+  if (!otlpTracesUrl) {
+    return;
+  }
+
+  // `zone.js` patches the async context model used by ZoneContextManager.
+  // Keep it out of server/test imports by loading only in the browser init path.
+  let zoneContextManager: ContextManager | undefined;
+  try {
+    await import("zone.js");
+    const { ZoneContextManager } = await import("@opentelemetry/context-zone");
+    if ("Zone" in globalThis) {
+      zoneContextManager = new ZoneContextManager();
+    }
+  } catch {
+    // Zone is optional; telemetry must never break UX.
+  }
+
+  const exporter = new OTLPTraceExporter({ url: otlpTracesUrl });
+
+  const provider = new WebTracerProvider({
+    resource: resourceFromAttributes({
+      "deployment.environment": process.env.NODE_ENV ?? "development",
+      "service.name": TELEMETRY_SERVICE_NAME,
+    }),
+    spanProcessors: [
+      new BatchSpanProcessor(exporter, {
+        exportTimeoutMillis: 30_000,
+        maxExportBatchSize: 50,
+        maxQueueSize: 200,
+        scheduledDelayMillis: 5_000,
+      }),
+    ],
+  });
+
+  provider.register({
+    // Best-practice browser context propagation. If Zone is unavailable for some
+    // reason (CSP/host restrictions), we fall back to the default context manager.
+    // ZoneContextManager instance type is imported dynamically to keep zone.js out of the
+    // critical client bundle and avoid patching when telemetry is disabled.
+    contextManager: zoneContextManager,
+  });
+
+  // Prevent self-instrumentation loops by ignoring exporter traffic.
+  const exporterUrlPattern = new RegExp(`^${escapeRegExp(otlpTracesUrl)}(?:$|[?#])`);
+
+  registerInstrumentations({
+    instrumentations: [
+      new FetchInstrumentation({
+        clearTimingResources: true,
+        ignoreUrls: [exporterUrlPattern],
+        propagateTraceHeaderCorsUrls: [
+          new RegExp(`^${escapeRegExp(window.location.origin)}(?:/|$)`),
+        ],
+        // Emit both stable and legacy HTTP attributes for safer backend/dashboard migration.
+        semconvStabilityOptIn: "http/dup",
+      }),
+    ],
+  });
 }
 
 /**
@@ -86,7 +194,6 @@ function getOtlpEndpoint(): string {
  * This function is idempotent and safe to call multiple times.
  * It will only initialize once, even in React Strict Mode.
  *
- * @throws Error if called in a non-browser environment
  */
 export function initTelemetry(): void {
   // Guard: prevent double-initialization
@@ -94,50 +201,16 @@ export function initTelemetry(): void {
     return;
   }
 
-  // Guard: ensure we're in a browser environment
+  // Server-safe: allow importing and calling in non-browser contexts.
   if (typeof window === "undefined") {
-    throw new Error("initTelemetry() must be called in a browser environment");
+    return;
   }
 
-  // Set flag immediately to prevent concurrent initialization attempts
-  // This prevents race conditions where multiple calls could partially initialize
-  // If initialization fails, we don't retry (telemetry is non-critical)
+  // Set flag immediately to prevent concurrent initialization attempts. If init fails,
+  // we do not retry (client telemetry is non-critical and must never harm UX).
   isInitialized = true;
 
-  try {
-    // Configure exporter
-    const exporter = new OTLPTraceExporter({
-      url: getOtlpEndpoint(),
-    });
-
-    // Create batch span processor for efficient export
-    const spanProcessor = new BatchSpanProcessor(exporter);
-
-    // Create tracer provider and attach span processor
-    // Note: the runtime WebTracerProvider implements addSpanProcessor even though
-    // the public typings don't currently surface it, so we widen the type here.
-    type WebTracerProviderWithProcessor = WebTracerProvider & {
-      addSpanProcessor: (processor: SpanProcessor) => void;
-    };
-    const provider = new WebTracerProvider() as WebTracerProviderWithProcessor;
-    provider.addSpanProcessor(spanProcessor);
-
-    // Register the provider (makes it the global tracer provider and exporter active)
-    provider.register();
-
-    // Configure fetch instrumentation to propagate trace context
-    const fetchInstrumentation = new FetchInstrumentation({
-      // Clear timing resources after span ends to prevent memory leaks
-      clearTimingResources: true,
-      // Propagate trace headers only to exact same-origin requests
-      propagateTraceHeaderCorsUrls: [window.location.origin],
-    });
-
-    // Register instrumentations
-    registerInstrumentations({
-      instrumentations: [fetchInstrumentation],
-    });
-  } catch {
+  fireAndForget(startClientTelemetry(), () => {
     // Telemetry is optional on the client; swallow errors to avoid impacting UX.
-  }
+  });
 }

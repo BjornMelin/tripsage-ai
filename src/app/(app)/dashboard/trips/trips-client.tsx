@@ -52,9 +52,9 @@ import { parseTripDate } from "@/lib/trips/parse-trip-date";
  * Matches trip status semantic colors.
  */
 const TRIP_STATUS_COLORS = {
-  active: "text-green-700", // aligned with active status
-  completed: "text-gray-600", // neutral completed state
-  upcoming: "text-blue-700", // aligned with info status
+  active: "text-success", // aligned with active status
+  completed: "text-muted-foreground", // neutral completed state
+  upcoming: "text-info", // aligned with info status
 } as const;
 
 const CONNECTED_MESSAGE = "Connected — live updates enabled";
@@ -343,11 +343,12 @@ export default function TripsClient({ userId }: { userId: string }) {
           </CardHeader>
           <CardContent className="text-center">
             <Button
+              type="button"
               onClick={handleCreateTrip}
               size="lg"
               disabled={createTripMutation.isPending}
             >
-              <PlusIcon className="h-5 w-5 mr-2" />
+              <PlusIcon aria-hidden="true" className="h-5 w-5 mr-2" />
               Create Your First Trip
             </Button>
           </CardContent>
@@ -377,8 +378,12 @@ export default function TripsClient({ userId }: { userId: string }) {
               {connectionStatusMessage}
             </output>
           </div>
-          <Button onClick={handleCreateTrip} disabled={createTripMutation.isPending}>
-            <PlusIcon className="h-4 w-4 mr-2" />
+          <Button
+            type="button"
+            onClick={handleCreateTrip}
+            disabled={createTripMutation.isPending}
+          >
+            <PlusIcon aria-hidden="true" className="h-4 w-4 mr-2" />
             Create Trip
           </Button>
         </div>
@@ -421,9 +426,20 @@ export default function TripsClient({ userId }: { userId: string }) {
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <label htmlFor="trip-search" className="sr-only">
+            Search trips
+          </label>
+          <SearchIcon
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
+          />
           <Input
+            id="trip-search"
+            name="tripSearch"
             placeholder="Search trips, destinations…"
+            type="search"
+            inputMode="search"
+            autoComplete="off"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -435,7 +451,7 @@ export default function TripsClient({ userId }: { userId: string }) {
           onValueChange={(value) => setFilterBy(value as FilterOption)}
         >
           <SelectTrigger aria-label="Filter trips" className="w-full md:w-40">
-            <FilterIcon className="h-4 w-4 mr-2" />
+            <FilterIcon aria-hidden="true" className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -464,6 +480,7 @@ export default function TripsClient({ userId }: { userId: string }) {
 
         <div className="flex border rounded-md">
           <Button
+            type="button"
             aria-label="Grid view"
             aria-pressed={viewMode === "grid"}
             data-state={viewMode === "grid" ? "on" : "off"}
@@ -472,9 +489,10 @@ export default function TripsClient({ userId }: { userId: string }) {
             onClick={() => setViewMode("grid")}
             className="rounded-r-none"
           >
-            <GridIcon className="h-4 w-4" />
+            <GridIcon aria-hidden="true" className="h-4 w-4" />
           </Button>
           <Button
+            type="button"
             aria-label="List view"
             aria-pressed={viewMode === "list"}
             data-state={viewMode === "list" ? "on" : "off"}
@@ -483,7 +501,7 @@ export default function TripsClient({ userId }: { userId: string }) {
             onClick={() => setViewMode("list")}
             className="rounded-l-none"
           >
-            <ListIcon className="h-4 w-4" />
+            <ListIcon aria-hidden="true" className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -492,12 +510,16 @@ export default function TripsClient({ userId }: { userId: string }) {
       {filteredAndSortedTrips.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <SearchIcon
+              aria-hidden="true"
+              className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+            />
             <h3 className="text-lg font-semibold mb-2">No trips found</h3>
             <p className="text-muted-foreground mb-4">
               Try adjusting your search or filter criteria
             </p>
             <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 setSearchQuery("");
@@ -573,7 +595,10 @@ export default function TripsClient({ userId }: { userId: string }) {
             >
               {deleteTripMutation.isPending ? (
                 <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="mr-2 h-4 w-4 animate-spin"
+                  />
                   Deleting…
                 </>
               ) : (

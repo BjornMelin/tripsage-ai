@@ -10,6 +10,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
 - UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
+- Design system uses semantic UI tokens (`success`, `warning`, `info`, `highlight`, `overlay`) via Tailwind classes (e.g., `bg-overlay/50` for dialog overlays).
 - Payments/Email: Stripe `20.2.0`, Resend `^6.7.0`.
 - Calendar/Scheduling: `ical-generator@10.0.0` with Google Calendar REST integration in `src/lib/calendar`.
 
@@ -84,6 +85,11 @@ Avoid new barrels; import concrete modules.
   Public data may use cache directives sparingly.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
 - **Telemetry**: Wrap server logic with `withTelemetrySpan` / `withTelemetrySpanSync` and `createServerLogger`; emit operational alerts via `emitOperationalAlert` for critical failures. Avoid `console.*` in server code.
+
+## Layout & Accessibility
+
+- Root layout provides a skip link to `#main-content`.
+- Pages and layouts should render a single main landmark: `<main id="main-content" tabIndex={-1}>…</main>`.
 
 ## Caching Strategy
 

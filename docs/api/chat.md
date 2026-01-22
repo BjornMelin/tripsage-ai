@@ -13,7 +13,7 @@ Streaming chat completion using the AI SDK v6 **UI message stream protocol**.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `messages` | array | Yes | Array of AI SDK `UIMessage` objects |
 | `sessionId` | string | No | Chat session ID |
 | `model` | string | No | Model override |
@@ -92,7 +92,7 @@ Create a new chat session.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `title` | string | No | Session title |
 
 #### Response
@@ -121,7 +121,7 @@ Get a specific chat session.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `id` | string | Yes | Session ID |
 
 #### Response
@@ -146,7 +146,7 @@ Delete a chat session.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `id` | string | Yes | Session ID |
 
 #### Response
@@ -173,7 +173,7 @@ List messages in a chat session.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `id` | string | Yes | Session ID |
 
 #### Response
@@ -198,13 +198,13 @@ Create a message in a chat session.
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `id` | string | Yes | Session ID |
 
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `content` | string | Yes | Message content |
 | `role` | string | Yes | Message role (`user`, `assistant`, `system`) |
 

@@ -40,7 +40,7 @@ Upsert a provider API key.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 | `apiKey` | string | Yes | API key (max 2048 chars) |
 | `baseUrl` | string | No | Gateway base URL (applies to `gateway` service only). Must be HTTPS, with valid resolvable hostname (no wildcards). Required for self-hosted `gateway` deployments; optional when using the default public gateway where it is inferred automatically. Include trailing slash if path-based routing is used. |
@@ -79,7 +79,7 @@ Delete a provider API key.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 
 ### Response
@@ -111,7 +111,7 @@ Validate a provider API key.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `service` | string | Yes | Service name (`openai`, `openrouter`, `anthropic`, `xai`, `gateway`) |
 | `apiKey` | string | Yes | API key to validate |
 

@@ -35,7 +35,7 @@ export function TripDetailHeader({
       <div className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
           <Link href="/dashboard/trips">
-            <ChevronLeftIcon className="mr-1 h-4 w-4" />
+            <ChevronLeftIcon aria-hidden="true" className="mr-1 h-4 w-4" />
             Trips
           </Link>
         </Button>
@@ -51,12 +51,12 @@ export function TripDetailHeader({
 
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
+            <CalendarIcon aria-hidden="true" className="h-4 w-4" />
             {formatTripDates(trip)}
           </span>
           <span className="text-muted-foreground/60">•</span>
           <span className="inline-flex items-center gap-2">
-            <UsersIcon className="h-4 w-4" />
+            <UsersIcon aria-hidden="true" className="h-4 w-4" />
             {collaboratorCount} collaborator{collaboratorCount === 1 ? "" : "s"}
           </span>
         </div>
@@ -65,7 +65,7 @@ export function TripDetailHeader({
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild variant="outline">
           <Link href="/chat">
-            <MessageSquareIcon className="mr-2 h-4 w-4" />
+            <MessageSquareIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             Ask TripSage
           </Link>
         </Button>
@@ -76,7 +76,7 @@ export function TripDetailHeader({
           onClick={onDeleteClick}
           disabled={isDeleting}
         >
-          <Trash2Icon className="mr-2 h-4 w-4" />
+          <Trash2Icon aria-hidden="true" className="mr-2 h-4 w-4" />
           Delete
         </Button>
       </div>

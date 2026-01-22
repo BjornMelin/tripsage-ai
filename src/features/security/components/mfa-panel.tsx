@@ -303,7 +303,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                   alt="TOTP QR code"
                   width={192}
                   height={192}
-                  className="h-48 w-48 rounded bg-white p-2"
+                  className="h-48 w-48 rounded bg-background p-2"
                 />
                 <p className="text-sm text-muted-foreground text-center">
                   Scan the QR code with your authenticator app, then enter the 6-digit
@@ -432,7 +432,7 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                     className={cn(
                       "border rounded-lg p-3 flex items-center justify-between",
                       factor.status === "verified"
-                        ? "border-green-500/40"
+                        ? "border-success/40"
                         : "border-muted-foreground/20"
                     )}
                   >
@@ -445,9 +445,9 @@ export function MfaPanel({ userEmail, initialAal, factors, loadError }: MfaPanel
                       </div>
                     </div>
                     {factor.status === "verified" ? (
-                      <CheckCircle2Icon className="h-5 w-5 text-green-500" />
+                      <CheckCircle2Icon className="h-5 w-5 text-success" />
                     ) : (
-                      <AlertCircleIcon className="h-5 w-5 text-amber-500" />
+                      <AlertCircleIcon className="h-5 w-5 text-warning" />
                     )}
                   </div>
                 ))}

@@ -58,7 +58,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0042](adr-0042-supabase-memory-orchestrator.md) | Supabase-Centric Memory Orchestrator | Accepted | 2025-11-18 |
 | [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | Superseded | 2025-11-19 |
 | [ADR-0045](adr-0045-flights-dto-frontend-zod.md) | Flights DTOs in Frontend (Next.js 16 + Zod v4) | Accepted | 2025-11-20 |
-| [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Proposed | 2025-11-20 |
+| [ADR-0046](adr-0046-otel-tracing-frontend.md) | OTEL Tracing for Next.js 16 Route Handlers | Accepted | 2026-01-21 |
 | [ADR-0047](adr-0047-runtime-policy-edge-vs-node.md) | Runtime Policy for AI SDK Routes (Edge vs Node) | Proposed | 2025-11-20 |
 | [ADR-0054](adr-0054-upstash-testing-harness.md) | Hybrid Upstash Testing (Mocks + Local Emulators + Smoke) | Proposed | 2025-11-24 |
 | [ADR-0055](adr-0055-flatten-frontend-root-structure.md) | Flatten Next.js App Structure to Repository Root | Accepted | 2025-12-08 |

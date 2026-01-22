@@ -244,7 +244,7 @@ export default function DestinationsSearchClient({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <GlobeIcon className="h-5 w-5" />
+                <GlobeIcon aria-hidden="true" className="h-5 w-5" />
                 Discover Destinations
               </CardTitle>
             </CardHeader>
@@ -259,7 +259,7 @@ export default function DestinationsSearchClient({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <MapPinIcon className="h-5 w-5" />
+                    <MapPinIcon aria-hidden="true" className="h-5 w-5" />
                     Compare Destinations ({selectedDestinations.length}/
                     {MAX_COMPARISON_ITEMS})
                   </CardTitle>
@@ -297,7 +297,7 @@ export default function DestinationsSearchClient({
                       onClick={() => handleDestinationCompare(destination)}
                     >
                       {destination.name}
-                      <XIcon className="h-3 w-3 ml-2" />
+                      <XIcon aria-hidden="true" className="h-3 w-3 ml-2" />
                     </Badge>
                   ))}
                 </div>
@@ -319,7 +319,7 @@ export default function DestinationsSearchClient({
           {/* Error State */}
           {searchError && (
             <Alert variant="destructive">
-              <AlertCircleIcon className="h-4 w-4" />
+              <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
               <AlertTitle>Search Error</AlertTitle>
               <AlertDescription className="flex items-center justify-between">
                 <span>{searchError.message}</span>
@@ -336,7 +336,10 @@ export default function DestinationsSearchClient({
               <CardContent className="text-center py-12">
                 <div className="flex flex-col items-center gap-4">
                   <div className="rounded-full bg-muted p-4">
-                    <SearchIcon className="h-8 w-8 text-muted-foreground" />
+                    <SearchIcon
+                      aria-hidden="true"
+                      className="h-8 w-8 text-muted-foreground"
+                    />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold">No destinations found</h3>
@@ -388,7 +391,7 @@ export default function DestinationsSearchClient({
               <CardContent className="text-center py-12">
                 <div className="flex flex-col items-center gap-4">
                   <div className="rounded-full bg-background p-4 shadow-sm">
-                    <GlobeIcon className="h-8 w-8 text-primary" />
+                    <GlobeIcon aria-hidden="true" className="h-8 w-8 text-primary" />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold">
@@ -415,7 +418,7 @@ export default function DestinationsSearchClient({
                     disabled={selectedDestinations.length < 2}
                     className="shadow-lg"
                   >
-                    <MapPinIcon className="h-4 w-4 mr-2" />
+                    <MapPinIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                     Compare ({selectedDestinations.length})
                   </Button>
                 </TooltipTrigger>

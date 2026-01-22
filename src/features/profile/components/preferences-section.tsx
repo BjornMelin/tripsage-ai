@@ -276,7 +276,7 @@ export function PreferencesSection() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select language" />
+                            <SelectValue placeholder="Select language…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -301,7 +301,7 @@ export function PreferencesSection() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
+                            <SelectValue placeholder="Select currency…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -327,7 +327,7 @@ export function PreferencesSection() {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select timezone" />
+                          <SelectValue placeholder="Select timezone…" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -353,7 +353,7 @@ export function PreferencesSection() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select units" />
+                            <SelectValue placeholder="Select units…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -375,7 +375,7 @@ export function PreferencesSection() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select theme" />
+                            <SelectValue placeholder="Select theme…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -400,7 +400,7 @@ export function PreferencesSection() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select date format" />
+                            <SelectValue placeholder="Select date format…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -423,7 +423,7 @@ export function PreferencesSection() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select time format" />
+                            <SelectValue placeholder="Select time format…" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>

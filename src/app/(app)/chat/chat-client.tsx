@@ -384,7 +384,7 @@ export function ChatClient(): ReactElement {
             className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
             data-testid="chat-stream-status"
           >
-            <span className="inline-flex size-2 animate-pulse rounded-full bg-emerald-500/70" />
+            <span className="inline-flex size-2 animate-pulse rounded-full bg-success/70" />
             <span>
               {streamStatus.step ? `Step ${streamStatus.step}: ` : ""}
               {streamStatus.label}
@@ -432,7 +432,7 @@ export function ChatClient(): ReactElement {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
               >
-                <PaperclipIcon className="mr-1 size-4" />
+                <PaperclipIcon aria-hidden="true" className="mr-1 size-4" />
                 Attach
               </Button>
               {/* Streaming controls */}
@@ -444,7 +444,7 @@ export function ChatClient(): ReactElement {
                   onClick={() => stop()}
                   aria-label="Stop generation"
                 >
-                  <StopCircleIcon className="mr-1 size-4" />
+                  <StopCircleIcon aria-hidden="true" className="mr-1 size-4" />
                   Stop
                 </Button>
               ) : null}
@@ -460,7 +460,7 @@ export function ChatClient(): ReactElement {
                   }
                   aria-label="Regenerate response"
                 >
-                  <RefreshCwIcon className="mr-1 size-4" />
+                  <RefreshCwIcon aria-hidden="true" className="mr-1 size-4" />
                   Regenerate
                 </Button>
               ) : null}
@@ -489,7 +489,7 @@ export function ChatClient(): ReactElement {
                     setFiles((prev) => prev.filter((entry) => entry.id !== id));
                   }}
                 >
-                  <XIcon className="size-3" />
+                  <XIcon aria-hidden="true" className="size-3" />
                 </Button>
               </div>
             ))}

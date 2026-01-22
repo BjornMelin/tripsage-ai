@@ -6,6 +6,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 // biome-ignore lint/suspicious/useAwait: Next.js `"use cache"` requires an async function export.
 export default async function ContactPage() {
   return (
-    <main className="container py-12 space-y-8">
+    <main id={MAIN_CONTENT_ID} className="container py-12 space-y-8" tabIndex={-1}>
       <header className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Contact</h1>
         <p className="text-muted-foreground">

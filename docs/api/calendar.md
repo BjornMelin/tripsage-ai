@@ -45,7 +45,7 @@ Check calendar free/busy status.
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `items` | array | Yes | Array of calendar items (min 1) - see schema below |
 | `timeMin` | string/date | Yes | Start time (ISO 8601 or YYYY-MM-DD) |
 | `timeMax` | string/date | Yes | End time (ISO 8601 or YYYY-MM-DD) |
@@ -56,7 +56,7 @@ Check calendar free/busy status.
 **Items Array Schema:**
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `id` | string | Yes | Calendar ID |
 | `attendees` | array | No | Array of attendees with `email` and optional `name` |
 
@@ -112,7 +112,7 @@ List calendar events.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `calendarId` | string | No | Calendar ID (default: "primary") |
 | `timeMin` | string | No | Start time filter |
 | `timeMax` | string | No | End time filter |
@@ -186,7 +186,7 @@ Create a calendar event.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `calendarId` | string | No | Calendar ID (default: "primary") |
 | `summary` | string | Yes | Event title (max 1024 chars) |
 | `start` | object | Yes | Start date/time |
@@ -246,7 +246,7 @@ Update a calendar event.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `eventId` | string | Yes | Event ID |
 | `calendarId` | string | No | Calendar ID (default: "primary") |
 
@@ -277,7 +277,7 @@ Delete a calendar event.
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `eventId` | string | Yes | Event ID |
 | `calendarId` | string | No | Calendar ID (default: "primary") |
 
@@ -312,7 +312,7 @@ Export calendar events to ICS format.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `calendarName` | string | No | Calendar name (default: "TripSage Calendar") |
 | `events` | array | Yes | Array of calendar events (min 1) - see event schema below |
 | `timezone` | string | No | Timezone |
@@ -320,7 +320,7 @@ Export calendar events to ICS format.
 **Event Schema (items in `events` array):**
 
 | Field | Type | Required | Format/Description |
-|-------|------|----------|-------------------|
+| ----- | ---- | -------- | -------------------|
 | `start` | object | **Yes** | Start date/time. Supports both `date` (YYYY-MM-DD) and `dateTime` (ISO 8601) formats |
 | `end` | object | **Yes** | End date/time. Supports both `date` (YYYY-MM-DD) and `dateTime` (ISO 8601) formats |
 | `summary` | string | No | Event title/summary |
@@ -400,7 +400,7 @@ Import calendar events from ICS format.
 #### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `icsData` | string | Yes | ICS file content |
 | `validateOnly` | boolean | No | Validate only without importing (default: false). Set to true to validate ICS syntax without persisting events. |
 

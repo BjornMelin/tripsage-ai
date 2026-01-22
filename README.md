@@ -120,6 +120,30 @@ make supa.link PROJECT_REF=...
 make supa.db.push
 ```
 
+### Observability (OpenTelemetry)
+
+Server-side tracing is registered via `src/instrumentation.ts` using `@vercel/otel`. Client-side tracing is initialized via `TelemetryProvider` (mounted from `src/app/layout.tsx`) and exports browser spans with OTLP/HTTP.
+
+Local tracing (Collector + Jaeger):
+
+```bash
+docker compose up -d otel-collector jaeger
+open http://localhost:16686
+```
+
+Enable browser tracing (optional):
+
+```bash
+# Either is accepted (client normalizes to `/v1/traces`)
+NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+# or
+NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+# (also accepted)
+NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces/
+```
+
+To disable browser tracing in production, leave `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` unset.
+
 ### Formatting enforcement
 
 Run `pnpm biome:fix` before committing. CI runs `pnpm biome:fix` and then checks for a clean working tree with `git diff --exit-code`, so any formatting changes produced locally will fail CI if not committed.

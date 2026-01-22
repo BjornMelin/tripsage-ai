@@ -14,13 +14,13 @@ Get agent configuration.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `agentType` | string | Yes | Agent type (`flightAgent`, `accommodationAgent`, `destinationAgent`, `itineraryAgent`, `budgetAgent`, `memoryAgent`, `routerAgent`) |
 
 ### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `scope` | string | No | Configuration scope (default: "global") |
 
 ### Response
@@ -64,19 +64,19 @@ Update agent configuration.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `agentType` | string | Yes | Agent type |
 
 ### Query Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `scope` | string | No | Configuration scope (default: "global") |
 
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `model` | string | No | Model name |
 | `temperature` | number | No | Temperature (0-2) |
 | `maxTokens` | number | No | Maximum tokens |
@@ -125,7 +125,7 @@ List agent configuration versions.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `agentType` | string | Yes | Agent type |
 
 ### Response
@@ -180,7 +180,7 @@ Rollback agent configuration to a previous version.
 ### Path Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+| --------- | ---- | -------- | ----------- |
 | `agentType` | string | Yes | Agent type |
 | `versionId` | string | Yes | Version ID to rollback to |
 

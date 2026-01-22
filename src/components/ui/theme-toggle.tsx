@@ -28,7 +28,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" disabled>
-        <SunIcon className="h-[1.2rem] w-[1.2rem]" />
+        <SunIcon aria-hidden="true" className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Loading theme toggle</span>
       </Button>
     );
@@ -38,22 +38,28 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
-          <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+          <SunIcon
+            aria-hidden="true"
+            className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0"
+          />
+          <MoonIcon
+            aria-hidden="true"
+            className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100"
+          />
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setTheme("light")}>
-          <SunIcon className="mr-2 h-4 w-4" />
+          <SunIcon aria-hidden="true" className="mr-2 h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <MoonIcon className="mr-2 h-4 w-4" />
+          <MoonIcon aria-hidden="true" className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("system")}>
-          <MonitorIcon className="mr-2 h-4 w-4" />
+          <MonitorIcon aria-hidden="true" className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -73,7 +79,7 @@ export function CompactThemeToggle() {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" disabled>
-        <SunIcon className="h-[1.2rem] w-[1.2rem]" />
+        <SunIcon aria-hidden="true" className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Loading theme toggle</span>
       </Button>
     );
@@ -85,8 +91,14 @@ export function CompactThemeToggle() {
       size="icon"
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
     >
-      <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
-      <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+      <SunIcon
+        aria-hidden="true"
+        className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0"
+      />
+      <MoonIcon
+        aria-hidden="true"
+        className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100"
+      />
       <span className="sr-only">Toggle theme</span>
     </Button>
   );

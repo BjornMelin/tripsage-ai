@@ -118,7 +118,9 @@ export function TripSettingsPanel({
             Reset
           </Button>
           <Button type="button" onClick={onSave} disabled={isSaving}>
-            {isSaving ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isSaving ? (
+              <Loader2Icon aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             Save changes
           </Button>
         </div>

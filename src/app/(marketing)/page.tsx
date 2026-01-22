@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 // caching handled at app level via cacheComponents; no per-file directive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrentYear } from "@/components/ui/current-year";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { ROUTES } from "@/lib/routes";
 
 /**
@@ -22,7 +23,7 @@ import { ROUTES } from "@/lib/routes";
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="flex-1">
+      <main id={MAIN_CONTENT_ID} className="flex-1" tabIndex={-1}>
         <section className="px-4 py-12 md:py-24 lg:py-32">
           <div className="container mx-auto grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
             <div className="space-y-4">
@@ -68,7 +69,7 @@ export default function Home() {
           fallback={
             <div className="bg-muted py-12 md:py-24 lg:py-32">
               <div className="container mx-auto">
-                <div className="animate-pulse bg-gray-200 h-64 rounded" />
+                <div className="animate-pulse bg-muted h-64 rounded" />
               </div>
             </div>
           }

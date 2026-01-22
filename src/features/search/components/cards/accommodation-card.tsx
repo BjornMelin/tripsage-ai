@@ -81,7 +81,7 @@ export function AccommodationCard({
             </div>
             <div className="text-right">
               <div className="flex items-center gap-1">
-                <StarIcon className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                <StarIcon className="h-4 w-4 fill-warning text-warning" />
                 <span className="font-medium">{userRating ?? "N/A"}</span>
               </div>
               <Badge variant="secondary" className="mt-1">

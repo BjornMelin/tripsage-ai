@@ -7,7 +7,7 @@
 import type { Activity } from "@schemas/search";
 import type { UiTrip } from "@schemas/trips";
 import { CalendarIcon, MapPinIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +53,6 @@ export function TripSelectionModal({
   onAddToTrip,
   isAdding,
 }: TripSelectionModalProps) {
-  const router = useRouter();
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   const handleClose = () => {
@@ -86,15 +85,10 @@ export function TripSelectionModal({
             <div className="text-center py-4 text-muted-foreground">
               No active or planning trips found.
               <br />
-              <Button
-                variant="link"
-                className="mt-2"
-                onClick={() => {
-                  onClose();
-                  router.push("/trips");
-                }}
-              >
-                Create a new trip
+              <Button variant="link" className="mt-2" asChild>
+                <Link href="/trips" onClick={onClose}>
+                  Create a new trip
+                </Link>
               </Button>
             </div>
           ) : (
@@ -126,12 +120,12 @@ export function TripSelectionModal({
                     >
                       <span className="font-semibold text-base">{trip.title}</span>
                       <div className="flex items-center text-sm text-muted-foreground gap-2">
-                        <MapPinIcon className="h-3 w-3" />
+                        <MapPinIcon aria-hidden="true" className="h-3 w-3" />
                         <span>{trip.destination}</span>
                       </div>
                       {trip.startDate && (
                         <div className="flex items-center text-sm text-muted-foreground gap-2">
-                          <CalendarIcon className="h-3 w-3" />
+                          <CalendarIcon aria-hidden="true" className="h-3 w-3" />
                           <span>{new Date(trip.startDate).toLocaleDateString()}</span>
                         </div>
                       )}

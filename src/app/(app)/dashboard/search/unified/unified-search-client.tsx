@@ -23,7 +23,7 @@ import {
   UsersIcon,
   ZapIcon,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -64,7 +64,6 @@ export default function UnifiedSearchClient({
   onSearchFlights,
   onSearchHotels,
 }: UnifiedSearchClientProps) {
-  const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
@@ -291,12 +290,10 @@ export default function UnifiedSearchClient({
                   </span>
                 </div>
                 <div className="pt-2 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => router.push(`${ROUTES.dashboard.search}/flights`)}
-                    variant="outline"
-                  >
-                    Open flight search
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`${ROUTES.dashboard.search}/flights`}>
+                      Open flight search
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -333,12 +330,10 @@ export default function UnifiedSearchClient({
                   </span>
                 </div>
                 <div className="pt-2 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => router.push(`${ROUTES.dashboard.search}/hotels`)}
-                    variant="outline"
-                  >
-                    Open hotel search
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`${ROUTES.dashboard.search}/hotels`}>
+                      Open hotel search
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -389,7 +384,7 @@ export default function UnifiedSearchClient({
         </Dialog>
 
         {/* Hero Section */}
-        <Card className="bg-linear-to-r from-blue-50 to-green-50 border-none">
+        <Card className="bg-linear-to-r from-info/10 to-success/10 border-none">
           <CardContent className="p-8">
             <div className="text-center space-y-4">
               <h1 className="text-3xl font-bold">Unified Search Experience</h1>
@@ -522,32 +517,32 @@ export default function UnifiedSearchClient({
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <FeatureCard
-                icon={<ZapIcon className="h-6 w-6 text-yellow-500" />}
+                icon={<ZapIcon className="h-6 w-6 text-warning" />}
                 title="React 19 Optimistic Updates"
                 description="Instant UI feedback with optimistic UI patterns"
               />
               <FeatureCard
-                icon={<TrendingUpIcon className="h-6 w-6 text-green-500" />}
+                icon={<TrendingUpIcon className="h-6 w-6 text-success" />}
                 title="AI Price Predictions"
                 description="Smart recommendations with confidence scores and timing advice"
               />
               <FeatureCard
-                icon={<StarIcon className="h-6 w-6 text-blue-500" />}
+                icon={<StarIcon className="h-6 w-6 text-info" />}
                 title="Personalized Rankings"
                 description="AI-powered hotel and flight scoring based on your preferences"
               />
               <FeatureCard
-                icon={<UsersIcon className="h-6 w-6 text-purple-500" />}
+                icon={<UsersIcon className="h-6 w-6 text-highlight" />}
                 title="Smart Bundles"
                 description="Dynamic package deals with real savings calculations"
               />
               <FeatureCard
-                icon={<MapPinIcon className="h-6 w-6 text-red-500" />}
+                icon={<MapPinIcon className="h-6 w-6 text-destructive" />}
                 title="Location Intelligence"
                 description="Walk scores, landmark distances, and neighborhood insights"
               />
               <FeatureCard
-                icon={<ShieldIcon className="h-6 w-6 text-orange-500" />}
+                icon={<ShieldIcon className="h-6 w-6 text-warning" />}
                 title="Price Protection"
                 description="Free cancellation and price matching guarantees"
               />

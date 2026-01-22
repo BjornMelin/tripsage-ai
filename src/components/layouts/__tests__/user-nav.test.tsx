@@ -40,7 +40,7 @@ describe("UserNav", () => {
     expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("Security")).toBeInTheDocument();
-    expect(screen.getByText("Log out")).toBeInTheDocument();
+    expect(screen.getByText("Log Out")).toBeInTheDocument();
   });
 
   it("calls logoutAction when logout button is clicked", async () => {
@@ -51,7 +51,7 @@ describe("UserNav", () => {
     await userEvent.click(screen.getByRole("button"));
 
     // Click logout
-    await userEvent.click(screen.getByText("Log out"));
+    await userEvent.click(screen.getByText("Log Out"));
 
     await waitFor(() => {
       expect(logoutAction).toHaveBeenCalled();

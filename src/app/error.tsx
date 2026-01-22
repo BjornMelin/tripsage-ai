@@ -6,6 +6,7 @@
 
 import { useEffect } from "react";
 import { PageErrorFallback } from "@/components/error/error-fallback";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
 import { getUserIdFromUserStore } from "@/lib/client/user-store";
@@ -39,5 +40,9 @@ export default function RootErrorBoundary({
     }
   }, [error]);
 
-  return <PageErrorFallback error={error} reset={reset} />;
+  return (
+    <main id={MAIN_CONTENT_ID} className="flex-1" tabIndex={-1}>
+      <PageErrorFallback error={error} reset={reset} />
+    </main>
+  );
 }

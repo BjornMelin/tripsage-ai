@@ -9,26 +9,26 @@ import { cva, type VariantProps } from "class-variance-authority";
  * bg/text/ring set is ever emitted. `statusVariants` resolves precedence
  * status > action > urgency > tone fallback.
  *
- * Note: Some tone keys intentionally reuse the same color for semantic grouping:
- * - active/create/low/success all use green (positive/affirmative states)
- * - pending/medium both use amber (intermediate/waiting states)
+ * Note: Some tone keys intentionally reuse the same semantic color group:
+ * - active/create/low/success use success (positive/affirmative states)
+ * - pending/medium use warning (intermediate/waiting states)
  */
 
 export const TONE_CLASSES = {
-  active: "bg-green-50 text-green-700 ring-green-600/20",
-  calendar: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
-  create: "bg-green-50 text-green-700 ring-green-600/20",
-  deals: "bg-orange-50 text-orange-700 ring-orange-600/20",
-  error: "bg-red-50 text-red-700 ring-red-600/20",
-  explore: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  high: "bg-red-50 text-red-700 ring-red-600/20",
-  info: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  low: "bg-green-50 text-green-700 ring-green-600/20",
-  medium: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  search: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  success: "bg-green-50 text-green-700 ring-green-600/20",
-  unknown: "bg-slate-50 text-slate-700 ring-slate-600/20",
+  active: "bg-success/10 text-success ring-success/20",
+  calendar: "bg-info/10 text-info ring-info/20",
+  create: "bg-success/10 text-success ring-success/20",
+  deals: "bg-warning/10 text-warning ring-warning/20",
+  error: "bg-destructive/10 text-destructive ring-destructive/20",
+  explore: "bg-highlight/10 text-highlight ring-highlight/20",
+  high: "bg-destructive/10 text-destructive ring-destructive/20",
+  info: "bg-info/10 text-info ring-info/20",
+  low: "bg-success/10 text-success ring-success/20",
+  medium: "bg-warning/10 text-warning ring-warning/20",
+  pending: "bg-warning/10 text-warning ring-warning/20",
+  search: "bg-info/10 text-info ring-info/20",
+  success: "bg-success/10 text-success ring-success/20",
+  unknown: "bg-muted text-muted-foreground ring-border/40",
 } as const;
 
 const statusToneVariants = cva(
@@ -76,54 +76,62 @@ export type ToneColorSet = {
  */
 export const TONE_COLOR_SETS: Record<ToneVariant, ToneColorSet> = {
   active: {
-    bg: "bg-green-700/10",
-    border: "border-green-700/20",
-    text: "text-green-700",
+    bg: "bg-success/10",
+    border: "border-success/20",
+    text: "text-success",
   },
   calendar: {
-    bg: "bg-indigo-700/10",
-    border: "border-indigo-700/20",
-    text: "text-indigo-700",
+    bg: "bg-info/10",
+    border: "border-info/20",
+    text: "text-info",
   },
   create: {
-    bg: "bg-green-700/10",
-    border: "border-green-700/20",
-    text: "text-green-700",
+    bg: "bg-success/10",
+    border: "border-success/20",
+    text: "text-success",
   },
   deals: {
-    bg: "bg-orange-700/10",
-    border: "border-orange-700/20",
-    text: "text-orange-700",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
   },
-  error: { bg: "bg-red-700/10", border: "border-red-700/20", text: "text-red-700" },
+  error: {
+    bg: "bg-destructive/10",
+    border: "border-destructive/20",
+    text: "text-destructive",
+  },
   explore: {
-    bg: "bg-purple-700/10",
-    border: "border-purple-700/20",
-    text: "text-purple-700",
+    bg: "bg-highlight/10",
+    border: "border-highlight/20",
+    text: "text-highlight",
   },
-  high: { bg: "bg-red-700/10", border: "border-red-700/20", text: "text-red-700" },
-  info: { bg: "bg-blue-700/10", border: "border-blue-700/20", text: "text-blue-700" },
-  low: { bg: "bg-green-700/10", border: "border-green-700/20", text: "text-green-700" },
+  high: {
+    bg: "bg-destructive/10",
+    border: "border-destructive/20",
+    text: "text-destructive",
+  },
+  info: { bg: "bg-info/10", border: "border-info/20", text: "text-info" },
+  low: { bg: "bg-success/10", border: "border-success/20", text: "text-success" },
   medium: {
-    bg: "bg-amber-700/10",
-    border: "border-amber-700/20",
-    text: "text-amber-700",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
   },
   pending: {
-    bg: "bg-amber-700/10",
-    border: "border-amber-700/20",
-    text: "text-amber-700",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
   },
-  search: { bg: "bg-blue-700/10", border: "border-blue-700/20", text: "text-blue-700" },
+  search: { bg: "bg-info/10", border: "border-info/20", text: "text-info" },
   success: {
-    bg: "bg-green-700/10",
-    border: "border-green-700/20",
-    text: "text-green-700",
+    bg: "bg-success/10",
+    border: "border-success/20",
+    text: "text-success",
   },
   unknown: {
-    bg: "bg-slate-700/10",
-    border: "border-slate-700/20",
-    text: "text-slate-700",
+    bg: "bg-muted",
+    border: "border-border",
+    text: "text-muted-foreground",
   },
 };
 
@@ -138,42 +146,42 @@ export function getToneColors(tone: ToneVariant): ToneColorSet {
 }
 
 export const AGENT_STATUS_COLORS = {
-  active: "bg-green-500",
-  busy: "bg-yellow-500",
-  idle: "bg-blue-500",
-  offline: "bg-gray-500",
+  active: "bg-success",
+  busy: "bg-warning",
+  idle: "bg-info",
+  offline: "bg-muted-foreground",
 } as const;
 
 export const HANDOFF_STATUS_COLORS = {
   completed: {
-    bg: "bg-green-50",
-    border: "border-green-200",
-    text: "text-green-600",
+    bg: "bg-success/10",
+    border: "border-success/20",
+    text: "text-success",
   },
   failed: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-600",
+    bg: "bg-destructive/10",
+    border: "border-destructive/20",
+    text: "text-destructive",
   },
   pending: {
-    bg: "bg-yellow-50",
-    border: "border-yellow-200",
-    text: "text-yellow-600",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
+    text: "text-warning",
   },
 } as const;
 
 export const DEFAULT_HANDOFF_STATUS_COLOR = {
-  bg: "bg-gray-50",
-  border: "border-gray-200",
-  text: "text-gray-600",
+  bg: "bg-muted",
+  border: "border-border",
+  text: "text-muted-foreground",
 } as const;
 
 export const TREND_COLORS = {
-  decreasing: "text-red-500",
-  down: "text-red-500",
-  increasing: "text-green-500",
-  stable: "text-gray-500",
-  up: "text-green-500",
+  decreasing: "text-destructive",
+  down: "text-destructive",
+  increasing: "text-success",
+  stable: "text-muted-foreground",
+  up: "text-success",
 } as const;
 
 export type StatusVariantProps = VariantProps<typeof statusToneVariants> &

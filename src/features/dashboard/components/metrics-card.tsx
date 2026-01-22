@@ -9,14 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
- * Trend colors aligned with statusVariants urgency mapping.
- * Positive semantic: up=green (good), down=red (bad)
- * Negative semantic: up=red (bad), down=green (good)
+ * Trend colors aligned with semantic status tokens.
+ * Positive semantic: up=success (good), down=destructive (bad)
+ * Negative semantic: up=destructive (bad), down=success (good)
  */
 // biome-ignore lint/style/useNamingConvention: Review requested camelCase naming
 const trendColors = {
-  bad: "text-red-700",
-  good: "text-green-700",
+  bad: "text-destructive",
+  good: "text-success",
   neutral: "text-muted-foreground",
 } as const;
 

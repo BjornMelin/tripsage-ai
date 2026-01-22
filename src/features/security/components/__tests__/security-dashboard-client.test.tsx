@@ -48,9 +48,9 @@ describe("LocalTime", () => {
 describe("SecurityEventsList", () => {
   it("renders event details and risk label", () => {
     const riskColor = {
-      high: "text-red-600",
-      low: "text-green-600",
-      medium: "text-yellow-600",
+      high: "text-destructive",
+      low: "text-success",
+      medium: "text-warning",
     };
     render(
       <SecurityEventsList
@@ -64,13 +64,33 @@ describe("SecurityEventsList", () => {
             timestamp: "2025-01-02T00:00:00Z",
             type: "suspicious_activity",
           },
+          {
+            description: "New device sign-in",
+            device: "Firefox",
+            id: "evt-2",
+            ipAddress: "1.1.1.2",
+            riskLevel: "medium",
+            timestamp: "2025-01-02T00:00:00Z",
+            type: "login_success",
+          },
+          {
+            description: "Trusted device",
+            device: "Safari",
+            id: "evt-3",
+            ipAddress: "1.1.1.3",
+            riskLevel: "low",
+            timestamp: "2025-01-02T00:00:00Z",
+            type: "login_success",
+          },
         ]}
         riskColor={riskColor}
       />
     );
 
     expect(screen.getByText("Suspicious login")).toBeInTheDocument();
-    expect(screen.getByText("high")).toHaveClass("text-red-600");
+    expect(screen.getByText("high")).toHaveClass("text-destructive");
+    expect(screen.getByText("medium")).toHaveClass("text-warning");
+    expect(screen.getByText("low")).toHaveClass("text-success");
     expect(screen.getByText("1.1.1.1")).toBeInTheDocument();
   });
 });

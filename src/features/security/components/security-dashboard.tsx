@@ -82,9 +82,9 @@ async function GetSecurityData(userId: string, currentSessionId: string | null) 
 
 /** The risk color for each security event risk level. */
 const RiskColor: Record<SecurityEvent["riskLevel"], string> = {
-  high: "text-red-600",
-  low: "text-green-600",
-  medium: "text-yellow-600",
+  high: "text-destructive",
+  low: "text-success",
+  medium: "text-warning",
 };
 
 /**

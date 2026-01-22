@@ -319,7 +319,7 @@ export default function HotelsSearchClient({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Building2Icon className="h-5 w-5" />
+                  <Building2Icon aria-hidden="true" className="h-5 w-5" />
                   Find Accommodations
                 </CardTitle>
                 <CardDescription>
@@ -334,7 +334,7 @@ export default function HotelsSearchClient({
             {/* Error State */}
             {searchError && (
               <Alert variant="destructive">
-                <AlertCircleIcon className="h-4 w-4" />
+                <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
                 <AlertTitle>Search Error</AlertTitle>
                 <AlertDescription>
                   {searchError.message || "An error occurred during search"}
@@ -347,8 +347,8 @@ export default function HotelsSearchClient({
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <SearchIcon className="h-5 w-5 animate-pulse" />
-                    Searching for accommodations...
+                    <SearchIcon aria-hidden="true" className="h-5 w-5 animate-pulse" />
+                    Searching for accommodations…
                   </CardTitle>
                   <CardDescription>
                     Please wait while we find the best options for you
@@ -371,14 +371,14 @@ export default function HotelsSearchClient({
               <div className="space-y-6">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                   <h2 className="text-2xl font-semibold flex items-center gap-2">
-                    <Building2Icon className="h-6 w-6" />
+                    <Building2Icon aria-hidden="true" className="h-6 w-6" />
                     Found accommodations
                   </h2>
                   <div className="flex gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button onClick={handleSortClick} variant="outline" size="sm">
-                          <SortAscIcon className="h-4 w-4 mr-2" />
+                          <SortAscIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                           Sort by Price (
                           {sortDirection === "asc" ? "Low→High" : "High→Low"})
                         </Button>
@@ -388,7 +388,7 @@ export default function HotelsSearchClient({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button onClick={handleFilterClick} variant="outline" size="sm">
-                          <FilterIcon className="h-4 w-4 mr-2" />
+                          <FilterIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                           Filter
                         </Button>
                       </TooltipTrigger>
@@ -426,7 +426,10 @@ export default function HotelsSearchClient({
                   <CardContent className="text-center py-12">
                     <div className="flex flex-col items-center gap-4">
                       <div className="rounded-full bg-muted p-4">
-                        <SearchIcon className="h-8 w-8 text-muted-foreground" />
+                        <SearchIcon
+                          aria-hidden="true"
+                          className="h-8 w-8 text-muted-foreground"
+                        />
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-lg font-semibold">

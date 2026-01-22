@@ -87,8 +87,8 @@ const isLoading = useDebouncedLoading(300);
 
 Loading UI should remain screen-reader friendly:
 
-- Spinners and skeletons include ARIA labels (override when needed).
-- Respect reduced motion (`prefers-reduced-motion`) via CSS when possible.
+- Spinners and skeletons include ARIA labels using typographic ellipsis (e.g., “Loading…”).
+- Respect reduced motion (`prefers-reduced-motion`); global handling is defined in `src/app/globals.css`.
 - Prefer skeletons for large content regions to reduce layout shift.
 
 ## Next.js App Router integration

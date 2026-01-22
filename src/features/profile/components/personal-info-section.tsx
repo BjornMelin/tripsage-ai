@@ -294,9 +294,9 @@ export function PersonalInfoSection() {
                 disabled={isUploading}
               >
                 {isUploading ? (
-                  <UploadIcon className="h-3 w-3 animate-spin" />
+                  <UploadIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
                 ) : (
-                  <CameraIcon className="h-3 w-3" />
+                  <CameraIcon aria-hidden="true" className="h-3 w-3" />
                 )}
               </Button>
             </div>
@@ -329,7 +329,7 @@ export function PersonalInfoSection() {
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your first name" {...field} />
+                      <Input placeholder="Enter your first name…" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -342,7 +342,7 @@ export function PersonalInfoSection() {
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your last name" {...field} />
+                      <Input placeholder="Enter your last name…" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -357,7 +357,7 @@ export function PersonalInfoSection() {
                 <FormItem>
                   <FormLabel>Display Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your display name" {...field} />
+                    <Input placeholder="Enter your display name…" {...field} />
                   </FormControl>
                   <FormDescription>
                     This is the name that will be displayed to other users.
@@ -375,7 +375,7 @@ export function PersonalInfoSection() {
                   <FormLabel>Bio</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Tell us a little about yourself"
+                      placeholder="Tell us a little about yourself…"
                       className="min-h-[100px]"
                       {...field}
                     />
@@ -396,7 +396,7 @@ export function PersonalInfoSection() {
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="City, Country" {...field} />
+                      <Input placeholder="City, Country…" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -409,7 +409,7 @@ export function PersonalInfoSection() {
                   <FormItem>
                     <FormLabel>Website</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com" {...field} />
+                      <Input placeholder="https://example.com…" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

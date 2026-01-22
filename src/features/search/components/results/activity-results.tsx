@@ -181,7 +181,10 @@ export function ActivityResults({
   if (results.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <MapPinIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <MapPinIcon
+          aria-hidden="true"
+          className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+        />
         <h3 className="text-lg font-semibold mb-2">No activities found</h3>
         <p className="text-muted-foreground mb-4">
           Try adjusting your search criteria or dates
@@ -193,7 +196,7 @@ export function ActivityResults({
           aria-label="Modify search"
           title={onOpenFilters ? undefined : "Filters unavailable"}
         >
-          <RefreshCwIcon className="h-4 w-4 mr-2" />
+          <RefreshCwIcon aria-hidden="true" className="h-4 w-4 mr-2" />
           Modify Search
         </Button>
       </Card>
@@ -220,7 +223,7 @@ export function ActivityResults({
                 aria-label="Open activity filters"
                 title={onOpenFilters ? undefined : "Filters unavailable"}
               >
-                <FilterIcon className="h-4 w-4 mr-2" />
+                <FilterIcon aria-hidden="true" className="h-4 w-4 mr-2" />
                 Filters
               </Button>
               <div className="flex items-center gap-1">
@@ -231,7 +234,9 @@ export function ActivityResults({
                   className={cn(sortBy === "price" && "bg-accent")}
                 >
                   Price
-                  {sortBy === "price" && <ArrowUpDownIcon className="h-3 w-3 ml-1" />}
+                  {sortBy === "price" && (
+                    <ArrowUpDownIcon aria-hidden="true" className="h-3 w-3 ml-1" />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
@@ -240,7 +245,9 @@ export function ActivityResults({
                   className={cn(sortBy === "rating" && "bg-accent")}
                 >
                   Rating
-                  {sortBy === "rating" && <ArrowUpDownIcon className="h-3 w-3 ml-1" />}
+                  {sortBy === "rating" && (
+                    <ArrowUpDownIcon aria-hidden="true" className="h-3 w-3 ml-1" />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
@@ -250,7 +257,7 @@ export function ActivityResults({
                 >
                   Duration
                   {sortBy === "duration" && (
-                    <ArrowUpDownIcon className="h-3 w-3 ml-1" />
+                    <ArrowUpDownIcon aria-hidden="true" className="h-3 w-3 ml-1" />
                   )}
                 </Button>
               </div>
@@ -264,7 +271,7 @@ export function ActivityResults({
               onClick={() => setViewMode("list")}
               aria-label="List view"
             >
-              <ListIcon className="h-4 w-4" />
+              <ListIcon aria-hidden="true" className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === "grid" ? "default" : "outline"}
@@ -272,7 +279,7 @@ export function ActivityResults({
               onClick={() => setViewMode("grid")}
               aria-label="Grid view"
             >
-              <Grid3X3Icon className="h-4 w-4" />
+              <Grid3X3Icon aria-hidden="true" className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -323,7 +330,7 @@ export function ActivityResults({
             className={cn(
               "relative",
               selectedForComparison.has(activity.id) &&
-                "ring-2 ring-blue-500 rounded-lg",
+                "ring-2 ring-info/50 rounded-lg",
               optimisticSelecting.has(activity.id) && "opacity-75"
             )}
           >
@@ -333,7 +340,9 @@ export function ActivityResults({
               onCompare={onCompare ? () => handleCompare(activity) : undefined}
             />
             {selectedForComparison.has(activity.id) && (
-              <Badge className="absolute top-2 right-2 bg-blue-500">Selected</Badge>
+              <Badge className="absolute top-2 right-2 bg-info text-info-foreground">
+                Selected
+              </Badge>
             )}
           </div>
         ))}

@@ -46,17 +46,17 @@ describe("LoadingSpinner", () => {
   });
 
   it("applies different colors", () => {
-    const { rerender } = render(<LoadingSpinner color="white" data-testid="spinner" />);
+    const { rerender } = render(<LoadingSpinner color="muted" data-testid="spinner" />);
     let spinner = screen.getByTestId("spinner");
-    expect(spinner).toHaveClass("text-white");
+    expect(spinner).toHaveClass("text-muted-foreground");
 
     rerender(<LoadingSpinner color="destructive" data-testid="spinner" />);
     spinner = screen.getByTestId("spinner");
-    expect(spinner).toHaveClass("text-red-700");
+    expect(spinner).toHaveClass("text-destructive");
 
     rerender(<LoadingSpinner color="success" data-testid="spinner" />);
     spinner = screen.getByTestId("spinner");
-    expect(spinner).toHaveClass("text-green-700");
+    expect(spinner).toHaveClass("text-success");
   });
 
   it("applies custom className", () => {

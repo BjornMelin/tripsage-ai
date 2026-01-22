@@ -14,7 +14,7 @@ Return AI-powered trip suggestions for the authenticated user.
 ### Query Parameters
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| --------- | ---- | ------- | ----------- |
 | `limit` | number | `4` | Maximum number of suggestions to return |
 | `budget_max` | number | — | Maximum budget constraint |
 | `category` | string | — | Category filter (implementation-defined) |

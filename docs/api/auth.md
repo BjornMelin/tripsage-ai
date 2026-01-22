@@ -21,7 +21,7 @@ Email/password login; returns JWT tokens and sets HttpOnly Supabase authenticati
 ### Request Body
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `email` | string | Yes | User email address |
 | `password` | string | Yes | User password (min 8 chars) |
 | `rememberMe` | boolean | No | Extend session lifetime and token expiration (default: false) |

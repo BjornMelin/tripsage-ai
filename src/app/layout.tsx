@@ -13,6 +13,7 @@ import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provi
 import { TelemetryProvider } from "@/components/providers/telemetry-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 
 /**
  * Primary sans-serif font configuration.
@@ -83,12 +84,16 @@ async function AppShell({ children }: { children: React.ReactNode }) {
           {/* Keep Supabase Realtime authorized with the current access token */}
           <RealtimeAuthProvider />
           <a
-            href="#main-content"
+            href={`#${MAIN_CONTENT_ID}`}
             className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow"
           >
             Skip to main content
           </a>
-          <main id="main-content" className="flex flex-col min-h-screen" tabIndex={-1}>
+          <main
+            id={MAIN_CONTENT_ID}
+            tabIndex={-1}
+            className="flex min-h-screen flex-col"
+          >
             {children}
           </main>
           <Toaster />

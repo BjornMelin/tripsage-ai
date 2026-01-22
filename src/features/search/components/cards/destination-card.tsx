@@ -111,7 +111,7 @@ export function DestinationCard({
               </Badge>
               {destination.rating && (
                 <div className="flex items-center text-sm">
-                  <StarIcon className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
+                  <StarIcon className="h-3 w-3 fill-warning text-warning mr-1" />
                   <span className="font-medium">{destination.rating.toFixed(1)}</span>
                 </div>
               )}

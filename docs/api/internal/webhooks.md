@@ -42,7 +42,7 @@ Cache invalidation webhook for database changes.
 Postgres real-time change event payload:
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `table` | string | Yes | Database table name (e.g., `trips`, `trip_collaborators`, `flights`, `accommodations`) |
 | `type` | string | Yes | Operation type: `INSERT`, `UPDATE`, or `DELETE` |
 | `record` | object \| null | Yes | New record data (null for DELETE operations) |
@@ -76,12 +76,11 @@ Postgres real-time change event payload:
   "bumped": true,
   "ok": true
 }
-```
 
 **Response Fields:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `ok` | boolean | Indicates if the webhook was processed successfully |
 | `bumped` | boolean | Indicates if cache tags were invalidated (version bumped) |
 
@@ -90,7 +89,7 @@ Postgres real-time change event payload:
 **Error Response Schema:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `error` | string | Error message |
 
 **Error Examples:**
@@ -129,7 +128,7 @@ Trip collaborator webhook for handling `trip_collaborators` table changes.
 Postgres real-time change event payload:
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `table` | string | Yes | Database table name (must be `trip_collaborators`) |
 | `type` | string | Yes | Operation type: `INSERT`, `UPDATE`, or `DELETE` |
 | `record` | object \| null | Yes | New record data (null for DELETE operations) |
@@ -200,7 +199,7 @@ Postgres real-time change event payload:
 **Response Fields:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `ok` | boolean | Indicates if the webhook was processed successfully |
 | `enqueued` | boolean | Indicates if the event was enqueued to QStash (only present when `true`) |
 | `fallback` | boolean | Indicates if fallback in-process processing was used (only present when `true`) |
@@ -212,7 +211,7 @@ Postgres real-time change event payload:
 **Error Response Schema:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `error` | string | Error type identifier |
 | `reason` | string | Human-readable error message |
 
@@ -262,7 +261,7 @@ File attachment webhook for handling `file_attachments` table changes.
 Postgres real-time change event payload:
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ----- | ---- | -------- | ----------- |
 | `table` | string | Yes | Database table name (must be `file_attachments`) |
 | `type` | string | Yes | Operation type: `INSERT`, `UPDATE`, or `DELETE` |
 | `record` | object \| null | Yes | New record data (null for DELETE operations) |
@@ -333,7 +332,7 @@ Postgres real-time change event payload:
 **Response Fields:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `ok` | boolean | Indicates if the webhook was processed successfully |
 | `enqueued` | boolean | Indicates if an attachment ingestion job was enqueued (only present when `true` or `false` on completion events) |
 | `skipped` | boolean | Indicates if the event was skipped due to wrong table (only present when `true`) |
@@ -344,7 +343,7 @@ Postgres real-time change event payload:
 **Error Response Schema:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `error` | string | Error type identifier or message |
 
 **Error Examples:**
