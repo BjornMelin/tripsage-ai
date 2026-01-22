@@ -146,7 +146,7 @@
     "resend": "^6.7.0",
     "shiki": "^3.21.0",
     "sonner": "^2.0.7",
-    "streamdown": "^1.6.11",
+    "streamdown": "^2.1.0",
     "stripe": "20.2.0",
     "tailwind-merge": "^3.4.0",
     "use-stick-to-bottom": "^1.1.1",
