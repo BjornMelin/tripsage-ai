@@ -28,13 +28,26 @@ import { GetAmenityIcon } from "./amenities";
 import { RatingStars } from "./rating-stars";
 
 /** Get price history icon based on trend */
-export function PriceHistoryIcon({ trend }: { trend: string }) {
+export function PriceHistoryIcon({
+  trend,
+  ...props
+}: { trend: string } & React.SVGProps<SVGSVGElement>) {
   if (trend === "falling")
     return (
-      <TrendingUpIcon aria-hidden="true" className="h-3 w-3 text-success rotate-180" />
+      <TrendingUpIcon
+        aria-hidden="true"
+        className="h-3 w-3 text-success rotate-180"
+        {...props}
+      />
     );
   if (trend === "rising")
-    return <TrendingUpIcon aria-hidden="true" className="h-3 w-3 text-destructive" />;
+    return (
+      <TrendingUpIcon
+        aria-hidden="true"
+        className="h-3 w-3 text-destructive"
+        {...props}
+      />
+    );
   return null;
 }
 

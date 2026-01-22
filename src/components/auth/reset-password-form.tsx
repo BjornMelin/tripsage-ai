@@ -197,7 +197,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 id={emailFieldId}
                 name="email"
                 type="email"
-                placeholder="john@example.com…"
+                placeholder="john@example.com"
                 required
                 autoComplete="email"
                 disabled={isLoading}

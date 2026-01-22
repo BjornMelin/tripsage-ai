@@ -227,7 +227,7 @@ export function FlightCard({
                 <span className="text-2xl font-bold">
                   {formatCurrency(flight.price.total)}
                 </span>
-                <PriceChangeIcon aria-hidden="true" change={flight.price.priceChange} />
+                <PriceChangeIcon change={flight.price.priceChange} />
               </div>
               <p className="text-xs text-muted-foreground mb-2">per person</p>
 

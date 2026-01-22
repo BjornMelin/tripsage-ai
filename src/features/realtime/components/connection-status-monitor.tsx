@@ -149,7 +149,6 @@ export function ConnectionStatusMonitor() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <StatusIcon
-              aria-hidden="true"
               isConnected={connectionStatus.isConnected}
               hasError={!!connectionStatus.lastError}
             />
@@ -287,12 +286,7 @@ export function ConnectionStatusIndicator() {
 
   return (
     <div className="flex items-center space-x-2">
-      <StatusIcon
-        aria-hidden="true"
-        isConnected={isConnected}
-        hasError={hasError}
-        size="h-3 w-3"
-      />
+      <StatusIcon isConnected={isConnected} hasError={hasError} size="h-3 w-3" />
       <span className="text-xs text-muted-foreground">
         {isConnected ? "Live" : "Offline"}
       </span>
