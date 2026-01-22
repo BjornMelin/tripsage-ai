@@ -1,3 +1,21 @@
+## [1.29.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.28.0...v1.29.0) (2026-01-22)
+
+### Features
+
+* **a11y:** restore skip-link target across fallbacks ([b4036f8](https://github.com/BjornMelin/tripsage-ai/commit/b4036f8560653e17fc3c9afeded6d449c92d01dd))
+* **telemetry:** modernize client tracing init ([1a69b72](https://github.com/BjornMelin/tripsage-ai/commit/1a69b724a1c512fd3e4c5f296b3faf99671ea5d8))
+* **ui:** standardize semantic tokens and primitives ([ff7d556](https://github.com/BjornMelin/tripsage-ai/commit/ff7d55668f5b6d890622853c380f1f171bcc77f7))
+
+### Bug Fixes
+
+* **a11y:** improve form labeling and navigation ([429c656](https://github.com/BjornMelin/tripsage-ai/commit/429c656853b9e220575ec6a9756e9fcc6e8b66eb))
+* **auth:** update placeholder text in reset password form ([affad28](https://github.com/BjornMelin/tripsage-ai/commit/affad28fb8c5e797a83c3e15929041b3409b990b))
+* **hotel-card:** remove redundant aria-hidden attribute from PriceHistoryIcon ([a44e2fd](https://github.com/BjornMelin/tripsage-ai/commit/a44e2fdfcec890899ea92ee5b4b8e249a98e5630))
+* **review:** address PR feedback ([e0a9725](https://github.com/BjornMelin/tripsage-ai/commit/e0a9725078e0b126dcba7a4848922fa57c1a9e1f))
+* **review:** clarify error check and waitFor ([e57833c](https://github.com/BjornMelin/tripsage-ai/commit/e57833c1e6f771a93fa39b89f613bf13fd64eab4))
+* **search:** prevent className override in PriceHistoryIcon ([2eaa866](https://github.com/BjornMelin/tripsage-ai/commit/2eaa866975f4dd0e735187764f4d06846e85cb5f))
+* update input placeholders and add aria-hidden attributes to icons ([06fc2ea](https://github.com/BjornMelin/tripsage-ai/commit/06fc2ea672cd8ac77fad734ed12ea038ebef10a3))
+
 ## [1.28.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.27.0...v1.28.0) (2026-01-21)
 
 ### Features
