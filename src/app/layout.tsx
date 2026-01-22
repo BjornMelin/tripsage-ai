@@ -89,7 +89,13 @@ async function AppShell({ children }: { children: React.ReactNode }) {
           >
             Skip to main content
           </a>
-          <div className="flex min-h-screen flex-col">{children}</div>
+          <main
+            id={MAIN_CONTENT_ID}
+            tabIndex={-1}
+            className="flex min-h-screen flex-col"
+          >
+            {children}
+          </main>
           <Toaster />
         </ThemeProvider>
       </PerformanceMonitor>

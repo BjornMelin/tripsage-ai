@@ -260,7 +260,7 @@ export function HotelSearchForm({
               ? (_form, _state) => (
                   <>
                     <Separator />
-                    <div className="bg-gradient-to-r from-warning/10 to-destructive/10 p-4 rounded-lg border">
+                    <div className="bg-gradient-to-r from-warning/10 to-accent/10 p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <SparklesIcon aria-hidden className="h-5 w-5 text-warning" />

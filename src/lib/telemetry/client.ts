@@ -38,7 +38,7 @@ function normalizeOtlpTracesUrl(url: string): string | null {
     parsed.search = "";
 
     const withoutTrailingSlashes = parsed.pathname.replace(/\/+$/, "");
-    const basePathname = withoutTrailingSlashes === "" ? "" : withoutTrailingSlashes;
+    const basePathname = withoutTrailingSlashes;
 
     let normalizedPathname = basePathname.endsWith("/v1/traces")
       ? basePathname
@@ -172,7 +172,7 @@ async function startClientTelemetry(): Promise<void> {
     instrumentations: [
       new FetchInstrumentation({
         clearTimingResources: true,
-        ignoreUrls: [exporterUrlPattern, otlpTracesUrl],
+        ignoreUrls: [exporterUrlPattern],
         propagateTraceHeaderCorsUrls: [
           new RegExp(`^${escapeRegExp(window.location.origin)}(?:/|$)`),
         ],

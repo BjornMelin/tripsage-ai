@@ -2,7 +2,8 @@
 
 <!-- TODO: Delete this document once we have time to ensure if there is
 any value in it, to incorporate it into the testing docs and solidify and
-future proof the testing coverage requirements -->
+future proof the testing coverage requirements. Owner: @bjornmelin | Target date: 2026-03-31
+| Issue: https://github.com/BjornMelin/tripsage-ai/issues/649 -->
 
 This document defines the **current coverage baseline**, what is **enforced in CI**, and how we
 intend to **raise thresholds over time** without blocking merges on unrelated work.

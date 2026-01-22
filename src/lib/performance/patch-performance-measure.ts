@@ -36,6 +36,14 @@ export function patchPerformanceMeasureForPrerender(): void {
               ? Math.max(0, startOrOptions.start)
               : startOrOptions.start,
         };
+        // Ensure that, after clamping, we don't end up with an inverted interval.
+        if (
+          typeof sanitized.start === "number" &&
+          typeof sanitized.end === "number" &&
+          sanitized.end < sanitized.start
+        ) {
+          sanitized.end = sanitized.start;
+        }
 
         return originalMeasure(name, sanitized);
       }

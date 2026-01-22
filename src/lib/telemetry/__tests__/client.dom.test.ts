@@ -194,9 +194,7 @@ describe("initTelemetry", () => {
     );
     const fetchConfig = fetchCalls[0]?.[0];
     const ignoreUrls = unsafeCast<unknown[]>(fetchConfig?.ignoreUrls);
-    expect(ignoreUrls).toEqual(
-      expect.arrayContaining(["http://localhost:4318/v1/traces", expect.any(RegExp)])
-    );
+    expect(ignoreUrls).toEqual(expect.arrayContaining([expect.any(RegExp)]));
   });
 
   it("should normalize /v1/traces/ (trailing slash) to /v1/traces", async () => {

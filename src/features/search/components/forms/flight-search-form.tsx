@@ -244,7 +244,7 @@ export function FlightSearchForm({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-info/20 flex items-center justify-center">
-              <PlaneIcon className="h-5 w-5 text-info" />
+              <PlaneIcon aria-hidden="true" className="h-5 w-5 text-info" />
             </div>
             <div>
               <CardTitle className="text-xl">Find Flights</CardTitle>
@@ -260,7 +260,7 @@ export function FlightSearchForm({
                 variant="secondary"
                 className="bg-success/10 text-success border-success/20"
               >
-                <SparklesIcon className="h-3 w-3 mr-1" />
+                <SparklesIcon aria-hidden="true" className="h-3 w-3 mr-1" />
                 Smart Bundle: Save up to {smartBundles.total}
               </Badge>
             </div>
@@ -304,7 +304,10 @@ export function FlightSearchForm({
                     <div className="bg-gradient-to-r from-info/10 to-success/10 p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <SparklesIcon className="h-5 w-5 text-info" />
+                          <SparklesIcon
+                            aria-hidden="true"
+                            className="h-5 w-5 text-info"
+                          />
                           <h3 className="font-semibold text-sm">Smart Trip Bundle</h3>
                           <Badge
                             variant="secondary"
