@@ -6,7 +6,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 - Next.js `^16.1.3` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
 - TypeScript `^5.9.3`, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
-- AI SDK v6 (`ai@6.0.39`, `@ai-sdk/react@3.0.41`) is the only LLM transport.
+- AI SDK v6 is the only LLM transport (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson)).
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
 - UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
@@ -18,15 +18,15 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 > Keep this list high-level to avoid docs drift; use `package.json` as the source of truth for exact semver ranges.
 
-- **Framework:** `next@^16.1.3`, `react@^19.2.3`, `typescript@^5.9.3`
-- **AI SDK v6:** `ai@6.0.39`, `@ai-sdk/react@3.0.41`, connectors `@ai-sdk/openai@3.0.12`, `@ai-sdk/anthropic@3.0.15`, `@ai-sdk/xai@3.0.26`, `@ai-sdk/togetherai@2.0.13`
-- **Data/Auth:** `@supabase/ssr@^0.8.0`, `@supabase/supabase-js@^2.90.1`
-- **State:** `zustand@^5.0.9`, `@tanstack/react-query@^5.90.19`
-- **Caching/Jobs:** `@upstash/redis@^1.36.0`, `@upstash/ratelimit@2.0.8`, `@upstash/qstash@^2.8.4`
-- **UI:** Radix primitives, `tailwindcss@^4.1.18`, `lucide-react@^0.562.0`, `motion@12.27.0`, `class-variance-authority@^0.7.1`, `clsx@^2.1.1`
-- **Forms/Validation:** `react-hook-form@^7.71.1`, `zod@^4.3.5`, `@hookform/resolvers@^5.2.2`
-- **Observability:** `@vercel/otel@^2.1.0`, `@opentelemetry/*` (wrappers in `src/lib/telemetry`; see `docs/development/backend/observability.md`)
-- **Testing/Tooling:** `vitest@^4.0.17`, `@playwright/test@^1.57.0`, `@biomejs/biome@^2.3.11`, `pnpm boundary:check`
+- **Framework:** Next.js, React, TypeScript (see `package.json`)
+- **AI SDK v6:** core + providers (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson))
+- **Data/Auth:** Supabase SSR + browser client
+- **State:** Zustand, TanStack Query
+- **Caching/Jobs:** Upstash Redis/Ratelimit/QStash
+- **UI:** Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion
+- **Forms/Validation:** React Hook Form + Zod v4
+- **Observability:** `@vercel/otel`, `@opentelemetry/*` (wrappers in `src/lib/telemetry`; see [Observability](../development/backend/observability.md#approved-telemetry--logging-entrypoints))
+- **Testing/Tooling:** Biome, Vitest, Playwright, `pnpm boundary:check`
 
 ## Project Layout
 
@@ -81,10 +81,17 @@ Avoid new barrels; import concrete modules.
   Routes accessing `cookies()` or `headers()` cannot use cache directives per Next.js Cache Components restrictions.
   Server Components that need time-based APIs (directly or indirectly, e.g. `Date.now()` via telemetry helpers) should force runtime rendering with `await connection()` to ensure values are computed at request time rather than build time.
   Do not use route-segment `dynamic` overrides when `cacheComponents: true` is enabled; cache directives take precedence and config conflicts cause build errors.
-  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/0011-spec-byok-routes-and-security.md).
+  See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/archive/0011-spec-byok-routes-and-security.md).
   Public data may use cache directives sparingly.
 - **Background Work**: QStash webhooks for async tasks (e.g., memory sync). Handlers must be idempotent and stateless.
 - **Telemetry**: Wrap server logic with `withTelemetrySpan` / `withTelemetrySpanSync` and `createServerLogger`; emit operational alerts via `emitOperationalAlert` for critical failures. Avoid `console.*` in server code.
+
+## Performance Guidance (Vercel)
+
+- Avoid data-fetch waterfalls; parallelize independent async work and add Suspense boundaries where streaming helps UX.
+- Avoid barrel imports; import concrete modules directly (see [Import Paths](../development/standards/standards.md#import-paths)).
+- Use `next/dynamic` for heavy, rarely-used client components.
+- Keep client components small; move data fetching to server components or route handlers where possible.
 
 ## Layout & Accessibility
 
@@ -216,7 +223,7 @@ For full-stack invalidation:
 2. **API response** → Include cache headers
 3. **Client** → `invalidateQueries()` or real-time subscription triggers refetch
 
-See also: `docs/development/backend/cache-versioned-keys.md` for detailed Upstash patterns.
+See also: [Cache Versioned Keys](../development/backend/cache-versioned-keys.md#cache-versioned-keys--developer-recipe) for detailed Upstash patterns.
 
 ## Workflow Examples
 
@@ -284,7 +291,7 @@ flowchart LR
 - Types: `pnpm type-check`.
 - Tests: `pnpm test*` (Vitest projects; add `/** @vitest-environment jsdom */` when DOM is used).
 - Typical targeted runs: `pnpm test:unit` (unit), `pnpm test:components` (UI), `pnpm test:api` (route handlers), `pnpm test:e2e:chromium` (Playwright, Chromium-only), `pnpm test:e2e` (Playwright, all browsers).
-- Playwright patterns and gotchas: see `docs/agents/04-playwright-e2e.md`.
+- Playwright patterns and gotchas: see [Testing](../development/testing/testing.md#playwright-e2e).
 - Follow AGENTS “final-only” rule: delete superseded code and tests when replacements land.
 
 ## Deployment

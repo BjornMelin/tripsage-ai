@@ -10,6 +10,11 @@ The activities feature provides:
 - **Details**: Retrieve comprehensive activity information (photos, ratings, descriptions, location)
 - **Hybrid Provider Model**: Google Places API (New) as primary deterministic provider, with guarded AI/web fallback
 
+## UI Guidelines
+
+- Follow [UI and Accessibility Standards](../standards/standards.md#ui-and-accessibility).
+- Align with Vercel Web Interface Guidelines: <https://vercel.com/design/guidelines>.
+
 ## Architecture
 
 ### Service Layer
@@ -339,4 +344,4 @@ Limits are enforced via Upstash Redis and `withApiGuards` factory.
 
 - **SPEC-0030**: Activity Search & Booking - Functional & Technical Spec
 - **ADR-0053**: Activity Search & Booking via Google Places API Integration
-- **API Reference**: `docs/api/api-reference.md`
+- **API Reference**: [Activities (Google Places)](../../api/api-reference.md#activities-google-places)

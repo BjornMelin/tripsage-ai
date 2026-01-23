@@ -53,4 +53,4 @@ The following work is required for production BYOK readiness and must be complet
 
 - PostgREST roles/claims: <https://docs.postgrest.org/en/v10/auth.html>
 - Supabase Vault RPCs: `supabase/migrations/20260120000000_base_schema.sql` (historical split migrations are archived under `supabase/migrations/archive/`)
-- Rate-limiting ADR: `docs/architecture/decisions/adr-0020-rate-limiting-strategy.md`
+- Rate-limiting ADR: [ADR-0020](adr-0020-rate-limiting-strategy.md)

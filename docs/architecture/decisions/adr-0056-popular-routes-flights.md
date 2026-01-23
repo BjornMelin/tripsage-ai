@@ -52,7 +52,7 @@ Would add another provider and legal/latency risks; Amadeus is already in use el
 
 ## References
 
-- SPEC-0034 (docs/specs/archive/0034-spec-popular-routes-flights.md)  
+- [SPEC-0034](../../specs/archive/0034-spec-popular-routes-flights.md)
 - ADR-0045 (Flights DTOs)  
 - ADR-0050 (Amadeus + Google Places + Stripe)  
 - Upstash caching patterns in `lib/cache/upstash.ts`

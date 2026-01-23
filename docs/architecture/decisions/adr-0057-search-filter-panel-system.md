@@ -40,7 +40,7 @@ We will implement a complete search filter system using shadcn/ui components wit
 
 ### 1. Prerequisites
 
-- `shadcn/ui` is already installed and configured (see `docs/development/ui.md`).
+- `shadcn/ui` is already installed and configured (see [Repo Structure](../repo-structure.md#boundary-rules)).
 - Run all shadcn commands from the repository root so the generator picks up the Next.js workspace config.
 - **Versioning strategy**: We intentionally use `@latest` for shadcn component additions to track upstream bug fixes and improvements. Versions are pinned in `pnpm-lock.yaml` for reproducibility across environments; CI/CD and local dev will have identical locked versions. If a breaking change occurs in a shadcn release, replace `@latest` with a specific vetted version in `package.json` (e.g., `shadcn-ui@0.8.1`) and document the constraint in this ADR with the breaking change details. Team members should review shadcn changelog entries during routine `pnpm update` cycles and flag any known issues (search `github.com/shadcn-ui/ui/releases` for accordion/toggle-group breaking changes before upgrade).
 
@@ -49,7 +49,7 @@ We will implement a complete search filter system using shadcn/ui components wit
 Restore two methods that were incorrectly removed as YAGNI (the previously proposed `getMostUsedFilters` is deferred to a follow-up ADR because it is not implemented in the store yet):
 
 | Method | User Value |
-|--------|-----------|
+| --- | --- |
 | `clearFiltersByCategory(category)` | "Clear all pricing filters" - better UX than clearing one by one |
 | `applyFiltersFromObject(filterObject)` | Enable URL deep-linking, shareable filter configurations |
 
@@ -180,7 +180,7 @@ describe('FilterPanel', () => {
 ### 6. shadcn/ui Components Mapping
 
 | Filter Type | shadcn/ui Component | Example Use |
-|-------------|--------------------|--------------|
+| --- | --- | --- |
 | Range (min/max) | `Slider` (dual-thumb) | Price: $0-$2000 |
 | Single select | `ToggleGroup` (single) | Stops: Any/Nonstop/1/2+ |
 | Multi select | `Checkbox` + `ScrollArea` | Airlines: AA, UA, DL |
@@ -193,7 +193,7 @@ describe('FilterPanel', () => {
 The `HotelResults` component supports four sort criteria:
 
 | Sort | Description | Availability |
-|------|-------------|--------------|
+| --- | --- | --- |
 | AI Recommended | Sort by AI recommendation score (1-10) | Always |
 | Price | Sort by total price | Always |
 | Rating | Sort by star rating | Always |

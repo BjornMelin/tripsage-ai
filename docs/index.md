@@ -20,7 +20,7 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 ### Application Developers
 
 - **Final baseline (2026-01-05)**:
-  - **[Architecture Overview](architecture/overview.md)** - RSC-first system overview and principles
+  - **[System Architecture](architecture/system-overview.md)** - Runtime topology, key capabilities, and workflows
   - **[Repo Structure](architecture/repo-structure.md)** - Feature-first layout and server-only boundaries
   - **[Architecture Decisions (ADRs)](architecture/decisions/index.md)** - Canonical ADR index
   - **[Technical Specs](specs/README.md)** - Canonical specs index
@@ -49,40 +49,8 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 ## Quick Setup
 
-### Prerequisites
-
-- Node.js ≥24 with pnpm ≥9.0.0
-- Supabase account (database and authentication)
-- Upstash Redis (caching)
-- AI provider API key (OpenAI, Anthropic, or xAI)
-
-### Installation
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd tripsage-ai
-
-# Install dependencies
-pnpm install
-
-# Configure environment
-cp .env.local.example .env.local
-# Edit .env.local with your Supabase, Upstash, and AI provider credentials
-
-# Start development server
-pnpm dev
-```
-
-### Verification
-
-```bash
-# Frontend + API available at
-open http://localhost:3000
-
-# Test API endpoint
-curl http://localhost:3000/api/dashboard
-```
+See [Quick Start](development/core/quick-start.md) for the canonical, up-to-date
+setup steps and verification commands.
 
 ## Key Features
 

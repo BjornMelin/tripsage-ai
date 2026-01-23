@@ -61,7 +61,7 @@
 - **Telemetry**: Structured events for tool calls (name, duration, cacheHit, validationResult) exported via existing logging pipeline.
 - **Testing**: Vitest suites per agent, integration tests hitting API routes with mocked providers, Playwright e2e scenarios for each workflow wave.
 - **Rollout**: Full cutover (no flags). Monitor telemetry; rollback is a deploy revert.
-- **Runbook**: See `docs/operations/agent-frontend.md` for env and validation commands (full cutover; no flags).
+- **Runbook**: See [Agent Frontend Runbook](../../operations/agent-frontend.md) for env and validation commands (full cutover; no flags).
 
 ## Non-Goals
 

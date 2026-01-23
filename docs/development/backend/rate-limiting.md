@@ -41,7 +41,7 @@ Note: When `dynamicLimits` is enabled on a `Ratelimit` instance, the default eph
 References:
 
 - <https://upstash.com/docs/redis/sdks/ratelimit-ts/methods>
-- ADR-0032: `docs/architecture/decisions/adr-0032-centralized-rate-limiting.md`
+- ADR-0032: [Centralized Rate Limiting](../../architecture/decisions/adr-0032-centralized-rate-limiting.md)
 
 ## Redis access (canonical)
 
@@ -104,4 +104,4 @@ Prefer existing Upstash test harness utilities:
 - MSW handlers: `src/test/msw/handlers/upstash.ts`
 - API route rate limiting can be overridden via `setRateLimitFactoryForTests()` in `src/lib/api/factory.ts`.
 
-See `docs/development/testing/testing.md` for the current test tiers and mock setup guidance.
+See [Testing](../testing/testing.md#decision-table) for the current test tiers and mock setup guidance.

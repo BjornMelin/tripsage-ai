@@ -88,7 +88,7 @@ Do not record raw user/session identifiers in telemetry spans by default.
 
 - Use `hashTelemetryIdentifier()` from `src/lib/telemetry/identifiers.ts` to emit stable pseudonyms (e.g., `user.id_hash`, `session.id_hash`) when `TELEMETRY_HASH_SECRET` is configured (required in production).
 - In non-production, if `TELEMETRY_HASH_SECRET` is unset, identifier attributes should be omitted (fail-safe).
-- Policy and attribute classification: `docs/development/security/telemetry-data-classification.md`.
+- Policy and attribute classification: [Telemetry Data Classification](../security/telemetry-data-classification.md#telemetry-data-classification-server--client).
 
 ## Infrastructure spans (catalog)
 
@@ -423,7 +423,7 @@ emitOperationalAlert("webhook.verification_failed", {
 
 ## References
 
-- `docs/architecture/decisions/adr-0046-otel-tracing-frontend.md`
+- [ADR-0046: OTel tracing (frontend)](../../architecture/decisions/adr-0046-otel-tracing-frontend.md)
 - Vercel OTEL: <https://vercel.com/docs/observability/otel-overview>
 - AI SDK telemetry: <https://ai-sdk.dev/docs/ai-sdk-core/telemetry>
 - OpenTelemetry JS: <https://opentelemetry.io/docs/languages/js/>

@@ -129,7 +129,7 @@ References:
 - Pair schema and inferred type in the same file:
 
 ```ts
-export const userSchema = z.strictObject({ id: z.string().uuid(), email: z.string().email() });
+export const userSchema = z.strictObject({ id: z.uuid(), email: z.email() });
 export type User = z.infer<typeof userSchema>;
 ```
 

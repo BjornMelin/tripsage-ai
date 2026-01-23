@@ -2,7 +2,7 @@
 
 Step-by-step instructions to run TripSage locally with a **real Supabase local database**, seeded data, and a quick end-to-end RAG verification.
 
-For general onboarding, start with `docs/development/core/quick-start.md`.
+For general onboarding, start with [Quick Start](quick-start.md).
 
 ## Prerequisites
 
@@ -40,7 +40,8 @@ Then copy values from `pnpm supabase:status` into `.env.local`:
 Notes:
 
 - Seed output prints login credentials (example: `dev.owner@example.local` / `dev-password-change-me`).
-- Local confirmation inbox is at `http://localhost:54324` (sometimes labeled “Mailpit” in `pnpm supabase:status`).
+- Local confirmation inbox is at `http://localhost:54324`. For details, see
+  [Supabase runbook: Inbucket/Mailpit](../../runbooks/supabase.md#local-auth-email-confirmations-inbucket--mailpit).
 
 ## 4) Run the app
 
@@ -104,3 +105,7 @@ This updates `src/lib/supabase/database.types.ts` from the local database schema
 
 - If `pnpm dev` starts on a different port, use the printed URL (e.g. `http://localhost:3001`).
 - Prefer repo scripts (`pnpm supabase:*`) over running `supabase ...` directly; the scripts encode local stack workarounds and keep behavior reproducible.
+
+### WSL storage proxy workaround
+
+See [Supabase runbook: WSL storage proxy workaround](../../runbooks/supabase.md#wsl-storage-proxy-workaround).

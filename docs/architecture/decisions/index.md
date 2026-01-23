@@ -21,8 +21,9 @@ This is the canonical entry point for Architecture Decision Records (ADRs).
 - [ADR-0070: Stripe webhook verification and idempotency (Next.js Route Handlers)](adr-0070-stripe-webhook-verification-and-idempotency.md)
 - [ADR-0071: Unknown thrown values and client error boundary policy](adr-0071-unknown-errors-and-client-error-boundaries.md)
 - [ADR-0072: Dependency upgrade batch (2026-01-19)](adr-0072-2026-01-19-dependency-upgrade-batch.md)
+- [ADR-0073: Streamdown v2 canonical markdown renderer (security profiles + plugins)](adr-0073-streamdown-v2-markdown-renderer.md)
 
 ## Historical ADR log
 
 For the full historical list (including superseded decisions), see
-[`docs/architecture/decisions/README.md`](README.md).
+[Architecture Decisions README](README.md).

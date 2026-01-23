@@ -19,7 +19,7 @@ TripSage requires a testing strategy that:
 Our current test suite has significant issues:
 
 - Legacy patterns incompatible with modern React
-- Coverage below target (see `docs/development/testing/coverage-milestones.md` for current baseline and enforced thresholds)
+- Coverage below target (see [Coverage Milestones](../../development/testing/coverage-milestones.md) for current baseline and enforced thresholds)
 - Slow execution times
 - Brittle tests tied to implementation
 

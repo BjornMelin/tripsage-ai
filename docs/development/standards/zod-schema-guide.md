@@ -61,8 +61,8 @@ Pair schema and type together in the same module (no central type barrel):
 ```typescript
 /** Zod schema for user profile data with validation rules. */
 export const userSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  email: z.email(),
   name: z.string().min(1).max(100),
 });
 
@@ -112,7 +112,7 @@ const futureDate = refinedSchemas.futureDate.parse("2025-12-31T12:00:00Z");
 const password = refinedSchemas.strongPassword.parse("Test123!Password");
 ```
 
-## Zod v4.2.0 Features
+## Zod v4.3+ Features
 
 New features available in Zod v4.2.0+ for improved schema expressiveness.
 
@@ -266,7 +266,7 @@ Use transforms for common input normalization:
 ```typescript
 export const searchFormSchema = z.strictObject({
   query: z.string().transform((s) => s.trim()),
-  email: z.string().email().transform((s) => s.toLowerCase()),
+  email: z.email().transform((s) => s.toLowerCase()),
   maxPrice: z.string().transform((s) => Number(s) || 0),
 });
 ```
@@ -306,7 +306,7 @@ export const toolInputSchema = z.strictObject({
 // Tool Output Schema
 export const toolOutputSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("success"), data: z.unknown() }),
-  z.object({ type: z.literal("error"), message: z.string() }),
+  z.object({ type: z.literal("error"), error: z.string() }),
 ]);
 ```
 
@@ -363,7 +363,7 @@ export const webSearchTool = createAiTool({
 **Temperature:** Tool calls use `temperature: 0`, creative tasks use `temperature: 0.7-1.0`
 **Guardrails:** Server tools should use `createAiTool` with cache/rateLimit/telemetry guardrails (see AI Tools guide).
 
-**Zod v4 Migration:** `z.iso.datetime()` → `z.string().datetime()`, `message:` → `error:`, avoid deprecated APIs
+**Zod v4 Migration:** `z.string().datetime()` → `z.iso.datetime()`, `message:` → `error:`, avoid deprecated APIs
 
 ## Testing & Checklist
 

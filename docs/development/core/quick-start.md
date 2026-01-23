@@ -54,6 +54,8 @@ pnpm install
     - `SUPABASE_SERVICE_ROLE_KEY` (use the `sb_secret_...` key from `pnpm supabase:status`)
     - (Recommended) `SUPABASE_JWT_SECRET` (use the `JWT_SECRET` value from `pnpm supabase:status`)
 
+    WSL note: see the [Supabase runbook: WSL storage proxy workaround](../../runbooks/supabase.md#wsl-storage-proxy-workaround).
+
     Seed deterministic data for the scenario you’re working on:
 
     - `pnpm supabase:reset:dev`
@@ -157,8 +159,8 @@ pnpm dev
 
 ## Next Steps
 
-- Standards: [docs/development/standards/standards.md](../standards/standards.md)
-- Zod Schema Guide: [docs/development/standards/zod-schema-guide.md](../standards/zod-schema-guide.md)
-- Testing: [docs/development/testing/testing.md](../testing/testing.md)
-- Observability: [docs/development/backend/observability.md](../backend/observability.md)
-- Troubleshooting: [docs/development/core/troubleshooting.md](troubleshooting.md)
+- Standards: [Standards](../standards/standards.md)
+- Zod Schema Guide: [Zod Schema Guide](../standards/zod-schema-guide.md)
+- Testing: [Testing](../testing/testing.md)
+- Observability: [Observability](../backend/observability.md#approved-telemetry--logging-entrypoints)
+- Troubleshooting: [Troubleshooting](troubleshooting.md)

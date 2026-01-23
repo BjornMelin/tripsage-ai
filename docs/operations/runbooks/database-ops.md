@@ -318,7 +318,7 @@ YYYYMMDD_HHMMSS_description.sql
 # Example: 20251113_143000_add_trip_collaborators.sql
 ```
 
-Keep table and function inventory aligned with `docs/architecture/database.md`.
+Keep table and function inventory aligned with [Database Architecture](../../architecture/database.md#function--rpc-inventory-keep).
 
 ## Common Issues & Resolutions
 

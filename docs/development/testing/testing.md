@@ -259,10 +259,15 @@ Standard workflow:
 - `pnpm supabase:bootstrap` (or `pnpm supabase:start` + `pnpm supabase:db:reset`)
 - For deterministic data that covers more routes and UI surfaces:
   - `pnpm supabase:reset:dev` (for local UI dev)
-- Copy values from `pnpm supabase:status` into `.env.local` (see `docs/runbooks/supabase.md`)
+- Copy values from `pnpm supabase:status` into `.env.local` (see [Supabase runbook](../runbooks/supabase.md#environment-variables-local))
 - For local sign-up confirmation, use Inbucket/Mailpit at `http://localhost:54324`
+  (see [Supabase runbook: Inbucket/Mailpit](../runbooks/supabase.md#local-auth-email-confirmations-inbucket--mailpit))
 
 > Note: the default `pnpm test:e2e:*` Playwright config uses `scripts/e2e-webserver.mjs`, which starts a mock Supabase Auth server on `http://127.0.0.1:54329` and does not require local Supabase. Use local Supabase when you want to validate real DB/RLS/RAG/attachments behavior end-to-end.
+
+### WSL storage proxy workaround
+
+See [Supabase runbook: WSL storage proxy workaround](../runbooks/supabase.md#wsl-storage-proxy-workaround).
 
 ### Submission testing
 

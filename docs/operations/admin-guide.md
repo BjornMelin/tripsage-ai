@@ -5,7 +5,7 @@ Admin surfaces are implemented in Next.js route handlers and rely on Supabase SS
 ## Access requirements
 
 - Valid Supabase session cookie (SSR) with `app_metadata.is_admin: true`.
-- Environment variables populated for Supabase + Upstash (see `docs/operations/deployment-guide.md`).
+- Environment variables populated for Supabase + Upstash (see [Deployment Guide](deployment-guide.md#required-environment-variables)).
 - Admin routes are telemetry-instrumented; no server `console.*`.
 
 ## Admin endpoints

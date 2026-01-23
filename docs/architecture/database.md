@@ -94,9 +94,12 @@ export const GET = withApiGuards({
 ## Security & RLS
 
 - **RLS-first**: All user-owned tables enable Row Level Security with owner policies (e.g., `auth.uid() = user_id`).
+- **RLS policy structure**: Prefer `auth.uid()` in policy expressions (or `select auth.uid()` in subqueries) and index any columns used in policy predicates (`user_id`, `trip_id`) to avoid row-by-row scans.
+- **Performance**: Use partial indexes for common filters (e.g., `where namespace = 'user_content'`) and keep RLS predicates sargable. See Supabase Postgres best practices: <https://supabase.com/docs/guides/database/postgres/performance>.
 - **Collaboration**: `trip_collaborators` policies permit shared access on trip-scoped rows; realtime topic helpers enforce the same audience.
 - **BYOK**: API keys live in Vault; access only via SECURITY DEFINER RPCs (`insert/get/delete/touch_user_api_key`, gateway config helpers) running under service role with validated ownership.
 - **Server-only use**: Sensitive operations stay in route handlers/Server Components; BYOK routes import `"server-only"` and avoid cache directives on auth-scoped paths.
+- **Storage policies**: Storage bucket RLS and ownership audits align with [Storage Owner Audit](../operations/runbooks/storage-owner-audit.md).
 
 ### API Key Security
 

@@ -48,7 +48,7 @@ Adds complexity without clear benefit. If we later introduce ultra-low-latency i
 
 ## References
 
-- Spec: docs/specs/0021-spec-supabase-webhooks-vercel-consolidation.md
+- Spec: [SPEC-0021](../../specs/archive/0021-spec-supabase-webhooks-vercel-consolidation.md)
 - Supabase Database Webhooks: <https://supabase.com/docs/guides/database/webhooks>
 - pg_net extension: <https://supabase.com/docs/guides/database/extensions/pg_net>
 - Next.js Route Handlers: <https://nextjs.org/docs/app/building-your-application/routing/route-handlers>

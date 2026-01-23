@@ -19,7 +19,7 @@ Telemetry: all service/provider/orchestrator calls are wrapped with `withTelemet
 
 ## Internal References
 
-- `docs/prompts/tools/accommodation-details-tool-migration.md` (line 263) lists Expedia as an alternative accommodation detail provider beside Airbnb MCP and Booking.com; no dedicated ADR/SPEC currently defines an Expedia implementation.
+- [Accommodation Details Tool Migration](../../prompts/tools/accommodation-details-tool-migration.md) (line 263) lists Expedia as an alternative accommodation detail provider beside Airbnb MCP and Booking.com; no dedicated ADR/SPEC currently defines an Expedia implementation.
 - AGENTS.md + ADR-0020/0024/0026/0031/0036 and SPEC-001/010/015 still govern cross-cutting concerns (telemetry, cache/layout, BYOK, AI SDK v6), so a future Expedia ADR must inherit those constraints.
 - Current implementation homes: schemas consolidated in `src/domain/schemas/expedia.ts`; Rapid client under `src/domain/expedia/client.ts`; consumers: `src/ai/tools/server/accommodations.ts` and `src/lib/payments/booking-payment.ts`.
 
