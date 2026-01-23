@@ -12,7 +12,7 @@ TripSage tools use the `createAiTool` factory from `@ai/lib/tool-factory`:
 - **Workflow-specific telemetry** for agent-level observability
 
 For provider configuration (Gateway/BYOK), see [AI Integration](ai-integration.md).  
-For tool input schema patterns, see [Zod Schema Guide](zod-schema-guide.md).
+For tool input schema patterns, see [Zod Schema Guide](../standards/zod-schema-guide.md).
 
 ## Tool Creation Patterns
 
@@ -100,12 +100,14 @@ export const myTool = createAiTool({
 ```
 
 **Output validation (required):**
+
 - All server tools must provide an `outputSchema` and set `validateOutput: true`.
 - Prefer shared Zod output schemas in `@schemas/*` or `@ai/tools/schemas/*` to keep tool contracts consistent.
 
 ### Exceptions (Temporary Only)
 
 If a server tool must use raw `tool()` temporarily:
+
 1. Add the marker `// ai-tool-check: allow-raw-tool` in the file.
 2. Add the file to `TOOL_ALLOWLIST` in `scripts/check-ai-tools.mjs` with a reason.
 3. Remove the exception as soon as the file's migration to `createAiTool` completes.
@@ -122,7 +124,7 @@ type ToolExecute<InputValue, OutputValue> = (
 ```
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `params` | `InputValue` | Validated input matching the tool's `inputSchema` |
 | `callOptions.messages` | `ModelMessage[]` | Conversation messages for context extraction |
 | `callOptions.toolCallId` | `string` | Unique identifier for this tool invocation |
@@ -279,7 +281,7 @@ function buildMyAgentTools(identifier: string): ToolSet {
 
 ## Tool Input Schemas
 
-Tool input schemas must follow AI SDK v6 patterns. See [Zod Schema Guide](zod-schema-guide.md) for full details.
+Tool input schemas must follow AI SDK v6 patterns. See [Zod Schema Guide](../standards/zod-schema-guide.md) for full details.
 
 **Requirements:**
 
@@ -356,7 +358,7 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 ### Search & Discovery
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `webSearch` | Web search via Firecrawl v2.5 | `server/web-search.ts` |
 | `webSearchBatch` | Batch web search for multiple queries | `server/web-search-batch.ts` |
 | `crawlUrl` / `crawlSite` | Web crawling and content extraction | `server/web-crawl.ts` |
@@ -368,7 +370,7 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 ### Travel Planning
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `searchFlights` | Flight search | `server/flights.ts` |
 | `searchAccommodations` | Accommodation search | `server/accommodations.ts` |
 | `getAccommodationDetails` | Accommodation details | `server/accommodations.ts` |
@@ -380,7 +382,7 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 ### Planning & Itinerary
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `createTravelPlan` | Create new travel plan | `server/planning.ts` |
 | `saveTravelPlan` | Save travel plan | `server/planning.ts` |
 | `updateTravelPlan` | Update existing plan | `server/planning.ts` |
@@ -390,7 +392,7 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 ### Calendar & Scheduling
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `createCalendarEvent` | Create Google Calendar event | `server/calendar.ts` |
 | `getAvailability` | Check calendar free/busy | `server/calendar.ts` |
 | `exportItineraryToIcs` | Export events to ICS format | `server/calendar.ts` |
@@ -398,21 +400,21 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 ### Memory & Context
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `addConversationMemory` | Store conversation memory | `server/memory.ts` |
 | `searchUserMemories` | Search user memory | `server/memory.ts` |
 
 ### Maps & Location
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `geocode` | Address to coordinates | `server/maps.ts` |
 | `distanceMatrix` | Distance/duration between locations | `server/maps.ts` |
 
 ### Human-in-the-Loop
 
 | Tool | Description | Source |
-|------|-------------|--------|
+| --- | --- | --- |
 | `requireApproval` | Request user approval | `server/approvals.ts` |
 | `getApprovalStatus` | Check approval status | `server/approvals.ts` |
 | `grantApproval` | Grant pending approval | `server/approvals.ts` |
@@ -425,7 +427,7 @@ Tool errors use standardized codes from `@ai/tools/server/errors.ts`. Use `creat
 ### General Errors
 
 | Code | Constant | Description |
-|------|----------|-------------|
+| --- | --- | --- |
 | `invalid_params` | `invalidParams` | Invalid input parameters |
 | `tool_execution_failed` | `toolExecutionFailed` | Generic execution failure |
 | `tool_rate_limited` | `toolRateLimited` | Rate limit exceeded |
@@ -433,7 +435,7 @@ Tool errors use standardized codes from `@ai/tools/server/errors.ts`. Use `creat
 ### Web Search Errors
 
 | Code | Constant | Description |
-|------|----------|-------------|
+| --- | --- | --- |
 | `web_search_not_configured` | `webSearchNotConfigured` | Missing API key |
 | `web_search_rate_limited` | `webSearchRateLimited` | Rate limit exceeded |
 | `web_search_unauthorized` | `webSearchUnauthorized` | Invalid API key |
@@ -444,7 +446,7 @@ Tool errors use standardized codes from `@ai/tools/server/errors.ts`. Use `creat
 ### Accommodation Errors
 
 | Code | Constant | Description |
-|------|----------|-------------|
+| --- | --- | --- |
 | `accom_search_not_configured` | `accomSearchNotConfigured` | Missing configuration |
 | `accom_search_rate_limited` | `accomSearchRateLimited` | Rate limit exceeded |
 | `accom_search_unauthorized` | `accomSearchUnauthorized` | Unauthorized |
@@ -457,7 +459,7 @@ Tool errors use standardized codes from `@ai/tools/server/errors.ts`. Use `creat
 ### Approval Errors
 
 | Code | Constant | Description |
-|------|----------|-------------|
+| --- | --- | --- |
 | `approval_required` | `approvalRequired` | User approval required |
 | `approval_missing_session` | `approvalMissingSession` | No session for approval |
 | `approval_backend_unavailable` | `approvalBackendUnavailable` | Approval service unavailable |

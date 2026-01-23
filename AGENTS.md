@@ -169,6 +169,13 @@ throw error; // Let withApiGuards handle unknown errors
 - Chat/streaming: `convertToModelMessages()` → `streamText(tools, outputs)` → `result.toUIMessageStreamResponse()`.
 - Structured JSON: use `generateObject` or `streamObject` with Zod schemas from `@schemas/*`.
 
+### 5.2.1 Markdown rendering (Streamdown v2)
+
+- **Canonical renderer:** `src/components/markdown/Markdown.tsx` is the only file allowed to import from `streamdown`.
+- **Chat text parts:** Use `src/components/ai-elements/response.tsx` (adapter over the canonical renderer).
+- **Plugins:** Streamdown v2.1+ uses a plugin architecture (`@streamdown/code`, `@streamdown/mermaid`, `@streamdown/math`) configured inside the canonical renderer.
+- **KaTeX CSS:** Required for math rendering; imported globally in `src/app/layout.tsx`.
+
 ### 5.3 Models and providers
 
 - **Vercel AI Gateway (primary):** `createGateway()` with `AI_GATEWAY_API_KEY`.
