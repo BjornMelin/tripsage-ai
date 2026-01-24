@@ -2,7 +2,7 @@
   "name": "tripsage-ai-frontend",
   "version": "1.29.0",
   "private": true,
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@10.28.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -116,7 +116,7 @@
     "@streamdown/math": "^1.0.1",
     "@streamdown/mermaid": "^1.0.1",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.90.1",
+    "@supabase/supabase-js": "^2.91.1",
     "@tanstack/react-query": "^5.90.20",
     "@upstash/qstash": "^2.8.4",
     "@upstash/ratelimit": "2.0.8",

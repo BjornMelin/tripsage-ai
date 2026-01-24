@@ -4,7 +4,7 @@ services:
 
   # OpenTelemetry Collector for monitoring
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.144.0
     container_name: tripsage-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -21,7 +21,7 @@ services:
 
   # Jaeger for distributed tracing
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/all-in-one:1.76.0
     container_name: tripsage-jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true
