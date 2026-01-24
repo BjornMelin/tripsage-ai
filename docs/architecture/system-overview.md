@@ -52,7 +52,7 @@ graph TD
 
 - App Router with RSC-first rendering; client components only where interactivity is required.
 - Route handlers live in `src/app/api/**/route.ts`. They parse input (Zod), create request-scoped collaborators (Supabase, rate limiter, providers), and delegate to pure handlers. No module-scope state.
-- AI SDK v6 is the only LLM transport (`streamText`, `generateObject`, `streamObject`); structured outputs use Zod schemas under `src/schemas`.
+- AI SDK v6 is the only LLM transport (`streamText`, `generateText` + `Output.object`); structured outputs use Zod schemas under `src/schemas`.
 - Caching and rate limiting use per-request Upstash Redis/RateLimit instances. Auth-dependent routes remain dynamic (no cache).
 - Background/async work uses QStash webhooks; handlers are stateless and idempotent.
 

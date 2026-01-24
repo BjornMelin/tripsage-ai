@@ -34,7 +34,8 @@ Get agent configuration.
   "config": {
     "model": "gpt-4",
     "temperature": 0.7,
-    "maxTokens": 2048,
+    "maxOutputTokens": 2048,
+    "stepLimit": 10,
     "topP": 0.95,
     "timeoutSeconds": 30,
     "description": "Flight search agent configuration"
@@ -79,7 +80,8 @@ Update agent configuration.
 | ----- | ---- | -------- | ----------- |
 | `model` | string | No | Model name |
 | `temperature` | number | No | Temperature (0-2) |
-| `maxTokens` | number | No | Maximum tokens |
+| `maxOutputTokens` | number | No | Maximum output tokens |
+| `stepLimit` | number | No | Maximum tool steps per response |
 | `topP` | number | No | Top P |
 | `timeoutSeconds` | number | No | Timeout in seconds |
 | `description` | string | No | Configuration description |
@@ -95,7 +97,8 @@ Update agent configuration.
   "config": {
     "model": "gpt-4",
     "temperature": 0.7,
-    "maxTokens": 2048,
+    "maxOutputTokens": 2048,
+    "stepLimit": 10,
     "topP": 0.95,
     "timeoutSeconds": 30,
     "description": "Flight search agent configuration"
@@ -197,7 +200,7 @@ Rollback agent configuration to a previous version.
   "config": {
     "model": "gpt-4",
     "temperature": 0.5,
-    "maxTokens": 2048,
+    "maxOutputTokens": 2048,
     "topP": 0.95,
     "timeoutSeconds": 30
   }

@@ -407,3 +407,185 @@ export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
     }
   );
 }
+
+/**
+ * Options for the `getMany` helper.
+ */
+export interface GetManyOptions {
+  /** Maximum number of rows to return. */
+  limit?: number;
+  /** Number of rows to skip (for pagination). */
+  offset?: number;
+  /** Column to order by. */
+  orderBy?: string;
+  /** If true, order ascending; otherwise descending. Default: true. */
+  ascending?: boolean;
+  /** Whether to include a count of total matching rows. */
+  count?: "exact" | "planned" | "estimated";
+}
+
+/**
+ * Fetches multiple rows from the specified table with optional pagination and ordering.
+ * A `where` closure receives the fluent query builder to apply filters
+ * (`eq`, `in`, etc.) prior to selecting rows.
+ * Validates output using Zod schemas when available.
+ *
+ * @template T Table name constrained to `Database['public']['Tables']` keys
+ * @param client Typed supabase client
+ * @param table Target table name
+ * @param where Closure to apply filters to the builder
+ * @param options Optional pagination, ordering, and count settings
+ * @returns Array of rows (validated), count if requested, and error (if any)
+ */
+export function getMany<T extends TableName>(
+  client: TypedClient,
+  table: T,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: GetManyOptions
+): Promise<{ data: Tables<T>[]; count: number | null; error: unknown }> {
+  return withTelemetrySpan(
+    "supabase.select",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "select",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+
+      // Build the initial query with optional count
+      const selectOptions = options?.count ? { count: options.count } : undefined;
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      let qb = (anyClient as any).from(table as string).select("*", selectOptions);
+
+      // Apply where clause
+      qb = where(qb);
+
+      // Apply ordering if specified
+      if (options?.orderBy) {
+        qb = qb.order(options.orderBy, { ascending: options.ascending ?? true });
+      }
+
+      // Apply pagination using range
+      if (options?.limit !== undefined || options?.offset !== undefined) {
+        const start = options?.offset ?? 0;
+        const end =
+          options?.limit !== undefined ? start + options.limit - 1 : undefined;
+        if (end !== undefined) {
+          qb = qb.range(start, end);
+        }
+      }
+
+      const { data, count, error } = await qb;
+
+      if (error) {
+        return { count: null, data: [], error };
+      }
+
+      const rows = (data ?? []) as Tables<T>[];
+      span.setAttribute("db.supabase.row_count", rows.length);
+
+      // Validate output if schema exists
+      if (schema?.row && rows.length > 0) {
+        try {
+          const validated = rows.map((row) => schema.row.parse(row)) as Tables<T>[];
+          return { count: count ?? null, data: validated, error: null };
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { count: null, data: [], error: validationError };
+        }
+      }
+
+      return { count: count ?? null, data: rows, error: null };
+    }
+  );
+}
+
+/**
+ * Inserts multiple rows into the specified table and returns all inserted records.
+ * Unlike `insertSingle`, this handles batch inserts without `.single()`.
+ * Validates input and output using Zod schemas when available.
+ *
+ * @template T Table name constrained to `Database['public']['Tables']` keys
+ * @param client Typed supabase client
+ * @param table Target table name
+ * @param values Array of insert payloads (validated via Zod schema)
+ * @returns Array of inserted rows (validated) and error (if any)
+ */
+export function insertMany<T extends keyof Database["public"]["Tables"]>(
+  client: TypedClient,
+  table: T,
+  values: TablesInsert<T>[]
+): Promise<{ data: Tables<T>[]; error: unknown }> {
+  return withTelemetrySpan(
+    "supabase.insert",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.batch_size": values.length,
+        "db.supabase.operation": "insert",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      if (values.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Validate input if schema exists
+      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+      if (schema?.insert) {
+        try {
+          for (const value of values) {
+            schema.insert.parse(value);
+          }
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: [], error: validationError };
+        }
+      }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const anyClient = client as any;
+      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
+      const insertQb = (anyClient as any)
+        .from(table as string)
+        .insert(values as unknown);
+
+      // Chain select to return the inserted rows
+      if (insertQb && typeof insertQb.select === "function") {
+        const { data, error } = await insertQb.select();
+        if (error) return { data: [], error };
+
+        const rows = (data ?? []) as Tables<T>[];
+        span.setAttribute("db.supabase.row_count", rows.length);
+
+        // Validate output if schema exists
+        if (schema?.row && rows.length > 0) {
+          try {
+            const validated = rows.map((row) => schema.row.parse(row)) as Tables<T>[];
+            return { data: validated, error: null };
+          } catch (validationError) {
+            if (validationError instanceof Error) {
+              recordErrorOnSpan(span, validationError);
+            }
+            return { data: [], error: validationError };
+          }
+        }
+        return { data: rows, error: null };
+      }
+      return { data: [], error: null };
+    }
+  );
+}

@@ -371,7 +371,7 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
 }
 
 /**
- * Creates a mock model that returns structured JSON for generateObject tests.
+ * Creates a mock model that returns structured JSON for structured output tests.
  *
  * @param jsonObject The object to return as stringified JSON text
  * @returns Mock model configured for structured output
@@ -383,12 +383,12 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
  *   confidence: 0.95,
  * });
  *
- * const result = await generateObject({
+ * const result = await generateText({
  *   model,
- *   schema: mySchema,
+ *   output: Output.object({ schema: mySchema }),
  *   prompt: 'Classify this',
  * });
- * expect(result.object.classification).toBe('flightSearch');
+ * expect(result.output?.classification).toBe('flightSearch');
  * ```
  */
 export function createMockObjectModel<T>(jsonObject: T) {
@@ -405,30 +405,12 @@ export function createMockObjectModel<T>(jsonObject: T) {
 }
 
 /**
- * Creates a streaming mock model for streamObject tests.
+ * Creates a streaming mock model for structured output streaming tests.
  *
- * Streams the JSON object incrementally for partial object testing.
+ * Streams the JSON object incrementally for partial output testing.
  *
  * @param jsonObject The object to stream as JSON
  * @returns Mock model configured for streaming structured output
- *
- * @example
- * ```typescript
- * const model = createStreamingObjectMockModel({
- *   name: 'Paris',
- *   country: 'France',
- * });
- *
- * const { partialObjectStream } = streamObject({
- *   model,
- *   schema: destinationSchema,
- *   prompt: 'Describe Paris',
- * });
- *
- * for await (const partial of partialObjectStream) {
- *   console.log(partial);
- * }
- * ```
  */
 export function createStreamingObjectMockModel<T>(jsonObject: T) {
   const jsonString = JSON.stringify(jsonObject);

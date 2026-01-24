@@ -78,19 +78,22 @@ export function createDestinationAgent(
     { content: instructions, role: "system" },
     schemaMessage,
   ];
-  const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampMessages,
+    params.maxOutputTokens,
+    deps.modelId
+  );
 
   // Destination research may need more steps for gathering
-  const maxSteps = Math.max(params.maxSteps, 15);
-  const phase1End = Math.max(4, Math.floor(maxSteps * 0.33));
-  const phase2End = Math.max(phase1End + 1, Math.floor(maxSteps * 0.66));
+  const stepLimit = Math.max(params.stepLimit, 15);
+  const phase1End = Math.max(4, Math.floor(stepLimit * 0.33));
+  const phase2End = Math.max(phase1End + 1, Math.floor(stepLimit * 0.66));
 
   return createTripSageAgent<typeof DESTINATION_TOOLS>(deps, {
     agentType: "destinationResearch",
     defaultMessages: [schemaMessage],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps,
+    maxOutputTokens,
     name: "Destination Research Agent",
     // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
     // on the agent config (ToolLoopAgentSettings.output).
@@ -118,6 +121,7 @@ export function createDestinationAgent(
         activeTools: ["getCurrentWeather", "getTravelAdvisory", "searchPlaceDetails"],
       };
     },
+    stepLimit,
     temperature: params.temperature,
     tools: DESTINATION_TOOLS,
     topP: params.topP,

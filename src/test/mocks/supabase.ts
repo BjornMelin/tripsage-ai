@@ -647,3 +647,6 @@ export function setupSupabaseMocks(): void {
     useSupabase: () => MOCK_SUPABASE,
   }));
 }
+
+// Re-export test client utility for convenience
+export { createTestBrowserClient } from "@/test/helpers/supabase-test-client";

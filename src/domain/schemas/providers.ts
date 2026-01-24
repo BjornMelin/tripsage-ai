@@ -21,7 +21,7 @@ export type ProviderId = z.infer<typeof providerIdSchema>;
  * The `model` field is excluded as LanguageModel is not serializable.
  */
 export const providerResolutionSchema = z.object({
-  maxTokens: z.number().int().positive().optional(),
+  maxOutputTokens: z.number().int().positive().optional(),
   modelId: z.string().min(1),
   provider: providerIdSchema,
 });

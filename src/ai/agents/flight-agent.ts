@@ -78,14 +78,17 @@ export function createFlightAgent(
     schemaMessage,
     ...contextMessages,
   ];
-  const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampMessages,
+    params.maxOutputTokens,
+    deps.modelId
+  );
 
   return createTripSageAgent<typeof FLIGHT_TOOLS>(deps, {
     agentType: "flightSearch",
     defaultMessages: [schemaMessage],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps: params.maxSteps,
+    maxOutputTokens,
     name: "Flight Search Agent",
     // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
     // on the agent config (ToolLoopAgentSettings.output).
@@ -102,6 +105,7 @@ export function createFlightAgent(
         activeTools: ["searchFlights", "distanceMatrix"],
       };
     },
+    stepLimit: params.stepLimit,
     temperature: params.temperature,
     tools: FLIGHT_TOOLS,
     topP: params.topP,

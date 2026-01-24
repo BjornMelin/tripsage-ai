@@ -75,6 +75,96 @@ GET /api/dashboard?window=24h|7d|30d|all
       "https://<app>/api/dashboard?window=24h"
     ```
 
+## Data migrations
+
+### Agent config normalization (maxTokens/maxSteps → maxOutputTokens/stepLimit, id format)
+
+Handled automatically by the base schema migration as of 2026-01-24. If your
+environment applied the base schema before that date or you manage migrations
+manually, run once to normalize stored configs.
+
+```sql
+BEGIN;
+
+UPDATE agent_config
+SET config = jsonb_set(
+  config,
+  '{parameters}',
+  jsonb_strip_nulls(
+    jsonb_build_object(
+      'description', config->'parameters'->'description',
+      'maxOutputTokens',
+      COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
+      'model', config->'parameters'->'model',
+      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
+      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
+      'temperature', config->'parameters'->'temperature',
+      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
+      'topKTools', config->'parameters'->'topKTools',
+      'topP', config->'parameters'->'topP'
+    )
+  ),
+  true
+)
+WHERE (config->'parameters' ? 'maxTokens') OR (config->'parameters' ? 'maxSteps');
+
+UPDATE agent_config_versions
+SET config = jsonb_set(
+  config,
+  '{parameters}',
+  jsonb_strip_nulls(
+    jsonb_build_object(
+      'description', config->'parameters'->'description',
+      'maxOutputTokens',
+      COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
+      'model', config->'parameters'->'model',
+      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
+      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
+      'temperature', config->'parameters'->'temperature',
+      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
+      'topKTools', config->'parameters'->'topKTools',
+      'topP', config->'parameters'->'topP'
+    )
+  ),
+  true
+)
+WHERE (config->'parameters' ? 'maxTokens') OR (config->'parameters' ? 'maxSteps');
+
+UPDATE agent_config
+SET config = jsonb_set(
+  config,
+  '{id}',
+  to_jsonb(
+    concat(
+      'v',
+      extract(epoch from created_at)::bigint,
+      '_',
+      substr(md5(version_id::text), 1, 8)
+    )
+  ),
+  true
+)
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+UPDATE agent_config_versions
+SET config = jsonb_set(
+  config,
+  '{id}',
+  to_jsonb(
+    concat(
+      'v',
+      extract(epoch from created_at)::bigint,
+      '_',
+      substr(md5(id::text), 1, 8)
+    )
+  ),
+  true
+)
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+COMMIT;
+```
+
 ## Security & auditing
 
 - Admin auth comes solely from Supabase `app_metadata.is_admin`; there are no parallel RBAC tables.

@@ -44,7 +44,7 @@
 
 ### P3 - Router & Error Recovery
 
-- **Router**: Implement TypeScript intent router that uses AI SDK `generateObject` to classify user requests and set `currentAgent` before hitting specific route handlers.
+- **Router**: Implement TypeScript intent router that uses AI SDK `generateText` with `Output.object` to classify user requests and set `currentAgent` before hitting specific route handlers.
 - **Error Recovery**: Frontend ToolLoop handles fallback messaging and escalations.
 - **Note**: Python LangGraph orchestration and agents have been completely removed; all functionality now runs in TypeScript AI SDK v6.
 

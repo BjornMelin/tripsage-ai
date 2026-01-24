@@ -115,7 +115,7 @@ export interface ChatAgentConfig {
   /** Desired max output tokens before clamping. */
   desiredMaxTokens?: number;
   /** Maximum tool execution steps. */
-  maxSteps?: number;
+  stepLimit?: number;
   /** Tools that require user ID injection for user-scoped operations. */
   userScopedTools?: string[];
   /** Enable call options schema for dynamic configuration. */
@@ -203,7 +203,7 @@ export function createChatAgent(
 
   const {
     desiredMaxTokens = 1024,
-    maxSteps = 10,
+    stepLimit = 10,
     memorySummary,
     systemPrompt = CHAT_DEFAULT_SYSTEM_PROMPT,
     useCallOptions = false,
@@ -235,7 +235,11 @@ export function createChatAgent(
     { content: instructions, role: "system" },
     { content: textParts.join(" "), role: "user" },
   ];
-  const { maxTokens } = clampMaxTokens(clampInput, desiredMaxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampInput,
+    desiredMaxTokens,
+    deps.modelId
+  );
 
   // Build tools with user ID injection for user-scoped operations
   const chatScopedTools = [...CHAT_SCOPED_TOOLS];
@@ -255,9 +259,9 @@ export function createChatAgent(
 
   logger.info("Creating chat agent", {
     identifier: deps.identifier,
-    maxSteps,
-    maxTokens,
+    maxOutputTokens,
     modelId: deps.modelId,
+    stepLimit,
     useCallOptions,
   });
 
@@ -411,7 +415,7 @@ export function createChatAgent(
     // Budget prompt tokens to leave room for tool-call overhead and max output tokens.
     const promptTokenBudget = Math.max(
       1,
-      modelLimit - maxTokens - TOOL_CALL_OVERHEAD_TOKENS
+      modelLimit - maxOutputTokens - TOOL_CALL_OVERHEAD_TOKENS
     );
     const estimatedPromptTokens = countTokens(
       stepMessages.flatMap((m) => extractTokenizableText(m)),
@@ -439,11 +443,11 @@ export function createChatAgent(
     agentType: "router" as const, // Chat agent acts as the main router
     defaultMessages: [],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps,
+    maxOutputTokens,
     name: "Chat Agent",
     // AI SDK v6: Prepare step for context management in long conversations
     prepareStep,
+    stepLimit,
     tools: chatTools,
   };
 

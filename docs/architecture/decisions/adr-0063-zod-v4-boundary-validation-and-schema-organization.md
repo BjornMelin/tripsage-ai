@@ -57,7 +57,7 @@ Zod v4 constraints:
 
 - No `deepPartial` (use shallow `partial()` or explicit nested partials).
 - Use the `error` param (not deprecated message patterns) for custom messages where applicable (example: `z.string().min(5, { error: "Value must be at least 5 characters" })`).
-- Do not use deprecated Zod error helpers (`error.format()`, `error.flatten()`). Prefer `z.treeifyError(error)`, `z.flattenError(error)`, `z.prettifyError(error)`, or `error.issues` depending on the boundary.
+- Do not use deprecated Zod error helpers (format/flatten). Prefer `z.treeifyError(error)`, `z.flattenError(error)`, `z.prettifyError(error)`, or `error.issues` depending on the boundary.
 
 Environment variables:
 

@@ -34,7 +34,7 @@ export type TokenChatMessage = z.infer<typeof tokenChatMessageSchema>;
  */
 export const clampResultSchema = z.object({
   /** Final safe max tokens for the model/context. */
-  maxTokens: z.number().int().min(1),
+  maxOutputTokens: z.number().int().min(1),
   /** Reasons describing why clamping occurred. */
   reasons: z.array(z.string()),
 });

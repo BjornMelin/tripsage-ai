@@ -21,7 +21,7 @@ vi.mock("@/lib/agents/config-resolver", () => ({
       model: "gpt-4o-mini",
       parameters: {
         description: "Flight search agent",
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
         model: "gpt-4o-mini",
         temperature: 0.7,
         timeoutSeconds: 30,

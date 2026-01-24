@@ -68,7 +68,11 @@ const guardedPOST = withApiGuards({
   // Build message list if not provided
   const finalMessages: ChatMessage[] = messages ?? [{ content: prompt, role: "user" }];
 
-  const { maxTokens, reasons } = clampMaxTokens(finalMessages, desiredMaxTokens, model);
+  const { maxOutputTokens, reasons } = clampMaxTokens(
+    finalMessages,
+    desiredMaxTokens,
+    model
+  );
 
   // If prompt already exhausts the model context window, return a 400 with reasons
   const modelLimit = getModelContextLimit(model);
@@ -101,7 +105,7 @@ const guardedPOST = withApiGuards({
     timeout: buildTimeoutConfigFromSeconds(STREAM_TIMEOUT_SECONDS),
     // Prefer messages when available; otherwise prompt.
     ...(messages ? { messages: finalMessages } : { prompt }),
-    maxOutputTokens: maxTokens,
+    maxOutputTokens,
   });
 
   // Return a UI Message Stream response suitable for AI Elements consumers

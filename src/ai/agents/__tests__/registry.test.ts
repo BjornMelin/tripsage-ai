@@ -29,7 +29,7 @@ vi.mock("@/lib/ratelimit/config", () => ({
 }));
 
 vi.mock("@/lib/tokens/budget", () => ({
-  clampMaxTokens: () => ({ maxTokens: 1024, reasons: [] }),
+  clampMaxTokens: () => ({ maxOutputTokens: 1024, reasons: [] }),
   countTokens: () => 100,
 }));
 
@@ -215,8 +215,8 @@ describe("createAgentForWorkflow", () => {
       id: "test-config-id",
       model: "gpt-4" as const,
       parameters: {
-        maxSteps: 10,
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
+        stepLimit: 10,
         temperature: 0.3,
       },
       scope: "global" as const,
