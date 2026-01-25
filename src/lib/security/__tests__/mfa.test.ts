@@ -30,6 +30,41 @@ const mfaEnrollmentRows: {
   status: string;
 }[] = [];
 
+type FilterFn<Row> = (row: Row) => boolean;
+
+const createUpdateManyChain = <Row extends Record<string, unknown>>(
+  rows: Row[],
+  applyUpdate: (row: Row) => void
+) => {
+  const filters: Array<FilterFn<Row>> = [];
+  const chain = {
+    eq(field: string, value: unknown) {
+      filters.push((row) => (row as never)[field] === value);
+      return chain;
+    },
+    is(field: string, value: unknown) {
+      filters.push((row) => (row as never)[field] === value);
+      return chain;
+    },
+    lt(field: string, value: string) {
+      filters.push((row) => String((row as never)[field]) < value);
+      return chain;
+    },
+    // biome-ignore lint/suspicious/noThenProperty: mimic Promise-like query builder in tests
+    then(
+      resolve: (value: { count: number; error: null }) => void,
+      _reject?: (reason?: unknown) => void
+    ) {
+      const matching = rows.filter((row) => filters.every((f) => f(row)));
+      matching.forEach((row) => {
+        applyUpdate(row);
+      });
+      resolve({ count: matching.length, error: null });
+    },
+  };
+  return chain;
+};
+
 const mockSupabase = unsafeCast<Parameters<typeof startTotpEnrollment>[0]>({
   auth: {
     getUser: vi.fn(async () => ({
@@ -83,11 +118,9 @@ const mockSupabase = unsafeCast<Parameters<typeof startTotpEnrollment>[0]>({
           return chain;
         },
         update: () => {
-          const updateChain = {
-            eq: () => updateChain,
-            lt: () => ({ error: null }),
-          };
-          return updateChain;
+          return createUpdateManyChain(mfaEnrollmentRows, (row) => {
+            row.status = "expired";
+          });
         },
       };
     }
@@ -169,6 +202,17 @@ const mockAdmin = unsafeCast<AdminSupabase>({
               const row = backupRows.find((r) => filters.every((f) => f(r)));
               return { data: row ? { id: row.id } : null, error: null };
             },
+            // biome-ignore lint/suspicious/noThenProperty: mimic Promise-like query builder in tests
+            then(
+              resolve: (value: {
+                count: number;
+                data: typeof backupRows;
+                error: null;
+              }) => void
+            ) {
+              const matching = backupRows.filter((row) => filters.every((f) => f(row)));
+              resolve({ count: matching.length, data: matching, error: null });
+            },
           };
           return chain;
         },
@@ -176,29 +220,9 @@ const mockAdmin = unsafeCast<AdminSupabase>({
           // biome-ignore lint/style/useNamingConvention: mimic DB columns
           consumed_at: string;
         }) => {
-          const filters: Array<(row: (typeof backupRows)[number]) => boolean> = [];
-          const chain = {
-            eq(field: string, value: string) {
-              filters.push((row) => (row as never)[field] === value);
-              return chain;
-            },
-            is(field: string, value: string | null) {
-              filters.push((row) => (row as never)[field] === value);
-              return chain;
-            },
-            select: (_cols: string, opts?: { count?: string; head?: boolean }) => {
-              _cols;
-              const matching = backupRows.filter((row) => filters.every((f) => f(row)));
-              matching.forEach((row) => {
-                Object.assign(row, values);
-              });
-              if (opts?.head) {
-                return { count: matching.length, error: null };
-              }
-              return { data: matching, error: null };
-            },
-          };
-          return chain;
+          return createUpdateManyChain(backupRows, (row) => {
+            Object.assign(row, values);
+          });
         },
       };
     }
@@ -216,23 +240,9 @@ const mockAdmin = unsafeCast<AdminSupabase>({
           return { error: null };
         },
         update: (values: Partial<(typeof mfaEnrollmentRows)[number]>) => {
-          const filters: Array<(row: (typeof mfaEnrollmentRows)[number]) => boolean> =
-            [];
-          const chain = {
-            eq(field: string, value: string) {
-              filters.push((row) => (row as never)[field] === value);
-              return chain;
-            },
-            lt: () => {
-              mfaEnrollmentRows.forEach((row) => {
-                if (filters.every((f) => f(row))) {
-                  Object.assign(row, values);
-                }
-              });
-              return { error: null };
-            },
-          };
-          return chain;
+          return createUpdateManyChain(mfaEnrollmentRows, (row) => {
+            Object.assign(row, values);
+          });
         },
       };
     }
@@ -334,7 +344,7 @@ describe("mfa service", () => {
       .digest("hex");
 
     const result = await verifyBackupCode(mockAdmin, mockIds.userId, code);
-    expect(result.remaining).toBeGreaterThanOrEqual(0);
+    expect(result.remaining).toBe(0);
     const consumed = backupRows.find((r) => r.code_hash === lookupHash);
     expect(consumed?.consumed_at).not.toBeNull();
   });
