@@ -28,13 +28,19 @@ vi.mock("@/lib/idempotency/redis", () => ({
 // Hoist mock functions so they can be accessed and modified in tests
 const createDefaultFromMock = vi.hoisted(() => {
   const sessionId = "123e4567-e89b-12d3-a456-426614174000";
+  const userId = "11111111-1111-4111-8111-111111111111";
   // Create query builder that supports chaining with .eq().eq().single()
   const createSelectBuilder = () => {
     const builder: {
       eq: ReturnType<typeof vi.fn>;
+      maybeSingle: ReturnType<typeof vi.fn>;
       single: ReturnType<typeof vi.fn>;
     } = {
       eq: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: sessionId },
+        error: null,
+      }),
       single: vi.fn().mockResolvedValue({
         data: { id: sessionId },
         error: null,
@@ -60,14 +66,20 @@ const createDefaultFromMock = vi.hoisted(() => {
     if (table === "sessions") {
       return {
         insert: vi.fn(() => ({
-          select: vi.fn().mockResolvedValue({
-            data: [{ id: sessionId }],
-            error: null,
-          }),
+          select: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: { id: sessionId },
+              error: null,
+            }),
+          })),
         })),
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: sessionId },
+                error: null,
+              }),
               single: vi.fn().mockResolvedValue({
                 data: { id: sessionId },
                 error: null,
@@ -101,7 +113,21 @@ const createDefaultFromMock = vi.hoisted(() => {
       return {
         insert: vi.fn(() => ({
           select: vi.fn().mockResolvedValue({
-            data: [{ id: 1 }],
+            data: [
+              {
+                attachments: [],
+                content: { text: "Hello world" },
+                created_at: "2024-01-01T00:00:00Z",
+                id: "22222222-2222-4222-8222-222222222222",
+                pii_scrubbed: false,
+                role: "user",
+                session_id: sessionId,
+                tool_calls: [],
+                tool_results: [],
+                updated_at: "2024-01-01T00:00:00Z",
+                user_id: userId,
+              },
+            ],
             error: null,
           }),
         })),

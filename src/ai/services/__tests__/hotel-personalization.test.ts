@@ -30,9 +30,17 @@ vi.mock("@/lib/cache/upstash", () => ({
   setCachedJson: vi.fn().mockResolvedValue(undefined),
 }));
 
+const mockSpan = {
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+};
+
 vi.mock("@/lib/telemetry/span", () => ({
   recordTelemetryEvent: vi.fn(),
-  withTelemetrySpan: vi.fn(async (_name, _opts, fn) => fn()),
+  withTelemetrySpan: vi.fn(async (_name, _opts, fn) => fn(mockSpan)),
 }));
 
 vi.mock("@/lib/cache/hash", () => ({
