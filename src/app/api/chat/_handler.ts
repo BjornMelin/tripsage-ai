@@ -628,10 +628,11 @@ async function loadChatHistory(options: {
       return { messages: [], ok: true };
     }
     const message = error instanceof Error ? error.message : String(error);
+    const normalizedError = error instanceof Error ? error : new Error(message);
     return {
       ok: false,
       res: errorResponse({
-        err: new Error(message),
+        err: normalizedError,
         error: "db_error",
         reason: "Failed to load chat history",
         status: 500,
@@ -672,10 +673,12 @@ async function loadChatHistory(options: {
     } else {
       const message =
         toolError instanceof Error ? toolError.message : String(toolError);
+      const normalizedError =
+        toolError instanceof Error ? toolError : new Error(message);
       return {
         ok: false,
         res: errorResponse({
-          err: new Error(message),
+          err: normalizedError,
           error: "db_error",
           reason: "Failed to load tool calls",
           status: 500,

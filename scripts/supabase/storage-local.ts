@@ -193,6 +193,13 @@ export type EnsureStorageOptions = {
   supabaseDir: string;
 };
 
+/**
+ * Ensures the local Supabase storage container is running and wired to Kong.
+ *
+ * @param opts - Options describing the local Supabase project and paths.
+ * @throws Error when required containers, migrations, or readiness checks fail,
+ * or when the Kong proxy container fails to start.
+ */
 export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   const ids = getIdsFromProjectId(opts.projectId);
 
@@ -277,8 +284,13 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
 
   // WSL/port-proxy fallback: expose an alternate local port for the Kong gateway.
   // This avoids cases where Docker Desktop port forwarding fails for /storage routes.
-  trySh("docker", ["rm", "-f", ids.kongProxyId]);
-  const proxyResult = trySh("docker", [
+  try {
+    sh("docker", ["rm", "-f", ids.kongProxyId]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("No such container")) throw error;
+  }
+  sh("docker", [
     "run",
     "-d",
     "--name",
@@ -293,9 +305,4 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
     "TCP-LISTEN:8000,fork,reuseaddr",
     `TCP:${ids.kongId}:8000`,
   ]);
-  if (!proxyResult) {
-    throw new Error(
-      "Failed to start Kong proxy container. WSL users may need to use port 54321 directly."
-    );
-  }
 }

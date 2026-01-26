@@ -383,15 +383,11 @@ export function updateMany<
       if (!schemaClient) {
         return { count: 0, error: new Error("from_unavailable") };
       }
-      const qb = where(
-        (() => {
-          const base = schemaClient.from(table as string);
-          if (typeof base.update !== "function") {
-            return { error: new Error("update_unavailable") } as TableFilterBuilder;
-          }
-          return base.update(updates as unknown, { count: "exact" });
-        })()
-      );
+      const base = schemaClient.from(table as string);
+      if (typeof base.update !== "function") {
+        throw new Error("update_unavailable");
+      }
+      const qb = where(base.update(updates as unknown, { count: "exact" }));
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };
@@ -442,15 +438,11 @@ export function getSingle<
       if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
-      const qb = where(
-        (() => {
-          const base = schemaClient.from(table as string);
-          if (typeof base.select !== "function") {
-            return { error: new Error("select_unavailable") } as TableFilterBuilder;
-          }
-          return base.select(selectColumns);
-        })()
-      );
+      const base = schemaClient.from(table as string);
+      if (typeof base.select !== "function") {
+        return { data: null, error: new Error("select_unavailable") };
+      }
+      const qb = where(base.select(selectColumns));
       if (qb && typeof qb === "object" && "error" in qb) {
         return { data: null, error: (qb as { error?: unknown }).error ?? null };
       }
@@ -521,15 +513,12 @@ export function deleteSingle<
       if (!schemaClient) {
         return { count: 0, error: new Error("from_unavailable") };
       }
-      const qb = where(
-        (() => {
-          const base = schemaClient.from(table as string);
-          if (typeof base.delete !== "function") {
-            return { error: new Error("delete_unavailable") } as TableFilterBuilder;
-          }
-          return base.delete({ count: "exact" });
-        })()
-      );
+      const base = schemaClient.from(table as string);
+      const deleteBuilder =
+        typeof base.delete !== "function"
+          ? ({ error: new Error("delete_unavailable") } as TableFilterBuilder)
+          : base.delete({ count: "exact" });
+      const qb = where(deleteBuilder);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };
@@ -541,6 +530,9 @@ export function deleteSingle<
  * Deletes rows from the specified table matching the given criteria.
  * Naming aligns with bulk operations (e.g., updateMany) and does not enforce
  * single-row deletes.
+ * NOTE: deleteMany is an intentional alias for deleteSingle, and deleteSingle
+ * deletes all matching rows. This keeps naming consistent with updateMany and
+ * insertMany while sharing the same implementation.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
  * @param client Typed supabase client

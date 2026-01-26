@@ -151,21 +151,31 @@ export const PUT = withApiGuards({
       if (!scopeResult.ok) return scopeResult.error;
       const scope = scopeResult.data;
 
-      const existing = await withTelemetrySpan(
+      const existingResult = await withTelemetrySpan(
         "agent_config.load_existing",
         { attributes: { agentType: agentValidation.data, scope } },
         async () => {
-          const { data } = await getMaybeSingle(
+          const { data, error } = await getMaybeSingle(
             supabase,
             "agent_config",
             (qb) => qb.eq("agent_type", agentValidation.data).eq("scope", scope),
             { select: "config", validate: false }
           );
-          if (!data?.config) return undefined;
+          if (error) return { error };
+          if (!data?.config) return { existing: undefined };
           const parsed = configurationAgentConfigSchema.safeParse(data.config);
-          return parsed.success ? parsed.data : undefined;
+          return { existing: parsed.success ? parsed.data : undefined };
         }
       );
+      if ("error" in existingResult && existingResult.error) {
+        return errorResponse({
+          err: existingResult.error,
+          error: "internal",
+          reason: "Failed to load existing configuration",
+          status: 500,
+        });
+      }
+      const existing = existingResult.existing;
 
       const configPayload = buildConfigPayload(
         agentValidation.data,

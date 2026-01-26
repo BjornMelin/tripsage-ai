@@ -119,6 +119,10 @@ export async function getUserSecurityEvents(
  * @param adminSupabase - The admin Supabase client.
  * @param userId - The ID of the user to get the security metrics for.
  * @returns The security metrics.
+ * @throws Error when one or more queries fail. Message format:
+ * `failed_to_fetch_security_metrics:<label>:<message>|...` with
+ * pipe-separated labels: `login_rows`, `failed_logins`, `sessions`,
+ * `mfa_factors`, `identities`.
  */
 export async function getUserSecurityMetrics(
   adminSupabase: TypedAdminSupabase,

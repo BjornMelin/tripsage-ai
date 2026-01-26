@@ -195,10 +195,10 @@ export const POST = withApiGuards({
         const normalizedError =
           signedError instanceof Error
             ? signedError
-            : signedError && typeof signedError === "object" && "message" in signedError
+            : signedError
               ? new Error(
                   String(
-                    (signedError as { message?: unknown }).message ?? "unknown_error"
+                    (signedError as { message?: string }).message ?? "unknown_error"
                   )
                 )
               : undefined;

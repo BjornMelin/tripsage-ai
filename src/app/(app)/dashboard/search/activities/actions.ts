@@ -72,8 +72,8 @@ export async function submitActivitySearch(
  * Retrieves trips with "planning" or "active" status from Supabase.
  * Results are mapped to the UI trip format.
  *
- * @returns A list of UI-formatted trips.
- * @throws Error if unauthorized or fetch fails.
+ * @returns A Result with the list of UI-formatted trips, or a ResultError if
+ * unauthorized or fetch fails.
  */
 export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>> {
   const supabase = await createServerSupabase();
@@ -127,8 +127,10 @@ export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>>
  *
  * @param tripId - The ID of the trip to add the activity to.
  * @param activityData - The activity details including title, price, etc.
- * @returns A success result when the activity is stored.
- * @throws Error if unauthorized, trip not found, or validation fails.
+ * @returns A Result with `{ success: true }` on success, or a ResultError
+ * with one of: "unauthorized" (not authenticated), "forbidden" (trip not
+ * found or access denied), "invalid_request" (validation failure with
+ * fieldErrors), or "internal" (database insert error).
  */
 export async function addActivityToTrip(
   tripId: number | string,

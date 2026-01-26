@@ -11,6 +11,10 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("trip-access");
 
+function extractErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Validate that a user has owner or collaborator access to a trip.
  *
@@ -45,10 +49,7 @@ export async function ensureTripAccess(options: {
   ]);
 
   if (ownerResult.error) {
-    const message =
-      ownerResult.error instanceof Error
-        ? ownerResult.error.message
-        : String(ownerResult.error);
+    const message = extractErrorMessage(ownerResult.error);
     logger.error("trip_access_owner_check_failed", {
       error: message,
       tripId,
@@ -66,10 +67,7 @@ export async function ensureTripAccess(options: {
   if (ownerResult.data) return null;
 
   if (collaboratorResult.error) {
-    const message =
-      collaboratorResult.error instanceof Error
-        ? collaboratorResult.error.message
-        : String(collaboratorResult.error);
+    const message = extractErrorMessage(collaboratorResult.error);
     logger.error("trip_access_collaborator_check_failed", {
       error: message,
       tripId,
@@ -93,8 +91,7 @@ export async function ensureTripAccess(options: {
   );
 
   if (existsError) {
-    const message =
-      existsError instanceof Error ? existsError.message : String(existsError);
+    const message = extractErrorMessage(existsError);
     logger.error("trip_access_existence_check_failed", {
       error: message,
       tripId,

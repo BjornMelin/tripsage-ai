@@ -103,9 +103,11 @@ const localFallback =
     ? {}
     : resolveLocalSupabaseEnvFallback();
 
+const storageUrl = process.env.SUPABASE_STORAGE_URL || undefined;
+
 const env = envSchema.parse({
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? localFallback.serviceRoleKey,
-  storageUrl: process.env.SUPABASE_STORAGE_URL,
+  storageUrl,
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? localFallback.supabaseUrl,
 });
 

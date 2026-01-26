@@ -400,12 +400,14 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
           state.insertByTable.set(resource, remaining);
         }
 
-        const contentRange = makeContentRange(matchedRows.length, matchedRows);
-        const body = prefer.includes("return=representation") ? matchedRows : [];
-        return jsonResponse(body, {
-          headers: contentRange ? { "content-range": contentRange } : undefined,
-          status: 200,
-        });
+        if (prefer.includes("return=representation")) {
+          const contentRange = makeContentRange(matchedRows.length, matchedRows);
+          return jsonResponse(matchedRows, {
+            headers: contentRange ? { "content-range": contentRange } : undefined,
+            status: 200,
+          });
+        }
+        return new Response(null, { status: 204 });
       }
 
       const select = state.selectByTable.get(resource) ?? state.selectResult;
@@ -731,5 +733,8 @@ export function setupSupabaseMocks(): void {
   }));
 }
 
-// Re-export test client utility for convenience
+/**
+ * Creates a Supabase browser client instance for test suites.
+ * Use this utility to set up client-side Supabase operations in test environments.
+ */
 export { createTestBrowserClient } from "@/test/helpers/supabase-test-client";

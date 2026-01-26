@@ -457,6 +457,8 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
  * @param supabase - Supabase client instance.
  * @param namespace - Namespace to clear.
  * @returns Count of deleted documents.
+ * @throws Error when the namespace delete fails.
+ * @see docs/specs/active/0104-spec-rag.md
  */
 export async function deleteNamespace(
   supabase: SupabaseClient<Database>,

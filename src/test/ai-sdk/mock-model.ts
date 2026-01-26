@@ -374,6 +374,7 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
 /**
  * Creates a mock model that returns structured JSON for structured output tests.
  *
+ * @typeParam T - The shape of the JSON object returned by the mock model.
  * @param jsonObject The object to return as stringified JSON text
  * @returns Mock model configured for structured output
  *
@@ -410,6 +411,7 @@ export function createMockObjectModel<T>(jsonObject: T) {
  *
  * Streams the JSON object incrementally for partial output testing.
  *
+ * @typeParam T - The shape of the JSON object streamed by the mock model.
  * @param jsonObject The object to stream as JSON
  * @returns Mock model configured for streaming structured output
  */

@@ -1081,6 +1081,7 @@ export const authSessionsRowSchema = z.object({
   created_at: primitiveSchemas.isoDateTime.nullable(),
   factor_id: z.string().nullable(),
   id: primitiveSchemas.uuid,
+  // PostgreSQL inet - opaque at application layer.
   ip: z.unknown(),
   not_after: primitiveSchemas.isoDateTime.nullable(),
   oauth_client_id: z.string().nullable(),

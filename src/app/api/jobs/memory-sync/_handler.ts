@@ -75,6 +75,7 @@ export interface MemorySyncJobDeps {
 
 type ChatSessionUpdatePayload =
   Database["public"]["Tables"]["chat_sessions"]["Update"] & {
+    // biome-ignore lint/style/useNamingConvention: Database field name
     memory_synced_at?: string | null;
   };
 
