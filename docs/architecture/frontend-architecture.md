@@ -72,7 +72,7 @@ Avoid new barrels; import concrete modules.
 
 - **RSC-first**: Server Components by default; add `"use client"` only for interactive islands.
 - **Route Handlers**: Parse `NextRequest`, create request-scoped Supabase client, Upstash limiter, and provider registry inside the handler, then delegate to a pure `_handler` function. BYOK routes import `"server-only"`. No module-scope singletons beyond config constants.
-- **AI SDK Integration**: Use `streamText` / `generateText` with `Output.object({ schema })` for structured output (Zod schemas in `src/schemas`). UI hooks use `useChat`/`useAssistant` with `DefaultChatTransport`. No custom streaming stacks.
+- **AI SDK Integration**: Use `streamText` / `generateText` with `Output.object({ schema })` for structured output (Zod schemas in `src/domain/schemas` / `@schemas/*`). UI hooks use `useChat`/`useAssistant` with `DefaultChatTransport`. No custom streaming stacks.
 - **Validation**: Zod v4 schemas kept in domain files per AGENTS rules (see AGENTS.md §4.4–4.5 for schema organization and helpers). Structured outputs share the same schemas across server and client. Canonical types (e.g., `UiTrip`, `TripSuggestion`) defined in `@schemas/*`; stores/hooks re-export for convenience.
 - **State**: Client UI state via Zustand slices in `src/stores`; server data via TanStack Query. Realtime channel lifecycle is encapsulated in `use-realtime-channel` and thin wrappers only.
 - **Security**: Supabase SSR auth only. Random IDs/timestamps from `@/lib/security/random`. BYOK resolution lives in `src/ai/models/registry.ts`; keys never leave server.

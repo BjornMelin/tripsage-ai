@@ -28,7 +28,7 @@
 3. Update navigation / index docs (if present) to:
    - Remove Expedia as “current provider”.
    - Point “Accommodations provider” to ADR-00X and the new spec:
-    [SPEC-0027](../../specs/archive/0027-spec-accommodations-amadeus-google-stripe.md).
+   - [SPEC-0027](../../specs/archive/0027-spec-accommodations-amadeus-google-stripe.md).
 
 ## 2. Context
 

@@ -18,8 +18,9 @@ rendering on Streamdown v2 and defines how AI Elements `Response` integrates wit
 - Canonical renderer component: `src/components/markdown/Markdown.tsx`
 - Rules:
   - No other file may import from `streamdown`.
-  - All markdown rendering in the app flows through `Markdown` (directly or via
-    `src/components/ai-elements/response.tsx`).
+  - All markdown rendering in the app flows through `Markdown`. The
+    `src/components/ai-elements/response.tsx` adapter must import `Markdown` and
+    must not import `streamdown` directly.
 
 ## Streaming vs static behavior
 

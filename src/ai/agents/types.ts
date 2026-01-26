@@ -395,15 +395,25 @@ export interface AgentParameters {
  */
 export function extractAgentParameters(config: AgentConfig): AgentParameters {
   const params = config.parameters;
+  const legacyMaxTokens =
+    "maxTokens" in params &&
+    typeof (params as { maxTokens?: number }).maxTokens === "number"
+      ? (params as { maxTokens?: number }).maxTokens
+      : undefined;
+  const legacyMaxSteps =
+    "maxSteps" in params &&
+    typeof (params as { maxSteps?: number }).maxSteps === "number"
+      ? (params as { maxSteps?: number }).maxSteps
+      : undefined;
   return {
     maxOutputTokens:
       "maxOutputTokens" in params && typeof params.maxOutputTokens === "number"
         ? params.maxOutputTokens
-        : 4096,
+        : (legacyMaxTokens ?? 4096),
     stepLimit:
       "stepLimit" in params && typeof params.stepLimit === "number"
         ? params.stepLimit
-        : 10,
+        : (legacyMaxSteps ?? 10),
     temperature:
       "temperature" in params && typeof params.temperature === "number"
         ? params.temperature

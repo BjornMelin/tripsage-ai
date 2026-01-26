@@ -9,15 +9,16 @@ import { GET as SESS_GET, POST as SESS_POST } from "../route";
 
 vi.mock("server-only", () => ({}));
 
+const spanMock = {
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+};
+
 vi.mock("@/lib/telemetry/span", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/telemetry/span")>();
-  const spanMock = {
-    addEvent: vi.fn(),
-    end: vi.fn(),
-    recordException: vi.fn(),
-    setAttribute: vi.fn(),
-    setStatus: vi.fn(),
-  };
   return {
     ...actual,
     recordTelemetryEvent: vi.fn(),
@@ -29,6 +30,9 @@ vi.mock("@/lib/telemetry/span", async (importOriginal) => {
 describe("/api/chat/sessions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.values(spanMock).forEach((fn) => {
+      fn.mockClear();
+    });
     resetApiRouteMocks();
   });
   it("creates and lists sessions", async () => {

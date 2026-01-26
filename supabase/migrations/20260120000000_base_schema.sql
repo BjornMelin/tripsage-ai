@@ -1221,17 +1221,15 @@ SET config = jsonb_set(
   config,
   '{parameters}',
   jsonb_strip_nulls(
-    jsonb_build_object(
-      'description', config->'parameters'->'description',
+    (
+      COALESCE(config->'parameters', '{}'::jsonb)
+      - 'maxTokens'
+      - 'maxSteps'
+    ) || jsonb_build_object(
       'maxOutputTokens',
       COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
-      'model', config->'parameters'->'model',
-      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
-      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
-      'temperature', config->'parameters'->'temperature',
-      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
-      'topKTools', config->'parameters'->'topKTools',
-      'topP', config->'parameters'->'topP'
+      'stepLimit',
+      COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps')
     )
   ),
   true
@@ -1243,17 +1241,15 @@ SET config = jsonb_set(
   config,
   '{parameters}',
   jsonb_strip_nulls(
-    jsonb_build_object(
-      'description', config->'parameters'->'description',
+    (
+      COALESCE(config->'parameters', '{}'::jsonb)
+      - 'maxTokens'
+      - 'maxSteps'
+    ) || jsonb_build_object(
       'maxOutputTokens',
       COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
-      'model', config->'parameters'->'model',
-      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
-      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
-      'temperature', config->'parameters'->'temperature',
-      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
-      'topKTools', config->'parameters'->'topKTools',
-      'topP', config->'parameters'->'topP'
+      'stepLimit',
+      COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps')
     )
   ),
   true

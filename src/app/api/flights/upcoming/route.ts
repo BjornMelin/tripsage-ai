@@ -161,7 +161,5 @@ export const GET = withApiGuards({
     });
   }
 
-  return Response.json(
-    ((data as FlightRow[] | null | undefined) ?? []).map(toUpcomingFlight)
-  );
+  return Response.json((data as FlightRow[]).map(toUpcomingFlight));
 });

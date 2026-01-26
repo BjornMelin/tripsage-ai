@@ -2,6 +2,7 @@
  * @fileoverview Domain types shared with accommodations persistence adapters.
  */
 
+/** Insert payload for persisting accommodation bookings to the database. */
 export type AccommodationBookingInsert = {
   // biome-ignore lint/style/useNamingConvention: database columns use snake_case
   booking_token: string;
@@ -30,6 +31,7 @@ export type AccommodationBookingInsert = {
   user_id: string;
 };
 
+/** Lightweight trip ownership record for authorization checks. */
 export type TripOwnership = {
   id: number;
   userId: string;

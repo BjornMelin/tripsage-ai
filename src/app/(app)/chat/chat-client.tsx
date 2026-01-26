@@ -477,7 +477,7 @@ export function ChatClient(): ReactElement {
                 key={id}
                 className="inline-flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-xs"
               >
-                <span className="max-w-50 truncate">{file.name}</span>
+                <span className="max-w-[50px] truncate">{file.name}</span>
                 <Button
                   type="button"
                   variant="ghost"

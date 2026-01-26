@@ -4,7 +4,7 @@ services:
 
   # OpenTelemetry Collector for monitoring
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.144.0
+    image: otel/opentelemetry-collector-contrib@sha256:213886eb6407af91b87fa47551c3632be1a6419ff3a5114ef1e6fc364628496f
     container_name: tripsage-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:

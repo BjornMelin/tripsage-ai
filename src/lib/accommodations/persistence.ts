@@ -14,14 +14,23 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("accommodations.persistence");
 
+/** Dependencies for accommodations persistence layer. */
 export type AccommodationPersistenceDeps = {
   supabase: () => Promise<TypedServerSupabase>;
 };
 
+/** Result of persisting a booking row. */
 export type PersistBookingResult = {
   error: unknown | null;
 };
 
+/**
+ * Creates persistence helpers for accommodations workflows.
+ *
+ * @param deps - Dependencies including the Supabase client factory.
+ * @returns Object with `getTripOwnership` (resolves to TripOwnership or null)
+ * and `persistBooking` (resolves to PersistBookingResult).
+ */
 export function createAccommodationPersistence(deps: AccommodationPersistenceDeps): {
   getTripOwnership: (tripId: number, userId: string) => Promise<TripOwnership | null>;
   persistBooking: (

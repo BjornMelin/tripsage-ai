@@ -20,6 +20,7 @@ import {
   getMaybeSingle,
   insertSingle,
   updateMany,
+  updateSingle,
 } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import type {
@@ -164,12 +165,12 @@ async function handleRecencyFetchContext(
     "turns",
     (qb) => {
       const scoped = intent.sessionId ? qb.eq("session_id", intent.sessionId) : qb;
-      return scoped.eq("user_id", intent.userId).order("created_at", {
-        ascending: false,
-      });
+      return scoped.eq("user_id", intent.userId);
     },
     {
+      ascending: false,
       limit,
+      orderBy: "created_at",
       schema: "memories",
       select: "id, content, created_at, session_id",
       validate: false,
@@ -309,12 +310,12 @@ async function handleOnTurnCommitted(
     }
 
     // Update session last_synced_at
-    const { error: syncError } = await updateMany(
+    const { error: syncError } = await updateSingle(
       supabase,
       "sessions",
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
       { last_synced_at: new Date().toISOString() },
-      (qb) => qb.eq("id", intent.sessionId),
+      (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
       { schema: "memories" }
     );
     if (syncError) {

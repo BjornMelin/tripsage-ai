@@ -211,6 +211,48 @@ function getNextAutoIncrement(state: SupabaseMockState, table: string): number {
   return next;
 }
 
+type TableDefaults = Record<
+  string,
+  (state: SupabaseMockState, row: Record<string, unknown>) => Record<string, unknown>
+>;
+
+const TABLE_DEFAULTS: TableDefaults = {
+  chat_messages: (state, row) => ({
+    ...row,
+    created_at: row.created_at ?? null,
+    id:
+      typeof row.id === "number"
+        ? row.id
+        : getNextAutoIncrement(state, "chat_messages"),
+    metadata: row.metadata ?? null,
+  }),
+  chat_sessions: (_state, row) => ({
+    ...row,
+    created_at: row.created_at ?? null,
+    metadata: row.metadata ?? null,
+    trip_id: row.trip_id ?? null,
+    updated_at: row.updated_at ?? row.created_at ?? null,
+  }),
+  chat_tool_calls: (state, row) => ({
+    ...row,
+    created_at: row.created_at ?? null,
+    error_message: row.error_message ?? null,
+    id:
+      typeof row.id === "number"
+        ? row.id
+        : getNextAutoIncrement(state, "chat_tool_calls"),
+    updated_at: row.updated_at ?? null,
+  }),
+  file_attachments: (_state, row) => ({
+    ...row,
+    created_at: row.created_at ?? null,
+    metadata: row.metadata ?? null,
+    updated_at: row.updated_at ?? null,
+    virus_scan_result: row.virus_scan_result ?? null,
+    virus_scan_status: row.virus_scan_status ?? "pending",
+  }),
+};
+
 function applyRowDefaults(
   state: SupabaseMockState,
   table: string,
@@ -218,44 +260,8 @@ function applyRowDefaults(
 ): unknown {
   if (!row || typeof row !== "object") return row;
   const record = row as Record<string, unknown>;
-
-  if (table === "chat_sessions") {
-    if (record.created_at === undefined) record.created_at = null;
-    if (record.updated_at === undefined) record.updated_at = record.created_at ?? null;
-    if (record.metadata === undefined) record.metadata = null;
-    if (record.trip_id === undefined) record.trip_id = null;
-    return record;
-  }
-
-  if (table === "chat_messages") {
-    if (typeof record.id !== "number") {
-      record.id = getNextAutoIncrement(state, table);
-    }
-    if (record.created_at === undefined) record.created_at = null;
-    if (record.metadata === undefined) record.metadata = null;
-    return record;
-  }
-
-  if (table === "file_attachments") {
-    if (record.created_at === undefined) record.created_at = null;
-    if (record.updated_at === undefined) record.updated_at = null;
-    if (record.metadata === undefined) record.metadata = null;
-    if (record.virus_scan_result === undefined) record.virus_scan_result = null;
-    if (record.virus_scan_status === undefined) record.virus_scan_status = "pending";
-    return record;
-  }
-
-  if (table === "chat_tool_calls") {
-    if (typeof record.id !== "number") {
-      record.id = getNextAutoIncrement(state, table);
-    }
-    if (record.created_at === undefined) record.created_at = null;
-    if (record.updated_at === undefined) record.updated_at = null;
-    if (record.error_message === undefined) record.error_message = null;
-    return record;
-  }
-
-  return record;
+  const resolver = TABLE_DEFAULTS[table];
+  return resolver ? resolver(state, record) : record;
 }
 
 function hydrateInsertedRows(

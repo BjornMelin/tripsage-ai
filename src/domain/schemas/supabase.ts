@@ -826,6 +826,7 @@ export const ragDocumentsRowSchema = z.object({
   content: z.string(),
   created_at: primitiveSchemas.isoDateTime,
   embedding: z.string().nullable(),
+  // PostgreSQL tsvector - opaque at application layer.
   fts: z.unknown(),
   id: z.string(),
   metadata: jsonSchema.nullable(),

@@ -20,7 +20,7 @@ import {
 } from "@/lib/ai/embeddings/text-embedding-model";
 import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
-import { deleteSingle, upsertMany } from "@/lib/supabase/typed-helpers";
+import { deleteMany, upsertMany } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { RagLimitError } from "./errors";
@@ -462,7 +462,7 @@ export async function deleteNamespace(
   supabase: SupabaseClient<Database>,
   namespace: RagNamespace
 ): Promise<number> {
-  const { count, error } = await deleteSingle(supabase, "rag_documents", (qb) =>
+  const { count, error } = await deleteMany(supabase, "rag_documents", (qb) =>
     qb.eq("namespace", namespace)
   );
 

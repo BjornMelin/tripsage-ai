@@ -278,7 +278,7 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   // WSL/port-proxy fallback: expose an alternate local port for the Kong gateway.
   // This avoids cases where Docker Desktop port forwarding fails for /storage routes.
   trySh("docker", ["rm", "-f", ids.kongProxyId]);
-  trySh("docker", [
+  const proxyResult = trySh("docker", [
     "run",
     "-d",
     "--name",
@@ -293,4 +293,9 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
     "TCP-LISTEN:8000,fork,reuseaddr",
     `TCP:${ids.kongId}:8000`,
   ]);
+  if (!proxyResult) {
+    throw new Error(
+      "Failed to start Kong proxy container. WSL users may need to use port 54321 directly."
+    );
+  }
 }

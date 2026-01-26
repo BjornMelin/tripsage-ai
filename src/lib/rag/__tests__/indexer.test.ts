@@ -37,7 +37,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 vi.mock("@/lib/supabase/typed-helpers", () => ({
-  deleteSingle: vi.fn(),
+  deleteMany: vi.fn(),
   upsertMany: vi.fn(),
 }));
 

@@ -299,16 +299,28 @@ async function ensureStorageBuckets(): Promise<void> {
     const { data, error } = await storageClient.storage.getBucket(bucket.name);
     if (data) continue;
     if (error) {
-      const { error: createError } = await storageClient.storage.createBucket(
-        bucket.name,
-        {
-          allowedMimeTypes: [...bucket.allowedMimeTypes],
-          fileSizeLimit: bucket.fileSizeLimit,
-          public: bucket.public,
+      const status =
+        typeof error === "object" && error && "status" in error
+          ? Number((error as { status?: number }).status)
+          : undefined;
+      const message = error instanceof Error ? error.message : String(error);
+      const isNotFound = status === 404 || message.toLowerCase().includes("not found");
+      if (isNotFound) {
+        const { error: createError } = await storageClient.storage.createBucket(
+          bucket.name,
+          {
+            allowedMimeTypes: [...bucket.allowedMimeTypes],
+            fileSizeLimit: bucket.fileSizeLimit,
+            public: bucket.public,
+          }
+        );
+        if (createError) {
+          throw new Error(
+            `createBucket failed (${bucket.name}): ${createError.message}`
+          );
         }
-      );
-      if (createError) {
-        throw new Error(`createBucket failed (${bucket.name}): ${createError.message}`);
+      } else {
+        throw new Error(`getBucket failed (${bucket.name}): ${message}`);
       }
     }
   }

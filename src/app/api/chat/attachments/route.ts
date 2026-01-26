@@ -166,10 +166,10 @@ export const POST = withApiGuards({
 
       if (insertError) {
         await cleanupInserted();
-        const message =
-          insertError instanceof Error ? insertError.message : String(insertError);
+        const normalizedError =
+          insertError instanceof Error ? insertError : new Error(String(insertError));
         return errorResponse({
-          err: new Error(message),
+          err: normalizedError,
           error: "db_error",
           reason: "Failed to create attachment record",
           status: 500,
@@ -192,8 +192,18 @@ export const POST = withApiGuards({
         // Best-effort cleanup: remove metadata rows so the paths cannot authorize uploads.
         await cleanupInserted();
 
+        const normalizedError =
+          signedError instanceof Error
+            ? signedError
+            : signedError && typeof signedError === "object" && "message" in signedError
+              ? new Error(
+                  String(
+                    (signedError as { message?: unknown }).message ?? "unknown_error"
+                  )
+                )
+              : undefined;
         return errorResponse({
-          err: signedError ? new Error(signedError.message) : undefined,
+          err: normalizedError,
           error: "internal",
           reason: "Failed to create signed upload URLs",
           status: 500,

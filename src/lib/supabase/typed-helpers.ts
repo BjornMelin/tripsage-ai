@@ -24,12 +24,42 @@ type TableUpdate<
   T extends TableName<S>,
 > = Database[S]["Tables"][T] extends Record<"Update", infer U> ? U : never;
 /**
- * Query builder type alias using `any` intentionally.
- * Supabase's query builder is any-based internally; precise generics cause
- * excessive complexity and type instability. Biome rule suppressed below.
+ * Query builder type alias for Supabase chaining with minimal shape.
+ * Keep this loose enough for test doubles while avoiding `any`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing is any-based
-export type TableFilterBuilder = any;
+export type TableFilterBuilder = {
+  eq: (...args: unknown[]) => TableFilterBuilder;
+  in: (...args: unknown[]) => TableFilterBuilder;
+  is: (...args: unknown[]) => TableFilterBuilder;
+  gt: (...args: unknown[]) => TableFilterBuilder;
+  gte: (...args: unknown[]) => TableFilterBuilder;
+  lt: (...args: unknown[]) => TableFilterBuilder;
+  lte: (...args: unknown[]) => TableFilterBuilder;
+  neq: (...args: unknown[]) => TableFilterBuilder;
+  like: (...args: unknown[]) => TableFilterBuilder;
+  ilike: (...args: unknown[]) => TableFilterBuilder;
+  contains: (...args: unknown[]) => TableFilterBuilder;
+  overlaps: (...args: unknown[]) => TableFilterBuilder;
+  order: (...args: unknown[]) => TableFilterBuilder;
+  select: (...args: unknown[]) => TableFilterBuilder;
+  limit: (count: number) => TableFilterBuilder;
+  offset?: (count: number) => TableFilterBuilder;
+  range?: (from: number, to: number) => TableFilterBuilder;
+  single: () => PromiseLike<{ data: unknown; error: unknown }>;
+  maybeSingle: () => PromiseLike<{ data: unknown; error: unknown }>;
+  count?: number | null;
+  error?: unknown;
+  data?: unknown;
+  then?: unknown;
+};
+
+type TableQueryBuilder = {
+  select: (...args: unknown[]) => TableFilterBuilder;
+  insert: (values: unknown) => TableFilterBuilder;
+  update: (values: unknown, options?: unknown) => TableFilterBuilder;
+  upsert: (values: unknown, options?: unknown) => TableFilterBuilder;
+  delete: (options?: unknown) => TableFilterBuilder;
+};
 
 type SupabaseTableSchema = {
   insert?: { parse: (value: unknown) => unknown };
@@ -70,24 +100,21 @@ const isSupportedTable = (schema: SchemaName, table: string): boolean => {
 
 const resolveSchema = (schema?: SchemaName): SchemaName => schema ?? "public";
 
-const getSchemaClient = (
-  client: TypedClient,
-  schema: SchemaName
-): TableFilterBuilder => {
-  if (schema === "public") return client;
-  const schemaFn = (client as { schema?: (name: SchemaName) => TableFilterBuilder })
-    .schema;
-  return typeof schemaFn === "function" ? schemaFn(schema) : client;
-};
-
 const getFromClient = (
   client: TypedClient,
   schema: SchemaName
-): TableFilterBuilder | null => {
-  const schemaClient = getSchemaClient(client, schema) as TableFilterBuilder;
-  return schemaClient && typeof (schemaClient as { from?: unknown }).from === "function"
-    ? schemaClient
-    : null;
+): { from: (table: string) => TableQueryBuilder } | null => {
+  const schemaClient =
+    schema === "public" || typeof client.schema !== "function"
+      ? client
+      : client.schema(schema);
+  if (!schemaClient || typeof schemaClient.from !== "function") {
+    return null;
+  }
+  const schemaClientAny = schemaClient as { from: (table: string) => unknown };
+  return {
+    from: (table: string) => schemaClientAny.from(table as string) as TableQueryBuilder,
+  };
 };
 
 const getValidationSchema = (
@@ -200,7 +227,7 @@ export function insertSingle<
             return { data: null, error: validationError };
           }
         }
-        return { data: (data ?? null) as TableRow<S, T> | null, error: null };
+        return { data: data as TableRow<S, T>, error: null };
       }
 
       if (insertQb && typeof insertQb.then === "function") {
@@ -268,20 +295,13 @@ export function updateSingle<
       if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
-      const filtered = where(
-        (() => {
-          const base = schemaClient.from(table as string);
-          if (typeof base.update !== "function") {
-            return { error: new Error("update_unavailable") } as TableFilterBuilder;
-          }
-          return base.update(updates as unknown);
-        })()
-      );
-      const resolved = await Promise.resolve(filtered);
-      if (resolved && typeof (resolved as { select?: unknown }).select === "function") {
-        const { data, error } = await (resolved as TableFilterBuilder)
-          .select()
-          .single();
+      const base = schemaClient.from(table as string);
+      if (typeof base.update !== "function") {
+        return { data: null, error: new Error("update_unavailable") };
+      }
+      const filtered = where(base.update(updates as unknown));
+      if (filtered && typeof filtered.select === "function") {
+        const { data, error } = await filtered.select().single();
         if (error) return { data: null, error };
         if (!data) return { data: null, error: null };
         // Validate output if schema exists
@@ -299,10 +319,10 @@ export function updateSingle<
         }
         return { data: (data ?? null) as TableRow<S, T> | null, error: null };
       }
-      if (resolved && typeof resolved === "object" && "error" in resolved) {
+      if (filtered && typeof filtered === "object" && "error" in filtered) {
         return {
           data: null,
-          error: (resolved as { error?: unknown }).error ?? null,
+          error: (filtered as { error?: unknown }).error ?? null,
         };
       }
       return { data: null, error: null };
@@ -457,7 +477,7 @@ export function getSingle<
           return { data: null, error: validationError };
         }
       }
-      return { data: (data ?? null) as TableRow<S, T> | null, error: null };
+      return { data: data as TableRow<S, T>, error: null };
     }
   );
 }
@@ -515,6 +535,29 @@ export function deleteSingle<
       return { count: count ?? 0, error: error ?? null };
     }
   );
+}
+
+/**
+ * Deletes rows from the specified table matching the given criteria.
+ * Naming aligns with bulk operations (e.g., updateMany) and does not enforce
+ * single-row deletes.
+ *
+ * @template T Table name constrained to `Database['public']['Tables']` keys
+ * @param client Typed supabase client
+ * @param table Target table name
+ * @param where Closure to apply filters to the builder
+ * @returns Count of deleted rows and error (if any)
+ */
+export function deleteMany<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: { schema?: S }
+): Promise<{ count: number; error: unknown | null }> {
+  return deleteSingle(client, table, where, options);
 }
 
 /**

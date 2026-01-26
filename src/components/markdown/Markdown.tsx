@@ -21,8 +21,13 @@ import { z } from "zod";
 import { getClientOrigin } from "@/lib/url/client-origin";
 import { cn } from "@/lib/utils";
 
+/** Security profile controlling allowed content sources and sanitization strictness. */
 export type MarkdownSecurityProfile = "ai" | "user" | "trusted";
 
+/**
+ * Props for the Markdown component.
+ * Extends Streamdown props with security profile and streaming controls.
+ */
 export type MarkdownProps = {
   content: string;
   className?: string;
@@ -213,6 +218,7 @@ function TripSageMarkdownLink({
   children,
   className,
   href,
+  node: _node,
   ...rest
 }: MarkdownLinkProps) {
   const isIncomplete = href === "streamdown:incomplete-link";

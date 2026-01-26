@@ -603,7 +603,7 @@ export async function verifyBackupCode(
         adminSupabase,
         "auth_backup_codes",
         (qb) => qb.eq("user_id", userId).is("consumed_at", null),
-        { count: "exact", limit: 1, select: "id", validate: false }
+        { count: "exact", limit: 1, validate: false }
       );
 
       // Best-effort metadata; do not fail the request if counting fails.

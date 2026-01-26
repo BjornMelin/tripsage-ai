@@ -192,13 +192,30 @@ export async function getUserSecurityMetrics(
       ),
     ]);
 
-  const safeLoginRowsRes = loginRowsRes.error ? { count: 0, data: [] } : loginRowsRes;
-  const safeFailedRes = failedRes.error ? { count: 0, data: [] } : failedRes;
-  const safeSessionRes = sessionRes.error ? { count: 0, data: [] } : sessionRes;
-  const safeMfaRes = mfaRes.error ? { count: 0, data: [] } : mfaRes;
-  const safeIdentitiesRes = identitiesRes.error
-    ? { count: 0, data: [] }
-    : identitiesRes;
+  const errors = [
+    { error: loginRowsRes.error, label: "login_rows" },
+    { error: failedRes.error, label: "failed_logins" },
+    { error: sessionRes.error, label: "sessions" },
+    { error: mfaRes.error, label: "mfa_factors" },
+    { error: identitiesRes.error, label: "identities" },
+  ].filter(
+    (entry): entry is { label: string; error: NonNullable<typeof entry.error> } =>
+      Boolean(entry.error)
+  );
+
+  if (errors.length > 0) {
+    const details = errors.map(
+      ({ label, error }) =>
+        `${label}:${error instanceof Error ? error.message : String(error)}`
+    );
+    throw new Error(`failed_to_fetch_security_metrics:${details.join("|")}`);
+  }
+
+  const safeLoginRowsRes = loginRowsRes;
+  const safeFailedRes = failedRes;
+  const safeSessionRes = sessionRes;
+  const safeMfaRes = mfaRes;
+  const safeIdentitiesRes = identitiesRes;
 
   const loginRows =
     (safeLoginRowsRes.data as Array<Record<string, unknown>> | undefined)?.map(

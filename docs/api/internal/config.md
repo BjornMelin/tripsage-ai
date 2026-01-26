@@ -201,6 +201,7 @@ Rollback agent configuration to a previous version.
     "model": "gpt-4",
     "temperature": 0.5,
     "maxOutputTokens": 2048,
+    "stepLimit": 10,
     "topP": 0.95,
     "timeoutSeconds": 30
   }

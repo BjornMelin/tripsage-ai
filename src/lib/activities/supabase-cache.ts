@@ -101,8 +101,7 @@ export function createSupabaseActivitiesSearchCache(
             .eq("destination", destination)
             .eq("query_hash", queryHash)
             .gt("expires_at", nowIso)
-            .order("created_at", { ascending: false })
-            .limit(1);
+            .order("created_at", { ascending: false });
         },
         { select: "source, results", validate: false }
       );

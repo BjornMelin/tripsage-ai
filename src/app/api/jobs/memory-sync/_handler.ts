@@ -73,6 +73,11 @@ export interface MemorySyncJobDeps {
   clock?: { now: () => string };
 }
 
+type ChatSessionUpdatePayload =
+  Database["public"]["Tables"]["chat_sessions"]["Update"] & {
+    memory_synced_at?: string | null;
+  };
+
 /**
  * Handles memory sync jobs by validating session access, storing conversation turns,
  * and updating sync timestamps.
@@ -293,12 +298,12 @@ export async function handleMemorySyncJob(
 
   // Update memory context summary (simplified - could be enhanced with AI)
   {
-    const updatePayload = {
+    const updatePayload: ChatSessionUpdatePayload = {
       // biome-ignore lint/style/useNamingConvention: Database field name
       memory_synced_at: nowIso(),
       // biome-ignore lint/style/useNamingConvention: Database field name
       updated_at: nowIso(),
-    } as Database["public"]["Tables"]["chat_sessions"]["Update"];
+    };
 
     const { error: updateError } = await updateSingle(
       supabase,

@@ -112,9 +112,9 @@ const futureDate = refinedSchemas.futureDate.parse("2025-12-31T12:00:00Z");
 const password = refinedSchemas.strongPassword.parse("Test123!Password");
 ```
 
-## Zod v4.3+ Features
+## Zod v4.2+ Features
 
-New features available in Zod v4.2.0+ for improved schema expressiveness.
+New features available in Zod v4.2+ for improved schema expressiveness.
 
 ### z.looseRecord() - Flexible Records
 
@@ -210,8 +210,8 @@ Use `.refine()` with `path` to show errors on the correct field:
 
 ```typescript
 export const dateRangeSchema = z.strictObject({
-  checkIn: z.string().datetime(),
-  checkOut: z.string().datetime(),
+  checkIn: z.iso.datetime(),
+  checkOut: z.iso.datetime(),
 }).refine(
   (data) => new Date(data.checkOut) > new Date(data.checkIn),
   { error: "Checkout must be after check-in", path: ["checkOut"] }

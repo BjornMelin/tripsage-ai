@@ -91,18 +91,15 @@ SET config = jsonb_set(
   config,
   '{parameters}',
   jsonb_strip_nulls(
-    jsonb_build_object(
-      'description', config->'parameters'->'description',
-      'maxOutputTokens',
-      COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
-      'model', config->'parameters'->'model',
-      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
-      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
-      'temperature', config->'parameters'->'temperature',
-      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
-      'topKTools', config->'parameters'->'topKTools',
-      'topP', config->'parameters'->'topP'
-    )
+    (
+      COALESCE(config->'parameters', '{}'::jsonb) ||
+      jsonb_build_object(
+        'maxOutputTokens',
+        COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
+        'stepLimit',
+        COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps')
+      )
+    ) - 'maxTokens' - 'maxSteps'
   ),
   true
 )
@@ -113,18 +110,15 @@ SET config = jsonb_set(
   config,
   '{parameters}',
   jsonb_strip_nulls(
-    jsonb_build_object(
-      'description', config->'parameters'->'description',
-      'maxOutputTokens',
-      COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
-      'model', config->'parameters'->'model',
-      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
-      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
-      'temperature', config->'parameters'->'temperature',
-      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
-      'topKTools', config->'parameters'->'topKTools',
-      'topP', config->'parameters'->'topP'
-    )
+    (
+      COALESCE(config->'parameters', '{}'::jsonb) ||
+      jsonb_build_object(
+        'maxOutputTokens',
+        COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
+        'stepLimit',
+        COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps')
+      )
+    ) - 'maxTokens' - 'maxSteps'
   ),
   true
 )
@@ -137,9 +131,9 @@ SET config = jsonb_set(
   to_jsonb(
     concat(
       'v',
-      extract(epoch from created_at)::bigint,
+      extract(epoch from COALESCE(created_at, now()))::bigint,
       '_',
-      substr(md5(version_id::text), 1, 8)
+      substr(md5(COALESCE(version_id::text, '0')), 1, 8)
     )
   ),
   true
@@ -153,9 +147,9 @@ SET config = jsonb_set(
   to_jsonb(
     concat(
       'v',
-      extract(epoch from created_at)::bigint,
+      extract(epoch from COALESCE(created_at, now()))::bigint,
       '_',
-      substr(md5(id::text), 1, 8)
+      substr(md5(COALESCE(id::text, '0')), 1, 8)
     )
   ),
   true

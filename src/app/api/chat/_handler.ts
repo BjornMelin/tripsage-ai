@@ -297,11 +297,11 @@ async function ensureChatSession(options: {
       { select: "id", validate: false }
     );
     if (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
       return {
         ok: false,
         res: errorResponse({
-          err: new Error(message),
+          err: normalizedError,
           error: "db_error",
           reason: "Failed to verify session",
           status: 500,

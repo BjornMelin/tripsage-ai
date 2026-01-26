@@ -233,7 +233,7 @@ describe("typed-helpers", () => {
       (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
       const { count, error } = await deleteSingle(client, "trips", () => {
-        return deleteResult;
+        return unsafeCast(deleteResult);
       });
       expect(count).toBe(1);
       expect(error).toBeNull();
@@ -246,7 +246,7 @@ describe("typed-helpers", () => {
       (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
 
       const { count, error } = await deleteSingle(client, "trips", () => {
-        return deleteResult;
+        return unsafeCast(deleteResult);
       });
       expect(count).toBe(0);
       expect(error).toBeTruthy();
