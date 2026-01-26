@@ -55,7 +55,7 @@ export async function ensureTripAccess(options: {
       userId,
     });
     return errorResponse({
-      err: new Error(message),
+      err: ownerResult.error,
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,
@@ -76,7 +76,7 @@ export async function ensureTripAccess(options: {
       userId,
     });
     return errorResponse({
-      err: new Error(message),
+      err: collaboratorResult.error,
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,
@@ -101,7 +101,7 @@ export async function ensureTripAccess(options: {
       userId,
     });
     return errorResponse({
-      err: new Error(message),
+      err: existsError,
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,

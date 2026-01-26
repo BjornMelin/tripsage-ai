@@ -35,6 +35,9 @@ const tripIdSchema = z.coerce.number().int().positive();
  * Validates/normalizes activity search parameters inside a server-side telemetry span.
  *
  * Note: this action does not execute the activity search itself.
+ *
+ * @param params - Activity search parameters to validate and normalize.
+ * @returns A result containing validated parameters or validation errors.
  */
 // biome-ignore lint/suspicious/useAwait: withTelemetrySpan returns a Promise synchronously
 export async function submitActivitySearch(
@@ -124,6 +127,7 @@ export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>>
  *
  * @param tripId - The ID of the trip to add the activity to.
  * @param activityData - The activity details including title, price, etc.
+ * @returns A success result when the activity is stored.
  * @throws Error if unauthorized, trip not found, or validation fails.
  */
 export async function addActivityToTrip(

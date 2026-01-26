@@ -69,20 +69,6 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabase: vi.fn(() => adminMock),
 }));
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getSession: vi.fn(async () => ({
-        data: { session: { access_token: "token" } },
-        error: null,
-      })),
-      getUser: vi.fn(async () => ({
-        data: { user: { id: TEST_USER_ID } },
-        error: null,
-      })),
-    },
-  })),
-}));
 
 describe("GET /api/security/events", () => {
   it("returns mapped security events", async () => {

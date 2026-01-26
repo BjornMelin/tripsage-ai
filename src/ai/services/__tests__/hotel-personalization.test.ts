@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import type {
   HotelForPersonalization,
   HotelPersonalization,
@@ -237,7 +238,7 @@ describe("hotel-personalization", () => {
     it("returns empty map for empty hotels array", async () => {
       const { personalizeHotels } = await import("../hotel-personalization");
 
-      const result = await personalizeHotels("user-123", [], {});
+      const result = await personalizeHotels(TEST_USER_ID, [], {});
 
       expect(result.size).toBe(0);
     });
@@ -266,7 +267,7 @@ describe("hotel-personalization", () => {
         },
       ];
 
-      const result = await personalizeHotels("user-123", hotels, {});
+      const result = await personalizeHotels(TEST_USER_ID, hotels, {});
 
       expect(result.get(0)?.reason).toBe("Cached reason");
       expect(result.get(0)?.vibe).toBe("luxury");
@@ -299,7 +300,7 @@ describe("hotel-personalization", () => {
         },
       ];
 
-      const result = await personalizeHotels("user-123", hotels, {
+      const result = await personalizeHotels(TEST_USER_ID, hotels, {
         travelStyle: "luxury",
       });
 
@@ -345,7 +346,7 @@ describe("hotel-personalization", () => {
 
       const { PERSONALIZATION_CACHE_TTL } = await import("../hotel-personalization");
 
-      await personalizeHotels("user-123", hotels, {});
+      await personalizeHotels(TEST_USER_ID, hotels, {});
 
       expect(setCachedJson).toHaveBeenCalledWith(
         expect.stringContaining("hotel:personalize:"),
@@ -407,7 +408,7 @@ describe("hotel-personalization", () => {
         { amenities: [], location: "City C", name: "Hotel C", pricePerNight: 300 },
       ];
 
-      const result = await personalizeHotels("user-123", hotels, {});
+      const result = await personalizeHotels(TEST_USER_ID, hotels, {});
 
       expect(result.get(0)?.reason).toBe("Hotel 0");
       expect(result.get(1)?.reason).toBe("Hotel 1");
@@ -434,7 +435,7 @@ describe("hotel-personalization", () => {
         withFamily: false,
       };
 
-      await personalizeHotels("user-123", hotels, preferences);
+      await personalizeHotels(TEST_USER_ID, hotels, preferences);
 
       const call = vi.mocked(generateText).mock.calls[0][0];
       expect(call.prompt).toContain("luxury");
@@ -460,7 +461,7 @@ describe("hotel-personalization", () => {
         },
       ];
 
-      await personalizeHotels("user-123", hotels, {});
+      await personalizeHotels(TEST_USER_ID, hotels, {});
 
       const call = vi.mocked(generateText).mock.calls[0][0];
       // User input in hotel descriptions should be sanitized

@@ -161,7 +161,9 @@ export const PUT = withApiGuards({
             (qb) => qb.eq("agent_type", agentValidation.data).eq("scope", scope),
             { select: "config", validate: false }
           );
-          return data?.config as AgentConfig | undefined;
+          if (!data?.config) return undefined;
+          const parsed = configurationAgentConfigSchema.safeParse(data.config);
+          return parsed.success ? parsed.data : undefined;
         }
       );
 

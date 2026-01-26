@@ -2,6 +2,7 @@
  * @fileoverview Factory for creating Search and SearchResult test data.
  */
 
+import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { TEST_USER_ID } from "@/test/helpers/ids";
 
 let searchIdCounter = 1;
@@ -174,8 +175,6 @@ export const resetSearchFactory = (): void => {
   searchIdCounter = 1;
   resultIdCounter = 1;
 };
-
-import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 
 /**
  * Create mock search history item.

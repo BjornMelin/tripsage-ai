@@ -138,6 +138,7 @@ export interface ChatValidationResult {
  *
  * @param messages - UI messages to validate.
  * @returns Validation result with error details if invalid.
+ * @see docs/architecture/decisions/adr-0038-hybrid-frontend-agents.md
  */
 export function validateChatMessages(messages: UIMessage[]): ChatValidationResult {
   const att = validateImageAttachments(messages);
@@ -163,6 +164,7 @@ export function validateChatMessages(messages: UIMessage[]): ChatValidationResul
  * @param messages - Message history for context window analysis.
  * @param config - Agent loop settings (max steps, token limits, useCallOptions).
  * @returns Configured TripSage agent result.
+ * @see docs/architecture/decisions/adr-0038-hybrid-frontend-agents.md
  *
  * @example
  * ```typescript
@@ -484,6 +486,7 @@ export { CHAT_DEFAULT_SYSTEM_PROMPT };
  *
  * @param messages - UI messages to convert.
  * @returns Promise resolving to model messages for agent prompt.
+ * @see docs/architecture/decisions/adr-0038-hybrid-frontend-agents.md
  */
 export function toModelMessages(messages: UIMessage[]): Promise<ModelMessage[]> {
   return convertToModelMessages(messages);

@@ -82,13 +82,12 @@ export class InvalidTotpError extends Error {
 
 /** Indicates an internal failure verifying TOTP (DB/network). */
 export class TotpVerificationInternalError extends Error {
-  readonly code: string;
+  readonly code = "totp_verification_internal_error" as const;
   readonly status = 500;
 
   constructor(message = "mfa_verify_failed") {
     super(message);
     this.name = "TotpVerificationInternalError";
-    this.code = message;
   }
 }
 
@@ -643,6 +642,12 @@ export async function refreshAal(supabase: TypedSupabase): Promise<"aal1" | "aal
   );
 }
 
+/**
+ * Enforces AAL2 (MFA) authentication level.
+ *
+ * @param supabase - The Supabase client.
+ * @throws {MfaRequiredError} When the current session is not at AAL2.
+ */
 export async function requireAal2(supabase: TypedSupabase): Promise<void> {
   const level = await refreshAal(supabase);
   if (level !== "aal2") {

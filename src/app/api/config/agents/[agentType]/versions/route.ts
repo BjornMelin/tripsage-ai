@@ -23,6 +23,15 @@ const paginationSchema = z.object({
 const parseScopeParam = (raw: string | null) =>
   validateSchema(scopeSchema, raw ?? undefined);
 
+/**
+ * Lists version history for an agent configuration.
+ *
+ * Requires admin authentication. Supports cursor-based pagination.
+ *
+ * @param req - NextRequest with optional scope, cursor, and limit query params.
+ * @returns Promise resolving to paginated version list with nextCursor.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "config:agents:versions",

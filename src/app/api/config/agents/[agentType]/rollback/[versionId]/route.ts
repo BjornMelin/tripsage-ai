@@ -48,10 +48,12 @@ function buildRollbackConfig(existing: AgentConfig, scope: string): AgentConfig 
 }
 
 /**
- * POST /api/config/agents/[agentType]/rollback/[versionId]
- *
  * Rolls back an agent configuration to a previous version.
  * Only allows admins to rollback configurations.
+ *
+ * @param req - NextRequest with optional scope query param.
+ * @returns Promise resolving to rolled back config and new version ID.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
  */
 export const POST = withApiGuards({
   auth: true,

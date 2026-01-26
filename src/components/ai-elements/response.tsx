@@ -1,5 +1,5 @@
 /**
- * @fileoverview AI Elements Response component. Renders markdown content using Streamdown with sensible defaults.
+ * @fileoverview AI Elements Response component. Renders markdown content via the canonical Markdown renderer.
  */
 
 "use client";

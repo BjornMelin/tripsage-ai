@@ -34,6 +34,7 @@ export type ResolveAgentConfigOptions = {
  * @param agentType Canonical agent type identifier.
  * @param options Optional resolver overrides.
  * @returns Parsed configuration and active version id.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
  */
 export async function resolveAgentConfig(
   agentType: AgentType,

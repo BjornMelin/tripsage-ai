@@ -135,6 +135,7 @@ export type User = z.infer<typeof userSchema>;
 
 - Registry helpers: use `primitiveSchemas`, `transformSchemas`, `refinedSchemas` from `@schemas/registry`.
 - Tool schemas (AI SDK v6): include `.describe()` on fields, `z.strictObject` inputs, `temperature: 0` for tool calls.
+- Advanced patterns (mutually exclusive fields, `z.xor()`): see [Zod Schema Guide](./zod-schema-guide.md).
 
 ## Architecture & Services
 

@@ -284,6 +284,7 @@ export interface StreamingToolMockModelOptions {
  *
  * @param options Configuration for tool calls
  * @returns Configured streaming mock model with tool support
+ * @throws {Error} Thrown when `toolCalls` is empty.
  *
  * @example
  * ```typescript

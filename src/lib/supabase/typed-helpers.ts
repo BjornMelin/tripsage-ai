@@ -100,6 +100,30 @@ const getValidationSchema = (
     | undefined;
 };
 
+const resolveMaybeSingle = async (
+  qb: TableFilterBuilder
+): Promise<{ data: unknown; error: unknown }> => {
+  if (qb && typeof qb.maybeSingle === "function") {
+    return await qb.maybeSingle();
+  }
+
+  if (qb && typeof qb.limit === "function") {
+    const limited = qb.limit(1);
+    if (limited && typeof limited.maybeSingle === "function") {
+      return await limited.maybeSingle();
+    }
+    if (limited && typeof limited.single === "function") {
+      return await limited.single();
+    }
+  }
+
+  if (qb && typeof qb.single === "function") {
+    return await qb.single();
+  }
+
+  return { data: null, error: new Error("maybeSingle_unavailable") };
+};
+
 /**
  * Inserts a row into the specified table and returns the single selected row.
  * Uses `.select().single()` to fetch the inserted record in one roundtrip.
@@ -547,17 +571,7 @@ export function getMaybeSingle<
       if (qb && typeof qb === "object" && "error" in qb) {
         return { data: null, error: (qb as { error?: unknown }).error ?? null };
       }
-      const limited = typeof qb.limit === "function" ? qb.limit(1) : null;
-      const result =
-        typeof qb.maybeSingle === "function"
-          ? await qb.maybeSingle()
-          : limited && typeof limited.maybeSingle === "function"
-            ? await limited.maybeSingle()
-            : limited && typeof limited.single === "function"
-              ? await limited.single()
-              : typeof qb.single === "function"
-                ? await qb.single()
-                : { data: null, error: new Error("maybeSingle_unavailable") };
+      const result = await resolveMaybeSingle(qb);
       const { data, error } = result;
       if (error) return { data: null, error };
       if (!data) return { data: null, error: null };

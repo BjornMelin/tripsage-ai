@@ -33,8 +33,10 @@ export interface SessionsDeps {
 
 /**
  * Create a chat session owned by the authenticated user.
- * @param deps Collaborators with Supabase client and authenticated userId.
- * @param title Optional title (stored in metadata).
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param title - Optional title (stored in metadata).
+ * @returns Response with the created session ID.
  */
 export async function createSession(
   deps: SessionsDeps,
@@ -72,6 +74,9 @@ export async function createSession(
 
 /**
  * List sessions for the authenticated user.
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @returns Response with the list of sessions.
  */
 export async function listSessions(deps: SessionsDeps): Promise<Response> {
   const allowEphemeral = isChatEphemeralEnabled();
@@ -105,6 +110,10 @@ export async function listSessions(deps: SessionsDeps): Promise<Response> {
 
 /**
  * Get a single session by id (owner-only).
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to retrieve.
+ * @returns Response with the session data.
  */
 export async function getSession(deps: SessionsDeps, id: string): Promise<Response> {
   const { data, error } = await getMaybeSingle(
@@ -125,6 +134,10 @@ export async function getSession(deps: SessionsDeps, id: string): Promise<Respon
 
 /**
  * Delete a session by id (owner-only).
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to delete.
+ * @returns Response with no content on success.
  */
 export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
   const { error, count } = await deleteSingle(deps.supabase, "chat_sessions", (qb) =>
@@ -142,6 +155,10 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
 
 /**
  * List messages for a session.
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to list messages for.
+ * @returns Response with the list of session messages.
  */
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
   const logger = deps.logger;
@@ -300,6 +317,11 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
 
 /**
  * Create a message within a session for the authenticated user.
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to create a message in.
+ * @param payload - Message role and content parts.
+ * @returns Response with no content on success.
  */
 export async function createMessage(
   deps: SessionsDeps,

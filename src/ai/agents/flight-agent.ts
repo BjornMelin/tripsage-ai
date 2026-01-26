@@ -41,6 +41,9 @@ const FLIGHT_TOOLS = {
  * - Phase 1: Resolve locations via geocoding and POI lookup
  * - Phase 2: Search flights and compute distances
  *
+ * @remarks
+ * SPEC-0008 documents the AI SDK v6 foundations used by this agent.
+ *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated flight search request.

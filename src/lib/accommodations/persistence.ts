@@ -10,6 +10,9 @@ import type {
 } from "@domain/accommodations/types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { getSingle, insertSingle } from "@/lib/supabase/typed-helpers";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("accommodations.persistence");
 
 export type AccommodationPersistenceDeps = {
   supabase: () => Promise<TypedServerSupabase>;
@@ -36,7 +39,17 @@ export function createAccommodationPersistence(deps: AccommodationPersistenceDep
       (qb) => qb.eq("id", tripId).eq("user_id", userId),
       { select: "id, user_id", validate: false }
     );
-    if (error || !data) return null;
+    if (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error("accommodations.trip_ownership.query_failed", {
+        error: errorMessage,
+        stack: error instanceof Error ? (error.stack ?? null) : null,
+        tripId,
+        userId,
+      });
+      return null;
+    }
+    if (!data) return null;
     return { id: data.id, userId: data.user_id };
   };
 
