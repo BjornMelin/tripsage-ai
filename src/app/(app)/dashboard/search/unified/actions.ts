@@ -17,6 +17,7 @@ import {
   searchAccommodationParamsSchema,
 } from "@schemas/search";
 import { format } from "date-fns";
+import { createAccommodationPersistence } from "@/lib/accommodations/persistence";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag, versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
@@ -93,17 +94,21 @@ export async function searchHotelsAction(
   }
 
   const validatedParams = validation.data;
+  const { getTripOwnership, persistBooking } = createAccommodationPersistence({
+    supabase: createServerSupabase,
+  });
   const service = new AccommodationsService({
     bumpTag,
     cacheTtlSeconds: ACCOM_SEARCH_CACHE_TTL_SECONDS,
     canonicalizeParamsForCache,
     enrichHotelListingWithPlaces,
     getCachedJson,
+    getTripOwnership,
+    persistBooking,
     provider: new AmadeusProviderAdapter(),
     resolveLocationToLatLng,
     retryWithBackoff,
     setCachedJson,
-    supabase: createServerSupabase,
     versionedKey,
     withTelemetrySpan,
   });

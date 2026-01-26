@@ -11,6 +11,10 @@ import type {
   ProviderContext,
   ProviderResult,
 } from "@domain/accommodations/providers/types";
+import type {
+  AccommodationBookingInsert,
+  TripOwnership,
+} from "@domain/accommodations/types";
 import {
   type AccommodationBookingRequest,
   type AccommodationBookingResult,
@@ -27,9 +31,6 @@ import {
 } from "@schemas/accommodations";
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
-import type { Database } from "@/lib/supabase/database.types";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { getSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 
 type HotelLikeListing = {
   hotel?: {
@@ -50,7 +51,6 @@ type TelemetrySpan = {
 /** Dependencies for the accommodations service. */
 export type AccommodationsServiceDeps = {
   provider: AccommodationProviderAdapter;
-  supabase: () => Promise<TypedServerSupabase>;
   cacheTtlSeconds: number;
   bumpTag: (tag: string) => Promise<number>;
   canonicalizeParamsForCache: (
@@ -68,6 +68,10 @@ export type AccommodationsServiceDeps = {
     fn: (attempt: number) => Promise<T>,
     options: { attempts: number; baseDelayMs: number; maxDelayMs?: number }
   ) => Promise<T>;
+  getTripOwnership: (tripId: number, userId: string) => Promise<TripOwnership | null>;
+  persistBooking: (
+    bookingRow: AccommodationBookingInsert
+  ) => Promise<{ error: unknown | null }>;
   setCachedJson: (key: string, value: unknown, ttlSeconds?: number) => Promise<void>;
   versionedKey: (tag: string, key: string) => Promise<string>;
   withTelemetrySpan: <T>(
@@ -324,8 +328,7 @@ export class AccommodationsService {
       async (span) => {
         this.validateBookingContext(ctx, span, params.listingId);
 
-        const supabase = await this.deps.supabase();
-        await this.validateTripOwnership(supabase, params.tripId, ctx.userId);
+        await this.validateTripOwnership(params.tripId, ctx.userId);
 
         const bookingCacheKey = `${BOOKING_CACHE_NAMESPACE}:${params.bookingToken}`;
         const versionedBookingKey = await this.deps.versionedKey(
@@ -354,7 +357,7 @@ export class AccommodationsService {
         const idempotencyKey = params.idempotencyKey ?? secureUuid();
 
         const result = await runBookingOrchestrator(
-          { provider: this.deps.provider, supabase },
+          { provider: this.deps.provider },
           {
             amount: amountCents,
             approvalKey: "bookAccommodation",
@@ -370,12 +373,7 @@ export class AccommodationsService {
             persistBooking: async (payload) => {
               const bookingRow = this.buildBookingRow(params, payload, ctx.userId);
 
-              const persist = async () =>
-                await insertSingle(
-                  supabase,
-                  "bookings",
-                  bookingRow as Database["public"]["Tables"]["bookings"]["Insert"]
-                );
+              const persist = async () => await this.deps.persistBooking(bookingRow);
 
               const { error } = await this.deps.retryWithBackoff(persist, {
                 attempts: 3,
@@ -484,13 +482,11 @@ export class AccommodationsService {
   /**
    * Validates that a trip exists and belongs to the user.
    *
-   * @param supabase - Supabase client instance
    * @param tripId - Trip ID string to validate
    * @param userId - User ID to verify ownership
    * @throws ProviderError if trip ID is invalid or trip not found/not owned
    */
   private async validateTripOwnership(
-    supabase: TypedServerSupabase,
     tripId: string | undefined,
     userId: string
   ): Promise<void> {
@@ -503,14 +499,9 @@ export class AccommodationsService {
       throw new ProviderError("validation_failed", "invalid_trip_id");
     }
 
-    const { data: trip, error: tripError } = await getSingle(
-      supabase,
-      "trips",
-      (qb) => qb.eq("id", parsedTripId).eq("user_id", userId),
-      { select: "id, user_id", validate: false }
-    );
+    const trip = await this.deps.getTripOwnership(parsedTripId, userId);
 
-    if (tripError || !trip) {
+    if (!trip) {
       throw new ProviderError("not_found", "trip_not_found_or_not_owned");
     }
   }
@@ -567,7 +558,7 @@ export class AccommodationsService {
       stripePaymentIntentId?: string | null;
     },
     userId: string
-  ): Record<string, unknown> {
+  ): AccommodationBookingInsert {
     if (!params.bookingToken) {
       throw new Error("bookingToken is required for booking persistence");
     }
@@ -588,7 +579,7 @@ export class AccommodationsService {
       // biome-ignore lint/style/useNamingConvention: database columns use snake_case
       property_id: params.listingId,
       // biome-ignore lint/style/useNamingConvention: database columns use snake_case
-      provider_booking_id: payload.providerBookingId ?? null,
+      provider_booking_id: payload.providerBookingId ?? payload.bookingId,
       // biome-ignore lint/style/useNamingConvention: database columns use snake_case
       special_requests: params.specialRequests ?? null,
       status: "CONFIRMED",

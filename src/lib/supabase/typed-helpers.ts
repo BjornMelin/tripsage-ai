@@ -149,18 +149,15 @@ export function insertSingle<
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
-      if (!anyClient || typeof anyClient.from !== "function") {
-        return { data: null, error: new Error("from_unavailable") };
+      const base = schemaClient.from(table as string);
+      if (typeof base.insert !== "function") {
+        return { data: null, error: new Error("insert_unavailable") };
       }
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const insertQb = (anyClient as any)
-        .from(table as string)
-        .insert(values as unknown);
+      const insertQb = base.insert(values as unknown);
       // Some tests stub a very lightweight query builder without select/single methods.
       // Gracefully handle those by treating the insert as fire-and-forget.
       if (insertQb && typeof insertQb.select === "function") {
@@ -243,16 +240,18 @@ export function updateSingle<
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
       const filtered = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .update(updates as unknown) as TableFilterBuilder
+        (() => {
+          const base = schemaClient.from(table as string);
+          if (typeof base.update !== "function") {
+            return { error: new Error("update_unavailable") } as TableFilterBuilder;
+          }
+          return base.update(updates as unknown);
+        })()
       );
       const resolved = await Promise.resolve(filtered);
       if (resolved && typeof (resolved as { select?: unknown }).select === "function") {
@@ -336,16 +335,18 @@ export function updateMany<
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { count: 0, error: new Error("from_unavailable") };
       }
       const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .update(updates as unknown, { count: "exact" }) as TableFilterBuilder
+        (() => {
+          const base = schemaClient.from(table as string);
+          if (typeof base.update !== "function") {
+            return { error: new Error("update_unavailable") } as TableFilterBuilder;
+          }
+          return base.update(updates as unknown, { count: "exact" });
+        })()
       );
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
@@ -393,17 +394,22 @@ export function getSingle<
       const selectColumns = options?.select ?? "*";
       const shouldValidate = options?.validate ?? selectColumns === "*";
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
       const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .select(selectColumns) as TableFilterBuilder
+        (() => {
+          const base = schemaClient.from(table as string);
+          if (typeof base.select !== "function") {
+            return { error: new Error("select_unavailable") } as TableFilterBuilder;
+          }
+          return base.select(selectColumns);
+        })()
       );
+      if (qb && typeof qb === "object" && "error" in qb) {
+        return { data: null, error: (qb as { error?: unknown }).error ?? null };
+      }
       const limited = typeof qb.limit === "function" ? qb.limit(1) : null;
       const result =
         typeof qb.single === "function"
@@ -467,16 +473,18 @@ export function deleteSingle<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { count: 0, error: new Error("from_unavailable") };
       }
       const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .delete({ count: "exact" }) as TableFilterBuilder
+        (() => {
+          const base = schemaClient.from(table as string);
+          if (typeof base.delete !== "function") {
+            return { error: new Error("delete_unavailable") } as TableFilterBuilder;
+          }
+          return base.delete({ count: "exact" });
+        })()
       );
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
@@ -523,17 +531,22 @@ export function getMaybeSingle<
       const selectColumns = options?.select ?? "*";
       const shouldValidate = options?.validate ?? selectColumns === "*";
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
       const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .select(selectColumns) as TableFilterBuilder
+        (() => {
+          const base = schemaClient.from(table as string);
+          if (typeof base.select !== "function") {
+            return { error: new Error("select_unavailable") } as TableFilterBuilder;
+          }
+          return base.select(selectColumns);
+        })()
       );
+      if (qb && typeof qb === "object" && "error" in qb) {
+        return { data: null, error: (qb as { error?: unknown }).error ?? null };
+      }
       const limited = typeof qb.limit === "function" ? qb.limit(1) : null;
       const result =
         typeof qb.maybeSingle === "function"
@@ -613,18 +626,18 @@ export function upsertSingle<
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const upsertQb = (anyClient as any)
-        .from(table as string)
-        .upsert(values as unknown, {
-          ignoreDuplicates: false,
-          onConflict,
-        });
+      const base = schemaClient.from(table as string);
+      if (typeof base.upsert !== "function") {
+        return { data: null, error: new Error("upsert_unavailable") };
+      }
+      const upsertQb = base.upsert(values as unknown, {
+        ignoreDuplicates: false,
+        onConflict,
+      });
 
       // Chain select/single to return the upserted row
       if (upsertQb && typeof upsertQb.select === "function") {
@@ -704,18 +717,18 @@ export function upsertMany<
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: [], error: new Error("from_unavailable") };
       }
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const upsertQb = (anyClient as any)
-        .from(table as string)
-        .upsert(values as unknown, {
-          ignoreDuplicates: false,
-          onConflict,
-        });
+      const base = schemaClient.from(table as string);
+      if (typeof base.upsert !== "function") {
+        return { data: [], error: new Error("upsert_unavailable") };
+      }
+      const upsertQb = base.upsert(values as unknown, {
+        ignoreDuplicates: false,
+        onConflict,
+      });
 
       if (upsertQb && typeof upsertQb.select === "function") {
         const { data, error } = await upsertQb.select();
@@ -806,18 +819,18 @@ export function getMany<
       const selectColumns = options?.select ?? "*";
       const shouldValidate = options?.validate ?? selectColumns === "*";
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { count: null, data: [], error: new Error("from_unavailable") };
       }
 
       // Build the initial query with optional count
       const selectOptions = options?.count ? { count: options.count } : undefined;
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      let qb = (anyClient as any)
-        .from(table as string)
-        .select(selectColumns, selectOptions);
+      const base = schemaClient.from(table as string);
+      if (typeof base.select !== "function") {
+        return { count: null, data: [], error: new Error("select_unavailable") };
+      }
+      let qb = base.select(selectColumns, selectOptions);
 
       // Apply where clause
       qb = where(qb);
@@ -925,15 +938,15 @@ export function insertMany<
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = getFromClient(client, schemaName) as any;
-      if (!anyClient) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
         return { data: [], error: new Error("from_unavailable") };
       }
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const insertQb = (anyClient as any)
-        .from(table as string)
-        .insert(values as unknown);
+      const base = schemaClient.from(table as string);
+      if (typeof base.insert !== "function") {
+        return { data: [], error: new Error("insert_unavailable") };
+      }
+      const insertQb = base.insert(values as unknown);
 
       // Chain select to return the inserted rows
       if (insertQb && typeof insertQb.select === "function") {

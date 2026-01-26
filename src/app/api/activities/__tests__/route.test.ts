@@ -1,6 +1,4 @@
 /** @vitest-environment node */
-
-import type { NextRequest } from "next/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
@@ -70,7 +68,7 @@ vi.mock("@/lib/api/route-helpers", async () => {
   );
   return {
     ...actual,
-    getTrustedRateLimitIdentifier: vi.fn((_req: NextRequest) => `user:${TEST_USER_ID}`),
+    getTrustedRateLimitIdentifier: vi.fn(() => `user:${TEST_USER_ID}`),
     withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
   };
 });

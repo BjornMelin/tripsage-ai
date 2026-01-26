@@ -8,6 +8,7 @@ import { ACCOM_SEARCH_CACHE_TTL_SECONDS } from "@domain/accommodations/constants
 import { AmadeusProviderAdapter } from "@domain/accommodations/providers/amadeus-adapter";
 import { AccommodationsService } from "@domain/accommodations/service";
 import { accommodationSearchInputSchema } from "@schemas/accommodations";
+import { createAccommodationPersistence } from "@/lib/accommodations/persistence";
 import { withApiGuards } from "@/lib/api/factory";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag, versionedKey } from "@/lib/cache/tags";
@@ -26,6 +27,9 @@ export const POST = withApiGuards({
   telemetry: "accommodations.search",
 })(async (_req, { supabase }, body) => {
   const userResult = await getCurrentUser(supabase);
+  const { getTripOwnership, persistBooking } = createAccommodationPersistence({
+    supabase: async () => supabase,
+  });
 
   const service = new AccommodationsService({
     bumpTag,
@@ -33,11 +37,12 @@ export const POST = withApiGuards({
     canonicalizeParamsForCache,
     enrichHotelListingWithPlaces,
     getCachedJson,
+    getTripOwnership,
+    persistBooking,
     provider: new AmadeusProviderAdapter(),
     resolveLocationToLatLng,
     retryWithBackoff,
     setCachedJson,
-    supabase: async () => supabase,
     versionedKey,
     withTelemetrySpan,
   });

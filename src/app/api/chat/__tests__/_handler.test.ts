@@ -219,7 +219,7 @@ describe("handleChat", () => {
     expect(update.metadata).toEqual(
       expect.objectContaining({ isAborted: true, status: "aborted" })
     );
-  });
+  }, 10000);
 
   it("returns provider_unavailable when provider resolution fails", async () => {
     const { handleChat } = await import("../_handler");

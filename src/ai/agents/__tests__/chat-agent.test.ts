@@ -59,9 +59,14 @@ vi.mock("@/app/api/_helpers/attachments", () => ({
 }));
 
 // Mock tokens
+type CountTokens = (texts: string[], modelId?: string) => number;
+
 const tokenMocks = vi.hoisted(() => ({
   clampMaxTokens: vi.fn(() => ({ maxOutputTokens: 1024, reasons: [] })),
-  countTokens: vi.fn((_texts: string[], _modelId?: string) => 100),
+  countTokens: vi.fn<CountTokens>((texts, modelId) => {
+    if (texts.length > 0 && modelId) return 100;
+    return 100;
+  }),
 }));
 vi.mock("@/lib/tokens/budget", () => ({
   clampMaxTokens: tokenMocks.clampMaxTokens,

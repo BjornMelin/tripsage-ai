@@ -6,7 +6,6 @@ import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 type AccommodationsServiceDeps =
   import("@domain/accommodations/service").AccommodationsServiceDeps;
-type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
 
 vi.mock("@/lib/telemetry/alerts", () => ({
   emitOperationalAlert: vi.fn(),
@@ -61,30 +60,11 @@ describe("AccommodationsService booking payments", () => {
       search: vi.fn(),
     };
 
-    const supabase = unsafeCast<TypedServerSupabase>({
-      from: (table: string) => {
-        if (table === "trips") {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  single: async () => ({
-                    data: { id: 1, user_id: "user-1" },
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          };
-        }
-        if (table === "bookings") {
-          return {
-            insert: async () => ({ error: null }),
-          };
-        }
-        return unsafeCast<Record<string, unknown>>({});
-      },
-    });
+    const getTripOwnership = vi.fn(async (tripId: number, userId: string) => ({
+      id: tripId,
+      userId,
+    }));
+    const persistBooking = vi.fn(async () => ({ error: null }));
 
     let getKey: string | undefined;
     const getCachedJson: AccommodationsServiceDeps["getCachedJson"] = <T>(
@@ -103,11 +83,12 @@ describe("AccommodationsService booking payments", () => {
         `${prefix}:${JSON.stringify(params)}`,
       enrichHotelListingWithPlaces: async (listing) => listing,
       getCachedJson,
+      getTripOwnership,
+      persistBooking,
       provider,
       resolveLocationToLatLng: () => Promise.resolve({ lat: 1, lon: 1 }),
       retryWithBackoff: (fn) => fn(0),
       setCachedJson: async () => undefined,
-      supabase: async () => supabase,
       versionedKey: async (_tag: string, key: string) => `tag:v1:${key}`,
       withTelemetrySpan,
     });
@@ -158,5 +139,7 @@ describe("AccommodationsService booking payments", () => {
       sessionId: "session",
       userId: "user-1",
     });
+    expect(getTripOwnership).toHaveBeenCalledWith(1, "user-1");
+    expect(persistBooking).toHaveBeenCalledTimes(1);
   });
 });

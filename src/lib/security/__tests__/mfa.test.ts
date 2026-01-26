@@ -53,8 +53,11 @@ const createUpdateManyChain = <Row extends Record<string, unknown>>(
     // biome-ignore lint/suspicious/noThenProperty: mimic Promise-like query builder in tests
     then(
       resolve: (value: { count: number; error: null }) => void,
-      _reject?: (reason?: unknown) => void
+      reject?: (reason?: unknown) => void
     ) {
+      if (reject) {
+        // Intentionally ignored to mimic a resolved-only query builder.
+      }
       const matching = rows.filter((row) => filters.every((f) => f(row)));
       matching.forEach((row) => {
         applyUpdate(row);
