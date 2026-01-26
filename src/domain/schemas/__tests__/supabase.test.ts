@@ -5,6 +5,8 @@ import {
   apiMetricsRowSchema,
   apiMetricsUpdateSchema,
   httpMethodSchema,
+  mfaBackupCodeAuditInsertSchema,
+  mfaBackupCodeAuditRowSchema,
   supabaseSchemas,
 } from "@schemas/supabase";
 import { describe, expect, it } from "vitest";
@@ -136,6 +138,42 @@ describe("apiMetricsRowSchema", () => {
       endpoint: "",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("mfaBackupCodeAuditRowSchema", () => {
+  const validRow = {
+    count: 2,
+    created_at: "2024-01-15T10:30:00.000Z",
+    event: "regenerated",
+    id: "123e4567-e89b-12d3-a456-426614174000",
+    ip: "203.0.113.5",
+    user_agent: "Mozilla/5.0",
+    user_id: "123e4567-e89b-12d3-a456-426614174001",
+  };
+
+  it.concurrent("should validate a complete row", () => {
+    const result = mfaBackupCodeAuditRowSchema.safeParse(validRow);
+    expect(result.success).toBe(true);
+  });
+
+  it.concurrent("should accept nullable optional fields", () => {
+    const result = mfaBackupCodeAuditRowSchema.safeParse({
+      ...validRow,
+      ip: null,
+      user_agent: null,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("mfaBackupCodeAuditInsertSchema", () => {
+  it.concurrent("should validate a minimal insert", () => {
+    const result = mfaBackupCodeAuditInsertSchema.safeParse({
+      event: "consumed",
+      user_id: "123e4567-e89b-12d3-a456-426614174001",
+    });
+    expect(result.success).toBe(true);
   });
 });
 

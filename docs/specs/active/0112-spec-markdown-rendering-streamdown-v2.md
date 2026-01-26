@@ -67,6 +67,8 @@ Defaults:
 - Optional prefix allowlists can be extended via:
   - `NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES`
   - `NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES`
+- Link and image allowlists are only applied when explicit prefixes are provided; otherwise
+  defaults remain unrestricted beyond protocol hardening.
 
 ## Testing requirements
 

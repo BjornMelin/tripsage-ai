@@ -54,6 +54,8 @@ CREATE INDEX IF NOT EXISTS trips_user_status_created_idx
   ON public.trips (user_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS chat_sessions_user_updated_idx
   ON public.chat_sessions (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS chat_sessions_trip_id_idx
+  ON public.chat_sessions (trip_id);
 CREATE INDEX IF NOT EXISTS trip_collaborators_user_trip_idx
   ON public.trip_collaborators (user_id, trip_id);
 CREATE INDEX IF NOT EXISTS mfa_enrollments_challenge_factor_issued_idx
@@ -63,5 +65,7 @@ CREATE INDEX IF NOT EXISTS auth_backup_codes_active_lookup_idx
   WHERE consumed_at IS NULL;
 CREATE INDEX IF NOT EXISTS chat_messages_session_user_id_idx
   ON public.chat_messages (session_id, user_id, id);
+CREATE INDEX IF NOT EXISTS chat_messages_user_id_idx
+  ON public.chat_messages (user_id, id);
 CREATE INDEX IF NOT EXISTS chat_tool_calls_message_id_idx
   ON public.chat_tool_calls (message_id);

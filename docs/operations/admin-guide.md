@@ -77,7 +77,7 @@ GET /api/dashboard?window=24h|7d|30d|all
 
 ## Data migrations
 
-### Agent config normalization (maxTokens/maxSteps → maxOutputTokens/stepLimit, id format)
+### Agent config normalization (id format)
 
 Handled automatically by the base schema migration as of 2026-01-24. If your
 environment applied the base schema before that date or you manage migrations
@@ -85,44 +85,6 @@ manually, run once to normalize stored configs.
 
 ```sql
 BEGIN;
-
-UPDATE agent_config
-SET config = jsonb_set(
-  config,
-  '{parameters}',
-  jsonb_strip_nulls(
-    (
-      COALESCE(config->'parameters', '{}'::jsonb) ||
-      jsonb_build_object(
-        'maxOutputTokens',
-        COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
-        'stepLimit',
-        COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps')
-      )
-    ) - 'maxTokens' - 'maxSteps'
-  ),
-  true
-)
-WHERE (config->'parameters' ? 'maxTokens') OR (config->'parameters' ? 'maxSteps');
-
-UPDATE agent_config_versions
-SET config = jsonb_set(
-  config,
-  '{parameters}',
-  jsonb_strip_nulls(
-    (
-      COALESCE(config->'parameters', '{}'::jsonb) ||
-      jsonb_build_object(
-        'maxOutputTokens',
-        COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
-        'stepLimit',
-        COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps')
-      )
-    ) - 'maxTokens' - 'maxSteps'
-  ),
-  true
-)
-WHERE (config->'parameters' ? 'maxTokens') OR (config->'parameters' ? 'maxSteps');
 
 UPDATE agent_config
 SET config = jsonb_set(
