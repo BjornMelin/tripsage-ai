@@ -332,6 +332,7 @@ async function ensureStorageBuckets(): Promise<void> {
         throw new Error(`getBucket failed (${bucket.name}): ${message}`);
       }
     }
+    throw new Error(`getBucket failed (${bucket.name}): missing data and error`);
   }
 }
 

@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { messageRoleSchema } from "./chat";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for token management
@@ -11,7 +12,7 @@ import { z } from "zod";
  * Zod schema for chat message roles.
  * Defines available roles for chat messages in token counting.
  */
-export const chatMessageRoleSchema = z.enum(["system", "user", "assistant"]);
+export const chatMessageRoleSchema = messageRoleSchema;
 
 /** TypeScript type for chat message roles. */
 export type ChatMessageRole = z.infer<typeof chatMessageRoleSchema>;

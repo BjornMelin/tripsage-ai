@@ -10,7 +10,7 @@ import { ATTACHMENT_SCHEMA } from "./shared/media";
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for chat functionality
 
-/** Zod schema for message roles in chat conversations (system, user, assistant, tool). */
+/** Zod schema for message roles in chat conversations (system, user, assistant). */
 export const messageRoleSchema = z.enum(["user", "assistant", "system"]);
 
 /** TypeScript type for message roles. */

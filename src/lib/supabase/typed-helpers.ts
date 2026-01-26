@@ -4,6 +4,7 @@
 
 import { getSupabaseSchema, type SupabaseSchemaName } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 import type { Database } from "./database.types";
 
@@ -62,9 +63,9 @@ type TableQueryBuilder = {
 };
 
 type SupabaseTableSchema = {
-  insert?: { parse: (value: unknown) => unknown };
-  row?: { parse: (value: unknown) => unknown };
-  update?: { parse: (value: unknown) => unknown };
+  insert?: z.ZodTypeAny;
+  row?: z.ZodTypeAny;
+  update?: z.ZodTypeAny;
 };
 
 type CountPreference = "exact" | "planned" | "estimated";
@@ -91,6 +92,7 @@ const SUPPORTED_TABLES = {
     "file_attachments",
     "flights",
     "itinerary_items",
+    "mfa_backup_code_audit",
     "mfa_enrollments",
     "rag_documents",
     "saved_places",
@@ -823,9 +825,7 @@ export function upsertMany<
       const schema = getValidationSchema(schemaName, table as string);
       if (schema?.insert && shouldValidate) {
         try {
-          for (const value of values) {
-            schema.insert.parse(value);
-          }
+          z.array(schema.insert).parse(values);
         } catch (validationError) {
           if (validationError instanceof Error) {
             recordErrorOnSpan(span, validationError);
@@ -904,12 +904,13 @@ export interface GetManyOptions {
  * (`eq`, `in`, etc.) prior to selecting rows.
  * Validates output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @param options Optional pagination, ordering, and count settings
- * @returns Array of rows (validated), count if requested, and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional pagination, ordering, and count settings.
+ * @returns Array of rows (validated), count if requested, and error (if any).
  */
 export function getMany<
   S extends SchemaName = "public",

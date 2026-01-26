@@ -560,16 +560,17 @@ export const chatSessionsUpdateSchema = z.object({
 export type ChatSessionsUpdate = z.infer<typeof chatSessionsUpdateSchema>;
 
 /**
- * Zod schema for chat_messages table Row.
+ * Zod schema for chat_messages roles stored in the database.
+ * Includes "tool" entries which are persisted but excluded from token-counting schemas.
  */
-const chatMessageRoleSchema = z.enum(["user", "assistant", "system", "tool"]);
+const dbChatMessageRoleSchema = z.enum(["user", "assistant", "system", "tool"]);
 
 export const chatMessagesRowSchema = z.object({
   content: z.string(),
   created_at: primitiveSchemas.isoDateTime.nullable(),
   id: z.number().int(),
   metadata: jsonSchema.nullable(),
-  role: chatMessageRoleSchema,
+  role: dbChatMessageRoleSchema,
   session_id: primitiveSchemas.uuid,
   user_id: primitiveSchemas.uuid,
 });
@@ -585,7 +586,7 @@ export const chatMessagesInsertSchema = z.object({
   created_at: primitiveSchemas.isoDateTime.nullable().optional(),
   id: z.never().optional(),
   metadata: jsonSchema.nullable().optional(),
-  role: chatMessageRoleSchema,
+  role: dbChatMessageRoleSchema,
   session_id: primitiveSchemas.uuid,
   user_id: primitiveSchemas.uuid,
 });
@@ -601,7 +602,7 @@ export const chatMessagesUpdateSchema = z.object({
   created_at: primitiveSchemas.isoDateTime.nullable().optional(),
   id: z.never().optional(),
   metadata: jsonSchema.nullable().optional(),
-  role: chatMessageRoleSchema.optional(),
+  role: dbChatMessageRoleSchema.optional(),
   session_id: primitiveSchemas.uuid.optional(),
   user_id: primitiveSchemas.uuid.optional(),
 });
@@ -980,6 +981,54 @@ export const tripCollaboratorsUpdateSchema = z.object({
 export type TripCollaboratorsUpdate = z.infer<typeof tripCollaboratorsUpdateSchema>;
 
 /**
+ * Zod schema for mfa_backup_code_audit table Row.
+ */
+export const mfaBackupCodeAuditRowSchema = z.object({
+  count: z.number().int(),
+  created_at: primitiveSchemas.isoDateTime,
+  event: z.enum(["regenerated", "consumed"]),
+  id: primitiveSchemas.uuid,
+  ip: z.string().nullable(),
+  user_agent: z.string().nullable(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for mfa_backup_code_audit Row. */
+export type MfaBackupCodeAuditRow = z.infer<typeof mfaBackupCodeAuditRowSchema>;
+
+/**
+ * Zod schema for mfa_backup_code_audit table Insert.
+ */
+export const mfaBackupCodeAuditInsertSchema = z.object({
+  count: z.number().int().optional(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  event: z.enum(["regenerated", "consumed"]),
+  id: primitiveSchemas.uuid.optional(),
+  ip: z.string().nullable().optional(),
+  user_agent: z.string().nullable().optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for mfa_backup_code_audit Insert. */
+export type MfaBackupCodeAuditInsert = z.infer<typeof mfaBackupCodeAuditInsertSchema>;
+
+/**
+ * Zod schema for mfa_backup_code_audit table Update.
+ */
+export const mfaBackupCodeAuditUpdateSchema = z.object({
+  count: z.number().int().optional(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  event: z.enum(["regenerated", "consumed"]).optional(),
+  id: primitiveSchemas.uuid.optional(),
+  ip: z.string().nullable().optional(),
+  user_agent: z.string().nullable().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for mfa_backup_code_audit Update. */
+export type MfaBackupCodeAuditUpdate = z.infer<typeof mfaBackupCodeAuditUpdateSchema>;
+
+/**
  * Zod schema for mfa_enrollments table Row.
  */
 export const mfaEnrollmentsRowSchema = z.object({
@@ -1310,6 +1359,11 @@ export const supabaseSchemas = {
     row: itineraryItemsRowSchema,
     update: itineraryItemsUpdateSchema,
   },
+  mfa_backup_code_audit: {
+    insert: mfaBackupCodeAuditInsertSchema,
+    row: mfaBackupCodeAuditRowSchema,
+    update: mfaBackupCodeAuditUpdateSchema,
+  },
   mfa_enrollments: {
     insert: mfaEnrollmentsInsertSchema,
     row: mfaEnrollmentsRowSchema,
@@ -1377,6 +1431,8 @@ export type SupabaseSchemaName = keyof SupabaseSchemaRegistry;
  * Helper to get schema for a table name.
  * Retrieves table schemas from the registry for validation operations.
  *
+ * @typeParam S - Supabase schema name to resolve (defaults to "public").
+ * @typeParam T - Table name within the selected schema.
  * @param table - Table name to get schemas for
  * @param options - Optional schema selection (defaults to public)
  * @returns Table schemas (row, insert, update) or undefined if not found

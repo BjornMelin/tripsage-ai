@@ -177,7 +177,8 @@ function generateBackupCodes(count: number): string[] {
  * Starts a TOTP enrollment.
  *
  * @param supabase - The Supabase client.
- * @param deps - Optional dependencies for testability.
+ * @param deps - Optional dependencies for testability (deps.adminSupabase overrides the
+ * default admin client used to expire and insert enrollment rows).
  * @returns The enrollment result.
  * @throws {Error} When enrollment expiration or storage fails.
  */
@@ -594,7 +595,7 @@ export async function verifyBackupCode(
         "auth_backup_codes",
         (qb) =>
           qb.eq("user_id", userId).eq("code_hash", hashedInput).is("consumed_at", null),
-        { select: "id", validate: false }
+        { validate: false }
       );
 
       if (error) {
