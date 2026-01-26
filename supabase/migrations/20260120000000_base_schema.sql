@@ -1185,11 +1185,11 @@ BEGIN
       'agentType', agent,
       'createdAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
       'updatedAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-      'id', concat('v', extract(epoch from now())::bigint, '_seed_', agent),
+      'id', concat('v', extract(epoch from now())::bigint, '_', substr(md5(agent), 1, 8)),
       'model', 'gpt-4o',
       'parameters', jsonb_build_object(
         'temperature', 0.3,
-        'maxTokens', 4096,
+        'maxOutputTokens', 4096,
         'topP', 0.9
       ),
       'scope', 'global'
@@ -1214,6 +1214,84 @@ BEGIN
       updated_at = now();
   END LOOP;
 END$$;
+
+-- Normalize legacy agent config parameter keys (maxTokens/maxSteps -> maxOutputTokens/stepLimit)
+UPDATE public.agent_config
+SET config = jsonb_set(
+  config,
+  '{parameters}',
+  jsonb_strip_nulls(
+    jsonb_build_object(
+      'description', config->'parameters'->'description',
+      'maxOutputTokens',
+      COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
+      'model', config->'parameters'->'model',
+      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
+      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
+      'temperature', config->'parameters'->'temperature',
+      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
+      'topKTools', config->'parameters'->'topKTools',
+      'topP', config->'parameters'->'topP'
+    )
+  ),
+  true
+)
+WHERE (config->'parameters' ? 'maxTokens') OR (config->'parameters' ? 'maxSteps');
+
+UPDATE public.agent_config_versions
+SET config = jsonb_set(
+  config,
+  '{parameters}',
+  jsonb_strip_nulls(
+    jsonb_build_object(
+      'description', config->'parameters'->'description',
+      'maxOutputTokens',
+      COALESCE(config->'parameters'->'maxOutputTokens', config->'parameters'->'maxTokens'),
+      'model', config->'parameters'->'model',
+      'stepLimit', COALESCE(config->'parameters'->'stepLimit', config->'parameters'->'maxSteps'),
+      'stepTimeoutSeconds', config->'parameters'->'stepTimeoutSeconds',
+      'temperature', config->'parameters'->'temperature',
+      'timeoutSeconds', config->'parameters'->'timeoutSeconds',
+      'topKTools', config->'parameters'->'topKTools',
+      'topP', config->'parameters'->'topP'
+    )
+  ),
+  true
+)
+WHERE (config->'parameters' ? 'maxTokens') OR (config->'parameters' ? 'maxSteps');
+
+-- Normalize legacy agent config IDs to match versionId schema (v{epoch}_{hash})
+UPDATE public.agent_config
+SET config = jsonb_set(
+  config,
+  '{id}',
+  to_jsonb(
+    concat(
+      'v',
+      extract(epoch from created_at)::bigint,
+      '_',
+      substr(md5(version_id::text), 1, 8)
+    )
+  ),
+  true
+)
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+UPDATE public.agent_config_versions
+SET config = jsonb_set(
+  config,
+  '{id}',
+  to_jsonb(
+    concat(
+      'v',
+      extract(epoch from created_at)::bigint,
+      '_',
+      substr(md5(id::text), 1, 8)
+    )
+  ),
+  true
+)
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
 
 -- atomic upsert + version insertion
 CREATE OR REPLACE FUNCTION public.agent_config_upsert(
