@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.3.12/schema.json",
 
   "assist": {
     "actions": {
@@ -23,16 +23,6 @@
   },
 
   "files": {
-    "experimentalScannerIgnores": [
-      "**/node_modules/**",
-      "**/.next/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/coverage/**",
-      "**/.turbo/**",
-      "**/.vercel/**",
-      "**/storybook-static/**"
-    ],
     "ignoreUnknown": false,
     "includes": [
       "**/*.ts",
@@ -45,7 +35,15 @@
       "**/*.cts",
       "**/*.json",
       "**/*.css",
-      "!**/out"
+      "!**/out",
+      "!**/node_modules/**",
+      "!**/.next/**",
+      "!**/dist/**",
+      "!**/build/**",
+      "!**/coverage/**",
+      "!**/.turbo/**",
+      "!**/.vercel/**",
+      "!**/storybook-static/**"
     ],
     "maxSize": 1048576
   },
