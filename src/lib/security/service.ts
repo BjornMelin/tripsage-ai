@@ -10,6 +10,7 @@ import {
   securityEventSchema,
   securityMetricsSchema,
 } from "@schemas/security";
+import { extractErrorMessage } from "@/lib/errors/error-message";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import { getMany } from "@/lib/supabase/typed-helpers";
 
@@ -209,8 +210,7 @@ export async function getUserSecurityMetrics(
 
   if (errors.length > 0) {
     const details = errors.map(
-      ({ label, error }) =>
-        `${label}:${error instanceof Error ? error.message : String(error)}`
+      ({ label, error }) => `${label}:${extractErrorMessage(error)}`
     );
     throw new Error(`failed_to_fetch_security_metrics:${details.join("|")}`);
   }

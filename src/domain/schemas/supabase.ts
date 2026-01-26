@@ -1385,6 +1385,7 @@ export function getSupabaseSchema<
   const schemaName = options?.schema ?? "public";
   const schemaTables = supabaseSchemaRegistry[schemaName];
   if (!schemaTables) return undefined;
+  if (!Object.hasOwn(schemaTables, table)) return undefined;
   return schemaTables[table as keyof typeof schemaTables] as
     | SupabaseSchemaRegistry[S][T]
     | undefined;

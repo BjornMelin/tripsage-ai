@@ -412,8 +412,8 @@ export function createMockObjectModel<T>(jsonObject: T) {
  * Streams the JSON object incrementally for partial output testing.
  *
  * @typeParam T - The shape of the JSON object streamed by the mock model.
- * @param jsonObject The object to stream as JSON
- * @returns Mock model configured for streaming structured output
+ * @param jsonObject - The object to stream as JSON
+ * @returns - Mock model configured for streaming structured output
  */
 export function createStreamingObjectMockModel<T>(jsonObject: T) {
   const jsonString = JSON.stringify(jsonObject);

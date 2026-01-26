@@ -334,17 +334,24 @@ export async function verifyTotp(
       const adminSupabase = deps?.adminSupabase ?? getAdminSupabase();
 
       // Check for pending enrollment (initial setup flow)
-      const { data: pendingEnrollment, error: enrollmentError } = await getMaybeSingle(
-        supabase,
-        "mfa_enrollments",
-        (qb) =>
-          qb
-            .eq("factor_id", parsed.factorId)
-            .eq("challenge_id", parsed.challengeId)
-            .order("issued_at", { ascending: false })
-            .limit(1),
-        { select: "expires_at,status", validate: false }
-      );
+      const { data: pendingEnrollmentRaw, error: enrollmentError } =
+        await getMaybeSingle(
+          supabase,
+          "mfa_enrollments",
+          (qb) =>
+            qb
+              .eq("factor_id", parsed.factorId)
+              .eq("challenge_id", parsed.challengeId)
+              .order("issued_at", { ascending: false })
+              .limit(1),
+          { select: "expires_at,status", validate: false }
+        );
+      type PendingEnrollment = {
+        // biome-ignore lint/style/useNamingConvention: database column naming
+        expires_at?: string | null;
+        status?: string | null;
+      };
+      const pendingEnrollment = pendingEnrollmentRaw as PendingEnrollment | null;
 
       if (enrollmentError) {
         span.recordException(toException(enrollmentError));
@@ -355,12 +362,15 @@ export async function verifyTotp(
         );
       }
 
-      const isInitialEnrollment =
-        pendingEnrollment !== null && pendingEnrollment.status === "pending";
+      const isInitialEnrollment = pendingEnrollment?.status === "pending";
 
       // If this is initial enrollment, validate expiration
       if (isInitialEnrollment) {
-        if (new Date(pendingEnrollment.expires_at).getTime() < Date.now()) {
+        const expiresAt = pendingEnrollment?.expires_at;
+        if (!expiresAt) {
+          throw new TotpVerificationInternalError("mfa_enrollment_expires_at_missing");
+        }
+        if (new Date(expiresAt).getTime() < Date.now()) {
           const { error: expireError } = await updateMany(
             adminSupabase,
             "mfa_enrollments",
@@ -600,7 +610,7 @@ export async function verifyBackupCode(
             : "backup_code_consume_failed"
         );
       }
-      if (!updatedCount || updatedCount === 0) {
+      if (updatedCount === 0) {
         throw new InvalidBackupCodeError("backup_code_already_consumed");
       }
 

@@ -40,6 +40,10 @@ function trySh(cmd: string, args: string[]): string | null {
   }
 }
 
+function isWsl(): boolean {
+  return Boolean(process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP);
+}
+
 function decodeJwtPayload(token: string): unknown {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
@@ -68,13 +72,13 @@ function unique(items: string[]): string[] {
 }
 
 function getPublishableKey(kongYaml: string): string {
-  const key = kongYaml.match(/\bsb_publishable_[A-Za-z0-9_-]+\b/)?.[0];
+  const key = kongYaml.match(/\bsb_publishable_[A-Za-z0-9._-]+\b/)?.[0];
   if (!key) throw new Error("Could not find sb_publishable_* key in kong.yml");
   return key;
 }
 
 function getSecretKey(kongYaml: string): string {
-  const key = kongYaml.match(/\bsb_secret_[A-Za-z0-9_-]+\b/)?.[0];
+  const key = kongYaml.match(/\bsb_secret_[A-Za-z0-9._-]+\b/)?.[0];
   if (!key) throw new Error("Could not find sb_secret_* key in kong.yml");
   return key;
 }
@@ -139,6 +143,10 @@ function getDbPassword(dbId: string): string {
 function tryStorageReadyHost(apiKey: string): boolean {
   const ready = trySh("curl", [
     "-sSfL",
+    "--connect-timeout",
+    "2",
+    "--max-time",
+    "5",
     "-H",
     `apikey: ${apiKey}`,
     "-H",
@@ -158,6 +166,10 @@ function tryStorageReadyNetwork(apiKey: string, ids: LocalSupabaseIds): boolean 
     ids.networkId,
     "curlimages/curl:8.6.0",
     "-sSfL",
+    "--connect-timeout",
+    "2",
+    "--max-time",
+    "5",
     "-H",
     `apikey: ${apiKey}`,
     "-H",
@@ -284,25 +296,31 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
 
   // WSL/port-proxy fallback: expose an alternate local port for the Kong gateway.
   // This avoids cases where Docker Desktop port forwarding fails for /storage routes.
+  if (!isWsl()) return;
   try {
     sh("docker", ["rm", "-f", ids.kongProxyId]);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes("No such container")) throw error;
   }
-  sh("docker", [
-    "run",
-    "-d",
-    "--name",
-    ids.kongProxyId,
-    "--network",
-    ids.networkId,
-    "-p",
-    "54331:8000",
-    "alpine/socat",
-    "-d",
-    "-d",
-    "TCP-LISTEN:8000,fork,reuseaddr",
-    `TCP:${ids.kongId}:8000`,
-  ]);
+  try {
+    sh("docker", [
+      "run",
+      "-d",
+      "--name",
+      ids.kongProxyId,
+      "--network",
+      ids.networkId,
+      "-p",
+      "54331:8000",
+      "alpine/socat",
+      "-d",
+      "-d",
+      "TCP-LISTEN:8000,fork,reuseaddr",
+      `TCP:${ids.kongId}:8000`,
+    ]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to start kong proxy container: ${message}`);
+  }
 }

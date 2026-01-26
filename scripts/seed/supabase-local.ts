@@ -103,7 +103,8 @@ const localFallback =
     ? {}
     : resolveLocalSupabaseEnvFallback();
 
-const storageUrl = process.env.SUPABASE_STORAGE_URL || undefined;
+const storageUrlRaw = process.env.SUPABASE_STORAGE_URL?.trim();
+const storageUrl = storageUrlRaw?.replace(/\/storage\/v1\/?$/, "") || undefined;
 
 const env = envSchema.parse({
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? localFallback.serviceRoleKey,
@@ -117,16 +118,16 @@ const supabase = createClient<Database>(env.supabaseUrl, env.serviceRoleKey, {
     persistSession: false,
   },
 });
-const storageClient = createClient<Database>(
-  env.storageUrl ?? env.supabaseUrl,
-  env.serviceRoleKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+const storageBaseUrl = (env.storageUrl ?? env.supabaseUrl).replace(
+  /\/storage\/v1\/?$/,
+  ""
 );
+const storageClient = createClient<Database>(storageBaseUrl, env.serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
 const SEED_PASSWORD = "dev-password-change-me";
 const SEED_FIXTURES_DIR = "scripts/seed/fixtures";
@@ -331,17 +332,24 @@ async function ensureStorageBuckets(): Promise<void> {
 async function waitForPostgrestReady(): Promise<void> {
   const maxAttempts = 12;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const res = await fetch(`${env.supabaseUrl}/rest/v1/`, {
-      headers: {
-        Authorization: `Bearer ${env.serviceRoleKey}`,
-        apikey: env.serviceRoleKey,
-      },
-      method: "GET",
-    });
-    if (res.ok) return;
+    let failureDetail: string | null = null;
+    try {
+      const res = await fetch(`${env.supabaseUrl}/rest/v1/`, {
+        headers: {
+          Authorization: `Bearer ${env.serviceRoleKey}`,
+          apikey: env.serviceRoleKey,
+        },
+        method: "GET",
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) return;
+      failureDetail = `${res.status} ${res.statusText}`.trim();
+    } catch (error) {
+      failureDetail = error instanceof Error ? error.message : String(error);
+    }
     if (attempt === maxAttempts) {
       throw new Error(
-        `Supabase REST health failed (${res.status} ${res.statusText}). Is PostgREST ready?`
+        `Supabase REST health failed (${failureDetail ?? "unknown"}). Is PostgREST ready?`
       );
     }
     await new Promise((resolve) => setTimeout(resolve, 500));

@@ -88,11 +88,11 @@ export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>>
     });
   }
 
-  const { data, error } = await getMany(supabase, "trips", (qb) =>
-    qb
-      .eq("user_id", user.id)
-      .in("status", ["planning", "active"])
-      .order("created_at", { ascending: false })
+  const { data, error } = await getMany(
+    supabase,
+    "trips",
+    (qb) => qb.eq("user_id", user.id).in("status", ["planning", "active"]),
+    { ascending: false, orderBy: "created_at" }
   );
 
   if (error) {

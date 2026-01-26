@@ -6,6 +6,7 @@ import { safeValidateUIMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { isChatEphemeralEnabled } from "@/lib/chat/ephemeral";
+import { extractErrorMessage } from "@/lib/errors/error-message";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import {
@@ -58,7 +59,7 @@ export async function createSession(
   if (error) {
     if (allowEphemeral) {
       deps.logger.warn("chat:session_create_skipped", {
-        error: error instanceof Error ? error.message : String(error),
+        error: extractErrorMessage(error),
         userId: deps.userId,
       });
       return NextResponse.json({ id }, { status: 201 });
@@ -94,7 +95,7 @@ export async function listSessions(deps: SessionsDeps): Promise<Response> {
   if (error) {
     if (allowEphemeral) {
       deps.logger.warn("chat:sessions_list_skipped", {
-        error: error instanceof Error ? error.message : String(error),
+        error: extractErrorMessage(error),
         userId: deps.userId,
       });
       return NextResponse.json([], { status: 200 });
@@ -140,11 +141,11 @@ export async function getSession(deps: SessionsDeps, id: string): Promise<Respon
  * @returns Response with no content on success.
  */
 export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { error } = await deleteSingle(
+  const { count, error } = await deleteSingle(
     deps.supabase,
     "chat_sessions",
     (qb) => qb.eq("id", id).eq("user_id", deps.userId),
-    { count: null }
+    { count: "exact", returning: "representation", select: "id" }
   );
   if (error)
     return errorResponse({
@@ -152,6 +153,7 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
       reason: "Failed to delete session",
       status: 500,
     });
+  if (count === 0) return notFoundResponse("Session");
   return new Response(null, { status: 204 });
 }
 

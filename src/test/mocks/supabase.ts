@@ -404,7 +404,8 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
           state.insertByTable.set(resource, remaining);
         }
 
-        if (prefer.includes("return=representation")) {
+        const wantsRepresentation = prefer.includes("return=representation");
+        if (wantsRepresentation) {
           const contentRange = makeContentRange(matchedRows.length, matchedRows);
           return jsonResponse(matchedRows, {
             headers: {

@@ -328,7 +328,7 @@ export function updateSingle<
             return { data: null, error: validationError };
           }
         }
-        return { data: (data ?? null) as TableRow<S, T> | null, error: null };
+        return { data: data as TableRow<S, T>, error: null };
       }
       if (filtered && typeof filtered === "object" && "error" in filtered) {
         return {
@@ -398,7 +398,7 @@ export function updateMany<
       }
       const base = schemaClient.from(table as string);
       if (typeof base.update !== "function") {
-        throw new Error("update_unavailable");
+        return { count: 0, error: new Error("update_unavailable") };
       }
       const countPreference = options?.count;
       const updateBuilder =
@@ -501,6 +501,8 @@ export function getSingle<
  * supplied filter.
  * Use `options.count` to request a PostgREST count preference; set to `null`
  * to skip counting entirely.
+ * Use `options.returning: "representation"` (with `options.select`) to request
+ * deleted rows when the caller needs return data or reliable count headers.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
  * @param client Typed supabase client
@@ -515,7 +517,12 @@ export function deleteSingle<
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: { schema?: S; count?: CountPreference | null }
+  options?: {
+    schema?: S;
+    count?: CountPreference | null;
+    returning?: "representation";
+    select?: string;
+  }
 ): Promise<{ count: number; error: unknown | null }> {
   return withTelemetrySpan(
     "supabase.delete",
@@ -541,7 +548,19 @@ export function deleteSingle<
           : countPreference === null
             ? base.delete()
             : base.delete({ count: countPreference ?? "exact" });
-      const qb = where(deleteBuilder);
+      const selectColumns = options?.select ?? "*";
+      const returningBuilder =
+        options?.returning === "representation" &&
+        deleteBuilder &&
+        typeof deleteBuilder.select === "function"
+          ? deleteBuilder.select(selectColumns)
+          : deleteBuilder;
+      const qb =
+        returningBuilder &&
+        typeof returningBuilder === "object" &&
+        "error" in returningBuilder
+          ? returningBuilder
+          : where(returningBuilder);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };
@@ -617,15 +636,11 @@ export function getMaybeSingle<
       if (!schemaClient) {
         return { data: null, error: new Error("from_unavailable") };
       }
-      const qb = where(
-        (() => {
-          const base = schemaClient.from(table as string);
-          if (typeof base.select !== "function") {
-            return { error: new Error("select_unavailable") } as TableFilterBuilder;
-          }
-          return base.select(selectColumns);
-        })()
-      );
+      const base = schemaClient.from(table as string);
+      if (typeof base.select !== "function") {
+        return { data: null, error: new Error("select_unavailable") };
+      }
+      const qb = where(base.select(selectColumns));
       if (qb && typeof qb === "object" && "error" in qb) {
         return { data: null, error: (qb as { error?: unknown }).error ?? null };
       }

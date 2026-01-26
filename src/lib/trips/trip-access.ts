@@ -5,15 +5,12 @@ import {
   forbiddenResponse,
   notFoundResponse,
 } from "@/lib/api/route-helpers";
+import { extractErrorMessage } from "@/lib/errors/error-message";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("trip-access");
-
-function extractErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Validate that a user has owner or collaborator access to a trip.
