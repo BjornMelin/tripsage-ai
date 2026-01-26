@@ -19,7 +19,6 @@ import {
   getMany,
   getMaybeSingle,
   insertSingle,
-  updateMany,
   updateSingle,
 } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -316,7 +315,7 @@ async function handleOnTurnCommitted(
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
       { last_synced_at: new Date().toISOString() },
       (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
-      { schema: "memories" }
+      { schema: "memories", select: "id", validate: false }
     );
     if (syncError) {
       return {
@@ -340,13 +339,13 @@ async function handleSyncSession(
 ): Promise<MemoryAdapterExecutionResult> {
   try {
     // Update session last_synced_at
-    const { error } = await updateMany(
+    const { error } = await updateSingle(
       supabase,
       "sessions",
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
       { last_synced_at: new Date().toISOString() },
       (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
-      { schema: "memories" }
+      { schema: "memories", select: "id", validate: false }
     );
 
     if (error) {

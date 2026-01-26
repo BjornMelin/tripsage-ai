@@ -162,6 +162,23 @@ describe("typed-helpers", () => {
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
     });
+
+    it("returns error when validation is requested with a partial select", async () => {
+      const { client, chain } = makeClientWithChain();
+      const result = await updateSingle(
+        client,
+        "trips",
+        { name: "Updated" },
+        (qb) => qb,
+        {
+          select: "id",
+          validate: true,
+        }
+      );
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
+      expect(chain.update).not.toHaveBeenCalled();
+    });
   });
 
   describe("updateMany", () => {

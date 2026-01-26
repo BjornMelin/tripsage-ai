@@ -247,6 +247,9 @@ export function insertSingle<
  * that narrow the result to one row; this helper does not enforce uniqueness
  * and will update all matching rows before selecting `.single()`.
  * Validates input and output using Zod schemas when available.
+ * Use `options.select` to limit returned columns; validation defaults to
+ * `false` when selecting partial columns.
+ * Explicit validation with partial selects returns an error.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
  * @param client Typed supabase client
@@ -263,7 +266,7 @@ export function updateSingle<
   table: T,
   updates: Partial<TableUpdate<S, T>>,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: { schema?: S; validate?: boolean }
+  options?: { schema?: S; select?: string; validate?: boolean }
 ): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.update",
@@ -277,7 +280,13 @@ export function updateSingle<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      const shouldValidate = options?.validate ?? true;
+      const selectColumns = options?.select ?? "*";
+      if (options?.validate === true && selectColumns !== "*") {
+        const error = new Error("partial_select_validation_unavailable");
+        recordErrorOnSpan(span, error);
+        return { data: null, error };
+      }
+      const shouldValidate = options?.validate ?? selectColumns === "*";
       // Validate input if schema exists
       const schema = getValidationSchema(schemaName, table as string);
       if (schema?.update && shouldValidate) {
@@ -301,7 +310,7 @@ export function updateSingle<
       }
       const filtered = where(base.update(updates as unknown));
       if (filtered && typeof filtered.select === "function") {
-        const { data, error } = await filtered.select().single();
+        const { data, error } = await filtered.select(selectColumns).single();
         if (error) return { data: null, error };
         if (!data) return { data: null, error: null };
         // Validate output if schema exists

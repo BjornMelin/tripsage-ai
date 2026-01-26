@@ -284,7 +284,7 @@ export async function handleMemorySyncJob(
         last_synced_at: nowIso(),
       },
       (qb) => qb.eq("id", payload.sessionId),
-      { schema: "memories" }
+      { schema: "memories", select: "id", validate: false }
     );
     if (syncError) {
       throw new MemorySyncDatabaseError("Memory session sync update failed", {
@@ -311,7 +311,7 @@ export async function handleMemorySyncJob(
       "chat_sessions",
       updatePayload,
       (qb) => qb.eq("id", payload.sessionId),
-      { validate: false }
+      { select: "id", validate: false }
     );
 
     if (updateError) {

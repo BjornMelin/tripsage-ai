@@ -1043,7 +1043,8 @@ export async function handleChat(
         deps.supabase,
         "chat_messages",
         { metadata: supersededMeta },
-        (qb) => qb.eq("id", target.dbId).eq("user_id", userId)
+        (qb) => qb.eq("id", target.dbId).eq("user_id", userId),
+        { select: "id", validate: false }
       );
 
       if (error) {
@@ -1183,7 +1184,8 @@ export async function handleChat(
             deps.supabase,
             "chat_messages",
             { content, metadata: updatedMeta },
-            (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+            (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
+            { select: "id", validate: false }
           );
 
           if (error) {
@@ -1290,7 +1292,8 @@ export async function handleChat(
                   deps.supabase,
                   "chat_messages",
                   { metadata: stepMetadata },
-                  (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+                  (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
+                  { select: "id", validate: false }
                 );
 
                 if (stepError) {
@@ -1382,7 +1385,8 @@ export async function handleChat(
         deps.supabase,
         "chat_messages",
         { content, metadata: updatedMeta },
-        (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+        (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
+        { select: "id", validate: false }
       );
 
       if (error) {
