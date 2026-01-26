@@ -42,3 +42,16 @@ CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO aut
     SELECT id FROM public.chat_messages WHERE user_id = (select auth.uid())
   )
 );
+
+-- Indexes aligned with current query patterns and RLS access paths.
+CREATE INDEX IF NOT EXISTS trips_user_status_created_idx
+  ON public.trips (user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS chat_sessions_user_updated_idx
+  ON public.chat_sessions (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS mfa_enrollments_challenge_factor_issued_idx
+  ON public.mfa_enrollments (challenge_id, factor_id, issued_at DESC);
+CREATE INDEX IF NOT EXISTS auth_backup_codes_active_lookup_idx
+  ON public.auth_backup_codes (user_id, code_hash)
+  WHERE consumed_at IS NULL;
+CREATE INDEX IF NOT EXISTS chat_messages_session_user_id_idx
+  ON public.chat_messages (session_id, user_id, id);

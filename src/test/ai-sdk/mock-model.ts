@@ -282,8 +282,8 @@ export interface StreamingToolMockModelOptions {
  * Use for testing streaming agents that make tool calls.
  * Uses AI SDK v6 stream part types (tool-input-start, tool-input-delta, tool-input-end).
  *
- * @param options Configuration for tool calls
- * @returns Configured streaming mock model with tool support
+ * @param options - Configuration for tool calls
+ * @returns - Configured streaming mock model with tool support
  * @throws {Error} Thrown when `toolCalls` is empty.
  *
  * @example
@@ -375,8 +375,8 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
  * Creates a mock model that returns structured JSON for structured output tests.
  *
  * @typeParam T - The shape of the JSON object returned by the mock model.
- * @param jsonObject The object to return as stringified JSON text
- * @returns Mock model configured for structured output
+ * @param jsonObject - The object to return as stringified JSON text
+ * @returns - Mock model configured for structured output
  *
  * @example
  * ```typescript

@@ -527,6 +527,11 @@ export function getSupabaseMockState(
   return state;
 }
 
+/**
+ * Resets the mock state for a Supabase client instance.
+ *
+ * @param client - Supabase client whose mock state should be cleared.
+ */
 export function resetSupabaseMockState(client: SupabaseClient<Database>): void {
   const state = getSupabaseMockState(client);
   state.autoIncrement.clear();

@@ -69,6 +69,19 @@ function buildAttachmentStoragePath(options: {
 }
 
 /**
+ * Normalize an unknown error into an Error object or undefined.
+ *
+ * @param err - Error or unknown value to normalize.
+ * @returns An Error instance or undefined if the input was falsy.
+ */
+function normalizeError(err: unknown): Error | undefined {
+  if (!err) return undefined;
+  if (err instanceof Error) return err;
+  const message = (err as { message?: string }).message ?? "unknown_error";
+  return new Error(String(message));
+}
+
+/**
  * POST /api/chat/attachments
  *
  * Creates attachment metadata rows and returns signed upload URLs.
@@ -167,8 +180,7 @@ export const POST = withApiGuards({
 
       if (insertError) {
         await cleanupInserted();
-        const normalizedError =
-          insertError instanceof Error ? insertError : new Error(String(insertError));
+        const normalizedError = normalizeError(insertError);
         return errorResponse({
           err: normalizedError,
           error: "db_error",
@@ -193,16 +205,7 @@ export const POST = withApiGuards({
         // Best-effort cleanup: remove metadata rows so the paths cannot authorize uploads.
         await cleanupInserted();
 
-        const normalizedError =
-          signedError instanceof Error
-            ? signedError
-            : signedError
-              ? new Error(
-                  String(
-                    (signedError as { message?: string }).message ?? "unknown_error"
-                  )
-                )
-              : undefined;
+        const normalizedError = normalizeError(signedError);
         return errorResponse({
           err: normalizedError,
           error: "internal",

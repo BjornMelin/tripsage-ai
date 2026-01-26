@@ -359,7 +359,7 @@ async function waitForPostgrestReady(): Promise<void> {
 /**
  * Serialize embedding to pgvector format with strict dimension validation.
  *
- * Wraps the shared toPgvector function to enforce standard embedding dimensions.
+ * Enforces standard embedding dimensions before serializing to pgvector format.
  */
 function toPgvector(embedding: readonly number[]): string {
   if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {

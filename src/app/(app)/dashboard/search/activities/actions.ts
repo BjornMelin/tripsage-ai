@@ -170,14 +170,14 @@ export async function addActivityToTrip(
   }
 
   // Validate trip ownership
-  const { error: tripError } = await getSingle(
+  const { data: tripData, error: tripError } = await getSingle(
     supabase,
     "trips",
     (qb) => qb.eq("id", validatedTripId).eq("user_id", user.id),
     { select: "id", validate: false }
   );
 
-  if (tripError) {
+  if (tripError || !tripData) {
     return err({
       error: "forbidden",
       reason: "Trip not found or access denied",
