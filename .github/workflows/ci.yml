@@ -70,7 +70,7 @@ jobs:
     name: Frontend (lint, type, unit - quick)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
@@ -225,7 +225,7 @@ jobs:
         shard: [1, 2, 3, 4]
         total: [4]
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v6.0.2
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -263,7 +263,7 @@ jobs:
     if: ${{ needs.frontend-coverage.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v6.0.2
 
       - name: Set up Node
         uses: actions/setup-node@v6
