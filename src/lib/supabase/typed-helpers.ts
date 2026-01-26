@@ -165,14 +165,16 @@ const resolveMaybeSingle = async (
  * Uses `.select().single()` to fetch the inserted record in one roundtrip.
  * Validates input and output using Zod schemas when available.
  *
- * Note: When inserting multiple rows, `.single()` will error. For batches,
- * add a dedicated `insertMany` helper without `.single()` if needed.
+ * Note: This function accepts only single objects, not arrays.
+ * For batch inserts, use `insertMany` instead.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param values Insert payload (validated via Zod schema)
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Insert payload (validated via Zod schema).
+ * @param options - Optional schema selection and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
 export function insertSingle<
   S extends SchemaName = "public",
@@ -180,7 +182,7 @@ export function insertSingle<
 >(
   client: TypedClient,
   table: T,
-  values: TableInsert<S, T> | TableInsert<S, T>[],
+  values: TableInsert<S, T>,
   options?: { schema?: S; validate?: boolean }
 ): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
@@ -198,7 +200,12 @@ export function insertSingle<
       const shouldValidate = options?.validate ?? true;
       // Validate input if schema exists
       const schema = getValidationSchema(schemaName, table as string);
-      if (schema?.insert && shouldValidate && !Array.isArray(values)) {
+      if (Array.isArray(values)) {
+        const error = new Error("insert_single_requires_object");
+        recordErrorOnSpan(span, error);
+        return { data: null, error };
+      }
+      if (schema?.insert && shouldValidate) {
         try {
           schema.insert.parse(values);
         } catch (validationError) {
@@ -260,12 +267,14 @@ export function insertSingle<
  * `false` when selecting partial columns.
  * Explicit validation with partial selects returns an error.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param updates Partial update payload (validated via Zod schema)
- * @param where Closure to apply filters to the builder
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param updates - Partial update payload (validated via Zod schema).
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, select columns, and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
 export function updateSingle<
   S extends SchemaName = "public",
@@ -357,12 +366,14 @@ export function updateSingle<
  * Use `options.count` to control PostgREST count behavior; set to `null`
  * to skip counting entirely.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param updates Partial update payload (validated via Zod schema)
- * @param where Closure to apply filters to the builder
- * @returns Count of updated rows and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param updates - Partial update payload (validated via Zod schema).
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, validation toggle, and count preference.
+ * @returns Count of updated rows and error (if any).
  */
 export function updateMany<
   S extends SchemaName = "public",
@@ -428,11 +439,13 @@ export function updateMany<
  * constraints and will surface Supabase errors if multiple rows match.
  * Validates output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, select columns, and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
 export function getSingle<
   S extends SchemaName = "public",
@@ -511,11 +524,13 @@ export function getSingle<
  * Use `options.returning: "representation"` (with `options.select`) to request
  * deleted rows when the caller needs return data or reliable count headers.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, count preference, returning mode, and select columns.
+ * @returns Count of deleted rows and error (if any).
  */
 export function deleteSingle<
   S extends SchemaName = "public",
@@ -583,11 +598,13 @@ export function deleteSingle<
  * deletes all matching rows. This keeps naming consistent with updateMany and
  * insertMany while sharing the same implementation.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Count of deleted rows and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema and count preference.
+ * @returns Count of deleted rows and error (if any).
  */
 export function deleteMany<
   S extends SchemaName = "public",
@@ -608,11 +625,13 @@ export function deleteMany<
  * (`eq`, `in`, etc.) prior to selecting the row.
  * Validates output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Selected row (validated) or null, and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, select columns, and validation toggle.
+ * @returns Selected row (validated) or null, and error (if any).
  */
 export function getMaybeSingle<
   S extends SchemaName = "public",
@@ -678,12 +697,14 @@ export function getMaybeSingle<
  * Uses `.upsert()` with onConflict to perform insert-or-update operations.
  * Validates input and output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param values Upsert payload (validated via Zod schema)
- * @param onConflict Column name(s) to determine conflict (e.g., "user_id")
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Upsert payload (validated via Zod schema).
+ * @param onConflict - Column name(s) to determine conflict (e.g., "user_id").
+ * @param options - Optional schema and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
 export function upsertSingle<
   S extends SchemaName = "public",
@@ -762,12 +783,14 @@ export function upsertSingle<
  * Uses `.upsert()` with onConflict to perform insert-or-update operations in batch.
  * Validates input and output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param values Array of upsert payloads (validated via Zod schema)
- * @param onConflict Column name(s) to determine conflict (e.g., "user_id")
- * @returns Array of upserted rows (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Array of upsert payloads (validated via Zod schema).
+ * @param onConflict - Column name(s) to determine conflict (e.g., "user_id").
+ * @param options - Optional schema and validation toggle.
+ * @returns Array of upserted rows (validated) and error (if any).
  */
 export function upsertMany<
   S extends SchemaName = "public",
@@ -984,11 +1007,13 @@ export function getMany<
  * Unlike `insertSingle`, this handles batch inserts without `.single()`.
  * Validates input and output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param values Array of insert payloads (validated via Zod schema)
- * @returns Array of inserted rows (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Array of insert payloads (validated via Zod schema).
+ * @param options - Optional schema and validation toggle.
+ * @returns Array of inserted rows (validated) and error (if any).
  */
 export function insertMany<
   S extends SchemaName = "public",

@@ -170,6 +170,7 @@ export async function addActivityToTrip(
   }
 
   // Validate trip ownership
+  // Skip schema validation since we only select `id` for an existence check.
   const { data: tripData, error: tripError } = await getSingle(
     supabase,
     "trips",

@@ -58,35 +58,39 @@ type HardenOptions = z.infer<typeof HardenOptionsSchema>;
 type UnifiedPlugin = Plugin<unknown[]>;
 type PluggableTuple = [plugin: UnifiedPlugin, ...parameters: unknown[]];
 
-function IsPluggableTuple(value: Pluggable): value is PluggableTuple {
+// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
+function isPluggableTuple(value: Pluggable): value is PluggableTuple {
   return Array.isArray(value);
 }
 
-function IsUnifiedPlugin(value: unknown): value is UnifiedPlugin {
+// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
+function isUnifiedPlugin(value: unknown): value is UnifiedPlugin {
   return typeof value === "function";
 }
 
-function ResolvePluginDefaults(plugin: Pluggable): {
+// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
+function resolvePluginDefaults(plugin: Pluggable): {
   plugin: UnifiedPlugin;
   defaults: HardenOptions;
 } {
-  if (IsPluggableTuple(plugin)) {
+  if (isPluggableTuple(plugin)) {
     const parsed = HardenOptionsSchema.safeParse(plugin[1]);
     const defaults = parsed.success ? parsed.data : {};
-    if (!IsUnifiedPlugin(plugin[0])) {
+    if (!isUnifiedPlugin(plugin[0])) {
       throw new Error("Invalid Streamdown rehype plugin configuration");
     }
     return { defaults, plugin: plugin[0] };
   }
 
-  if (!IsUnifiedPlugin(plugin)) {
+  if (!isUnifiedPlugin(plugin)) {
     throw new Error("Invalid Streamdown rehype plugin configuration");
   }
 
   return { defaults: {}, plugin };
 }
 
-function ParseCommaSeparatedList(value: string | undefined): string[] {
+// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
+function parseCommaSeparatedList(value: string | undefined): string[] {
   if (!value) return [];
   return value
     .split(",")
@@ -134,18 +138,19 @@ const DefaultRemend: NonNullable<StreamdownProps["remend"]> = {
 const DefaultRemarkPlugins: NonNullable<StreamdownProps["remarkPlugins"]> =
   Object.values(streamdownDefaultRemarkPlugins);
 
-const { plugin: HardenFn, defaults: HardenDefaults } = ResolvePluginDefaults(
+const { plugin: HardenFn, defaults: HardenDefaults } = resolvePluginDefaults(
   streamdownDefaultRehypePlugins.harden
 );
 
-function CreateHardenOptions({
+// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
+function createHardenOptions({
   profile,
   origin,
 }: {
   profile: MarkdownSecurityProfile;
   origin: string;
 }): HardenOptions {
-  const extraLinkPrefixes = ParseCommaSeparatedList(
+  const extraLinkPrefixes = parseCommaSeparatedList(
     process.env.NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES
   );
 
@@ -156,7 +161,7 @@ function CreateHardenOptions({
 
   const allowedImagePrefixes = [
     origin,
-    ...ParseCommaSeparatedList(
+    ...parseCommaSeparatedList(
       process.env.NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES
     ),
   ];
@@ -190,14 +195,15 @@ function CreateHardenOptions({
   return base;
 }
 
-function CreateDefaultRehypePlugins({
+// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
+function createDefaultRehypePlugins({
   profile,
   origin,
 }: {
   profile: MarkdownSecurityProfile;
   origin: string;
 }): PluggableList {
-  const hardenOptions = CreateHardenOptions({ origin, profile });
+  const hardenOptions = createHardenOptions({ origin, profile });
 
   // For untrusted content, we intentionally omit `defaultRehypePlugins.raw`.
   // This means raw HTML is rendered as text instead of becoming DOM nodes.
@@ -265,7 +271,7 @@ export const Markdown = memo(
     const resolvedRehypePlugins = useMemo<PluggableList>(() => {
       return (
         rehypePlugins ??
-        CreateDefaultRehypePlugins({ origin, profile: securityProfile })
+        createDefaultRehypePlugins({ origin, profile: securityProfile })
       );
     }, [origin, rehypePlugins, securityProfile]);
 

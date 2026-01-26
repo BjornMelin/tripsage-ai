@@ -77,8 +77,17 @@ function buildAttachmentStoragePath(options: {
 function normalizeError(err: unknown): Error | undefined {
   if (!err) return undefined;
   if (err instanceof Error) return err;
-  const message = (err as { message?: string }).message ?? "unknown_error";
-  return new Error(String(message));
+  if (typeof err === "string") {
+    return new Error(err.length > 0 ? err : "unknown_error");
+  }
+  if (typeof err === "number" || typeof err === "boolean") {
+    return new Error(String(err));
+  }
+  const message =
+    typeof (err as { message?: unknown }).message === "string"
+      ? (err as { message?: string }).message
+      : undefined;
+  return new Error(message ?? "unknown_error");
 }
 
 /**
@@ -205,7 +214,9 @@ export const POST = withApiGuards({
         // Best-effort cleanup: remove metadata rows so the paths cannot authorize uploads.
         await cleanupInserted();
 
-        const normalizedError = normalizeError(signedError);
+        const normalizedError =
+          normalizeError(signedError) ??
+          new Error("Signed upload URL missing from Supabase response");
         return errorResponse({
           err: normalizedError,
           error: "internal",
