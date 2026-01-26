@@ -1,10 +1,5 @@
 /**
- * @fileoverview Canonical Markdown renderer for TripSage.
- *
- * Streamdown v2 is the only markdown engine we ship. This wrapper centralizes:
- * - Streaming vs static mode defaults
- * - Caret + remend configuration for streaming UX
- * - Security posture via rehype-harden profiles
+ * @fileoverview Canonical Streamdown v2 Markdown renderer with streaming and security support.
  */
 
 "use client";
