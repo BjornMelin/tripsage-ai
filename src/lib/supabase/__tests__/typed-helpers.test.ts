@@ -198,6 +198,23 @@ describe("typed-helpers", () => {
       expect(count).toBe(2);
     });
 
+    it("omits count preference when count is null", async () => {
+      const { client, chain } = makeClientWithChain();
+      const updates: Partial<TablesUpdate<"trips">> = { status: "completed" };
+
+      const updatePromise = Promise.resolve({ count: 0, error: null });
+      (chain.update as ReturnType<typeof vi.fn>).mockReturnValue(
+        Object.assign(updatePromise, chain) as MockChain
+      );
+
+      const { count, error } = await updateMany(client, "trips", updates, (qb) => qb, {
+        count: null,
+      });
+      expect(error).toBeNull();
+      expect(count).toBe(0);
+      expect(chain.update).toHaveBeenCalledWith(updates);
+    });
+
     it("returns error when update fails", async () => {
       const { client, chain } = makeClientWithChain();
       const updates: Partial<TablesUpdate<"trips">> = { status: "cancelled" };
@@ -254,6 +271,22 @@ describe("typed-helpers", () => {
       });
       expect(count).toBe(1);
       expect(error).toBeNull();
+    });
+
+    it("omits count preference when count is null", async () => {
+      const { client, chain } = makeClientWithChain();
+      const deleteResult = Promise.resolve({ count: 0, error: null });
+      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
+
+      const { count, error } = await deleteSingle(
+        client,
+        "trips",
+        () => unsafeCast(deleteResult),
+        { count: null }
+      );
+      expect(count).toBe(0);
+      expect(error).toBeNull();
+      expect(chain.delete).toHaveBeenCalledWith();
     });
 
     it("returns error when delete fails", async () => {

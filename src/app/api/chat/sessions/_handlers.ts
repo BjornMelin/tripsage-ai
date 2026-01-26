@@ -140,8 +140,11 @@ export async function getSession(deps: SessionsDeps, id: string): Promise<Respon
  * @returns Response with no content on success.
  */
 export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { error } = await deleteSingle(deps.supabase, "chat_sessions", (qb) =>
-    qb.eq("id", id).eq("user_id", deps.userId)
+  const { error } = await deleteSingle(
+    deps.supabase,
+    "chat_sessions",
+    (qb) => qb.eq("id", id).eq("user_id", deps.userId),
+    { count: null }
   );
   if (error)
     return errorResponse({

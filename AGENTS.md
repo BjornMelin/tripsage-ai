@@ -187,6 +187,7 @@ throw error; // Let withApiGuards handle unknown errors
 
 - **Caching:** `cacheComponents: true` enabled. Directives (`'use cache'`/`'use cache: private'`) cannot access `cookies()`/`headers()`; public routes only. Auth/BYOK: dynamic. See ADR-0024.
 - **Supabase SSR:** `createServerSupabase()` (server-only, auto-dynamic). Never access cookies in Client Components.
+- **Supabase updateSingle:** If you only check `{ error }` and do not use returned data, pass `{ select: "id", validate: false }` to minimize payloads and skip row validation.
 - **Performance:** `next/font`, `next/image`, Server Components, Suspense, `useActionState`/`useOptimistic`.
 
 ### 5.5 Rate limiting and ephemeral state

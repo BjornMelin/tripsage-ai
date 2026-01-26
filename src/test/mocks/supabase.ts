@@ -369,6 +369,7 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
         }
         if (prefer.includes("return=representation")) {
           return jsonResponse(wantsSingle ? (hydratedRows[0] ?? null) : hydratedRows, {
+            headers: { "preference-applied": "return=representation" },
             status: 201,
           });
         }
@@ -385,7 +386,10 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
         }
         if (prefer.includes("return=representation")) {
           const rows = flattenInsertedRows(parsed);
-          return jsonResponse(wantsSingle ? (rows[0] ?? null) : rows, { status: 200 });
+          return jsonResponse(wantsSingle ? (rows[0] ?? null) : rows, {
+            headers: { "preference-applied": "return=representation" },
+            status: 200,
+          });
         }
         return jsonResponse([], { status: 200 });
       }
@@ -403,7 +407,10 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
         if (prefer.includes("return=representation")) {
           const contentRange = makeContentRange(matchedRows.length, matchedRows);
           return jsonResponse(matchedRows, {
-            headers: contentRange ? { "content-range": contentRange } : undefined,
+            headers: {
+              ...(contentRange ? { "content-range": contentRange } : {}),
+              "preference-applied": "return=representation",
+            },
             status: 200,
           });
         }

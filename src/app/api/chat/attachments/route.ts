@@ -117,7 +117,8 @@ export const POST = withApiGuards({
       const { error: cleanupError } = await deleteSingle(
         supabase,
         "file_attachments",
-        (qb) => qb.in("id", insertedIds)
+        (qb) => qb.in("id", insertedIds),
+        { count: null }
       );
       if (cleanupError) {
         logger.warn("Failed to cleanup inserted attachment rows", {

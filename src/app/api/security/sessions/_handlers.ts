@@ -69,7 +69,7 @@ export async function terminateSessionHandler(params: {
         adminSupabase,
         "sessions",
         (qb) => qb.eq("id", sessionId).eq("user_id", userId),
-        { schema: "auth" }
+        { count: null, schema: "auth" }
       );
 
       if (deleteResult.error) {

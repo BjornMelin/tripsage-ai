@@ -67,6 +67,8 @@ type SupabaseTableSchema = {
   update?: { parse: (value: unknown) => unknown };
 };
 
+type CountPreference = "exact" | "planned" | "estimated";
+
 const SUPPORTED_TABLES = {
   auth: ["sessions"],
   memories: ["sessions", "turns"],
@@ -345,6 +347,8 @@ export function updateSingle<
  * (`eq`, `in`, etc.) prior to executing the update. This helper does not
  * enforce uniqueness and is suitable for bulk updates.
  * Validates input using Zod schemas when available.
+ * Use `options.count` to control PostgREST count behavior; set to `null`
+ * to skip counting entirely.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
  * @param client Typed supabase client
@@ -361,7 +365,7 @@ export function updateMany<
   table: T,
   updates: Partial<TableUpdate<S, T>>,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: { schema?: S; validate?: boolean }
+  options?: { schema?: S; validate?: boolean; count?: CountPreference | null }
 ): Promise<{ count: number; error: unknown | null }> {
   return withTelemetrySpan(
     "supabase.update",
@@ -396,7 +400,12 @@ export function updateMany<
       if (typeof base.update !== "function") {
         throw new Error("update_unavailable");
       }
-      const qb = where(base.update(updates as unknown, { count: "exact" }));
+      const countPreference = options?.count;
+      const updateBuilder =
+        countPreference === null
+          ? base.update(updates as unknown)
+          : base.update(updates as unknown, { count: countPreference ?? "exact" });
+      const qb = where(updateBuilder);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };
@@ -490,6 +499,8 @@ export function getSingle<
  * callers must provide filters that target the intended row(s). This helper
  * does not enforce single-row deletion and will delete all rows matching the
  * supplied filter.
+ * Use `options.count` to request a PostgREST count preference; set to `null`
+ * to skip counting entirely.
  *
  * @template T Table name constrained to `Database['public']['Tables']` keys
  * @param client Typed supabase client
@@ -504,7 +515,7 @@ export function deleteSingle<
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: { schema?: S }
+  options?: { schema?: S; count?: CountPreference | null }
 ): Promise<{ count: number; error: unknown | null }> {
   return withTelemetrySpan(
     "supabase.delete",
@@ -523,10 +534,13 @@ export function deleteSingle<
         return { count: 0, error: new Error("from_unavailable") };
       }
       const base = schemaClient.from(table as string);
+      const countPreference = options?.count;
       const deleteBuilder =
         typeof base.delete !== "function"
           ? ({ error: new Error("delete_unavailable") } as TableFilterBuilder)
-          : base.delete({ count: "exact" });
+          : countPreference === null
+            ? base.delete()
+            : base.delete({ count: countPreference ?? "exact" });
       const qb = where(deleteBuilder);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
@@ -556,7 +570,7 @@ export function deleteMany<
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: { schema?: S }
+  options?: { schema?: S; count?: CountPreference | null }
 ): Promise<{ count: number; error: unknown | null }> {
   return deleteSingle(client, table, where, options);
 }
@@ -830,7 +844,7 @@ export interface GetManyOptions {
   /** If true, order ascending; otherwise descending. Default: true. */
   ascending?: boolean;
   /** Whether to include a count of total matching rows. */
-  count?: "exact" | "planned" | "estimated";
+  count?: CountPreference;
   /** Optional schema to query (defaults to public). */
   schema?: SchemaName;
   /** Optional column list for select (defaults to "*"). */

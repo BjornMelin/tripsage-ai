@@ -226,7 +226,8 @@ export async function startTotpEnrollment(
         "mfa_enrollments",
         { status: "expired" },
         (qb) =>
-          qb.eq("user_id", userId).eq("status", "pending").lt("expires_at", nowIso())
+          qb.eq("user_id", userId).eq("status", "pending").lt("expires_at", nowIso()),
+        { count: null }
       );
       if (expireError) {
         span.recordException(toException(expireError));
@@ -365,7 +366,10 @@ export async function verifyTotp(
             "mfa_enrollments",
             { status: "expired" },
             (qb) =>
-              qb.eq("challenge_id", parsed.challengeId).eq("factor_id", parsed.factorId)
+              qb
+                .eq("challenge_id", parsed.challengeId)
+                .eq("factor_id", parsed.factorId),
+            { count: null }
           );
           if (expireError) {
             span.recordException(toException(expireError));
@@ -411,7 +415,8 @@ export async function verifyTotp(
               .eq("user_id", userId)
               .eq("factor_id", parsed.factorId)
               .eq("challenge_id", parsed.challengeId)
-              .eq("status", "pending")
+              .eq("status", "pending"),
+          { count: null }
         );
         if (consumeError) {
           span.recordException(toException(consumeError));
