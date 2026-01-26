@@ -69,6 +69,13 @@ type SupabaseTableSchema = {
 
 type CountPreference = "exact" | "planned" | "estimated";
 
+/**
+ * Registry of tables supported by runtime Zod validation.
+ * authoritative source: src/domain/schemas/supabase.ts
+ * To add a new table:
+ * 1. Ensure schema exists in src/domain/schemas/supabase.ts
+ * 2. Add table name to the appropriate schema array below
+ */
 const SUPPORTED_TABLES = {
   auth: ["sessions"],
   memories: ["sessions", "turns"],
@@ -541,13 +548,17 @@ export function deleteSingle<
         return { count: 0, error: new Error("from_unavailable") };
       }
       const base = schemaClient.from(table as string);
+
+      if (typeof base.delete !== "function") {
+        return { count: 0, error: new Error("delete_unavailable") };
+      }
+
       const countPreference = options?.count;
       const deleteBuilder =
-        typeof base.delete !== "function"
-          ? ({ error: new Error("delete_unavailable") } as TableFilterBuilder)
-          : countPreference === null
-            ? base.delete()
-            : base.delete({ count: countPreference ?? "exact" });
+        countPreference === null
+          ? base.delete()
+          : base.delete({ count: countPreference ?? "exact" });
+
       const selectColumns = options?.select ?? "*";
       const returningBuilder =
         options?.returning === "representation" &&
@@ -555,12 +566,8 @@ export function deleteSingle<
         typeof deleteBuilder.select === "function"
           ? deleteBuilder.select(selectColumns)
           : deleteBuilder;
-      const qb =
-        returningBuilder &&
-        typeof returningBuilder === "object" &&
-        "error" in returningBuilder
-          ? returningBuilder
-          : where(returningBuilder);
+
+      const qb = where(returningBuilder);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };

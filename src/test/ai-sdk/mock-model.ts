@@ -413,7 +413,7 @@ export function createMockObjectModel<T>(jsonObject: T) {
  *
  * @typeParam T - The shape of the JSON object streamed by the mock model.
  * @param jsonObject - The object to stream as JSON
- * @returns - Mock model configured for streaming structured output
+ * @returns Mock model configured for streaming structured output
  */
 export function createStreamingObjectMockModel<T>(jsonObject: T) {
   const jsonString = JSON.stringify(jsonObject);

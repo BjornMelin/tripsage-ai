@@ -1368,6 +1368,7 @@ const supabaseSchemaRegistry = {
 } as const;
 
 type SupabaseSchemaRegistry = typeof supabaseSchemaRegistry;
+/** Union type of all valid Supabase schema names in the registry. */
 export type SupabaseSchemaName = keyof SupabaseSchemaRegistry;
 
 /**

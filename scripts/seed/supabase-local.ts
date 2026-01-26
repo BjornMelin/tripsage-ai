@@ -30,6 +30,8 @@ import {
   deterministicTextEmbedding,
 } from "../../src/lib/ai/embeddings/deterministic";
 
+// Canonical source: src/lib/ai/embeddings/text-embedding-model.ts
+// Intentional duplication to keep seed script self-contained and avoid "server-only" imports.
 const TEXT_EMBEDDING_DIMENSIONS = 1536;
 
 import type { Database, Json } from "../../src/lib/supabase/database.types";

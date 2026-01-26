@@ -39,6 +39,7 @@ type BackupAuditMeta = { ip?: string; userAgent?: string };
 
 const auditLogger = createServerLogger("security.mfa.audit");
 
+/** Normalizes an unknown error into a standard Error object for telemetry recordException. */
 function toException(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
