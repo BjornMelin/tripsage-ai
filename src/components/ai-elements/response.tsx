@@ -5,18 +5,12 @@
 "use client";
 
 import { type ComponentProps, memo } from "react";
-import { Streamdown } from "streamdown";
+import { Markdown } from "@/components/markdown/Markdown";
 import { cn } from "@/lib/utils";
-import {
-  streamdownControls,
-  streamdownMermaid,
-  streamdownRehypePlugins,
-  streamdownRemarkPlugins,
-  streamdownShikiTheme,
-} from "./streamdown-config";
 
 /** Props for the Response component. */
-export type ResponseProps = ComponentProps<typeof Streamdown> & {
+export type ResponseProps = Omit<ComponentProps<typeof Markdown>, "content"> & {
+  children: string;
   /**
    * When true, disables interactive controls during streaming.
    * Mode defaults to "streaming" when not explicitly provided.
@@ -33,27 +27,21 @@ export type ResponseProps = ComponentProps<typeof Streamdown> & {
 export const Response = memo(
   ({
     className,
-    controls = streamdownControls,
+    children,
     isAnimating,
-    mermaid = streamdownMermaid,
     mode,
-    rehypePlugins = streamdownRehypePlugins,
-    remarkPlugins = streamdownRemarkPlugins,
-    shikiTheme = streamdownShikiTheme,
+    securityProfile,
     ...props
   }: ResponseProps) => (
-    <Streamdown
+    <Markdown
       className={cn(
         "streamdown-chat prose dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
-      controls={controls}
+      content={children}
       isAnimating={isAnimating}
-      mermaid={mermaid}
       mode={mode ?? "streaming"}
-      rehypePlugins={rehypePlugins}
-      remarkPlugins={remarkPlugins}
-      shikiTheme={shikiTheme}
+      securityProfile={securityProfile}
       {...props}
     />
   )

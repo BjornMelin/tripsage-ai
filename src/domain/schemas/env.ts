@@ -160,6 +160,16 @@ const nextEnvSchema = z.object({
   NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   /** Primary public site origin (preferred client/server origin when set). */
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
+  /**
+   * Optional comma-separated allowlist for image prefixes. Defaults are applied in-code.
+   * Prefer keeping this restricted to same-origin or trusted CDNs.
+   */
+  NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES: z.string().optional(),
+  /**
+   * Optional comma-separated allowlist for additional link prefixes.
+   * Defaults are applied in-code; this only extends them.
+   */
+  NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES: z.string().optional(),
 });
 
 // Supabase configuration
@@ -333,6 +343,8 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
   NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
+  NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES: z.string().optional(),
+  NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
 });

@@ -62,6 +62,9 @@ const nextConfig: NextConfig = {
       "motion",
       "@hello-pangea/dnd",
       "streamdown",
+      "@streamdown/code",
+      "@streamdown/math",
+      "@streamdown/mermaid",
     ],
     // Enable Turbopack file system caching for faster dev builds
     // Note: turbopackFileSystemCacheForBuild requires canary version
@@ -159,7 +162,7 @@ const nextConfig: NextConfig = {
 
   // Streamdown uses Shiki for code blocks. Force bundling to avoid
   // "Package shiki can't be external" warnings in Next.js/Turbopack.
-  transpilePackages: ["shiki"],
+  transpilePackages: ["shiki", "@streamdown/code", "@streamdown/math", "@streamdown/mermaid"],
 };
 
 export default withBotId(nextConfig);

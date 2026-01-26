@@ -7,6 +7,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import { BotIdClientProvider } from "@/components/providers/botid-client";
 import { PerformanceMonitor } from "@/components/providers/performance-provider";
 import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provider";
