@@ -377,7 +377,11 @@ export async function verifyTotp(
         if (!expiresAt) {
           throw new TotpVerificationInternalError("mfa_enrollment_expires_at_missing");
         }
-        if (new Date(expiresAt).getTime() < Date.now()) {
+        const expiresAtMs = Date.parse(expiresAt);
+        if (Number.isNaN(expiresAtMs)) {
+          throw new TotpVerificationInternalError("mfa_enrollment_expires_at_invalid");
+        }
+        if (expiresAtMs < Date.now()) {
           const { error: expireError } = await updateMany(
             adminSupabase,
             "mfa_enrollments",

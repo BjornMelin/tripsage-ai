@@ -95,7 +95,7 @@ SET config = jsonb_set(
       'v',
       extract(epoch from COALESCE(created_at, now()))::bigint,
       '_',
-      substr(md5(COALESCE(version_id::text, '0')), 1, 8)
+      substr(md5(COALESCE(version_id::text, gen_random_uuid()::text)), 1, 8)
     )
   ),
   true
@@ -111,7 +111,7 @@ SET config = jsonb_set(
       'v',
       extract(epoch from COALESCE(created_at, now()))::bigint,
       '_',
-      substr(md5(COALESCE(id::text, '0')), 1, 8)
+      substr(md5(COALESCE(id::text, gen_random_uuid()::text)), 1, 8)
     )
   ),
   true

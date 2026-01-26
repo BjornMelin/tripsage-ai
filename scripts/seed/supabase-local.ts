@@ -323,11 +323,10 @@ async function ensureStorageBuckets(): Promise<void> {
             public: bucket.public,
           }
         );
-        if (createError) {
-          throw new Error(
-            `createBucket failed (${bucket.name}): ${createError.message}`
-          );
+        if (!createError) {
+          continue;
         }
+        throw new Error(`createBucket failed (${bucket.name}): ${createError.message}`);
       } else {
         throw new Error(`getBucket failed (${bucket.name}): ${message}`);
       }

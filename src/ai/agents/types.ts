@@ -392,6 +392,7 @@ export interface AgentParameters {
  *
  * @param config - Agent configuration from database.
  * @returns Typed agent parameters with sensible defaults.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
  */
 export function extractAgentParameters(config: AgentConfig): AgentParameters {
   const params = config.parameters;

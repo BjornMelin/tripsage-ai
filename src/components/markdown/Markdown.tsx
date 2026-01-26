@@ -138,8 +138,7 @@ const { plugin: HardenFn, defaults: HardenDefaults } = ResolvePluginDefaults(
   streamdownDefaultRehypePlugins.harden
 );
 
-// biome-ignore lint/style/useNamingConvention: helper function uses camelCase.
-function createHardenOptions({
+function CreateHardenOptions({
   profile,
   origin,
 }: {
@@ -196,7 +195,7 @@ function CreateDefaultRehypePlugins({
   profile: MarkdownSecurityProfile;
   origin: string;
 }): PluggableList {
-  const hardenOptions = createHardenOptions({ origin, profile });
+  const hardenOptions = CreateHardenOptions({ origin, profile });
 
   // For untrusted content, we intentionally omit `defaultRehypePlugins.raw`.
   // This means raw HTML is rendered as text instead of becoming DOM nodes.
@@ -251,6 +250,7 @@ function TripSageMarkdownLink({
  * `@param` props - Markdown rendering options including `content`, `mode`,
  * `isAnimating`, `caret`, `controls`, `rehypePlugins`, `remarkPlugins`, `remend`,
  * `mermaid`, and `securityProfile`.
+ * @returns {JSX.Element} Rendered Markdown component with Streamdown rendering.
  */
 export const Markdown = memo(
   ({
