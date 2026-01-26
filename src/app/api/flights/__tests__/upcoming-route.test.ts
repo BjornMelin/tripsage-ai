@@ -6,6 +6,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -28,7 +29,7 @@ describe("/api/flights/upcoming", () => {
     gte: ReturnType<typeof vi.fn>;
     order: ReturnType<typeof vi.fn>;
     limit: ReturnType<typeof vi.fn>;
-    returns: ReturnType<typeof vi.fn>;
+    range: ReturnType<typeof vi.fn>;
   };
 
   const supabaseClient = {
@@ -51,7 +52,7 @@ describe("/api/flights/upcoming", () => {
     }));
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
     supabaseClient.from.mockReset();
@@ -63,49 +64,58 @@ describe("/api/flights/upcoming", () => {
     vi.clearAllMocks();
   });
 
+  const createFlightQueryBuilder = (result: {
+    data: Array<Record<string, unknown>> | null;
+    error: Error | null;
+  }): FlightQueryBuilder & Promise<{ data: unknown; error: unknown; count: null }> => {
+    const builderRef: FlightQueryBuilder = {
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+    };
+
+    const promise = Promise.resolve({
+      count: null,
+      data: result.data,
+      error: result.error,
+    });
+
+    return Object.assign(promise, builderRef);
+  };
+
   it("maps upcoming flights from Supabase rows", async () => {
-    const builder: FlightQueryBuilder = (() => {
-      const returns = vi.fn(async () => ({
-        data: [
-          {
-            airline: "DL",
-            currency: "USD",
-            departure_date: "2026-01-20T10:00:00.000Z",
-            destination: "JFK",
-            flight_class: "economy",
-            flight_number: "DL123",
-            id: 1,
-            metadata: {
-              airlineName: "Delta",
-              arrivalTime: "2026-01-20T18:00:00.000Z",
-              duration: 480,
-              gate: "A1",
-              seatsAvailable: 2,
-              status: "delayed",
-              stops: 1,
-              terminal: "2",
-              tripName: "NYC Sprint",
-            },
-            origin: "SFO",
-            price: 399,
-            return_date: null,
-            trip_id: 42,
+    const builder = createFlightQueryBuilder({
+      data: [
+        {
+          airline: "DL",
+          currency: "USD",
+          departure_date: "2026-01-20T10:00:00.000Z",
+          destination: "JFK",
+          flight_class: "economy",
+          flight_number: "DL123",
+          id: 1,
+          metadata: {
+            airlineName: "Delta",
+            arrivalTime: "2026-01-20T18:00:00.000Z",
+            duration: 480,
+            gate: "A1",
+            seatsAvailable: 2,
+            status: "delayed",
+            stops: 1,
+            terminal: "2",
+            tripName: "NYC Sprint",
           },
-        ],
-        error: null,
-      }));
-
-      const builderRef: FlightQueryBuilder = {
-        eq: vi.fn(() => builderRef),
-        gte: vi.fn(() => builderRef),
-        limit: vi.fn(() => builderRef),
-        order: vi.fn(() => builderRef),
-        returns,
-        select: vi.fn(() => builderRef),
-      };
-
-      return builderRef;
-    })();
+          origin: "SFO",
+          price: 399,
+          return_date: null,
+          trip_id: 42,
+        },
+      ],
+      error: null,
+    });
 
     supabaseClient.from.mockReturnValue(builder);
 
@@ -143,23 +153,10 @@ describe("/api/flights/upcoming", () => {
   });
 
   it("returns 500 when Supabase query fails", async () => {
-    const builder: FlightQueryBuilder = (() => {
-      const returns = vi.fn(async () => ({
-        data: null,
-        error: new Error("boom"),
-      }));
-
-      const builderRef: FlightQueryBuilder = {
-        eq: vi.fn(() => builderRef),
-        gte: vi.fn(() => builderRef),
-        limit: vi.fn(() => builderRef),
-        order: vi.fn(() => builderRef),
-        returns,
-        select: vi.fn(() => builderRef),
-      };
-
-      return builderRef;
-    })();
+    const builder = createFlightQueryBuilder({
+      data: null,
+      error: new Error("boom"),
+    });
 
     supabaseClient.from.mockReturnValue(builder);
 

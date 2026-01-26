@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -97,7 +98,10 @@ vi.mock("@/lib/supabase/server", () => ({
         data: { session: { access_token: "token" } },
         error: null,
       })),
-      getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
+      getUser: vi.fn(async () => ({
+        data: { user: { id: TEST_USER_ID } },
+        error: null,
+      })),
     },
   })),
 }));
@@ -128,7 +132,7 @@ describe("GET /api/security/metrics", () => {
     const { GET } = await import("../route");
     const res = await GET(
       createMockNextRequest({ method: "GET", url: "http://localhost" }),
-      { ...createRouteParamsContext(), user: { id: "user-1" } as never } as never
+      { ...createRouteParamsContext(), user: { id: TEST_USER_ID } as never } as never
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -153,7 +157,7 @@ describe("GET /api/security/metrics", () => {
     const { GET } = await import("../route");
     const res = await GET(
       createMockNextRequest({ method: "GET", url: "http://localhost" }),
-      { ...createRouteParamsContext(), user: { id: "user-1" } as never } as never
+      { ...createRouteParamsContext(), user: { id: TEST_USER_ID } as never } as never
     );
 
     expect(res.status).toBe(400);
@@ -166,7 +170,7 @@ describe("GET /api/security/metrics", () => {
       expect.objectContaining({
         error: expect.any(Object),
         issues: expect.any(Array),
-        userId: "user-1",
+        userId: TEST_USER_ID,
       })
     );
   });
@@ -179,7 +183,7 @@ describe("GET /api/security/metrics", () => {
     const { GET } = await import("../route");
     const res = await GET(
       createMockNextRequest({ method: "GET", url: "http://localhost" }),
-      { ...createRouteParamsContext(), user: { id: "user-1" } as never } as never
+      { ...createRouteParamsContext(), user: { id: TEST_USER_ID } as never } as never
     );
 
     expect(res.status).toBe(500);
@@ -191,7 +195,7 @@ describe("GET /api/security/metrics", () => {
       "Failed to fetch security metrics",
       expect.objectContaining({
         error: expect.any(Error),
-        userId: "user-1",
+        userId: TEST_USER_ID,
       })
     );
   });

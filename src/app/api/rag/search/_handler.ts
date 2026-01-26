@@ -17,6 +17,7 @@ import { createReranker } from "@/lib/rag/reranker";
 import { retrieveDocuments } from "@/lib/rag/retriever";
 import { hashIdentifier } from "@/lib/ratelimit/identifier";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMany } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
@@ -117,15 +118,21 @@ export async function handleRagSearch(
     const uniqueIds = Array.from(new Set(wantPairs.map((p) => p.id)));
     const wantKeySet = new Set(wantPairs.map((p) => `${p.id}:${p.chunkIndex}`));
 
-    const { data, error } = await deps.supabase
-      .from("rag_documents")
-      .select("id, chunk_index, content, metadata, namespace, source_id")
-      .in("id", uniqueIds);
+    const { data, error } = await getMany(
+      deps.supabase,
+      "rag_documents",
+      (qb) => qb.in("id", uniqueIds),
+      {
+        select: "id, chunk_index, content, metadata, namespace, source_id",
+        validate: false,
+      }
+    );
 
     if (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       recordTelemetryEvent("rag.cache.rehydration_db_error", {
         attributes: {
-          errorMessage: error.message,
+          errorMessage,
           uniqueIdCount: uniqueIds.length,
         },
         level: "warning",

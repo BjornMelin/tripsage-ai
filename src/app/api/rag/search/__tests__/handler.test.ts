@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 vi.mock("server-only", () => ({}));
 
@@ -84,7 +85,7 @@ describe("handleRagSearch (cache)", () => {
       {
         embeddingModelId: "openai/text-embedding-3-small",
         supabase: supabase as never,
-        userId: "user-1",
+        userId: TEST_USER_ID,
       },
       {
         keywordWeight: 0.3,
@@ -137,7 +138,7 @@ describe("handleRagSearch (cache)", () => {
       {
         embeddingModelId: "openai/text-embedding-3-small",
         supabase: supabase as never,
-        userId: "user-1",
+        userId: TEST_USER_ID,
       },
       {
         keywordWeight: 0.3,
@@ -184,7 +185,7 @@ describe("handleRagSearch (cache)", () => {
       {
         embeddingModelId: "openai/text-embedding-3-small",
         supabase: supabase as never,
-        userId: "user-1",
+        userId: TEST_USER_ID,
       },
       {
         keywordWeight: 0.3,

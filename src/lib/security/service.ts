@@ -11,6 +11,7 @@ import {
   securityMetricsSchema,
 } from "@schemas/security";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
+import { getMany } from "@/lib/supabase/typed-helpers";
 
 /** Audit log row type. */
 type AuditLogRow = {
@@ -63,13 +64,19 @@ export async function getUserSecurityEvents(
   adminSupabase: TypedAdminSupabase,
   userId: string
 ): Promise<SecurityEvent[]> {
-  const { data, error } = await adminSupabase
-    .schema("auth")
-    .from("audit_log_entries")
-    .select("id, created_at, ip_address, payload")
-    .eq("payload->>user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const { data, error } = await getMany(
+    adminSupabase,
+    "audit_log_entries",
+    (qb) => qb.eq("payload->>user_id", userId),
+    {
+      ascending: false,
+      limit: 50,
+      orderBy: "created_at",
+      schema: "auth",
+      select: "id, created_at, ip_address, payload",
+      validate: false,
+    }
+  );
 
   if (error) {
     throw new Error("failed_to_fetch_events");
@@ -119,59 +126,92 @@ export async function getUserSecurityMetrics(
 ): Promise<SecurityMetrics> {
   const since = new Date(Date.now() - HOURS_24_MS).toISOString();
 
-  const results = await Promise.allSettled([
-    adminSupabase
-      .schema("auth")
-      .from("audit_log_entries")
-      .select("created_at")
-      .eq("payload->>user_id", userId)
-      .eq("payload->>action", "login")
-      .order("created_at", { ascending: false })
-      .limit(1),
-    adminSupabase
-      .schema("auth")
-      .from("audit_log_entries")
-      .select("*", { count: "exact", head: true })
-      .eq("payload->>user_id", userId)
-      .eq("payload->>action", "login")
-      .eq("payload->>success", "false")
-      .gte("created_at", since),
-    adminSupabase
-      .schema("auth")
-      .from("sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .is("not_after", null),
-    adminSupabase
-      .schema("auth")
-      .from("mfa_factors")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "verified"),
-    adminSupabase
-      .schema("auth")
-      .from("identities")
-      .select("provider")
-      .eq("user_id", userId)
-      .neq("provider", "email"),
-  ]);
+  const [loginRowsRes, failedRes, sessionRes, mfaRes, identitiesRes] =
+    await Promise.all([
+      getMany(
+        adminSupabase,
+        "audit_log_entries",
+        (qb) => qb.eq("payload->>user_id", userId).eq("payload->>action", "login"),
+        {
+          ascending: false,
+          limit: 1,
+          orderBy: "created_at",
+          schema: "auth",
+          select: "created_at",
+          validate: false,
+        }
+      ),
+      getMany(
+        adminSupabase,
+        "audit_log_entries",
+        (qb) =>
+          qb
+            .eq("payload->>user_id", userId)
+            .eq("payload->>action", "login")
+            .eq("payload->>success", "false")
+            .gte("created_at", since),
+        {
+          count: "exact",
+          limit: 1,
+          schema: "auth",
+          select: "id",
+          validate: false,
+        }
+      ),
+      getMany(
+        adminSupabase,
+        "sessions",
+        (qb) => qb.eq("user_id", userId).is("not_after", null),
+        {
+          count: "exact",
+          limit: 1,
+          schema: "auth",
+          select: "id",
+          validate: false,
+        }
+      ),
+      getMany(
+        adminSupabase,
+        "mfa_factors",
+        (qb) => qb.eq("user_id", userId).eq("status", "verified"),
+        {
+          schema: "auth",
+          select: "id",
+          validate: false,
+        }
+      ),
+      getMany(
+        adminSupabase,
+        "identities",
+        (qb) => qb.eq("user_id", userId).neq("provider", "email"),
+        {
+          schema: "auth",
+          select: "provider",
+          validate: false,
+        }
+      ),
+    ]);
 
-  const [loginRowsRes, failedRes, sessionRes, mfaRes, identitiesRes] = results.map(
-    (r) => (r.status === "fulfilled" ? r.value : { count: 0, data: [], error: null })
-  ) as Array<{ data?: unknown; count?: number | null; error?: unknown }>;
+  const safeLoginRowsRes = loginRowsRes.error ? { count: 0, data: [] } : loginRowsRes;
+  const safeFailedRes = failedRes.error ? { count: 0, data: [] } : failedRes;
+  const safeSessionRes = sessionRes.error ? { count: 0, data: [] } : sessionRes;
+  const safeMfaRes = mfaRes.error ? { count: 0, data: [] } : mfaRes;
+  const safeIdentitiesRes = identitiesRes.error
+    ? { count: 0, data: [] }
+    : identitiesRes;
 
   const loginRows =
-    (loginRowsRes.data as Array<Record<string, unknown>> | undefined)?.map(
+    (safeLoginRowsRes.data as Array<Record<string, unknown>> | undefined)?.map(
       (row) => row.created_at as string
     ) ?? [];
-  const failedLoginAttempts = failedRes.count ?? 0;
-  const activeSessions = sessionRes.count ?? 0;
+  const failedLoginAttempts = safeFailedRes.count ?? 0;
+  const activeSessions = safeSessionRes.count ?? 0;
   const oauthConnections = (
-    (identitiesRes.data as Array<{ provider: string }> | undefined) ?? []
+    (safeIdentitiesRes.data as Array<{ provider: string }> | undefined) ?? []
   )
     .map((i) => i.provider)
     .filter(Boolean);
-  const mfaEnabled = ((mfaRes.data as Array<unknown>) ?? []).length > 0;
+  const mfaEnabled = ((safeMfaRes.data as Array<unknown>) ?? []).length > 0;
 
   const lastLogin = loginRows[0] ?? "never";
   const trustedDevices = activeSessions;
@@ -216,14 +256,19 @@ export async function getUserSessions(
   adminSupabase: TypedAdminSupabase,
   userId: string
 ): Promise<ActiveSession[]> {
-  const { data, error } = await adminSupabase
-    .schema("auth")
-    .from("sessions")
-    .select("id, user_agent, ip, refreshed_at, updated_at, created_at, not_after")
-    .eq("user_id", userId)
-    .is("not_after", null)
-    .order("refreshed_at", { ascending: false })
-    .limit(50);
+  const { data, error } = await getMany(
+    adminSupabase,
+    "sessions",
+    (qb) => qb.eq("user_id", userId).is("not_after", null),
+    {
+      ascending: false,
+      limit: 50,
+      orderBy: "refreshed_at",
+      schema: "auth",
+      select: "id, user_agent, ip, refreshed_at, updated_at, created_at, not_after",
+      validate: false,
+    }
+  );
 
   if (error) {
     throw new Error("failed_to_fetch_sessions");

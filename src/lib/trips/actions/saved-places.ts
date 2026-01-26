@@ -20,6 +20,7 @@ import {
 import { nowIso } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { deleteSingle, upsertSingle } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { normalizePlaceIdForStorage } from "@/lib/trips/place-id";
 import { listSavedPlacesForTrip } from "@/server/queries/saved-places";
@@ -128,9 +129,12 @@ export async function savePlaceImpl(
         user_id: user.id,
       };
 
-      const { error } = await supabase
-        .from("saved_places")
-        .upsert(insertRow, { onConflict: "trip_id,place_id" });
+      const { error } = await upsertSingle(
+        supabase,
+        "saved_places",
+        insertRow,
+        "trip_id,place_id"
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -144,7 +148,7 @@ export async function savePlaceImpl(
         }
         logger.error("saved_places_upsert_failed", {
           code: (error as { code?: unknown }).code ?? null,
-          message: error.message,
+          message: error instanceof Error ? error.message : "upsert failed",
           tripId: tripIdResult.data,
         });
         return err({ error: "internal", reason: "Failed to save place" });
@@ -203,13 +207,9 @@ export async function removePlaceImpl(
         return err({ error: "unauthorized", reason: "Unauthorized" });
       }
 
-      const { data, error } = await supabase
-        .from("saved_places")
-        .delete()
-        .eq("trip_id", tripIdResult.data)
-        .eq("place_id", normalizedPlaceId)
-        .select("id")
-        .maybeSingle();
+      const { count, error } = await deleteSingle(supabase, "saved_places", (qb) =>
+        qb.eq("trip_id", tripIdResult.data).eq("place_id", normalizedPlaceId)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -220,13 +220,13 @@ export async function removePlaceImpl(
         }
         logger.error("saved_places_delete_failed", {
           code: (error as { code?: unknown }).code ?? null,
-          message: error.message,
+          message: error instanceof Error ? error.message : "delete failed",
           tripId: tripIdResult.data,
         });
         return err({ error: "internal", reason: "Failed to remove place" });
       }
 
-      if (!data) {
+      if (count === 0) {
         return err({ error: "not_found", reason: "Saved place not found" });
       }
 

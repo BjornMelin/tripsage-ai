@@ -12,6 +12,7 @@ import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, parseStringId, validateSchema } from "@/lib/api/route-helpers";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
+import { getMany } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const paginationSchema = z.object({
@@ -56,19 +57,26 @@ export const GET = withApiGuards({
         "agent_config.list_versions",
         { attributes: { agentType: agentValidation.data, scope } },
         async () => {
-          let query = supabase
-            .from("agent_config_versions")
-            .select("id, created_at, created_by, summary, scope")
-            .eq("agent_type", agentValidation.data)
-            .eq("scope", scope)
-            .order("created_at", { ascending: false })
-            .limit(pagination.limit + 1);
-
-          if (pagination.cursor) {
-            query = query.lt("created_at", pagination.cursor);
-          }
-
-          return await query;
+          return await getMany(
+            supabase,
+            "agent_config_versions",
+            (qb) => {
+              let filtered = qb
+                .eq("agent_type", agentValidation.data)
+                .eq("scope", scope);
+              if (pagination.cursor) {
+                filtered = filtered.lt("created_at", pagination.cursor);
+              }
+              return filtered;
+            },
+            {
+              ascending: false,
+              limit: pagination.limit + 1,
+              orderBy: "created_at",
+              select: "id, created_at, created_by, summary, scope",
+              validate: false,
+            }
+          );
         }
       );
 

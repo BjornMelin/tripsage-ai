@@ -9,6 +9,7 @@ import {
   mockApiRouteCookies,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 vi.mock("server-only", () => ({}));
 
@@ -16,7 +17,7 @@ describe("withApiGuards auth credentials detection", () => {
   it("accepts Supabase SSR auth-token cookies", async () => {
     resetApiRouteMocks();
     mockApiRouteCookies({ "sb-127-auth-token": "test-auth-token" });
-    mockApiRouteAuthUser({ id: "test-user" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
 
     const { withApiGuards } = await import("@/lib/api/factory");
 
@@ -38,7 +39,7 @@ describe("withApiGuards auth credentials detection", () => {
       "sb-127-auth-token.0": "test-auth-token-part-0",
       "sb-127-auth-token.1": "test-auth-token-part-1",
     });
-    mockApiRouteAuthUser({ id: "test-user" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
 
     const { withApiGuards } = await import("@/lib/api/factory");
 

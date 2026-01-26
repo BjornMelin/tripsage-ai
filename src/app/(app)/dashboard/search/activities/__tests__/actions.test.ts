@@ -1,14 +1,20 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getManyMock.mockReset();
+  getSingleMock.mockReset();
+  insertSingleMock.mockReset();
 });
 
 // Mock supabase server client
 const mockGetUser = vi.fn();
-const mockFrom = vi.fn();
+const getManyMock = vi.hoisted(() => vi.fn());
+const getSingleMock = vi.hoisted(() => vi.fn());
+const insertSingleMock = vi.hoisted(() => vi.fn());
 const mapDbTripToUi = vi.hoisted(() =>
   vi.fn((row: Record<string, unknown>) => ({
     ...row,
@@ -21,9 +27,14 @@ vi.mock("@/lib/supabase/server", () => ({
       auth: {
         getUser: mockGetUser,
       },
-      from: mockFrom,
     })
   ),
+}));
+
+vi.mock("@/lib/supabase/typed-helpers", () => ({
+  getMany: getManyMock,
+  getSingle: getSingleMock,
+  insertSingle: insertSingleMock,
 }));
 
 // Mock cache tags
@@ -86,16 +97,8 @@ describe("Activity actions - getPlanningTrips", () => {
   });
 
   it("returns empty array when no trips exist", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    mockFrom.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          in: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        }),
-      }),
-    });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getManyMock.mockResolvedValue({ count: null, data: [], error: null });
 
     const result = await getPlanningTrips();
 
@@ -107,18 +110,11 @@ describe("Activity actions - getPlanningTrips", () => {
   });
 
   it("returns error when database query fails", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    mockFrom.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          in: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({
-              data: null,
-              error: { details: "Connection timeout", message: "Database error" },
-            }),
-          }),
-        }),
-      }),
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getManyMock.mockResolvedValue({
+      count: null,
+      data: null,
+      error: { details: "Connection timeout", message: "Database error" },
     });
 
     const result = await getPlanningTrips();
@@ -126,18 +122,10 @@ describe("Activity actions - getPlanningTrips", () => {
   });
 
   it("returns mapped trips when query succeeds", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
     // Create a valid trip row that passes tripsRowSchema validation
     const validRow = createValidTripRow({ id: 1, name: "First Trip" });
-    mockFrom.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          in: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: [validRow], error: null }),
-          }),
-        }),
-      }),
-    });
+    getManyMock.mockResolvedValue({ count: null, data: [validRow], error: null });
 
     const result = await getPlanningTrips();
 
@@ -172,18 +160,10 @@ describe("Activity actions - addActivityToTrip", () => {
   });
 
   it("returns error when trip not found or access denied", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    mockFrom.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: null,
-              error: { message: "No rows found" },
-            }),
-          }),
-        }),
-      }),
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getSingleMock.mockResolvedValue({
+      data: null,
+      error: { message: "No rows found" },
     });
 
     const result = await addActivityToTrip(123, {
@@ -193,18 +173,9 @@ describe("Activity actions - addActivityToTrip", () => {
   });
 
   it("inserts activity successfully", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-    mockFrom.mockReturnValue({
-      insert: mockInsert,
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: { id: 123 }, error: null }),
-          }),
-        }),
-      }),
-    });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getSingleMock.mockResolvedValue({ data: { id: 123 }, error: null });
+    insertSingleMock.mockResolvedValue({ data: null, error: null });
 
     const result = await addActivityToTrip(123, {
       currency: "USD",
@@ -214,45 +185,32 @@ describe("Activity actions - addActivityToTrip", () => {
     });
     expect(result.ok).toBe(true);
 
-    expect(mockInsert).toHaveBeenCalledTimes(1);
-    expect(mockInsert).toHaveBeenCalledWith(
+    expect(insertSingleMock).toHaveBeenCalledTimes(1);
+    expect(insertSingleMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "itinerary_items",
       expect.objectContaining({
         currency: "USD",
         description: "A fun beach tour",
         price: 99.99,
         title: "Beach Tour",
         trip_id: 123,
-        user_id: "test-user",
+        user_id: TEST_USER_ID,
       })
     );
   });
 
   it("coerces numeric trip id strings and inserts with number trip_id", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "trips") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 1 }, error: null }),
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === "itinerary_items") {
-        return { insert: mockInsert };
-      }
-      return {};
-    });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getSingleMock.mockResolvedValue({ data: { id: 1 }, error: null });
+    insertSingleMock.mockResolvedValue({ data: null, error: null });
 
     const result = await addActivityToTrip("1", { title: "Beach Tour" });
     expect(result.ok).toBe(true);
 
-    expect(mockInsert).toHaveBeenCalledWith(
+    expect(insertSingleMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "itinerary_items",
       expect.objectContaining({
         trip_id: 1,
       })
@@ -260,47 +218,21 @@ describe("Activity actions - addActivityToTrip", () => {
   });
 
   it("returns error when activity data fails validation", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    const mockInsert = vi.fn();
-    const single = vi.fn().mockResolvedValue({ data: { id: 123 }, error: null });
-    mockFrom.mockReturnValue({
-      insert: mockInsert,
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({ single }),
-        }),
-      }),
-    });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getSingleMock.mockResolvedValue({ data: { id: 123 }, error: null });
 
     const result = await addActivityToTrip(123, {
       title: "", // invalid per schema
     });
     expect(result.ok).toBe(false);
 
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(insertSingleMock).not.toHaveBeenCalled();
   });
 
   it("maps optional activity fields and inserts snake_case columns", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "trips") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 123 }, error: null }),
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === "itinerary_items") {
-        return { insert: mockInsert };
-      }
-      return {};
-    });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getSingleMock.mockResolvedValue({ data: { id: 123 }, error: null });
+    insertSingleMock.mockResolvedValue({ data: null, error: null });
 
     const result = await addActivityToTrip(123, {
       currency: "EUR",
@@ -315,7 +247,9 @@ describe("Activity actions - addActivityToTrip", () => {
     });
     expect(result.ok).toBe(true);
 
-    expect(mockInsert).toHaveBeenCalledWith(
+    expect(insertSingleMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "itinerary_items",
       expect.objectContaining({
         currency: "EUR",
         description: "City tour",
@@ -331,54 +265,23 @@ describe("Activity actions - addActivityToTrip", () => {
   });
 
   it("succeeds even if cache invalidation fails", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
     vi.mocked(bumpTag).mockRejectedValueOnce(new Error("cache failure"));
 
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "trips") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 123 }, error: null }),
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === "itinerary_items") {
-        return { insert: mockInsert };
-      }
-      return {};
-    });
+    getSingleMock.mockResolvedValue({ data: { id: 123 }, error: null });
+    insertSingleMock.mockResolvedValue({ data: null, error: null });
 
     const result = await addActivityToTrip(123, { title: "Beach Tour" });
     expect(result.ok).toBe(true);
-    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(insertSingleMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns error when insert fails and does not bump cache tag", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "test-user" } } });
-    const mockInsert = vi.fn().mockResolvedValue({
+    mockGetUser.mockResolvedValue({ data: { user: { id: TEST_USER_ID } } });
+    getSingleMock.mockResolvedValue({ data: { id: 123 }, error: null });
+    insertSingleMock.mockResolvedValue({
+      data: null,
       error: { code: "500", details: "insert failed", message: "insert failed" },
-    });
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "trips") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 123 }, error: null }),
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === "itinerary_items") {
-        return { insert: mockInsert };
-      }
-      return {};
     });
 
     const result = await addActivityToTrip(123, { title: "Beach Tour" });

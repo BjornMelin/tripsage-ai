@@ -23,6 +23,7 @@ import {
   zodErrorToFieldErrors,
 } from "@/lib/result";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getMany, getSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { mapDbTripToUi, mapItineraryItemUpsertToDbInsert } from "@/lib/trips/mappers";
@@ -84,19 +85,16 @@ export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>>
     });
   }
 
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("user_id", user.id)
-    .in("status", ["planning", "active"])
-    .order("created_at", { ascending: false });
+  const { data, error } = await getMany(supabase, "trips", (qb) =>
+    qb
+      .eq("user_id", user.id)
+      .in("status", ["planning", "active"])
+      .order("created_at", { ascending: false })
+  );
 
   if (error) {
     logger.error("Failed to fetch trips", {
-      data,
-      details: error.details,
       error,
-      message: error.message,
     });
     return err({
       error: "internal",
@@ -166,12 +164,12 @@ export async function addActivityToTrip(
   }
 
   // Validate trip ownership
-  const { error: tripError } = await supabase
-    .from("trips")
-    .select("id")
-    .eq("id", validatedTripId)
-    .eq("user_id", user.id)
-    .single();
+  const { error: tripError } = await getSingle(
+    supabase,
+    "trips",
+    (qb) => qb.eq("id", validatedTripId).eq("user_id", user.id),
+    { select: "id", validate: false }
+  );
 
   if (tripError) {
     return err({
@@ -209,15 +207,16 @@ export async function addActivityToTrip(
 
   const insertPayload = mapItineraryItemUpsertToDbInsert(validation.data, user.id);
 
-  const { error: insertError } = await supabase
-    .from("itinerary_items")
-    .insert(insertPayload);
+  const { error: insertError } = await insertSingle(
+    supabase,
+    "itinerary_items",
+    insertPayload
+  );
 
   if (insertError) {
     logger.error("Failed to add activity to trip", {
-      code: insertError.code,
-      details: insertError.details,
-      message: insertError.message,
+      code: (insertError as { code?: unknown } | null)?.code ?? null,
+      message: insertError instanceof Error ? insertError.message : "insert failed",
     });
     return err({
       error: "internal",

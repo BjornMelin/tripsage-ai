@@ -18,6 +18,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import type { BotIdVerification } from "@/lib/security/botid";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { mockBotIdHumanResponse } from "@/test/mocks/botid";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 import { registerUpstashMocksWithVitest } from "@/test/upstash/setup";
@@ -89,19 +90,20 @@ const DEFAULT_RATE_LIMIT: RateLimitResult = {
 const STATE = vi.hoisted(() => ({
   cookies: {} as Record<string, string>,
   rateLimitEnabled: false,
-  user: {
-    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
-    app_metadata: {},
-    aud: "authenticated",
-    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
-    created_at: new Date(0).toISOString(),
-    email: "test@example.com",
-    id: "test-user",
-    // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
-    user_metadata: {},
-  } as User | null,
+  user: null as User | null,
 }));
 STATE.cookies = { ...DEFAULT_COOKIE_JAR };
+STATE.user = {
+  // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+  app_metadata: {},
+  aud: "authenticated",
+  // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+  created_at: new Date(0).toISOString(),
+  email: "test@example.com",
+  id: TEST_USER_ID,
+  // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
+  user_metadata: {},
+} as User;
 
 const COOKIES_MOCK = vi.hoisted(() =>
   vi.fn(() => Promise.resolve(getMockCookiesForTest(STATE.cookies)))
@@ -192,7 +194,7 @@ export function resetApiRouteMocks(): void {
     // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     created_at: new Date(0).toISOString(),
     email: "test@example.com",
-    id: "test-user",
+    id: TEST_USER_ID,
     // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
     user_metadata: {},
   } as User;
@@ -247,7 +249,7 @@ export function mockApiRouteAuthUser(user: User | null | Partial<User>): void {
     // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
     created_at: new Date(0).toISOString(),
     email: "test@example.com",
-    id: "test-user",
+    id: TEST_USER_ID,
     // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case fields
     user_metadata: {},
   };
@@ -280,7 +282,7 @@ const ensureMfaMock = (client: ReturnType<typeof createMockSupabaseClient>) => {
       // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
       created_at: new Date(0).toISOString(),
       email: "test@example.com",
-      id: "test-user",
+      id: TEST_USER_ID,
       // biome-ignore lint/style/useNamingConvention: Supabase API uses snake_case
       user_metadata: {},
     } as User);

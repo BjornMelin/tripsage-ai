@@ -7,6 +7,7 @@ import "server-only";
 import { ATTACHMENT_MAX_FILE_SIZE } from "@schemas/attachments";
 import type { AttachmentsIngestJob, RagIndexJob } from "@schemas/webhooks";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
+import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("jobs.attachments-ingest");
@@ -145,16 +146,20 @@ export async function handleAttachmentsIngest(
 > {
   const { supabase } = deps;
 
-  const { data: attachment, error } = await supabase
-    .from("file_attachments")
-    .select(
-      "id,bucket_name,file_path,file_size,mime_type,original_filename,upload_status,virus_scan_status,user_id,trip_id,chat_id"
-    )
-    .eq("id", job.attachmentId)
-    .maybeSingle();
+  const { data: attachment, error } = await getMaybeSingle(
+    supabase,
+    "file_attachments",
+    (qb) => qb.eq("id", job.attachmentId),
+    {
+      select:
+        "id,bucket_name,file_path,file_size,mime_type,original_filename,upload_status,virus_scan_status,user_id,trip_id,chat_id",
+      validate: false,
+    }
+  );
 
   if (error) {
-    throw new Error(`db_error:${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`db_error:${message}`);
   }
 
   if (!attachment) {

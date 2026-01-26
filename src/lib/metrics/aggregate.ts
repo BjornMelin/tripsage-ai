@@ -8,6 +8,7 @@ import { type DashboardMetrics, dashboardMetricsSchema } from "@schemas/dashboar
 import { getRedis } from "@/lib/redis";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getMany } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Metric row shape for api_metrics queries (subset of columns needed). */
@@ -70,13 +71,13 @@ export function aggregateDashboardMetrics(
 
       // Parallel queries for trips and API metrics
       const [tripsResult, metricsResult] = await Promise.all([
-        supabase.from("trips").select("status"),
+        getMany(supabase, "trips", (qb) => qb, { select: "status", validate: false }),
         // Query api_metrics table (will fail gracefully if table doesn't exist yet)
         fetchApiMetrics(supabase, since),
       ]);
 
       // Process trip statistics
-      const trips = tripsResult.data ?? [];
+      const trips = tripsResult.error ? [] : (tripsResult.data ?? []);
       const tripStats = trips.reduce(
         (acc, trip) => {
           acc.total++;
@@ -146,15 +147,22 @@ async function fetchApiMetrics(
   since: string | null
 ): Promise<ApiMetricRow[]> {
   try {
-    const query = supabase.from("api_metrics").select("duration_ms, status_code");
+    const { data, error } = await getMany(
+      supabase,
+      "api_metrics",
+      (qb) => (since ? qb.gte("created_at", since) : qb),
+      {
+        limit: 10000,
+        select: "duration_ms, status_code",
+        validate: false,
+      }
+    );
 
-    if (since) {
-      const result = await query.gte("created_at", since).limit(10000);
-      return result.data ?? [];
+    if (error) {
+      return [];
     }
 
-    const result = await query.limit(10000);
-    return result.data ?? [];
+    return data ?? [];
   } catch {
     // Table might not exist yet, return empty
     return [];

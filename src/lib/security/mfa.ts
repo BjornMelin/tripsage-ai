@@ -25,6 +25,12 @@ import { incrCounter } from "@/lib/redis";
 import { nowIso, secureId } from "@/lib/security/random";
 import { getAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  getMany,
+  getMaybeSingle,
+  insertSingle,
+  updateMany,
+} from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -32,6 +38,10 @@ type TypedSupabase = SupabaseClient<Database>;
 type BackupAuditMeta = { ip?: string; userAgent?: string };
 
 const auditLogger = createServerLogger("security.mfa.audit");
+
+function toException(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /** A custom error class for invalid backup codes. */
 export class InvalidBackupCodeError extends Error {
@@ -212,20 +222,26 @@ export async function startTotpEnrollment(
       };
       const parsed = mfaEnrollmentSchema.parse(payload);
       const adminSupabase = deps?.adminSupabase ?? getAdminSupabase();
-      const { error: expireError } = await adminSupabase
-        .from("mfa_enrollments")
-        .update({ status: "expired" })
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .lt("expires_at", nowIso());
+      const { error: expireError } = await updateMany(
+        adminSupabase,
+        "mfa_enrollments",
+        { status: "expired" },
+        (qb) =>
+          qb.eq("user_id", userId).eq("status", "pending").lt("expires_at", nowIso())
+      );
       if (expireError) {
-        span.recordException(expireError);
-        throw new Error(expireError.message ?? "mfa_enrollment_expire_failed");
+        span.recordException(toException(expireError));
+        throw new Error(
+          expireError instanceof Error
+            ? expireError.message
+            : "mfa_enrollment_expire_failed"
+        );
       }
 
-      const { error: insertError } = await adminSupabase
-        .from("mfa_enrollments")
-        .insert({
+      const { error: insertError } = await insertSingle(
+        adminSupabase,
+        "mfa_enrollments",
+        {
           // biome-ignore lint/style/useNamingConvention: snake_case columns
           challenge_id: parsed.challengeId,
           // biome-ignore lint/style/useNamingConvention: snake_case columns
@@ -237,10 +253,15 @@ export async function startTotpEnrollment(
           status: "pending",
           // biome-ignore lint/style/useNamingConvention: snake_case columns
           user_id: userId,
-        });
+        }
+      );
       if (insertError) {
-        span.recordException(insertError);
-        throw new Error(insertError.message ?? "mfa_enrollment_store_failed");
+        span.recordException(toException(insertError));
+        throw new Error(
+          insertError instanceof Error
+            ? insertError.message
+            : "mfa_enrollment_store_failed"
+        );
       }
 
       return parsed;
@@ -313,19 +334,24 @@ export async function verifyTotp(
       const adminSupabase = deps?.adminSupabase ?? getAdminSupabase();
 
       // Check for pending enrollment (initial setup flow)
-      const { data: pendingEnrollment, error: enrollmentError } = await supabase
-        .from("mfa_enrollments")
-        .select("expires_at,status")
-        .eq("factor_id", parsed.factorId)
-        .eq("challenge_id", parsed.challengeId)
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: pendingEnrollment, error: enrollmentError } = await getMaybeSingle(
+        supabase,
+        "mfa_enrollments",
+        (qb) =>
+          qb
+            .eq("factor_id", parsed.factorId)
+            .eq("challenge_id", parsed.challengeId)
+            .order("issued_at", { ascending: false })
+            .limit(1),
+        { select: "expires_at,status", validate: false }
+      );
 
       if (enrollmentError) {
-        span.recordException(enrollmentError);
+        span.recordException(toException(enrollmentError));
         throw new TotpVerificationInternalError(
-          enrollmentError.message ?? "mfa_enrollment_lookup_failed"
+          enrollmentError instanceof Error
+            ? enrollmentError.message
+            : "mfa_enrollment_lookup_failed"
         );
       }
 
@@ -335,15 +361,19 @@ export async function verifyTotp(
       // If this is initial enrollment, validate expiration
       if (isInitialEnrollment) {
         if (new Date(pendingEnrollment.expires_at).getTime() < Date.now()) {
-          const { error: expireError } = await adminSupabase
-            .from("mfa_enrollments")
-            .update({ status: "expired" })
-            .eq("challenge_id", parsed.challengeId)
-            .eq("factor_id", parsed.factorId);
+          const { error: expireError } = await updateMany(
+            adminSupabase,
+            "mfa_enrollments",
+            { status: "expired" },
+            (qb) =>
+              qb.eq("challenge_id", parsed.challengeId).eq("factor_id", parsed.factorId)
+          );
           if (expireError) {
-            span.recordException(expireError);
+            span.recordException(toException(expireError));
             throw new TotpVerificationInternalError(
-              expireError.message ?? "mfa_enrollment_expire_failed"
+              expireError instanceof Error
+                ? expireError.message
+                : "mfa_enrollment_expire_failed"
             );
           }
           throw new InvalidTotpError("mfa_enrollment_expired");
@@ -369,21 +399,27 @@ export async function verifyTotp(
       // Mark enrollment consumed if this was initial enrollment
       if (isInitialEnrollment) {
         const userId = await getAuthenticatedUserId(supabase);
-        const { error: consumeError } = await adminSupabase
-          .from("mfa_enrollments")
-          .update({
+        const { error: consumeError } = await updateMany(
+          adminSupabase,
+          "mfa_enrollments",
+          {
             // biome-ignore lint/style/useNamingConvention: snake_case columns
             consumed_at: nowIso(),
             status: "consumed",
-          })
-          .eq("user_id", userId)
-          .eq("factor_id", parsed.factorId)
-          .eq("challenge_id", parsed.challengeId)
-          .eq("status", "pending");
+          },
+          (qb) =>
+            qb
+              .eq("user_id", userId)
+              .eq("factor_id", parsed.factorId)
+              .eq("challenge_id", parsed.challengeId)
+              .eq("status", "pending")
+        );
         if (consumeError) {
-          span.recordException(consumeError);
+          span.recordException(toException(consumeError));
           throw new TotpVerificationInternalError(
-            consumeError.message ?? "mfa_enrollment_update_failed"
+            consumeError instanceof Error
+              ? consumeError.message
+              : "mfa_enrollment_update_failed"
           );
         }
       }
@@ -527,47 +563,55 @@ export async function verifyBackupCode(
     { attributes: { feature: "mfa", userId }, redactKeys: ["userId"] },
     async (span) => {
       const hashedInput = hashBackupCode(parsedCode);
-      const table = adminSupabase.from("auth_backup_codes");
-      const { data, error } = await table
-        .select("id")
-        .eq("user_id", userId)
-        .eq("code_hash", hashedInput)
-        .is("consumed_at", null)
-        .maybeSingle();
+      const { data, error } = await getMaybeSingle(
+        adminSupabase,
+        "auth_backup_codes",
+        (qb) =>
+          qb.eq("user_id", userId).eq("code_hash", hashedInput).is("consumed_at", null),
+        { select: "id", validate: false }
+      );
 
       if (error) {
-        span.recordException(error);
-        throw new Error(error.message ?? "backup_codes_lookup_failed");
+        span.recordException(toException(error));
+        throw new Error(
+          error instanceof Error ? error.message : "backup_codes_lookup_failed"
+        );
       }
       if (!data) {
         throw new InvalidBackupCodeError("invalid_backup_code");
       }
 
-      const { data: updatedRows, error: updateError } = await table
+      const { count: updatedCount, error: updateError } = await updateMany(
+        adminSupabase,
+        "auth_backup_codes",
         // biome-ignore lint/style/useNamingConvention: DB column naming
-        .update({ consumed_at: nowIso() })
-        .eq("id", data.id)
-        .is("consumed_at", null)
-        .select("id");
+        { consumed_at: nowIso() },
+        (qb) => qb.eq("id", data.id).is("consumed_at", null)
+      );
       if (updateError) {
-        span.recordException(updateError);
-        throw new Error(updateError.message ?? "backup_code_consume_failed");
+        span.recordException(toException(updateError));
+        throw new Error(
+          updateError instanceof Error
+            ? updateError.message
+            : "backup_code_consume_failed"
+        );
       }
-      const updatedCount = updatedRows?.length ?? 0;
       if (!updatedCount || updatedCount === 0) {
         throw new InvalidBackupCodeError("backup_code_already_consumed");
       }
 
-      const { count, error: countError } = await table
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .is("consumed_at", null);
+      const { count, error: countError } = await getMany(
+        adminSupabase,
+        "auth_backup_codes",
+        (qb) => qb.eq("user_id", userId).is("consumed_at", null),
+        { count: "exact", limit: 1, select: "id", validate: false }
+      );
 
       // Best-effort metadata; do not fail the request if counting fails.
       if (countError) {
-        span.recordException(countError);
+        span.recordException(toException(countError));
         auditLogger.warn("failed to count remaining backup codes", {
-          error: countError.message,
+          error: countError instanceof Error ? countError.message : String(countError),
         });
       }
 
@@ -655,7 +699,7 @@ async function logBackupCodeAudit(
   count: number,
   meta: BackupAuditMeta
 ) {
-  const { error } = await adminSupabase.from("mfa_backup_code_audit" as never).insert({
+  const { error } = await insertSingle(adminSupabase, "mfa_backup_code_audit", {
     count,
     event,
     ip: meta.ip,
@@ -663,10 +707,10 @@ async function logBackupCodeAudit(
     user_agent: meta.userAgent,
     // biome-ignore lint/style/useNamingConvention: DB column naming
     user_id: userId,
-  } as never);
+  });
   if (error) {
     auditLogger.error("mfa backup code audit insert failed", {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       event,
       userId,
     });

@@ -7,6 +7,7 @@ import {
   mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 vi.mock("server-only", () => ({}));
 
@@ -19,7 +20,7 @@ vi.mock("../_handler", () => ({
 describe("/api/rag/index route", () => {
   beforeEach(() => {
     resetApiRouteMocks();
-    mockApiRouteAuthUser({ id: "user-1" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
     MOCK_HANDLE_RAG_INDEX.mockReset();
     MOCK_HANDLE_RAG_INDEX.mockResolvedValue(
       new Response(JSON.stringify({ indexed: 1, success: true }), {

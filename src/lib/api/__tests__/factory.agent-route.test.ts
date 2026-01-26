@@ -4,6 +4,7 @@ import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import type { Agent } from "ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
@@ -73,7 +74,10 @@ describe("createAgentRoute", () => {
     setSupabaseFactoryForTests(async () =>
       unsafeCast({
         auth: {
-          getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }),
+          getUser: async () => ({
+            data: { user: { id: TEST_USER_ID } },
+            error: null,
+          }),
         },
       })
     );

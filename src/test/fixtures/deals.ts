@@ -10,6 +10,7 @@ import {
   type DealAlert,
 } from "@schemas/deals";
 import { nowIso, secureId } from "@/lib/security/random";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 /**
  * Creates a valid Deal fixture using Zod schema validation.
@@ -63,7 +64,7 @@ export function createDealAlertFixture(overrides: Partial<DealAlert> = {}): Deal
     notificationType: "email",
     origin: "New York",
     updatedAt: nowIso(),
-    userId: "user-1",
+    userId: TEST_USER_ID,
     ...overrides,
   };
 

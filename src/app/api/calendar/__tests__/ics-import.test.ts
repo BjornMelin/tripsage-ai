@@ -2,6 +2,7 @@
 
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 let route: typeof import("../ics/import/route") | null = null;
@@ -19,7 +20,7 @@ describe("/api/calendar/ics/import", () => {
 
   beforeEach(() => {
     resetApiRouteMocks();
-    mockApiRouteAuthUser({ id: "user-1" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
   });
 
   it("imports ICS successfully", async () => {

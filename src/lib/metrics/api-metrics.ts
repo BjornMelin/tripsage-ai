@@ -8,6 +8,7 @@ import type { HttpMethod } from "@schemas/supabase";
 import { getRedis, incrCounter } from "@/lib/redis";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { insertSingle } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 type ApiMetricInsertRow = TablesInsert<"api_metrics">;
@@ -78,8 +79,14 @@ export async function recordApiMetric(metric: ApiMetric): Promise<void> {
           /* biome-ignore lint/style/useNamingConvention: Supabase column */
           user_id: metric.userId ?? null,
         };
-        const insertOp = supabase.from("api_metrics").insert(insertPayload);
-        operations.push(Promise.resolve(insertOp));
+        const insertOp = insertSingle(supabase, "api_metrics", insertPayload).then(
+          ({ error }) => {
+            if (error) {
+              span.setAttribute("supabase.error", true);
+            }
+          }
+        );
+        operations.push(insertOp);
       } catch {
         span.setAttribute("supabase.error", true);
       }

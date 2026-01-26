@@ -10,6 +10,7 @@ import {
   mockApiRouteCookies,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 const REQUIRE_SAME_ORIGIN = vi.hoisted(() =>
   vi.fn<() => SameOriginResult>(() => ({ ok: true }))
@@ -25,7 +26,7 @@ describe("withApiGuards CSRF gating", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     mockApiRouteCookies({ "sb-access-token": "test-token" });
-    mockApiRouteAuthUser({ id: "test-user" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
     REQUIRE_SAME_ORIGIN.mockClear();
   });
 

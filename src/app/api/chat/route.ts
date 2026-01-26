@@ -144,7 +144,7 @@ export const POST = withApiGuards({
     ttlMs: MEMORY_SUMMARY_TTL_MS,
   });
   const defaultMaxTokens = getDefaultMaxTokens();
-  const maxSteps = getDefaultMaxSteps();
+  const stepLimit = getDefaultMaxSteps();
   const timeoutSeconds = getDefaultTimeoutSeconds();
   const stepTimeoutSeconds = getDefaultStepTimeoutSeconds(timeoutSeconds);
   return handleChat(
@@ -152,7 +152,7 @@ export const POST = withApiGuards({
       clock: { now: () => Date.now() },
       config: {
         defaultMaxTokens,
-        maxSteps,
+        stepLimit,
         stepTimeoutSeconds,
         timeoutSeconds,
       },

@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { secureUuid } from "@/lib/security/random";
+import { deleteSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { ensureTripAccess } from "@/lib/trips/trip-access";
 
@@ -113,13 +114,15 @@ export const POST = withApiGuards({
   const cleanupInserted = async (): Promise<void> => {
     if (insertedIds.length === 0) return;
     try {
-      const { error: cleanupError } = await supabase
-        .from("file_attachments")
-        .delete()
-        .in("id", insertedIds);
+      const { error: cleanupError } = await deleteSingle(
+        supabase,
+        "file_attachments",
+        (qb) => qb.in("id", insertedIds)
+      );
       if (cleanupError) {
         logger.warn("Failed to cleanup inserted attachment rows", {
-          error: cleanupError.message,
+          error:
+            cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
           insertedCount: insertedIds.length,
           userId,
         });
@@ -146,7 +149,7 @@ export const POST = withApiGuards({
       });
 
       // Insert metadata row first so Storage RLS can authorize the upload.
-      const { error: insertError } = await supabase.from("file_attachments").insert({
+      const { error: insertError } = await insertSingle(supabase, "file_attachments", {
         bucket_name: STORAGE_BUCKET,
         chat_id: body.chatId ?? null,
         chat_message_id: body.chatMessageId ?? null,
@@ -163,8 +166,10 @@ export const POST = withApiGuards({
 
       if (insertError) {
         await cleanupInserted();
+        const message =
+          insertError instanceof Error ? insertError.message : String(insertError);
         return errorResponse({
-          err: new Error(insertError.message),
+          err: new Error(message),
           error: "db_error",
           reason: "Failed to create attachment record",
           status: 500,

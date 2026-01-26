@@ -11,6 +11,7 @@ import { AuthError, createClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 /**
  * Configuration for Supabase mock factory with insert capture support.
@@ -87,7 +88,7 @@ const createMockUser = (overrides?: Partial<User>): User => ({
   aud: "authenticated",
   created_at: new Date(0).toISOString(),
   email: "mock-user@example.com",
-  id: "mock-user-id",
+  id: TEST_USER_ID,
   user_metadata: {},
   ...overrides,
 });
@@ -107,6 +108,7 @@ const createMockSession = (user: User): Session => ({
  * Mutable state backing a mock Supabase client.
  */
 export type SupabaseMockState = {
+  autoIncrement: Map<string, number>;
   insertCapture: unknown[];
   insertByTable: Map<string, unknown[]>;
   insertErrorsByTable: Map<string, unknown>;
@@ -132,13 +134,6 @@ function jsonResponse(
       ...(init?.headers ?? {}),
     },
     status: init?.status ?? 200,
-  });
-}
-
-function emptyResponse(init?: { headers?: HeadersInit; status?: number }): Response {
-  return new Response(null, {
-    headers: init?.headers,
-    status: init?.status ?? 204,
   });
 }
 
@@ -207,6 +202,70 @@ function flattenInsertedRows(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (typeof value === "object") return [value];
   return [];
+}
+
+function getNextAutoIncrement(state: SupabaseMockState, table: string): number {
+  const current = state.autoIncrement.get(table) ?? 0;
+  const next = current + 1;
+  state.autoIncrement.set(table, next);
+  return next;
+}
+
+function applyRowDefaults(
+  state: SupabaseMockState,
+  table: string,
+  row: unknown
+): unknown {
+  if (!row || typeof row !== "object") return row;
+  const record = row as Record<string, unknown>;
+
+  if (table === "chat_sessions") {
+    if (record.created_at === undefined) record.created_at = null;
+    if (record.updated_at === undefined) record.updated_at = record.created_at ?? null;
+    if (record.metadata === undefined) record.metadata = null;
+    if (record.trip_id === undefined) record.trip_id = null;
+    return record;
+  }
+
+  if (table === "chat_messages") {
+    if (typeof record.id !== "number") {
+      record.id = getNextAutoIncrement(state, table);
+    }
+    if (record.created_at === undefined) record.created_at = null;
+    if (record.metadata === undefined) record.metadata = null;
+    return record;
+  }
+
+  if (table === "file_attachments") {
+    if (record.created_at === undefined) record.created_at = null;
+    if (record.updated_at === undefined) record.updated_at = null;
+    if (record.metadata === undefined) record.metadata = null;
+    if (record.virus_scan_result === undefined) record.virus_scan_result = null;
+    if (record.virus_scan_status === undefined) record.virus_scan_status = "pending";
+    return record;
+  }
+
+  if (table === "chat_tool_calls") {
+    if (typeof record.id !== "number") {
+      record.id = getNextAutoIncrement(state, table);
+    }
+    if (record.created_at === undefined) record.created_at = null;
+    if (record.updated_at === undefined) record.updated_at = null;
+    if (record.error_message === undefined) record.error_message = null;
+    return record;
+  }
+
+  return record;
+}
+
+function hydrateInsertedRows(
+  state: SupabaseMockState,
+  table: string,
+  payload: unknown
+): unknown[] {
+  const rows = flattenInsertedRows(payload);
+  if (rows.length === 0) return [];
+  return rows.map((row) => applyRowDefaults(state, table, row));
 }
 
 function applyEqFilters(rows: unknown, searchParams: URLSearchParams): unknown {
@@ -295,15 +354,17 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
           return jsonResponse(makePostgrestErrorPayload(forcedError), { status: 400 });
         }
         const parsed = parseJsonBody(init?.body ?? null);
+        const hydratedRows = hydrateInsertedRows(state, resource, parsed);
         if (parsed != null) {
           const byTable = state.insertByTable.get(resource) ?? [];
-          byTable.push(parsed);
+          byTable.push(...hydratedRows);
           state.insertByTable.set(resource, byTable);
           state.insertCapture.push(parsed);
         }
         if (prefer.includes("return=representation")) {
-          const rows = flattenInsertedRows(parsed);
-          return jsonResponse(wantsSingle ? (rows[0] ?? null) : rows, { status: 201 });
+          return jsonResponse(wantsSingle ? (hydratedRows[0] ?? null) : hydratedRows, {
+            status: 201,
+          });
         }
         return jsonResponse([], { status: 201 });
       }
@@ -324,7 +385,21 @@ function createMockFetch(state: SupabaseMockState): typeof fetch {
       }
 
       if (method === "DELETE") {
-        return emptyResponse({ status: 204 });
+        const existingRows = state.insertByTable.get(resource) ?? [];
+        const matched = applyEqFilters(existingRows, url.searchParams);
+        const matchedRows = Array.isArray(matched) ? matched : [];
+
+        if (matchedRows.length > 0) {
+          const remaining = existingRows.filter((row) => !matchedRows.includes(row));
+          state.insertByTable.set(resource, remaining);
+        }
+
+        const contentRange = makeContentRange(matchedRows.length, matchedRows);
+        const body = prefer.includes("return=representation") ? matchedRows : [];
+        return jsonResponse(body, {
+          headers: contentRange ? { "content-range": contentRange } : undefined,
+          status: 200,
+        });
       }
 
       const select = state.selectByTable.get(resource) ?? state.selectResult;
@@ -438,6 +513,7 @@ export function getSupabaseMockState(
 
 export function resetSupabaseMockState(client: SupabaseClient<Database>): void {
   const state = getSupabaseMockState(client);
+  state.autoIncrement.clear();
   state.insertCapture.length = 0;
   state.insertByTable.clear();
   state.insertErrorsByTable.clear();
@@ -465,6 +541,7 @@ export const createMockSupabaseClient = (
         : null;
 
   const state: SupabaseMockState = {
+    autoIncrement: new Map(),
     insertByTable: new Map(),
     insertCapture: config?.insertCapture ?? [],
     insertErrorsByTable: new Map(Object.entries(config?.insertErrors ?? {})),

@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import type { ServerLogger } from "@/lib/telemetry/logger";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import {
@@ -21,6 +22,7 @@ type UntypedSupabaseInsert = {
 };
 
 describe("sessions _handlers", () => {
+  const userId = TEST_USER_ID;
   const logger = {
     error: vi.fn(),
     info: vi.fn(),
@@ -28,39 +30,39 @@ describe("sessions _handlers", () => {
   } satisfies ServerLogger;
 
   it("create/list session happy path", async () => {
-    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u1" } });
-    const res1 = await createSession({ logger, supabase: s, userId: "u1" }, "Trip");
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
+    const res1 = await createSession({ logger, supabase: s, userId }, "Trip");
     expect(res1.status).toBe(201);
-    const res2 = await listSessions({ logger, supabase: s, userId: "u1" });
+    const res2 = await listSessions({ logger, supabase: s, userId });
     expect(res2.status).toBe(200);
   });
 
   it("get/delete session auth gating", async () => {
-    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u2" } });
-    const created = await createSession({ logger, supabase: s, userId: "u2" }, "Trip");
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
+    const created = await createSession({ logger, supabase: s, userId }, "Trip");
     const { id } = (await created.json()) as { id: string };
-    const g = await getSession({ logger, supabase: s, userId: "u2" }, id);
+    const g = await getSession({ logger, supabase: s, userId }, id);
     expect(g.status).toBe(200);
-    const d = await deleteSession({ logger, supabase: s, userId: "u2" }, id);
+    const d = await deleteSession({ logger, supabase: s, userId }, id);
     expect(d.status).toBe(204);
   });
 
   it("list/create messages happy path", async () => {
-    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u3" } });
-    const created = await createSession({ logger, supabase: s, userId: "u3" }, "Trip");
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
+    const created = await createSession({ logger, supabase: s, userId }, "Trip");
     const { id } = (await created.json()) as { id: string };
-    const r1 = await createMessage({ logger, supabase: s, userId: "u3" }, id, {
+    const r1 = await createMessage({ logger, supabase: s, userId }, id, {
       parts: [{ text: "hi", type: "text" }],
       role: "user",
     });
     expect(r1.status).toBe(201);
-    const r2 = await listMessages({ logger, supabase: s, userId: "u3" }, id);
+    const r2 = await listMessages({ logger, supabase: s, userId }, id);
     expect(r2.status).toBe(200);
   });
 
   it("includes tool output parts for assistant messages", async () => {
-    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u4" } });
-    const created = await createSession({ logger, supabase: s, userId: "u4" }, "Trip");
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
+    const created = await createSession({ logger, supabase: s, userId }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
 
     await unsafeCast<UntypedSupabaseInsert>(s)
@@ -72,7 +74,7 @@ describe("sessions _handlers", () => {
           metadata: {},
           role: "user",
           session_id: sessionId,
-          user_id: "u4",
+          user_id: userId,
         },
         {
           content: JSON.stringify([{ text: "tool step", type: "text" }]),
@@ -80,7 +82,7 @@ describe("sessions _handlers", () => {
           metadata: {},
           role: "assistant",
           session_id: sessionId,
-          user_id: "u4",
+          user_id: userId,
         },
       ]);
 
@@ -93,7 +95,7 @@ describe("sessions _handlers", () => {
       tool_name: "webSearch",
     });
 
-    const res = await listMessages({ logger, supabase: s, userId: "u4" }, sessionId);
+    const res = await listMessages({ logger, supabase: s, userId }, sessionId);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{
       role: string;
@@ -121,8 +123,8 @@ describe("sessions _handlers", () => {
   });
 
   it("tolerates legacy model tool-call parts in stored content", async () => {
-    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u6" } });
-    const created = await createSession({ logger, supabase: s, userId: "u6" }, "Trip");
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
+    const created = await createSession({ logger, supabase: s, userId }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
 
     await unsafeCast<UntypedSupabaseInsert>(s)
@@ -134,7 +136,7 @@ describe("sessions _handlers", () => {
           metadata: {},
           role: "user",
           session_id: sessionId,
-          user_id: "u6",
+          user_id: userId,
         },
         {
           // Stored by older implementations as model message parts (invalid for UIMessage parts).
@@ -150,7 +152,7 @@ describe("sessions _handlers", () => {
           metadata: {},
           role: "assistant",
           session_id: sessionId,
-          user_id: "u6",
+          user_id: userId,
         },
       ]);
 
@@ -163,7 +165,7 @@ describe("sessions _handlers", () => {
       tool_name: "webSearch",
     });
 
-    const res = await listMessages({ logger, supabase: s, userId: "u6" }, sessionId);
+    const res = await listMessages({ logger, supabase: s, userId }, sessionId);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{
       role: string;
@@ -180,8 +182,8 @@ describe("sessions _handlers", () => {
   });
 
   it("filters superseded assistant messages", async () => {
-    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: "u5" } });
-    const created = await createSession({ logger, supabase: s, userId: "u5" }, "Trip");
+    const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
+    const created = await createSession({ logger, supabase: s, userId }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
 
     await unsafeCast<UntypedSupabaseInsert>(s)
@@ -193,7 +195,7 @@ describe("sessions _handlers", () => {
           metadata: {},
           role: "user",
           session_id: sessionId,
-          user_id: "u5",
+          user_id: userId,
         },
         {
           content: JSON.stringify([{ text: "first answer", type: "text" }]),
@@ -201,7 +203,7 @@ describe("sessions _handlers", () => {
           metadata: { status: "superseded", supersededBy: "db:next" },
           role: "assistant",
           session_id: sessionId,
-          user_id: "u5",
+          user_id: userId,
         },
         {
           content: JSON.stringify([{ text: "second answer", type: "text" }]),
@@ -209,11 +211,11 @@ describe("sessions _handlers", () => {
           metadata: {},
           role: "assistant",
           session_id: sessionId,
-          user_id: "u5",
+          user_id: userId,
         },
       ]);
 
-    const res = await listMessages({ logger, supabase: s, userId: "u5" }, sessionId);
+    const res = await listMessages({ logger, supabase: s, userId }, sessionId);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{ role: string }>;
 

@@ -10,6 +10,7 @@ import { versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -56,12 +57,12 @@ export async function resolveAgentConfig(
       // Use admin client to bypass RLS for agent config lookup
       // Agent configs are protected by RLS and require admin privileges
       const supabase = options.supabase ?? createAdminSupabase();
-      const { data, error } = await supabase
-        .from("agent_config")
-        .select("config, version_id")
-        .eq("agent_type", agentType)
-        .eq("scope", scope)
-        .maybeSingle();
+      const { data, error } = await getMaybeSingle(
+        supabase,
+        "agent_config",
+        (qb) => qb.eq("agent_type", agentType).eq("scope", scope),
+        { select: "config, version_id", validate: false }
+      );
 
       if (error) {
         emitOperationalAlertOncePerWindow({

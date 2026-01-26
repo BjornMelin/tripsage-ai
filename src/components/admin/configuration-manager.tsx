@@ -384,16 +384,31 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="maxTokens">Max Tokens</Label>
+                <Label htmlFor="maxOutputTokens">Max Output Tokens</Label>
                 <Input
-                  id="maxTokens"
+                  id="maxOutputTokens"
                   type="number"
-                  value={renderFiniteNumberOrEmpty(currentParams.maxTokens)}
+                  value={renderFiniteNumberOrEmpty(currentParams.maxOutputTokens)}
                   onChange={(e) =>
-                    onParamChange("maxTokens", parseOptionalInt(e.target.value))
+                    onParamChange("maxOutputTokens", parseOptionalInt(e.target.value))
                   }
                   min={1}
                   max={8000}
+                  step={1}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stepLimit">Step Limit</Label>
+                <Input
+                  id="stepLimit"
+                  type="number"
+                  value={renderFiniteNumberOrEmpty(currentParams.stepLimit)}
+                  onChange={(e) =>
+                    onParamChange("stepLimit", parseOptionalInt(e.target.value))
+                  }
+                  min={1}
+                  max={50}
                   step={1}
                 />
               </div>

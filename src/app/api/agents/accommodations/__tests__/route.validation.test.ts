@@ -5,6 +5,7 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -57,7 +58,7 @@ describe("/api/agents/accommodations validation", () => {
     });
     setRateLimitFactoryForTests(async () => mockLimitFn());
     setSupabaseFactoryForTests(async () =>
-      createMockSupabaseClient({ user: { id: "user-1" } })
+      createMockSupabaseClient({ user: { id: TEST_USER_ID } })
     );
   });
 

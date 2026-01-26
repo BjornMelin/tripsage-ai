@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as route from "@/app/api/embeddings/route";
 import { setRateLimitFactoryForTests } from "@/lib/api/factory";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -17,14 +18,21 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
-// Mock Supabase server client
+// Mock Supabase server client (used by metrics fire-and-forget insertSingle)
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
       getUser: async () => ({
-        data: { user: { id: "user-1" } },
+        data: { user: { id: TEST_USER_ID } },
       }),
     },
+    from: vi.fn(() => ({
+      insert: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        })),
+      })),
+    })),
   })),
 }));
 
@@ -62,8 +70,10 @@ vi.mock("ai", () => ({
   })),
 }));
 
-const UPSERT = vi.fn();
-const FROM = vi.fn(() => ({ upsert: UPSERT }));
+const UPSERT_SELECT_SINGLE = vi.hoisted(() => vi.fn());
+const UPSERT_SELECT = vi.hoisted(() => vi.fn());
+const UPSERT = vi.hoisted(() => vi.fn());
+const FROM = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabase: vi.fn(() => ({
@@ -75,8 +85,13 @@ describe("/api/embeddings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     UPSERT.mockReset();
+    UPSERT_SELECT.mockReset();
+    UPSERT_SELECT_SINGLE.mockReset();
     FROM.mockClear();
-    UPSERT.mockResolvedValue({ error: null });
+    UPSERT_SELECT.mockImplementation(() => ({ single: UPSERT_SELECT_SINGLE }));
+    UPSERT.mockImplementation(() => ({ select: UPSERT_SELECT }));
+    FROM.mockImplementation(() => ({ upsert: UPSERT }));
+    UPSERT_SELECT_SINGLE.mockResolvedValue({ data: { id: "prop-123" }, error: null });
     vi.stubEnv("EMBEDDINGS_API_KEY", "test-embeddings-key-1234567890");
     __resetServerEnvCacheForTest();
     setRateLimitFactoryForTests(async () => ({
@@ -197,12 +212,15 @@ describe("/api/embeddings", () => {
         id: "prop-123",
         source: "hotel",
       }),
-      { onConflict: "id" }
+      { ignoreDuplicates: false, onConflict: "id" }
     );
   });
 
   it("logs and continues when persistence fails", async () => {
-    UPSERT.mockResolvedValueOnce({ error: { message: "boom" } });
+    UPSERT_SELECT_SINGLE.mockResolvedValueOnce({
+      data: null,
+      error: new Error("boom"),
+    });
 
     const res = await route.POST(
       createMockNextRequest({

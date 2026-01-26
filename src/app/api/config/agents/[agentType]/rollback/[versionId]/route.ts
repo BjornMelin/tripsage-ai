@@ -23,6 +23,7 @@ import {
 import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { nowIso, secureId } from "@/lib/security/random";
+import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
@@ -88,12 +89,13 @@ export const POST = withApiGuards({
       if (!agentValidation.ok) return agentValidation.error;
       if (!versionValidation.ok) return versionValidation.error;
 
-      const { data: versionRow, error: versionError } = await supabase
-        .from("agent_config_versions")
-        .select("config")
-        .eq("id", versionValidation.data)
-        .eq("agent_type", agentValidation.data)
-        .maybeSingle();
+      const { data: versionRow, error: versionError } = await getMaybeSingle(
+        supabase,
+        "agent_config_versions",
+        (qb) =>
+          qb.eq("id", versionValidation.data).eq("agent_type", agentValidation.data),
+        { select: "config", validate: false }
+      );
 
       if (versionError) {
         return errorResponse({

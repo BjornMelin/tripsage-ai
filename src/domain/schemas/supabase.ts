@@ -417,6 +417,832 @@ export const apiMetricsUpdateSchema = z.object({
 /** TypeScript type for api_metrics Update. */
 export type ApiMetricsUpdate = z.infer<typeof apiMetricsUpdateSchema>;
 
+/**
+ * Zod schema for agent_config table Row.
+ * Stores active configuration snapshots for each agent type/scope.
+ */
+export const agentConfigRowSchema = z.object({
+  agent_type: z.string(),
+  config: jsonSchema,
+  created_at: primitiveSchemas.isoDateTime,
+  id: z.string(),
+  scope: z.string(),
+  updated_at: primitiveSchemas.isoDateTime,
+  version_id: z.string(),
+});
+
+/** TypeScript type for agent_config Row. */
+export type AgentConfigRow = z.infer<typeof agentConfigRowSchema>;
+
+/**
+ * Zod schema for agent_config table Insert.
+ */
+export const agentConfigInsertSchema = z.object({
+  agent_type: z.string(),
+  config: jsonSchema,
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: z.string().optional(),
+  scope: z.string().optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  version_id: z.string(),
+});
+
+/** TypeScript type for agent_config Insert. */
+export type AgentConfigInsert = z.infer<typeof agentConfigInsertSchema>;
+
+/**
+ * Zod schema for agent_config table Update.
+ */
+export const agentConfigUpdateSchema = z.object({
+  agent_type: z.string().optional(),
+  config: jsonSchema.optional(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: z.string().optional(),
+  scope: z.string().optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  version_id: z.string().optional(),
+});
+
+/** TypeScript type for agent_config Update. */
+export type AgentConfigUpdate = z.infer<typeof agentConfigUpdateSchema>;
+
+/**
+ * Zod schema for agent_config_versions table Row.
+ */
+export const agentConfigVersionsRowSchema = z.object({
+  agent_type: z.string(),
+  config: jsonSchema,
+  created_at: primitiveSchemas.isoDateTime,
+  created_by: primitiveSchemas.uuid.nullable(),
+  id: z.string(),
+  scope: z.string(),
+  summary: z.string().nullable(),
+});
+
+/** TypeScript type for agent_config_versions Row. */
+export type AgentConfigVersionsRow = z.infer<typeof agentConfigVersionsRowSchema>;
+
+/**
+ * Zod schema for agent_config_versions table Insert.
+ */
+export const agentConfigVersionsInsertSchema = z.object({
+  agent_type: z.string(),
+  config: jsonSchema,
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  created_by: primitiveSchemas.uuid.nullable().optional(),
+  id: z.string().optional(),
+  scope: z.string().optional(),
+  summary: z.string().nullable().optional(),
+});
+
+/** TypeScript type for agent_config_versions Insert. */
+export type AgentConfigVersionsInsert = z.infer<typeof agentConfigVersionsInsertSchema>;
+
+/**
+ * Zod schema for agent_config_versions table Update.
+ */
+export const agentConfigVersionsUpdateSchema = z.object({
+  agent_type: z.string().optional(),
+  config: jsonSchema.optional(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  created_by: primitiveSchemas.uuid.nullable().optional(),
+  id: z.string().optional(),
+  scope: z.string().optional(),
+  summary: z.string().nullable().optional(),
+});
+
+/** TypeScript type for agent_config_versions Update. */
+export type AgentConfigVersionsUpdate = z.infer<typeof agentConfigVersionsUpdateSchema>;
+
+/**
+ * Zod schema for chat_sessions table Row.
+ */
+export const chatSessionsRowSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  id: primitiveSchemas.uuid,
+  metadata: jsonSchema.nullable(),
+  trip_id: z.number().int().nullable(),
+  updated_at: primitiveSchemas.isoDateTime.nullable(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for chat_sessions Row. */
+export type ChatSessionsRow = z.infer<typeof chatSessionsRowSchema>;
+
+/**
+ * Zod schema for chat_sessions table Insert.
+ */
+export const chatSessionsInsertSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  metadata: jsonSchema.nullable().optional(),
+  trip_id: z.number().int().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for chat_sessions Insert. */
+export type ChatSessionsInsert = z.infer<typeof chatSessionsInsertSchema>;
+
+/**
+ * Zod schema for chat_sessions table Update.
+ */
+export const chatSessionsUpdateSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  metadata: jsonSchema.nullable().optional(),
+  trip_id: z.number().int().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for chat_sessions Update. */
+export type ChatSessionsUpdate = z.infer<typeof chatSessionsUpdateSchema>;
+
+/**
+ * Zod schema for chat_messages table Row.
+ */
+export const chatMessagesRowSchema = z.object({
+  content: z.string(),
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  id: z.number().int(),
+  metadata: jsonSchema.nullable(),
+  role: z.string(),
+  session_id: primitiveSchemas.uuid,
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for chat_messages Row. */
+export type ChatMessagesRow = z.infer<typeof chatMessagesRowSchema>;
+
+/**
+ * Zod schema for chat_messages table Insert.
+ */
+export const chatMessagesInsertSchema = z.object({
+  content: z.string(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: z.never().optional(),
+  metadata: jsonSchema.nullable().optional(),
+  role: z.string(),
+  session_id: primitiveSchemas.uuid,
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for chat_messages Insert. */
+export type ChatMessagesInsert = z.infer<typeof chatMessagesInsertSchema>;
+
+/**
+ * Zod schema for chat_messages table Update.
+ */
+export const chatMessagesUpdateSchema = z.object({
+  content: z.string().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: z.never().optional(),
+  metadata: jsonSchema.nullable().optional(),
+  role: z.string().optional(),
+  session_id: primitiveSchemas.uuid.optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for chat_messages Update. */
+export type ChatMessagesUpdate = z.infer<typeof chatMessagesUpdateSchema>;
+
+/**
+ * Zod schema for chat_tool_calls table Row.
+ */
+export const chatToolCallsRowSchema = z.object({
+  arguments: jsonSchema,
+  completed_at: primitiveSchemas.isoDateTime.nullable(),
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  error_message: z.string().nullable(),
+  id: z.number().int(),
+  message_id: z.number().int(),
+  result: jsonSchema.nullable(),
+  status: z.string(),
+  tool_id: z.string(),
+  tool_name: z.string(),
+});
+
+/** TypeScript type for chat_tool_calls Row. */
+export type ChatToolCallsRow = z.infer<typeof chatToolCallsRowSchema>;
+
+/**
+ * Zod schema for chat_tool_calls table Insert.
+ */
+export const chatToolCallsInsertSchema = z.object({
+  arguments: jsonSchema.optional(),
+  completed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  error_message: z.string().nullable().optional(),
+  id: z.never().optional(),
+  message_id: z.number().int(),
+  result: jsonSchema.nullable().optional(),
+  status: z.string().optional(),
+  tool_id: z.string(),
+  tool_name: z.string(),
+});
+
+/** TypeScript type for chat_tool_calls Insert. */
+export type ChatToolCallsInsert = z.infer<typeof chatToolCallsInsertSchema>;
+
+/**
+ * Zod schema for chat_tool_calls table Update.
+ */
+export const chatToolCallsUpdateSchema = z.object({
+  arguments: jsonSchema.optional(),
+  completed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  error_message: z.string().nullable().optional(),
+  id: z.never().optional(),
+  message_id: z.number().int().optional(),
+  result: jsonSchema.nullable().optional(),
+  status: z.string().optional(),
+  tool_id: z.string().optional(),
+  tool_name: z.string().optional(),
+});
+
+/** TypeScript type for chat_tool_calls Update. */
+export type ChatToolCallsUpdate = z.infer<typeof chatToolCallsUpdateSchema>;
+
+/**
+ * Zod schema for file_attachments table Row.
+ */
+export const fileAttachmentsRowSchema = z.object({
+  bucket_name: z.string(),
+  chat_id: primitiveSchemas.uuid.nullable(),
+  chat_message_id: z.number().int().nullable(),
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  file_path: z.string(),
+  file_size: z.number().int(),
+  filename: z.string(),
+  id: primitiveSchemas.uuid,
+  metadata: jsonSchema,
+  mime_type: z.string(),
+  original_filename: z.string(),
+  trip_id: z.number().int().nullable(),
+  updated_at: primitiveSchemas.isoDateTime.nullable(),
+  upload_status: z.string(),
+  user_id: primitiveSchemas.uuid,
+  virus_scan_result: jsonSchema,
+  virus_scan_status: z.string(),
+});
+
+/** TypeScript type for file_attachments Row. */
+export type FileAttachmentsRow = z.infer<typeof fileAttachmentsRowSchema>;
+
+/**
+ * Zod schema for file_attachments table Insert.
+ */
+export const fileAttachmentsInsertSchema = z.object({
+  bucket_name: z.string().optional(),
+  chat_id: primitiveSchemas.uuid.nullable().optional(),
+  chat_message_id: z.number().int().nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  file_path: z.string(),
+  file_size: z.number().int(),
+  filename: z.string(),
+  id: primitiveSchemas.uuid.optional(),
+  metadata: jsonSchema.optional(),
+  mime_type: z.string(),
+  original_filename: z.string(),
+  trip_id: z.number().int().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  upload_status: z.string().optional(),
+  user_id: primitiveSchemas.uuid,
+  virus_scan_result: jsonSchema.optional(),
+  virus_scan_status: z.string().optional(),
+});
+
+/** TypeScript type for file_attachments Insert. */
+export type FileAttachmentsInsert = z.infer<typeof fileAttachmentsInsertSchema>;
+
+/**
+ * Zod schema for file_attachments table Update.
+ */
+export const fileAttachmentsUpdateSchema = z.object({
+  bucket_name: z.string().optional(),
+  chat_id: primitiveSchemas.uuid.nullable().optional(),
+  chat_message_id: z.number().int().nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  file_path: z.string().optional(),
+  file_size: z.number().int().optional(),
+  filename: z.string().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  metadata: jsonSchema.optional(),
+  mime_type: z.string().optional(),
+  original_filename: z.string().optional(),
+  trip_id: z.number().int().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  upload_status: z.string().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+  virus_scan_result: jsonSchema.optional(),
+  virus_scan_status: z.string().optional(),
+});
+
+/** TypeScript type for file_attachments Update. */
+export type FileAttachmentsUpdate = z.infer<typeof fileAttachmentsUpdateSchema>;
+
+/**
+ * Zod schema for itinerary_items table Row.
+ */
+export const itineraryItemsRowSchema = z.object({
+  booking_status: z.string().nullable(),
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  currency: primitiveSchemas.isoCurrency.nullable(),
+  description: z.string().nullable(),
+  end_time: primitiveSchemas.isoDateTime.nullable(),
+  external_id: z.string().nullable(),
+  id: z.number().int(),
+  item_type: z.string(),
+  location: z.string().nullable(),
+  metadata: jsonSchema.nullable(),
+  price: z.number().nullable(),
+  start_time: primitiveSchemas.isoDateTime.nullable(),
+  title: z.string(),
+  trip_id: z.number().int(),
+  updated_at: primitiveSchemas.isoDateTime.nullable(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for itinerary_items Row. */
+export type ItineraryItemsRow = z.infer<typeof itineraryItemsRowSchema>;
+
+/**
+ * Zod schema for itinerary_items table Insert.
+ */
+export const itineraryItemsInsertSchema = z.object({
+  booking_status: z.string().nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  currency: primitiveSchemas.isoCurrency.nullable().optional(),
+  description: z.string().nullable().optional(),
+  end_time: primitiveSchemas.isoDateTime.nullable().optional(),
+  external_id: z.string().nullable().optional(),
+  id: z.never().optional(),
+  item_type: z.string(),
+  location: z.string().nullable().optional(),
+  metadata: jsonSchema.nullable().optional(),
+  price: z.number().nullable().optional(),
+  start_time: primitiveSchemas.isoDateTime.nullable().optional(),
+  title: z.string(),
+  trip_id: z.number().int(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for itinerary_items Insert. */
+export type ItineraryItemsInsert = z.infer<typeof itineraryItemsInsertSchema>;
+
+/**
+ * Zod schema for itinerary_items table Update.
+ */
+export const itineraryItemsUpdateSchema = z.object({
+  booking_status: z.string().nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  currency: primitiveSchemas.isoCurrency.nullable().optional(),
+  description: z.string().nullable().optional(),
+  end_time: primitiveSchemas.isoDateTime.nullable().optional(),
+  external_id: z.string().nullable().optional(),
+  id: z.never().optional(),
+  item_type: z.string().optional(),
+  location: z.string().nullable().optional(),
+  metadata: jsonSchema.nullable().optional(),
+  price: z.number().nullable().optional(),
+  start_time: primitiveSchemas.isoDateTime.nullable().optional(),
+  title: z.string().optional(),
+  trip_id: z.number().int().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for itinerary_items Update. */
+export type ItineraryItemsUpdate = z.infer<typeof itineraryItemsUpdateSchema>;
+
+/**
+ * Zod schema for rag_documents table Row.
+ */
+export const ragDocumentsRowSchema = z.object({
+  chat_id: primitiveSchemas.uuid.nullable(),
+  chunk_index: z.number().int(),
+  content: z.string(),
+  created_at: primitiveSchemas.isoDateTime,
+  embedding: z.string().nullable(),
+  fts: z.unknown(),
+  id: z.string(),
+  metadata: jsonSchema.nullable(),
+  namespace: z.string(),
+  source_id: z.string().nullable(),
+  trip_id: z.number().int().nullable(),
+  updated_at: primitiveSchemas.isoDateTime,
+  user_id: primitiveSchemas.uuid.nullable(),
+});
+
+/** TypeScript type for rag_documents Row. */
+export type RagDocumentsRow = z.infer<typeof ragDocumentsRowSchema>;
+
+/**
+ * Zod schema for rag_documents table Insert.
+ */
+export const ragDocumentsInsertSchema = z.object({
+  chat_id: primitiveSchemas.uuid.nullable().optional(),
+  chunk_index: z.number().int().optional(),
+  content: z.string(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  embedding: z.string().nullable().optional(),
+  fts: z.unknown().optional(),
+  id: z.string().optional(),
+  metadata: jsonSchema.nullable().optional(),
+  namespace: z.string().optional(),
+  source_id: z.string().nullable().optional(),
+  trip_id: z.number().int().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid.nullable().optional(),
+});
+
+/** TypeScript type for rag_documents Insert. */
+export type RagDocumentsInsert = z.infer<typeof ragDocumentsInsertSchema>;
+
+/**
+ * Zod schema for rag_documents table Update.
+ */
+export const ragDocumentsUpdateSchema = z.object({
+  chat_id: primitiveSchemas.uuid.nullable().optional(),
+  chunk_index: z.number().int().optional(),
+  content: z.string().optional(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  embedding: z.string().nullable().optional(),
+  fts: z.unknown().optional(),
+  id: z.string().optional(),
+  metadata: jsonSchema.nullable().optional(),
+  namespace: z.string().optional(),
+  source_id: z.string().nullable().optional(),
+  trip_id: z.number().int().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid.nullable().optional(),
+});
+
+/** TypeScript type for rag_documents Update. */
+export type RagDocumentsUpdate = z.infer<typeof ragDocumentsUpdateSchema>;
+
+/**
+ * Zod schema for saved_places table Row.
+ */
+export const savedPlacesRowSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime,
+  id: z.number().int(),
+  place_id: z.string(),
+  place_snapshot: jsonSchema,
+  provider: z.string(),
+  trip_id: z.number().int(),
+  updated_at: primitiveSchemas.isoDateTime,
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for saved_places Row. */
+export type SavedPlacesRow = z.infer<typeof savedPlacesRowSchema>;
+
+/**
+ * Zod schema for saved_places table Insert.
+ */
+export const savedPlacesInsertSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: z.never().optional(),
+  place_id: z.string(),
+  place_snapshot: jsonSchema.optional(),
+  provider: z.string().optional(),
+  trip_id: z.number().int(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for saved_places Insert. */
+export type SavedPlacesInsert = z.infer<typeof savedPlacesInsertSchema>;
+
+/**
+ * Zod schema for saved_places table Update.
+ */
+export const savedPlacesUpdateSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: z.never().optional(),
+  place_id: z.string().optional(),
+  place_snapshot: jsonSchema.optional(),
+  provider: z.string().optional(),
+  trip_id: z.number().int().optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for saved_places Update. */
+export type SavedPlacesUpdate = z.infer<typeof savedPlacesUpdateSchema>;
+
+/**
+ * Zod schema for trip_collaborators table Row.
+ */
+export const tripCollaboratorsRowSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  id: z.number().int(),
+  role: z.string(),
+  trip_id: z.number().int(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for trip_collaborators Row. */
+export type TripCollaboratorsRow = z.infer<typeof tripCollaboratorsRowSchema>;
+
+/**
+ * Zod schema for trip_collaborators table Insert.
+ */
+export const tripCollaboratorsInsertSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: z.never().optional(),
+  role: z.string().optional(),
+  trip_id: z.number().int(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for trip_collaborators Insert. */
+export type TripCollaboratorsInsert = z.infer<typeof tripCollaboratorsInsertSchema>;
+
+/**
+ * Zod schema for trip_collaborators table Update.
+ */
+export const tripCollaboratorsUpdateSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: z.never().optional(),
+  role: z.string().optional(),
+  trip_id: z.number().int().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for trip_collaborators Update. */
+export type TripCollaboratorsUpdate = z.infer<typeof tripCollaboratorsUpdateSchema>;
+
+/**
+ * Zod schema for mfa_enrollments table Row.
+ */
+export const mfaEnrollmentsRowSchema = z.object({
+  challenge_id: z.string(),
+  consumed_at: primitiveSchemas.isoDateTime.nullable(),
+  expires_at: primitiveSchemas.isoDateTime,
+  factor_id: z.string(),
+  id: primitiveSchemas.uuid,
+  issued_at: primitiveSchemas.isoDateTime,
+  status: z.string(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for mfa_enrollments Row. */
+export type MfaEnrollmentsRow = z.infer<typeof mfaEnrollmentsRowSchema>;
+
+/**
+ * Zod schema for mfa_enrollments table Insert.
+ */
+export const mfaEnrollmentsInsertSchema = z.object({
+  challenge_id: z.string(),
+  consumed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  expires_at: primitiveSchemas.isoDateTime,
+  factor_id: z.string(),
+  id: primitiveSchemas.uuid.optional(),
+  issued_at: primitiveSchemas.isoDateTime.optional(),
+  status: z.string(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for mfa_enrollments Insert. */
+export type MfaEnrollmentsInsert = z.infer<typeof mfaEnrollmentsInsertSchema>;
+
+/**
+ * Zod schema for mfa_enrollments table Update.
+ */
+export const mfaEnrollmentsUpdateSchema = z.object({
+  challenge_id: z.string().optional(),
+  consumed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  expires_at: primitiveSchemas.isoDateTime.optional(),
+  factor_id: z.string().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  issued_at: primitiveSchemas.isoDateTime.optional(),
+  status: z.string().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for mfa_enrollments Update. */
+export type MfaEnrollmentsUpdate = z.infer<typeof mfaEnrollmentsUpdateSchema>;
+
+/**
+ * Zod schema for auth_backup_codes table Row.
+ */
+export const authBackupCodesRowSchema = z.object({
+  code_hash: z.string(),
+  consumed_at: primitiveSchemas.isoDateTime.nullable(),
+  id: primitiveSchemas.uuid,
+  issued_at: primitiveSchemas.isoDateTime,
+  label: z.string().nullable(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for auth_backup_codes Row. */
+export type AuthBackupCodesRow = z.infer<typeof authBackupCodesRowSchema>;
+
+/**
+ * Zod schema for auth_backup_codes table Insert.
+ */
+export const authBackupCodesInsertSchema = z.object({
+  code_hash: z.string(),
+  consumed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  issued_at: primitiveSchemas.isoDateTime.optional(),
+  label: z.string().nullable().optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for auth_backup_codes Insert. */
+export type AuthBackupCodesInsert = z.infer<typeof authBackupCodesInsertSchema>;
+
+/**
+ * Zod schema for auth_backup_codes table Update.
+ */
+export const authBackupCodesUpdateSchema = z.object({
+  code_hash: z.string().optional(),
+  consumed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  issued_at: primitiveSchemas.isoDateTime.optional(),
+  label: z.string().nullable().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for auth_backup_codes Update. */
+export type AuthBackupCodesUpdate = z.infer<typeof authBackupCodesUpdateSchema>;
+
+/**
+ * Zod schema for auth.sessions table Row.
+ */
+export const authSessionsRowSchema = z.object({
+  aal: z.string().nullable(),
+  created_at: primitiveSchemas.isoDateTime.nullable(),
+  factor_id: z.string().nullable(),
+  id: primitiveSchemas.uuid,
+  ip: z.unknown(),
+  not_after: primitiveSchemas.isoDateTime.nullable(),
+  oauth_client_id: z.string().nullable(),
+  refreshed_at: primitiveSchemas.isoDateTime.nullable(),
+  tag: z.string().nullable(),
+  updated_at: primitiveSchemas.isoDateTime.nullable(),
+  user_agent: z.string().nullable(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for auth.sessions Row. */
+export type AuthSessionsRow = z.infer<typeof authSessionsRowSchema>;
+
+/**
+ * Zod schema for auth.sessions table Insert.
+ */
+export const authSessionsInsertSchema = z.object({
+  aal: z.string().nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  factor_id: z.string().nullable().optional(),
+  id: primitiveSchemas.uuid,
+  ip: z.unknown().optional(),
+  not_after: primitiveSchemas.isoDateTime.nullable().optional(),
+  oauth_client_id: z.string().nullable().optional(),
+  refreshed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  tag: z.string().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  user_agent: z.string().nullable().optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for auth.sessions Insert. */
+export type AuthSessionsInsert = z.infer<typeof authSessionsInsertSchema>;
+
+/**
+ * Zod schema for auth.sessions table Update.
+ */
+export const authSessionsUpdateSchema = z.object({
+  aal: z.string().nullable().optional(),
+  created_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  factor_id: z.string().nullable().optional(),
+  id: primitiveSchemas.uuid.optional(),
+  ip: z.unknown().optional(),
+  not_after: primitiveSchemas.isoDateTime.nullable().optional(),
+  oauth_client_id: z.string().nullable().optional(),
+  refreshed_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  tag: z.string().nullable().optional(),
+  updated_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  user_agent: z.string().nullable().optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for auth.sessions Update. */
+export type AuthSessionsUpdate = z.infer<typeof authSessionsUpdateSchema>;
+
+/**
+ * Zod schema for memories.sessions table Row.
+ */
+export const memorySessionsRowSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime,
+  id: primitiveSchemas.uuid,
+  last_synced_at: primitiveSchemas.isoDateTime.nullable(),
+  metadata: jsonSchema,
+  title: z.string(),
+  updated_at: primitiveSchemas.isoDateTime,
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for memories.sessions Row. */
+export type MemorySessionsRow = z.infer<typeof memorySessionsRowSchema>;
+
+/**
+ * Zod schema for memories.sessions table Insert.
+ */
+export const memorySessionsInsertSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: primitiveSchemas.uuid.optional(),
+  last_synced_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  metadata: jsonSchema.optional(),
+  title: z.string(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for memories.sessions Insert. */
+export type MemorySessionsInsert = z.infer<typeof memorySessionsInsertSchema>;
+
+/**
+ * Zod schema for memories.sessions table Update.
+ */
+export const memorySessionsUpdateSchema = z.object({
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: primitiveSchemas.uuid.optional(),
+  last_synced_at: primitiveSchemas.isoDateTime.nullable().optional(),
+  metadata: jsonSchema.optional(),
+  title: z.string().optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for memories.sessions Update. */
+export type MemorySessionsUpdate = z.infer<typeof memorySessionsUpdateSchema>;
+
+/**
+ * Zod schema for memories.turns table Row.
+ */
+export const memoryTurnsRowSchema = z.object({
+  attachments: jsonSchema,
+  content: jsonSchema,
+  created_at: primitiveSchemas.isoDateTime,
+  id: primitiveSchemas.uuid,
+  pii_scrubbed: z.boolean(),
+  role: z.string(),
+  session_id: primitiveSchemas.uuid,
+  tool_calls: jsonSchema,
+  tool_results: jsonSchema,
+  updated_at: primitiveSchemas.isoDateTime,
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for memories.turns Row. */
+export type MemoryTurnsRow = z.infer<typeof memoryTurnsRowSchema>;
+
+/**
+ * Zod schema for memories.turns table Insert.
+ */
+export const memoryTurnsInsertSchema = z.object({
+  attachments: jsonSchema.optional(),
+  content: jsonSchema,
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: primitiveSchemas.uuid.optional(),
+  pii_scrubbed: z.boolean().optional(),
+  role: z.string(),
+  session_id: primitiveSchemas.uuid,
+  tool_calls: jsonSchema.optional(),
+  tool_results: jsonSchema.optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid,
+});
+
+/** TypeScript type for memories.turns Insert. */
+export type MemoryTurnsInsert = z.infer<typeof memoryTurnsInsertSchema>;
+
+/**
+ * Zod schema for memories.turns table Update.
+ */
+export const memoryTurnsUpdateSchema = z.object({
+  attachments: jsonSchema.optional(),
+  content: jsonSchema.optional(),
+  created_at: primitiveSchemas.isoDateTime.optional(),
+  id: primitiveSchemas.uuid.optional(),
+  pii_scrubbed: z.boolean().optional(),
+  role: z.string().optional(),
+  session_id: primitiveSchemas.uuid.optional(),
+  tool_calls: jsonSchema.optional(),
+  tool_results: jsonSchema.optional(),
+  updated_at: primitiveSchemas.isoDateTime.optional(),
+  user_id: primitiveSchemas.uuid.optional(),
+});
+
+/** TypeScript type for memories.turns Update. */
+export type MemoryTurnsUpdate = z.infer<typeof memoryTurnsUpdateSchema>;
+
 // ===== UTILITY FUNCTIONS =====
 // Schema registry and helper functions
 
@@ -430,15 +1256,75 @@ export const supabaseSchemas = {
     row: accommodationsRowSchema,
     update: accommodationsUpdateSchema,
   },
+  agent_config: {
+    insert: agentConfigInsertSchema,
+    row: agentConfigRowSchema,
+    update: agentConfigUpdateSchema,
+  },
+  agent_config_versions: {
+    insert: agentConfigVersionsInsertSchema,
+    row: agentConfigVersionsRowSchema,
+    update: agentConfigVersionsUpdateSchema,
+  },
   api_metrics: {
     insert: apiMetricsInsertSchema,
     row: apiMetricsRowSchema,
     update: apiMetricsUpdateSchema,
   },
+  auth_backup_codes: {
+    insert: authBackupCodesInsertSchema,
+    row: authBackupCodesRowSchema,
+    update: authBackupCodesUpdateSchema,
+  },
+  chat_messages: {
+    insert: chatMessagesInsertSchema,
+    row: chatMessagesRowSchema,
+    update: chatMessagesUpdateSchema,
+  },
+  chat_sessions: {
+    insert: chatSessionsInsertSchema,
+    row: chatSessionsRowSchema,
+    update: chatSessionsUpdateSchema,
+  },
+  chat_tool_calls: {
+    insert: chatToolCallsInsertSchema,
+    row: chatToolCallsRowSchema,
+    update: chatToolCallsUpdateSchema,
+  },
+  file_attachments: {
+    insert: fileAttachmentsInsertSchema,
+    row: fileAttachmentsRowSchema,
+    update: fileAttachmentsUpdateSchema,
+  },
   flights: {
     insert: flightsInsertSchema,
     row: flightsRowSchema,
     update: flightsUpdateSchema,
+  },
+  itinerary_items: {
+    insert: itineraryItemsInsertSchema,
+    row: itineraryItemsRowSchema,
+    update: itineraryItemsUpdateSchema,
+  },
+  mfa_enrollments: {
+    insert: mfaEnrollmentsInsertSchema,
+    row: mfaEnrollmentsRowSchema,
+    update: mfaEnrollmentsUpdateSchema,
+  },
+  rag_documents: {
+    insert: ragDocumentsInsertSchema,
+    row: ragDocumentsRowSchema,
+    update: ragDocumentsUpdateSchema,
+  },
+  saved_places: {
+    insert: savedPlacesInsertSchema,
+    row: savedPlacesRowSchema,
+    update: savedPlacesUpdateSchema,
+  },
+  trip_collaborators: {
+    insert: tripCollaboratorsInsertSchema,
+    row: tripCollaboratorsRowSchema,
+    update: tripCollaboratorsUpdateSchema,
   },
   trips: {
     insert: tripsInsertSchema,
@@ -452,15 +1338,52 @@ export const supabaseSchemas = {
   },
 } as const;
 
+const authSupabaseSchemas = {
+  sessions: {
+    insert: authSessionsInsertSchema,
+    row: authSessionsRowSchema,
+    update: authSessionsUpdateSchema,
+  },
+} as const;
+
+const memoriesSupabaseSchemas = {
+  sessions: {
+    insert: memorySessionsInsertSchema,
+    row: memorySessionsRowSchema,
+    update: memorySessionsUpdateSchema,
+  },
+  turns: {
+    insert: memoryTurnsInsertSchema,
+    row: memoryTurnsRowSchema,
+    update: memoryTurnsUpdateSchema,
+  },
+} as const;
+
+const supabaseSchemaRegistry = {
+  auth: authSupabaseSchemas,
+  memories: memoriesSupabaseSchemas,
+  public: supabaseSchemas,
+} as const;
+
+type SupabaseSchemaRegistry = typeof supabaseSchemaRegistry;
+export type SupabaseSchemaName = keyof SupabaseSchemaRegistry;
+
 /**
  * Helper to get schema for a table name.
  * Retrieves table schemas from the registry for validation operations.
  *
  * @param table - Table name to get schemas for
+ * @param options - Optional schema selection (defaults to public)
  * @returns Table schemas (row, insert, update) or undefined if not found
  */
-export function getSupabaseSchema<T extends keyof typeof supabaseSchemas>(
-  table: T
-): (typeof supabaseSchemas)[T] | undefined {
-  return supabaseSchemas[table];
+export function getSupabaseSchema<
+  S extends SupabaseSchemaName = "public",
+  T extends keyof SupabaseSchemaRegistry[S] = keyof SupabaseSchemaRegistry[S],
+>(table: T, options?: { schema?: S }): SupabaseSchemaRegistry[S][T] | undefined {
+  const schemaName = options?.schema ?? "public";
+  const schemaTables = supabaseSchemaRegistry[schemaName];
+  if (!schemaTables) return undefined;
+  return schemaTables[table as keyof typeof schemaTables] as
+    | SupabaseSchemaRegistry[S][T]
+    | undefined;
 }

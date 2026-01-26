@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
+import { getMany } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { ensureTripAccess } from "@/lib/trips/trip-access";
 
@@ -101,39 +102,56 @@ export const GET = withApiGuards({
     return NextResponse.json(cached, { status: 200 });
   }
 
-  // Build Supabase query - Zod already coerces to numbers
-  let query = supabase
-    .from("file_attachments")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+  const {
+    data: attachments,
+    error: queryError,
+    count,
+  } = await getMany(
+    supabase,
+    "file_attachments",
+    (qb) => {
+      let filtered = qb;
 
-  // When listing trip-scoped attachments, rely on RLS to allow collaborators to read.
-  // Default behavior (no tripId) remains owner-scoped for efficiency.
-  if (tripId === undefined) {
-    query = query.eq("user_id", userId);
-  }
+      // When listing trip-scoped attachments, rely on RLS to allow collaborators to read.
+      // Default behavior (no tripId) remains owner-scoped for efficiency.
+      if (tripId === undefined) {
+        filtered = filtered.eq("user_id", userId);
+      }
 
-  // Filter by tripId if provided (Zod coercion ensures it's a number)
-  if (tripId !== undefined) {
-    query = query.eq("trip_id", tripId);
-  }
+      // Filter by tripId if provided (Zod coercion ensures it's a number)
+      if (tripId !== undefined) {
+        filtered = filtered.eq("trip_id", tripId);
+      }
 
-  // Filter by chatId if provided
-  if (chatId !== undefined) {
-    query = query.eq("chat_id", chatId);
-  }
+      // Filter by chatId if provided
+      if (chatId !== undefined) {
+        filtered = filtered.eq("chat_id", chatId);
+      }
 
-  // Filter by chatMessageId if provided (Zod coercion ensures it's a number)
-  if (chatMessageId !== undefined) {
-    query = query.eq("chat_message_id", chatMessageId);
-  }
+      // Filter by chatMessageId if provided (Zod coercion ensures it's a number)
+      if (chatMessageId !== undefined) {
+        filtered = filtered.eq("chat_message_id", chatMessageId);
+      }
 
-  const { data: attachments, error: queryError, count } = await query;
+      return filtered;
+    },
+    {
+      ascending: false,
+      count: "exact",
+      limit,
+      offset,
+      orderBy: "created_at",
+      select:
+        "id, file_path, file_size, filename, mime_type, original_filename, upload_status, created_at, updated_at, chat_id, chat_message_id, trip_id",
+      validate: false,
+    }
+  );
 
   if (queryError) {
+    const message =
+      queryError instanceof Error ? queryError.message : String(queryError);
     return errorResponse({
-      err: new Error(queryError.message),
+      err: new Error(message),
       error: "internal",
       reason: "Failed to fetch attachments",
       status: 500,

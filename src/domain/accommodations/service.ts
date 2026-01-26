@@ -27,7 +27,9 @@ import {
 } from "@schemas/accommodations";
 import type { ProcessedPayment } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
+import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 
 type HotelLikeListing = {
   hotel?: {
@@ -369,7 +371,11 @@ export class AccommodationsService {
               const bookingRow = this.buildBookingRow(params, payload, ctx.userId);
 
               const persist = async () =>
-                await supabase.from("bookings").insert(bookingRow as never);
+                await insertSingle(
+                  supabase,
+                  "bookings",
+                  bookingRow as Database["public"]["Tables"]["bookings"]["Insert"]
+                );
 
               const { error } = await this.deps.retryWithBackoff(persist, {
                 attempts: 3,
@@ -497,12 +503,12 @@ export class AccommodationsService {
       throw new ProviderError("validation_failed", "invalid_trip_id");
     }
 
-    const { data: trip, error: tripError } = await supabase
-      .from("trips")
-      .select("id, user_id")
-      .eq("id", parsedTripId)
-      .eq("user_id", userId)
-      .single();
+    const { data: trip, error: tripError } = await getSingle(
+      supabase,
+      "trips",
+      (qb) => qb.eq("id", parsedTripId).eq("user_id", userId),
+      { select: "id, user_id", validate: false }
+    );
 
     if (tripError || !trip) {
       throw new ProviderError("not_found", "trip_not_found_or_not_owned");

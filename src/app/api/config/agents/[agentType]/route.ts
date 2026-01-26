@@ -27,6 +27,7 @@ import {
 import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { nowIso, secureId } from "@/lib/security/random";
+import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -52,8 +53,9 @@ function buildConfigPayload(
     model: effectiveModel,
     parameters: {
       description: body.description ?? existing?.parameters.description,
-      maxTokens: body.maxTokens ?? existing?.parameters.maxTokens,
+      maxOutputTokens: body.maxOutputTokens ?? existing?.parameters.maxOutputTokens,
       model: effectiveModel,
+      stepLimit: body.stepLimit ?? existing?.parameters.stepLimit,
       stepTimeoutSeconds:
         body.stepTimeoutSeconds ?? existing?.parameters.stepTimeoutSeconds,
       temperature: body.temperature ?? existing?.parameters.temperature,
@@ -153,12 +155,12 @@ export const PUT = withApiGuards({
         "agent_config.load_existing",
         { attributes: { agentType: agentValidation.data, scope } },
         async () => {
-          const { data } = await supabase
-            .from("agent_config")
-            .select("config")
-            .eq("agent_type", agentValidation.data)
-            .eq("scope", scope)
-            .maybeSingle();
+          const { data } = await getMaybeSingle(
+            supabase,
+            "agent_config",
+            (qb) => qb.eq("agent_type", agentValidation.data).eq("scope", scope),
+            { select: "config", validate: false }
+          );
           return data?.config as AgentConfig | undefined;
         }
       );

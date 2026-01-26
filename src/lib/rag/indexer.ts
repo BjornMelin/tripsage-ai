@@ -20,6 +20,7 @@ import {
 } from "@/lib/ai/embeddings/text-embedding-model";
 import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
+import { deleteSingle, upsertMany } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { RagLimitError } from "./errors";
@@ -434,13 +435,12 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   );
 
   // Upsert to database
-  const { error } = await supabase.from("rag_documents").upsert(rows, {
-    ignoreDuplicates: false,
-    onConflict: "id,chunk_index",
-  });
+  const { error } = await upsertMany(supabase, "rag_documents", rows, "id,chunk_index");
 
   if (error) {
-    throw new Error(`Database upsert failed: ${error.message}`);
+    throw new Error(
+      `Database upsert failed: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   // Count successful documents (unique doc indices)
@@ -462,13 +462,14 @@ export async function deleteNamespace(
   supabase: SupabaseClient<Database>,
   namespace: RagNamespace
 ): Promise<number> {
-  const { count, error } = await supabase
-    .from("rag_documents")
-    .delete({ count: "exact" })
-    .eq("namespace", namespace);
+  const { count, error } = await deleteSingle(supabase, "rag_documents", (qb) =>
+    qb.eq("namespace", namespace)
+  );
 
   if (error) {
-    throw new Error(`Failed to delete namespace: ${error.message}`);
+    throw new Error(
+      `Failed to delete namespace: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   logger.info("namespace_deleted", {

@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -43,7 +44,7 @@ describe("/api/user-settings", () => {
     vi.clearAllMocks();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
-      data: { user: { id: "u1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
   });
@@ -85,7 +86,7 @@ describe("/api/user-settings", () => {
     const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     expect(upsert).toHaveBeenCalledWith(
-      { allow_gateway_fallback: false, user_id: "u1" },
+      { allow_gateway_fallback: false, user_id: TEST_USER_ID },
       { ignoreDuplicates: false, onConflict: "user_id" }
     );
   });

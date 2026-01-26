@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/route-helpers";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { getUserAllowGatewayFallback } from "@/lib/supabase/rpc";
+import { upsertSingle } from "@/lib/supabase/typed-helpers";
 
 const updateUserSettingsSchema = z.strictObject({
   allowGatewayFallback: z.boolean({
@@ -78,10 +79,12 @@ export const POST = withApiGuards({
     allow_gateway_fallback: allowGatewayFallback,
     user_id: userId,
   };
-  const { error: upsertError } = await supabase.from("user_settings").upsert(payload, {
-    ignoreDuplicates: false,
-    onConflict: "user_id",
-  });
+  const { error: upsertError } = await upsertSingle(
+    supabase,
+    "user_settings",
+    payload,
+    "user_id"
+  );
   if (upsertError) {
     return errorResponse({
       err: upsertError,

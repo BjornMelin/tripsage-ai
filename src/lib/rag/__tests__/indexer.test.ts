@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
+import { upsertMany } from "@/lib/supabase/typed-helpers";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { chunkText, indexDocuments } from "../indexer";
 
@@ -33,6 +34,11 @@ vi.mock("@/lib/telemetry/span", () => ({
   withTelemetrySpan: vi.fn(
     async <T>(_name: string, _options: unknown, execute: () => Promise<T>) => execute()
   ),
+}));
+
+vi.mock("@/lib/supabase/typed-helpers", () => ({
+  deleteSingle: vi.fn(),
+  upsertMany: vi.fn(),
 }));
 
 // Mock secureUuid
@@ -166,12 +172,9 @@ describe("indexDocuments", () => {
   });
 
   it("upserts chunks using (id, chunk_index) and keeps `id` stable per document", async () => {
-    const upsert = vi.fn().mockResolvedValue({ error: null });
-    const from = vi.fn(() => ({ upsert }));
-
-    const supabase = unsafeCast<SupabaseClient<Database>>({
-      from,
-    });
+    const supabase = unsafeCast<SupabaseClient<Database>>({});
+    const upsertManyMock = vi.mocked(upsertMany);
+    upsertManyMock.mockResolvedValue({ data: [], error: null });
 
     const content1 = "A".repeat(1200);
     const content2 = "B".repeat(1200);
@@ -211,18 +214,17 @@ describe("indexDocuments", () => {
       userId: "22222222-2222-2222-2222-222222222222",
     });
 
-    expect(from).toHaveBeenCalledWith("rag_documents");
-    expect(upsert).toHaveBeenCalledTimes(2);
+    expect(upsertManyMock).toHaveBeenCalledTimes(2);
 
     for (const [callIndex, expectedChunks] of [
       [0, chunks1],
       [1, chunks2],
     ] as const) {
-      const [rowsArg, optionsArg] = upsert.mock.calls[callIndex] ?? [];
-      expect(optionsArg).toEqual({
-        ignoreDuplicates: false,
-        onConflict: "id,chunk_index",
-      });
+      const [clientArg, tableArg, rowsArg, conflictArg] =
+        upsertManyMock.mock.calls[callIndex] ?? [];
+      expect(clientArg).toBe(supabase);
+      expect(tableArg).toBe("rag_documents");
+      expect(conflictArg).toBe("id,chunk_index");
 
       const rows = unsafeCast<Array<Record<string, unknown>>>(rowsArg);
       expect(rows).toHaveLength(expectedChunks.length);

@@ -1,17 +1,18 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 const mockUpdate = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(() => {
-    const maybeSingle = vi.fn(() => ({
+    const single = vi.fn(() => ({
       data: null,
       error: { code: "99999", message: "Update failed" },
     }));
 
-    const select = vi.fn(() => ({ maybeSingle }));
+    const select = vi.fn(() => ({ single }));
     const eq = vi.fn(() => ({ select }));
 
     mockUpdate.mockImplementation((updates: unknown) => {
@@ -27,7 +28,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
     return {
       auth: {
-        getUser: vi.fn(() => ({ data: { user: { id: "user-123" } } })),
+        getUser: vi.fn(() => ({ data: { user: { id: TEST_USER_ID } } })),
       },
       from,
     };

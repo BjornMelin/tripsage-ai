@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -28,7 +29,7 @@ const mockSessionRow = {
   tag: null,
   updated_at: "2025-01-01T01:00:00Z",
   user_agent: "Chrome on macOS",
-  user_id: "user-1",
+  user_id: TEST_USER_ID,
 };
 
 const supabaseMock = {
@@ -100,7 +101,7 @@ describe("/api/security/sessions routes", () => {
       error: null,
     });
     supabaseMock.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
     adminInstance = adminMock();
@@ -141,7 +142,7 @@ describe("/api/security/sessions routes", () => {
       error: null,
     });
     supabaseMock.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
 

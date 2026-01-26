@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setSupabaseFactoryForTests } from "@/lib/api/factory";
 import * as googleCalendar from "@/lib/calendar/google";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -17,7 +18,7 @@ vi.mock("next/headers", () => ({
 }));
 
 // Mock Supabase before importing route handlers
-const mockUser = { email: "test@example.com", id: "user-1" };
+const mockUser = { email: "test@example.com", id: TEST_USER_ID };
 const mockSupabase = {
   auth: {
     getUser: vi.fn(async () => ({
