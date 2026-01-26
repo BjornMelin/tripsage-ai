@@ -957,6 +957,9 @@ export function getMany<
         qb = qb.order(options.orderBy, { ascending: options.ascending ?? true });
       }
 
+      // Pagination: when options.offset is set without options.limit, end is undefined so
+      // we intentionally skip qb.range and fall back to qb.offset(start) (and qb.limit if
+      // present) to support the offset-only path.
       // Apply pagination using range
       if (options?.limit !== undefined || options?.offset !== undefined) {
         const start = options?.offset ?? 0;

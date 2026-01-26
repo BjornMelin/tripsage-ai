@@ -241,6 +241,10 @@ function stableUuid(seed: string): string {
   )}-${hex.slice(20)}`;
 }
 
+// Intentionally duplicates src/lib/rag/pgvector.ts (and mirrors the
+// TEXT_EMBEDDING_DIMENSIONS duplication) to keep the seed script self-contained,
+// avoid server-only imports, and prevent runtime/import issues during seeding.
+// Keep this in sync with pgvector helpers to ease maintenance.
 function serializePgvector(embedding: readonly number[]): string {
   const parts = embedding.map((value, idx) => {
     if (!Number.isFinite(value)) {

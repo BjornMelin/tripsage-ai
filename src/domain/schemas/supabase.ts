@@ -562,12 +562,14 @@ export type ChatSessionsUpdate = z.infer<typeof chatSessionsUpdateSchema>;
 /**
  * Zod schema for chat_messages table Row.
  */
+const chatMessageRoleSchema = z.enum(["user", "assistant", "system", "tool"]);
+
 export const chatMessagesRowSchema = z.object({
   content: z.string(),
   created_at: primitiveSchemas.isoDateTime.nullable(),
   id: z.number().int(),
   metadata: jsonSchema.nullable(),
-  role: z.string(),
+  role: chatMessageRoleSchema,
   session_id: primitiveSchemas.uuid,
   user_id: primitiveSchemas.uuid,
 });
@@ -583,7 +585,7 @@ export const chatMessagesInsertSchema = z.object({
   created_at: primitiveSchemas.isoDateTime.nullable().optional(),
   id: z.never().optional(),
   metadata: jsonSchema.nullable().optional(),
-  role: z.string(),
+  role: chatMessageRoleSchema,
   session_id: primitiveSchemas.uuid,
   user_id: primitiveSchemas.uuid,
 });
@@ -599,7 +601,7 @@ export const chatMessagesUpdateSchema = z.object({
   created_at: primitiveSchemas.isoDateTime.nullable().optional(),
   id: z.never().optional(),
   metadata: jsonSchema.nullable().optional(),
-  role: z.string().optional(),
+  role: chatMessageRoleSchema.optional(),
   session_id: primitiveSchemas.uuid.optional(),
   user_id: primitiveSchemas.uuid.optional(),
 });

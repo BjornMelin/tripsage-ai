@@ -177,7 +177,9 @@ function generateBackupCodes(count: number): string[] {
  * Starts a TOTP enrollment.
  *
  * @param supabase - The Supabase client.
+ * @param deps - Optional dependencies for testability.
  * @returns The enrollment result.
+ * @throws {Error} When enrollment expiration or storage fails.
  */
 export async function startTotpEnrollment(
   supabase: TypedSupabase,
@@ -313,7 +315,10 @@ export interface TotpVerificationResult {
  *
  * @param supabase - The Supabase client.
  * @param input - The input to verify the TOTP code.
+ * @param deps - Optional dependencies for testability.
  * @returns Verification result with enrollment state.
+ * @throws {InvalidTotpError} When the code is invalid or expired.
+ * @throws {TotpVerificationInternalError} When lookup or verification fails.
  */
 export async function verifyTotp(
   supabase: TypedSupabase,
@@ -560,7 +565,13 @@ export async function createBackupCodes(
  * @param adminSupabase - The Admin Supabase client.
  * @param userId - The ID of the user to verify the backup code for.
  * @param code - The code to verify.
+ * @param meta - Optional audit metadata (e.g. ipAddress/userAgent) for backup code logging.
  * @returns The verification result.
+ * @throws {InvalidBackupCodeError} Thrown when the code is invalid or already consumed
+ * (e.g. "invalid_backup_code", "backup_code_already_consumed").
+ * @throws {Error} Thrown on lookup or update failures (e.g. "backup_codes_lookup_failed",
+ * "backup_code_consume_failed", or wrapped update errors). Exceptions are recorded via
+ * span.recordException in the updateMany/error-handling block.
  */
 export async function verifyBackupCode(
   adminSupabase: TypedAdminSupabase,
