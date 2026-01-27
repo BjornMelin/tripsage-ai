@@ -83,6 +83,18 @@ Handled automatically by the base schema migration as of 2026-01-24. If your
 environment applied the base schema before that date or you manage migrations
 manually, run once to normalize stored configs.
 
+Prerequisite: `gen_random_uuid()` requires the Postgres `pgcrypto` extension.
+Supabase enables `pgcrypto` by default; self-managed Postgres must enable it
+before running the `UPDATE`s on `agent_config` and `agent_config_versions`.
+Run:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+```
+
+Tip: creating extensions typically requires superuser or database owner
+permissions (or a role granted `CREATE` on the database).
+
 ```sql
 BEGIN;
 

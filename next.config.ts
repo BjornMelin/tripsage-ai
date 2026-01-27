@@ -16,17 +16,14 @@ if (!isAbsolute(TURBOPACK_ROOT)) {
   throw new Error(`turbopack.root must be an absolute path, got: ${TURBOPACK_ROOT}`);
 }
 if (!existsSync(TURBOPACK_ROOT)) {
-  throw new Error(`turbopack.root must point to an existing directory: ${TURBOPACK_ROOT}`);
+  throw new Error(
+    `turbopack.root must point to an existing directory: ${TURBOPACK_ROOT}`
+  );
 }
 
 const nextConfig: NextConfig = {
   // Enable Cache Components (required for "use cache" directives in codebase)
   cacheComponents: true,
-
-  turbopack: {
-    // Explicit root avoids Next.js selecting an unrelated lockfile in a parent directory.
-    root: TURBOPACK_ROOT,
-  },
 
   compiler: {
     // Remove console.log statements in production
@@ -82,25 +79,29 @@ const nextConfig: NextConfig = {
 
     return [
       {
-        source: "/:path*",
         headers: securityHeaders,
+        source: "/:path*",
       },
       // Cache static assets for better performance
       {
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
         source: "/_next/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
         source: "/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ];
   },
 
   // Image optimization with modern formats
   images: {
-    dangerouslyAllowSVG: false,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    dangerouslyAllowSVG: false,
 
     // Enable image optimization for better performance
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -162,7 +163,17 @@ const nextConfig: NextConfig = {
 
   // Streamdown uses Shiki for code blocks. Force bundling to avoid
   // "Package shiki can't be external" warnings in Next.js/Turbopack.
-  transpilePackages: ["shiki", "@streamdown/code", "@streamdown/math", "@streamdown/mermaid"],
+  transpilePackages: [
+    "shiki",
+    "@streamdown/code",
+    "@streamdown/math",
+    "@streamdown/mermaid",
+  ],
+
+  turbopack: {
+    // Explicit root avoids Next.js selecting an unrelated lockfile in a parent directory.
+    root: TURBOPACK_ROOT,
+  },
 };
 
 export default withBotId(nextConfig);

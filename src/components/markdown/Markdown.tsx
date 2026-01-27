@@ -250,7 +250,7 @@ function TripSageMarkdownLink({
  * `@param` props - Markdown rendering options including `content`, `mode`,
  * `isAnimating`, `caret`, `controls`, `rehypePlugins`, `remarkPlugins`, `remend`,
  * `mermaid`, and `securityProfile`.
- * @returns {JSX.Element} Rendered Markdown component with Streamdown rendering.
+ * @returns Rendered Markdown component with Streamdown rendering.
  */
 export const Markdown = memo(
   ({

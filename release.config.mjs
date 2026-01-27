@@ -7,7 +7,6 @@
  */
 export default {
   branches: ["main"],
-  repositoryUrl: "https://github.com/BjornMelin/tripsage-ai.git",
   plugins: [
     [
       "@semantic-release/commit-analyzer",
@@ -15,11 +14,11 @@ export default {
         preset: "conventionalcommits",
         releaseRules: [
           { breaking: true, release: "minor" },
-          { type: "feat", release: "minor" },
-          { type: "fix", release: "patch" },
-          { type: "chore", release: false }
-        ]
-      }
+          { release: "minor", type: "feat" },
+          { release: "patch", type: "fix" },
+          { release: false, type: "chore" },
+        ],
+      },
     ],
     ["@semantic-release/release-notes-generator", { preset: "conventionalcommits" }],
     ["@semantic-release/changelog", { changelogFile: "CHANGELOG.md" }],
@@ -28,14 +27,16 @@ export default {
       "@semantic-release/git",
       {
         assets: ["CHANGELOG.md", "package.json"],
-        message: "chore(release): ${nextRelease.version} [skip ci]"
-      }
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: semantic-release interpolates this placeholder.
+        message: "chore(release): ${nextRelease.version} [skip ci]",
+      },
     ],
     [
       "@semantic-release/github",
       {
-        successCommentCondition: false
-      }
-    ]
-  ]
+        successCommentCondition: false,
+      },
+    ],
+  ],
+  repositoryUrl: "https://github.com/BjornMelin/tripsage-ai.git",
 };
