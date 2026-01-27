@@ -274,3 +274,4 @@ opensrc/
 
 # Firecrawl outputs
 .firecrawl
+.vercel
