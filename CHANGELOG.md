@@ -1,3 +1,31 @@
+## [1.30.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.29.0...v1.30.0) (2026-01-27)
+
+### Features
+
+* add KaTeX support to Markdown component and refine documentation ([4dab5f3](https://github.com/BjornMelin/tripsage-ai/commit/4dab5f399c764536c0611a5f16022fc13c81fa90))
+* **env:** add Streamdown configuration options to environment templates ([d1d8047](https://github.com/BjornMelin/tripsage-ai/commit/d1d80475eec878ca2060c56605559a6fca396b77))
+* introduce `count` option for Supabase operations to optimize performance and update chat RLS policies for efficiency. ([574dd6b](https://github.com/BjornMelin/tripsage-ai/commit/574dd6b764d7cd068fdad340ff8bb5e0d1831f31))
+* **markdown:** integrate Streamdown v2 for markdown rendering and security enhancements ([eae9ee3](https://github.com/BjornMelin/tripsage-ai/commit/eae9ee37fc5844db0fe1b7b925ba74979164ca24))
+* **markdown:** upgrade to Streamdown v2 with canonical renderer ([393bd94](https://github.com/BjornMelin/tripsage-ai/commit/393bd943ca46ecc9e40ae21c19858467d4ad795c))
+
+### Bug Fixes
+
+* **config:** normalize agent config and scripts to current standards ([b369524](https://github.com/BjornMelin/tripsage-ai/commit/b369524fb7b4b43e1f6481c247b1ba999c3430b8))
+* **pr-656:** resolve review comments ([7933daa](https://github.com/BjornMelin/tripsage-ai/commit/7933daae12a590c2ea531d69534b6510814315bd))
+* rename maxTokens to maxOutputTokens across multiple files ([dd15230](https://github.com/BjornMelin/tripsage-ai/commit/dd15230ced01113507c97261714092f6cce1fc7f))
+* resolve PR review comments for [#656](https://github.com/BjornMelin/tripsage-ai/issues/656) ([f929ef8](https://github.com/BjornMelin/tripsage-ai/commit/f929ef829c7573aec0c79f878661d674d5628a84))
+* **review:** address PR 656 feedback ([338f21f](https://github.com/BjornMelin/tripsage-ai/commit/338f21ff2ab6ccc50cebb366b17ffd353a199929))
+* **review:** apply sdk/supabase best practices ([e71f447](https://github.com/BjornMelin/tripsage-ai/commit/e71f447ecf0f5a576571affaa4864aae8e87a852))
+* **review:** resolve PR 656 comments ([0efc301](https://github.com/BjornMelin/tripsage-ai/commit/0efc301235b7b418b29f2e06513acd260ea976a7))
+* **review:** resolve PR 656 feedback ([44b8896](https://github.com/BjornMelin/tripsage-ai/commit/44b88966097d2a6e47271473eb25cce03424d457))
+* **schema:** tighten chat role validation ([5e90584](https://github.com/BjornMelin/tripsage-ai/commit/5e90584192490caec81f56430ec95ea288880738))
+* update admin-guide and error handling in seed script ([748d860](https://github.com/BjornMelin/tripsage-ai/commit/748d860a62377b770fb6147dcce0578bfda3e3f9))
+* upgrade Biome configuration to latest schema and remove deprecated fields ([bfadae0](https://github.com/BjornMelin/tripsage-ai/commit/bfadae00c09ab9dac291a85a3fa7e208c2b9d563))
+
+### Performance Improvements
+
+* add database indexes to improve query performance and refactor error handling for better consistency. ([d19eff6](https://github.com/BjornMelin/tripsage-ai/commit/d19eff6c06f1af2ac8baeb812c5d023cb56fa192))
+
 ## [1.29.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.28.0...v1.29.0) (2026-01-22)
 
 ### Features

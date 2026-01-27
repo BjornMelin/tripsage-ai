@@ -1,6 +1,6 @@
 {
   "name": "tripsage-ai-frontend",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "private": true,
   "packageManager": "pnpm@10.28.1",
   "scripts": {
