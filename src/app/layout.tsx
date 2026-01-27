@@ -23,7 +23,7 @@ const GEIST_SANS = Geist({
   adjustFontFallback: true,
   display: "swap",
   fallback: ["system-ui", "arial"],
-  preload: true,
+  preload: false,
   subsets: ["latin"],
   variable: "--font-geist-sans",
 });
@@ -35,7 +35,7 @@ const GEIST_MONO = Geist_Mono({
   adjustFontFallback: true,
   display: "swap",
   fallback: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
-  preload: true,
+  preload: false,
   subsets: ["latin"],
   variable: "--font-geist-mono",
 });
@@ -127,10 +127,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${GEIST_SANS.variable} ${GEIST_MONO.variable} font-sans antialiased min-h-screen`}
-      >
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${GEIST_SANS.variable} ${GEIST_MONO.variable}`}
+    >
+      <body className="font-sans antialiased min-h-screen">
         <Suspense fallback={<AppShellFallback />}>
           <AppShell>{children}</AppShell>
         </Suspense>

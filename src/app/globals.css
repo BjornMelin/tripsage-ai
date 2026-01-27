@@ -34,6 +34,10 @@
   --color-info-foreground: hsl(var(--info-foreground));
   --color-highlight: hsl(var(--highlight));
   --color-highlight-foreground: hsl(var(--highlight-foreground));
+
+  --font-sans: var(--font-geist-sans), system-ui, arial;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 :root {

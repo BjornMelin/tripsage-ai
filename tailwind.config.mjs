@@ -10,6 +10,17 @@ export default {
   content: ["./src/**/*.{ts,tsx,mdx}"],
   plugins: [tailwindcssAnimate],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", "system-ui", "arial"],
+        mono: [
+          "var(--font-geist-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Consolas",
+          "monospace",
+        ],
+      },
+    },
   },
 };
