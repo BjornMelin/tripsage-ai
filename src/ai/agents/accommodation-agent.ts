@@ -68,14 +68,17 @@ export function createAccommodationAgent(
     { content: instructions, role: "system" },
     schemaMessage,
   ];
-  const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampMessages,
+    params.maxOutputTokens,
+    deps.modelId
+  );
 
   return createTripSageAgent<typeof ACCOMMODATION_TOOLS>(deps, {
     agentType: "accommodationSearch",
     defaultMessages: [schemaMessage],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps: params.maxSteps,
+    maxOutputTokens,
     name: "Accommodation Search Agent",
     // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
     // on the agent config (ToolLoopAgentSettings.output).
@@ -102,6 +105,7 @@ export function createAccommodationAgent(
         ],
       };
     },
+    stepLimit: params.stepLimit,
     temperature: params.temperature,
     tools: ACCOMMODATION_TOOLS,
     topP: params.topP,

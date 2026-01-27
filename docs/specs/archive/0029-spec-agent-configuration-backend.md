@@ -111,7 +111,7 @@ Key structures:
   including:
   - `agentType`
   - `model` (provider + id)
-  - `temperature`, `maxTokens`, `topP`, `frequencyPenalty`, etc.
+  - `temperature`, `maxOutputTokens`, `topP`, `frequencyPenalty`, etc.
   - `enabledTools`, `safetyLevel`, and other knobs.
 - `agentConfigRequestSchema` – request shape for configuration updates, mapping
   UI form inputs to `configurationAgentConfig`.

@@ -7,6 +7,7 @@ import {
   mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createRouteParamsContext } from "@/test/helpers/route";
 import { setupStorageFromMock } from "@/test/helpers/supabase-storage";
 import { getSupabaseMockState } from "@/test/mocks/supabase";
@@ -43,6 +44,7 @@ function hasRequest(
 }
 
 describe("/api/attachments/files", () => {
+  const userId = TEST_USER_ID;
   // Storage mock for signed URL generation
   const mockCreateSignedUrls = vi.fn();
   let fromSpy: ReturnType<typeof vi.spyOn>;
@@ -50,7 +52,7 @@ describe("/api/attachments/files", () => {
   beforeEach(() => {
     vi.resetModules();
     resetApiRouteMocks();
-    mockApiRouteAuthUser({ id: "user-1" });
+    mockApiRouteAuthUser({ id: userId });
     vi.clearAllMocks();
 
     // Setup storage mock for signed URL generation
@@ -79,7 +81,7 @@ describe("/api/attachments/files", () => {
         bucket_name: "attachments",
         chat_message_id: null,
         created_at: "2025-01-01T00:00:00Z",
-        file_path: "chat/user-1/uuid-test.jpg",
+        file_path: `chat/${userId}/uuid-test.jpg`,
         file_size: 1024,
         filename: "file-id-1",
         id: "file-id-1",
@@ -89,7 +91,7 @@ describe("/api/attachments/files", () => {
         trip_id: null,
         updated_at: "2025-01-01T00:00:00Z",
         upload_status: "completed",
-        user_id: "user-1",
+        user_id: userId,
       },
     ];
 
@@ -116,14 +118,14 @@ describe("/api/attachments/files", () => {
       hasRequest(state.requests, "GET", "/rest/v1/file_attachments", {
         limit: "20",
         offset: "0",
-        user_id: "eq.user-1",
+        user_id: `eq.${userId}`,
       })
     ).toBe(true);
 
     // Verify storage signed URL generation was called
     expect(supabase.storage.from).toHaveBeenCalledWith("attachments");
     expect(mockCreateSignedUrls).toHaveBeenCalledWith(
-      ["chat/user-1/uuid-test.jpg"],
+      [`chat/${userId}/uuid-test.jpg`],
       3600,
       { download: true }
     );
@@ -206,7 +208,7 @@ describe("/api/attachments/files", () => {
       bucket_name: "attachments",
       chat_message_id: null,
       created_at: "2025-01-01T00:00:00Z",
-      file_path: `chat/user-1/uuid-file${i}.jpg`,
+      file_path: `chat/${userId}/uuid-file${i}.jpg`,
       file_size: 1024,
       filename: `file-id-${i}`,
       id: `file-id-${i}`,
@@ -216,7 +218,7 @@ describe("/api/attachments/files", () => {
       trip_id: null,
       updated_at: "2025-01-01T00:00:00Z",
       upload_status: "completed",
-      user_id: "user-1",
+      user_id: userId,
     }));
 
     state.selectResult = {
@@ -252,7 +254,7 @@ describe("/api/attachments/files", () => {
     const state = getSupabaseMockState(supabase);
 
     state.selectByTable.set("trips", {
-      data: [{ id: 123, user_id: "user-1" }],
+      data: [{ id: 123, user_id: userId }],
       error: null,
     });
 
@@ -322,7 +324,7 @@ describe("/api/attachments/files", () => {
         (r) =>
           r.method === "GET" &&
           r.url.startsWith("/rest/v1/file_attachments") &&
-          r.url.includes("user_id=eq.user-1") &&
+          r.url.includes(`user_id=eq.${userId}`) &&
           r.url.includes("chat_message_id=eq.456")
       )
     ).toBe(true);
@@ -465,7 +467,7 @@ describe("/api/attachments/files", () => {
     const cache = await import("@/lib/cache/upstash");
 
     state.selectByTable.set("trips", {
-      data: [{ id: 123, user_id: "user-1" }],
+      data: [{ id: 123, user_id: userId }],
       error: null,
     });
     state.selectByTable.set("trip_collaborators", { data: [], error: null });
@@ -488,7 +490,7 @@ describe("/api/attachments/files", () => {
     expect(res.status).toBe(200);
 
     expect(cache.setCachedJson).toHaveBeenCalledWith(
-      "attachments:files:user-1:limit=20&offset=0&tripId=123",
+      `attachments:files:${userId}:limit=20&offset=0&tripId=123`,
       expect.objectContaining({
         items: [],
         pagination: expect.objectContaining({
@@ -511,7 +513,7 @@ describe("/api/attachments/files", () => {
         bucket_name: "attachments",
         chat_message_id: null,
         created_at: "2025-01-01T00:00:00Z",
-        file_path: "chat/user-1/uuid-test.jpg",
+        file_path: `chat/${userId}/uuid-test.jpg`,
         file_size: 1024,
         filename: "file-id-1",
         id: "file-id-1",
@@ -521,7 +523,7 @@ describe("/api/attachments/files", () => {
         trip_id: null,
         updated_at: "2025-01-01T00:00:00Z",
         upload_status: "completed",
-        user_id: "user-1",
+        user_id: userId,
       },
     ];
 
@@ -560,7 +562,7 @@ describe("/api/attachments/files", () => {
         bucket_name: "attachments",
         chat_message_id: null,
         created_at: "2025-01-01T00:00:00Z",
-        file_path: "chat/user-1/file1.jpg",
+        file_path: `chat/${userId}/file1.jpg`,
         file_size: 1024,
         filename: "file-1",
         id: "file-1",
@@ -570,13 +572,13 @@ describe("/api/attachments/files", () => {
         trip_id: null,
         updated_at: "2025-01-01T00:00:00Z",
         upload_status: "completed",
-        user_id: "user-1",
+        user_id: userId,
       },
       {
         bucket_name: "attachments",
         chat_message_id: null,
         created_at: "2025-01-01T00:00:00Z",
-        file_path: "chat/user-1/file2.jpg",
+        file_path: `chat/${userId}/file2.jpg`,
         file_size: 2048,
         filename: "file-2",
         id: "file-2",
@@ -586,7 +588,7 @@ describe("/api/attachments/files", () => {
         trip_id: null,
         updated_at: "2025-01-01T00:00:00Z",
         upload_status: "completed",
-        user_id: "user-1",
+        user_id: userId,
       },
     ];
 
@@ -601,12 +603,12 @@ describe("/api/attachments/files", () => {
       data: [
         {
           error: null,
-          path: "chat/user-1/file1.jpg",
+          path: `chat/${userId}/file1.jpg`,
           signedUrl: "https://supabase.storage/signed/file1.jpg?token=abc",
         },
         {
           error: "Failed to generate URL",
-          path: "chat/user-1/file2.jpg",
+          path: `chat/${userId}/file2.jpg`,
           signedUrl: "",
         },
       ],

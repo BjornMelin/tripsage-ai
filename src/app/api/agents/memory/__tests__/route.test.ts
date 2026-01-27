@@ -5,6 +5,7 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -27,7 +28,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
       getUser: async () => ({
-        data: { user: { id: "user-1" } },
+        data: { user: { id: TEST_USER_ID } },
       }),
     },
   })),
@@ -54,7 +55,7 @@ describe("/api/agents/memory route", () => {
   const supabaseClient = {
     auth: {
       getUser: vi.fn(async () => ({
-        data: { user: { id: "user-1" } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       })),
     },
@@ -70,7 +71,7 @@ describe("/api/agents/memory route", () => {
     }));
     setSupabaseFactoryForTests(async () => supabaseClient as never);
     supabaseClient.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
   });

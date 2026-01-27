@@ -6,9 +6,15 @@ import { safeValidateUIMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { isChatEphemeralEnabled } from "@/lib/chat/ephemeral";
+import { extractErrorMessage } from "@/lib/errors/error-message";
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { insertSingle } from "@/lib/supabase/typed-helpers";
+import {
+  deleteSingle,
+  getMany,
+  getMaybeSingle,
+  insertSingle,
+} from "@/lib/supabase/typed-helpers";
 import type { ServerLogger } from "@/lib/telemetry/logger";
 import { getUiMessageIdFromRow, isSupersededMessage } from "../_metadata-helpers";
 import {
@@ -28,8 +34,10 @@ export interface SessionsDeps {
 
 /**
  * Create a chat session owned by the authenticated user.
- * @param deps Collaborators with Supabase client and authenticated userId.
- * @param title Optional title (stored in metadata).
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param title - Optional title (stored in metadata).
+ * @returns Response with the created session ID.
  */
 export async function createSession(
   deps: SessionsDeps,
@@ -51,7 +59,7 @@ export async function createSession(
   if (error) {
     if (allowEphemeral) {
       deps.logger.warn("chat:session_create_skipped", {
-        error: error instanceof Error ? error.message : String(error),
+        error: extractErrorMessage(error),
         userId: deps.userId,
       });
       return NextResponse.json({ id }, { status: 201 });
@@ -67,18 +75,27 @@ export async function createSession(
 
 /**
  * List sessions for the authenticated user.
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @returns Response with the list of sessions.
  */
 export async function listSessions(deps: SessionsDeps): Promise<Response> {
   const allowEphemeral = isChatEphemeralEnabled();
-  const { data, error } = await deps.supabase
-    .from("chat_sessions")
-    .select("id, created_at, updated_at, metadata")
-    .eq("user_id", deps.userId)
-    .order("updated_at", { ascending: false });
+  const { data, error } = await getMany(
+    deps.supabase,
+    "chat_sessions",
+    (qb) => qb.eq("user_id", deps.userId),
+    {
+      ascending: false,
+      orderBy: "updated_at",
+      select: "id, created_at, updated_at, metadata",
+      validate: false,
+    }
+  );
   if (error) {
     if (allowEphemeral) {
       deps.logger.warn("chat:sessions_list_skipped", {
-        error: error instanceof Error ? error.message : String(error),
+        error: extractErrorMessage(error),
         userId: deps.userId,
       });
       return NextResponse.json([], { status: 200 });
@@ -94,14 +111,18 @@ export async function listSessions(deps: SessionsDeps): Promise<Response> {
 
 /**
  * Get a single session by id (owner-only).
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to retrieve.
+ * @returns Response with the session data.
  */
 export async function getSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { data, error } = await deps.supabase
-    .from("chat_sessions")
-    .select("id, created_at, updated_at, metadata")
-    .eq("id", id)
-    .eq("user_id", deps.userId)
-    .maybeSingle();
+  const { data, error } = await getMaybeSingle(
+    deps.supabase,
+    "chat_sessions",
+    (qb) => qb.eq("id", id).eq("user_id", deps.userId),
+    { select: "id, created_at, updated_at, metadata", validate: false }
+  );
   if (error)
     return errorResponse({
       error: "db_error",
@@ -114,13 +135,18 @@ export async function getSession(deps: SessionsDeps, id: string): Promise<Respon
 
 /**
  * Delete a session by id (owner-only).
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to delete.
+ * @returns Response with no content on success.
  */
 export async function deleteSession(deps: SessionsDeps, id: string): Promise<Response> {
-  const { error, count } = await deps.supabase
-    .from("chat_sessions")
-    .delete({ count: "exact" })
-    .eq("id", id)
-    .eq("user_id", deps.userId);
+  const { count, error } = await deleteSingle(
+    deps.supabase,
+    "chat_sessions",
+    (qb) => qb.eq("id", id).eq("user_id", deps.userId),
+    { count: "exact", returning: "representation", select: "id" }
+  );
   if (error)
     return errorResponse({
       error: "db_error",
@@ -133,16 +159,20 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
 
 /**
  * List messages for a session.
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to list messages for.
+ * @returns Response with the list of session messages.
  */
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
   const logger = deps.logger;
 
-  const { data: session, error: sessionError } = await deps.supabase
-    .from("chat_sessions")
-    .select("id")
-    .eq("id", id)
-    .eq("user_id", deps.userId)
-    .maybeSingle();
+  const { data: session, error: sessionError } = await getMaybeSingle(
+    deps.supabase,
+    "chat_sessions",
+    (qb) => qb.eq("id", id).eq("user_id", deps.userId),
+    { select: "id", validate: false }
+  );
   if (sessionError)
     return errorResponse({
       error: "db_error",
@@ -151,12 +181,17 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
     });
   if (!session) return notFoundResponse("Session");
 
-  const { data: messages, error: messageError } = await deps.supabase
-    .from("chat_messages")
-    .select("id, role, content, created_at, metadata")
-    .eq("session_id", id)
-    .eq("user_id", deps.userId)
-    .order("id", { ascending: true });
+  const { data: messages, error: messageError } = await getMany(
+    deps.supabase,
+    "chat_messages",
+    (qb) => qb.eq("session_id", id).eq("user_id", deps.userId),
+    {
+      ascending: true,
+      orderBy: "id",
+      select: "id, role, content, created_at, metadata",
+      validate: false,
+    }
+  );
   if (messageError)
     return errorResponse({
       error: "db_error",
@@ -174,13 +209,18 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
 
   const { data: toolCalls, error: toolError } =
     messageIds.length > 0
-      ? await deps.supabase
-          .from("chat_tool_calls")
-          .select(
-            "message_id, tool_id, tool_name, arguments, result, status, error_message"
-          )
-          .in("message_id", messageIds)
-          .order("id", { ascending: true })
+      ? await getMany(
+          deps.supabase,
+          "chat_tool_calls",
+          (qb) => qb.in("message_id", messageIds),
+          {
+            ascending: true,
+            orderBy: "id",
+            select:
+              "message_id, tool_id, tool_name, arguments, result, status, error_message",
+            validate: false,
+          }
+        )
       : { data: [], error: null };
 
   if (toolError) {
@@ -281,6 +321,11 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
 
 /**
  * Create a message within a session for the authenticated user.
+ *
+ * @param deps - Collaborators with Supabase client and authenticated userId.
+ * @param id - The ID of the session to create a message in.
+ * @param payload - Message role and content parts.
+ * @returns Response with no content on success.
  */
 export async function createMessage(
   deps: SessionsDeps,
@@ -301,12 +346,12 @@ export async function createMessage(
       status: 400,
     });
   }
-  const { data: session, error: sessionError } = await deps.supabase
-    .from("chat_sessions")
-    .select("id")
-    .eq("id", id)
-    .eq("user_id", deps.userId)
-    .maybeSingle();
+  const { data: session, error: sessionError } = await getMaybeSingle(
+    deps.supabase,
+    "chat_sessions",
+    (qb) => qb.eq("id", id).eq("user_id", deps.userId),
+    { select: "id", validate: false }
+  );
   if (sessionError)
     return errorResponse({
       error: "db_error",

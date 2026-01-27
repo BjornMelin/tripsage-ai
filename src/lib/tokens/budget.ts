@@ -108,7 +108,7 @@ export function countTokens(texts: string[], modelHint?: string): number {
  * @param desiredMax Requested max output tokens.
  * @param modelName Model identifier; used to resolve context window.
  * @param table Optional limits override table.
- * @returns ClampResult with final maxTokens and reasons for any clamping.
+ * @returns ClampResult with final maxOutputTokens and reasons for any clamping.
  */
 export function clampMaxTokens(
   messages: ChatMessage[],
@@ -132,16 +132,16 @@ export function clampMaxTokens(
   );
 
   const available = Math.max(0, modelLimit - promptTokens);
-  let maxTokens = Math.min(finalDesired, available);
+  let maxOutputTokens = Math.min(finalDesired, available);
 
-  if (maxTokens <= 0) {
-    maxTokens = 1;
+  if (maxOutputTokens <= 0) {
+    maxOutputTokens = 1;
     reasons.push("maxTokens_clamped_model_limit");
   } else if (finalDesired > available) {
     reasons.push("maxTokens_clamped_model_limit");
   }
 
-  return { maxTokens, reasons };
+  return { maxOutputTokens, reasons };
 }
 
 /**

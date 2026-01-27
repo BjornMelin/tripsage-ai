@@ -6,6 +6,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const redisStore = new Map<string, string>();
@@ -93,7 +94,7 @@ describe("/api/flights/popular-destinations", () => {
 
   it("returns personalized destinations and caches them", async () => {
     supabaseClient.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
 
@@ -102,25 +103,35 @@ describe("/api/flights/popular-destinations", () => {
       eq: ReturnType<typeof vi.fn>;
       order: ReturnType<typeof vi.fn>;
       limit: ReturnType<typeof vi.fn>;
-      returns: ReturnType<typeof vi.fn>;
+      range: ReturnType<typeof vi.fn>;
     };
 
-    const builder: DestinationQueryBuilder = (() => {
-      const returns = vi.fn(async () => ({
-        data: [{ count: 3, destination: "LAX" }],
-        error: null,
-      }));
-
+    const createDestinationQueryBuilder = (result: {
+      data: Array<{ destination: string | null }> | null;
+      error: Error | null;
+    }): DestinationQueryBuilder &
+      Promise<{ data: unknown; error: unknown; count: null }> => {
       const builderRef: DestinationQueryBuilder = {
-        eq: vi.fn(() => builderRef),
-        limit: vi.fn(() => builderRef),
-        order: vi.fn(() => builderRef),
-        returns,
-        select: vi.fn(() => builderRef),
+        eq: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
       };
 
-      return builderRef;
-    })();
+      const promise = Promise.resolve({
+        count: null,
+        data: result.data,
+        error: result.error,
+      });
+
+      return Object.assign(promise, builderRef);
+    };
+
+    const builder = createDestinationQueryBuilder({
+      data: [{ destination: "LAX" }],
+      error: null,
+    });
 
     supabaseClient.from.mockReturnValue(builder);
 
@@ -135,7 +146,7 @@ describe("/api/flights/popular-destinations", () => {
     expect(res.status).toBe(200);
     expect(body).toEqual([{ code: "LAX", name: "LAX" }]);
 
-    const cached = await redisClient.get("popular-destinations:user:user-1");
+    const cached = await redisClient.get(`popular-destinations:user:${TEST_USER_ID}`);
     const parsed = cached
       ? (JSON.parse(cached) as Array<{ code: string; name: string }>)
       : null;

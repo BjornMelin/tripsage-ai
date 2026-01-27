@@ -1,7 +1,6 @@
 /** @vitest-environment node */
-
-import type { NextRequest } from "next/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -31,7 +30,7 @@ const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const GET_CURRENT_USER = vi.hoisted(() =>
   vi.fn(async () => ({
     error: null,
-    user: { id: "user-1" } as never,
+    user: { id: TEST_USER_ID } as never,
   }))
 );
 
@@ -69,7 +68,7 @@ vi.mock("@/lib/api/route-helpers", async () => {
   );
   return {
     ...actual,
-    getTrustedRateLimitIdentifier: vi.fn((_req: NextRequest) => "user:user-1"),
+    getTrustedRateLimitIdentifier: vi.fn(() => `user:${TEST_USER_ID}`),
     withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
   };
 });
@@ -88,7 +87,7 @@ describe("/api/activities routes", () => {
     MOCK_GET_REDIS.mockReturnValue({} as never);
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
   });
@@ -140,7 +139,7 @@ describe("/api/activities routes", () => {
       expect(body.activities[0].name).toBe("Test Activity");
       expect(MOCK_ACTIVITIES_SEARCH).toHaveBeenCalledWith(
         { category: "museums", destination: "Paris" },
-        expect.objectContaining({ userId: "user-1" })
+        expect.objectContaining({ userId: TEST_USER_ID })
       );
     });
 
@@ -243,7 +242,7 @@ describe("/api/activities routes", () => {
       expect(body.name).toBe("Test Activity");
       expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith(
         "places/123",
-        expect.objectContaining({ userId: "user-1" })
+        expect.objectContaining({ userId: TEST_USER_ID })
       );
     });
 
@@ -275,7 +274,7 @@ describe("/api/activities routes", () => {
       expect(res.status).toBe(200);
       expect(MOCK_ACTIVITIES_DETAILS).toHaveBeenCalledWith(
         "places/123",
-        expect.objectContaining({ userId: "user-1" })
+        expect.objectContaining({ userId: TEST_USER_ID })
       );
     });
 

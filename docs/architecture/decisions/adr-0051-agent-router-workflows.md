@@ -75,7 +75,7 @@ We will:
 
    - Route: `POST /api/agents/router` implemented in
      `src/app/api/agents/router/route.ts`.
-   - Uses AI SDK v6 `generateObject` and a Zod schema (`routerClassificationSchema`)
+   - Uses AI SDK v6 `generateText` with `Output.object` and a Zod schema (`routerClassificationSchema`)
      to classify the latest user message into one of the supported workflows with
      confidence and reasoning.
    - Uses `withApiGuards({ auth: true, rateLimit: "agents:router", telemetry: "agent.router" })`.

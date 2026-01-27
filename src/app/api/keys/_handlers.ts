@@ -6,6 +6,7 @@ import type { PostKeyBody } from "@schemas/api";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMany } from "@/lib/supabase/typed-helpers";
 import { vaultUnavailableResponse } from "./_error-mapping";
 
 /** Set of allowed API service providers for key storage. */
@@ -68,11 +69,17 @@ export async function getKeys(deps: {
   supabase: TypedServerSupabase;
   userId: string;
 }): Promise<Response> {
-  const { data, error } = await deps.supabase
-    .from("api_keys")
-    .select("service, created_at, last_used")
-    .eq("user_id", deps.userId)
-    .order("service", { ascending: true });
+  const { data, error } = await getMany(
+    deps.supabase,
+    "api_keys",
+    (qb) => qb.eq("user_id", deps.userId),
+    {
+      ascending: true,
+      orderBy: "service",
+      select: "service, created_at, last_used",
+      validate: false,
+    }
+  );
   if (error) {
     return vaultUnavailableResponse("Failed to fetch keys", error);
   }

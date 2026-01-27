@@ -3,11 +3,12 @@
 import { describe, expect, it } from "vitest";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { ensureTripAccess } from "@/lib/trips/trip-access";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 
 describe("ensureTripAccess", () => {
-  const userId = "user-1";
+  const userId = TEST_USER_ID;
   const tripId = 42;
 
   it("returns null when user owns the trip", async () => {

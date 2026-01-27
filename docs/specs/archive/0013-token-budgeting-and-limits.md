@@ -21,7 +21,7 @@ export function getModelContextLimit(modelName?: string, table?: ModelLimitsTabl
 export type ChatMessage = { role: 'system'|'user'|'assistant'; content: string };
 export const CHARS_PER_TOKEN_HEURISTIC = 4;
 export function countTokens(texts: string[], modelHint?: string): number;
-export type ClampResult = { maxTokens: number; reasons: string[] };
+export type ClampResult = { maxOutputTokens: number; reasons: string[] };
 export function clampMaxTokens(messages: ChatMessage[], desiredMax: number, modelName?: string, table?: Record<string, number>): ClampResult;
 export function countPromptTokens(messages: ChatMessage[], modelHint?: string): number;
 ```
@@ -43,10 +43,10 @@ export function countPromptTokens(messages: ChatMessage[], modelHint?: string): 
 
 - Inputs: messages (content-only for counting), desiredMax, modelName.
 - Compute: `available = max(0, limit - promptTokens)` where `limit = getModelContextLimit(modelName)`.
-- Result: `maxTokens = max(1, min(desiredMax, available))`.
+- Result: `maxOutputTokens = max(1, min(desiredMax, available))`.
 - Reasons:
-  - `maxTokens_clamped_model_limit` when desired exceeds available or available is 0.
-  - `maxTokens_clamped_invalid_desired` when desired <= 0 (coerced to 1).
+  - Clamped when desired exceeds available or available is 0.
+  - Clamped when desired <= 0 (coerced to 1).
 
 ## Error Handling & Safeguards
 

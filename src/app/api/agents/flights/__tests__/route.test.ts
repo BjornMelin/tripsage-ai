@@ -5,6 +5,7 @@ import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -21,7 +22,7 @@ vi.mock("@/lib/agents/config-resolver", () => ({
       model: "gpt-4o-mini",
       parameters: {
         description: "Flight search agent",
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
         model: "gpt-4o-mini",
         temperature: 0.7,
         timeoutSeconds: 30,
@@ -54,7 +55,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
       getUser: async () => ({
-        data: { user: { id: "user-1" } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       }),
     },
@@ -119,7 +120,7 @@ describe("/api/agents/flights route", () => {
     vi.clearAllMocks();
     setRateLimitFactoryForTests(async () => mockLimitFn());
     setSupabaseFactoryForTests(async () =>
-      createMockSupabaseClient({ user: { id: "user-1" } })
+      createMockSupabaseClient({ user: { id: TEST_USER_ID } })
     );
     mockLimitFn.mockResolvedValue({
       limit: 30,

@@ -126,6 +126,11 @@ pnpm supabase:status
 
 Populate `.env.local` with the local Supabase URL + keys printed by `pnpm supabase:status`.
 
+WSL note: if `http://127.0.0.1:54321/storage/v1/*` returns `500`, follow the storage proxy workaround in:
+
+- [Supabase runbook → Environment variables (local)](../../runbooks/supabase.md#environment-variables-local)
+- [Local Supabase + RAG E2E → Troubleshooting](../../development/core/local-supabase-rag-e2e.md#troubleshooting)
+
 ### Deterministic seed datasets
 
 - `pnpm supabase:reset:dev` — general UI dev dataset

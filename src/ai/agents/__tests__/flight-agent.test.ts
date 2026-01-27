@@ -50,8 +50,8 @@ describe("createFlightAgent", () => {
     id: "config-1",
     model: "gpt-4",
     parameters: {
-      maxSteps: 10,
-      maxTokens: 2048,
+      maxOutputTokens: 2048,
+      stepLimit: 10,
       temperature: 0.7,
       topP: 0.9,
     },
@@ -70,7 +70,7 @@ describe("createFlightAgent", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockClampMaxTokens.mockReturnValue({ maxTokens: 1024, reasons: [] });
+    mockClampMaxTokens.mockReturnValue({ maxOutputTokens: 1024, reasons: [] });
     mockBuildFlightPrompt.mockReturnValue(
       "Search for flights from {origin} to {destination}"
     );

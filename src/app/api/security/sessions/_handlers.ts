@@ -7,6 +7,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
+import { deleteSingle, getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -37,24 +38,23 @@ export async function terminateSessionHandler(params: {
       },
     },
     async (span) => {
-      const sessionQuery = adminSupabase
-        .schema("auth")
-        .from("sessions")
-        .select("id")
-        .eq("id", sessionId)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      const { data: session, error: fetchError } = await sessionQuery;
+      const { data: session, error: fetchError } = await getMaybeSingle(
+        adminSupabase,
+        "sessions",
+        (qb) => qb.eq("id", sessionId).eq("user_id", userId),
+        { schema: "auth", select: "id", validate: false }
+      );
       if (fetchError) {
         span.setAttribute("security.sessions.terminate.error", true);
+        const message =
+          fetchError instanceof Error ? fetchError.message : String(fetchError);
         logger.error("session_lookup_failed", {
-          error: fetchError.message,
+          error: message,
           sessionIdHash: sessionIdHash ?? undefined,
           userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
-          err: fetchError,
+          err: fetchError instanceof Error ? fetchError : new Error(message),
           error: "db_error",
           reason: "Failed to fetch session",
           status: 500,
@@ -65,22 +65,29 @@ export async function terminateSessionHandler(params: {
         return notFoundResponse("Session");
       }
 
-      const deleteResult = await adminSupabase
-        .schema("auth")
-        .from("sessions")
-        .delete()
-        .eq("id", sessionId)
-        .eq("user_id", userId);
+      const deleteResult = await deleteSingle(
+        adminSupabase,
+        "sessions",
+        (qb) => qb.eq("id", sessionId).eq("user_id", userId),
+        { count: null, schema: "auth" }
+      );
 
       if (deleteResult.error) {
+        const message =
+          deleteResult.error instanceof Error
+            ? deleteResult.error.message
+            : String(deleteResult.error);
         span.setAttribute("security.sessions.terminate.error", true);
         logger.error("session_delete_failed", {
-          error: deleteResult.error.message,
+          error: message,
           sessionIdHash: sessionIdHash ?? undefined,
           userIdHash: userIdHash ?? undefined,
         });
         return errorResponse({
-          err: deleteResult.error,
+          err:
+            deleteResult.error instanceof Error
+              ? deleteResult.error
+              : new Error(message),
           error: "db_error",
           reason: "Failed to terminate session",
           status: 500,

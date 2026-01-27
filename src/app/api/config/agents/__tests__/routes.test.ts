@@ -2,6 +2,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/cache/tags", () => ({
@@ -19,6 +20,14 @@ vi.mock("@/lib/telemetry/alerts", () => ({
   emitOperationalAlert: mockEmit,
 }));
 
+const mockSpan = {
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+};
+
 vi.mock("@/lib/telemetry/span", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/telemetry/span")>(
@@ -26,7 +35,11 @@ vi.mock("@/lib/telemetry/span", async () => {
     );
   return {
     ...actual,
-    withTelemetrySpan: (_n: string, _o: unknown, fn: () => Promise<unknown>) => fn(),
+    withTelemetrySpan: (
+      _n: string,
+      _o: unknown,
+      fn: (span: typeof mockSpan) => Promise<unknown>
+    ) => fn(mockSpan),
   };
 });
 
@@ -42,7 +55,7 @@ const supabaseData = {
     createdAt: new Date().toISOString(),
     id: "v1732250000_deadbeef",
     model: "gpt-4o",
-    parameters: { maxTokens: 1000, temperature: 0.3, topP: 0.9 },
+    parameters: { maxOutputTokens: 1000, temperature: 0.3, topP: 0.9 },
     scope: "global",
     updatedAt: new Date().toISOString(),
   },
@@ -75,7 +88,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: vi.fn(async () => ({
     auth: {
       getUser: vi.fn(async () => ({
-        data: { user: { app_metadata: { is_admin: true }, id: "admin-user" } },
+        data: { user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } },
         error: null,
       })),
     },
@@ -100,7 +113,7 @@ describe("config routes", () => {
     resetApiRouteMocks();
     mockApiRouteAuthUser({
       app_metadata: { is_admin: true },
-      id: "admin-user",
+      id: TEST_USER_ID,
     } as never);
     supabaseSelect.mockReset();
     supabaseMaybeSingle.mockReset();
@@ -117,7 +130,7 @@ describe("config routes", () => {
     const res = await GET(req, {
       params: Promise.resolve({ agentType: "budgetAgent" }),
       supabase: {} as never,
-      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
     } as never);
 
     expect(res.status).toBe(200);
@@ -145,7 +158,7 @@ describe("config routes", () => {
 
     const body = {
       description: "updated",
-      maxTokens: 500,
+      maxOutputTokens: 500,
       model: "gpt-4o-mini",
       stepTimeoutSeconds: 12,
       temperature: 0.4,
@@ -163,7 +176,7 @@ describe("config routes", () => {
     const res = await PUT(req, {
       params: Promise.resolve({ agentType: "budgetAgent" }),
       supabase,
-      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
     } as never);
 
     expect(res.status).toBe(200);
@@ -182,14 +195,14 @@ describe("config routes", () => {
         p_config: expect.objectContaining({
           agentType: "budgetAgent",
           parameters: expect.objectContaining({
-            maxTokens: body.maxTokens,
+            maxOutputTokens: body.maxOutputTokens,
             stepTimeoutSeconds: body.stepTimeoutSeconds,
             temperature: body.temperature,
             timeoutSeconds: body.timeoutSeconds,
             topP: body.topP,
           }),
         }),
-        p_created_by: "admin-user",
+        p_created_by: TEST_USER_ID,
         p_scope: "global",
         p_summary: body.description,
       })
@@ -200,7 +213,7 @@ describe("config routes", () => {
     const versionsRow = {
       agent_type: "budgetAgent",
       created_at: "2025-12-01T00:00:00Z",
-      created_by: "admin-user",
+      created_by: TEST_USER_ID,
       id: "ver-1",
       scope: "global",
       summary: "initial",
@@ -220,7 +233,7 @@ describe("config routes", () => {
     const res = await GET(req, {
       params: Promise.resolve({ agentType: "budgetAgent" }),
       supabase,
-      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
     } as never);
 
     expect(res.status).toBe(200);
@@ -254,7 +267,7 @@ describe("config routes", () => {
         versionId: "11111111-1111-4111-8111-111111111111",
       }),
       supabase,
-      user: { app_metadata: { is_admin: true }, id: "admin-user" } as never,
+      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
     } as never);
 
     expect(res.status).toBe(200);
@@ -273,13 +286,13 @@ describe("config routes", () => {
   });
 
   it("rejects non-admin", async () => {
-    mockApiRouteAuthUser({ id: "user" } as never);
+    mockApiRouteAuthUser({ id: TEST_USER_ID } as never);
     const { GET } = await import("../[agentType]/route");
     const req = new NextRequest("http://localhost/api/config/agents/budgetAgent");
     const res = await GET(req, {
       params: Promise.resolve({ agentType: "budgetAgent" }),
       supabase: {} as never,
-      user: { id: "user" } as never,
+      user: { id: TEST_USER_ID } as never,
     } as never);
     expect(res.status).toBe(403);
   });

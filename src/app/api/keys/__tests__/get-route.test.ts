@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setRateLimitFactoryForTests } from "@/lib/api/factory";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -22,7 +23,11 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordErrorOnSpan: vi.fn(),
   recordTelemetryEvent: vi.fn(),
+  withTelemetrySpan: vi.fn((_name, _options, execute: (span: unknown) => unknown) =>
+    execute({ recordException: vi.fn(), setAttribute: vi.fn() })
+  ),
 }));
 
 // Mock route helpers
@@ -52,7 +57,7 @@ describe("GET /api/keys route", () => {
   });
 
   it("returns key metadata for authenticated user", async () => {
-    const supabase = createMockSupabaseClient({ user: { id: "u1" } });
+    const supabase = createMockSupabaseClient({ user: { id: TEST_USER_ID } });
     getSupabaseMockState(supabase).selectResult = {
       count: null,
       data: [
@@ -60,7 +65,7 @@ describe("GET /api/keys route", () => {
           created_at: "2025-11-01T00:00:00Z",
           last_used: null,
           service: "openai",
-          user_id: "u1",
+          user_id: TEST_USER_ID,
         },
       ],
       error: null,

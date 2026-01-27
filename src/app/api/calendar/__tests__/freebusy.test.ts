@@ -7,6 +7,7 @@ import {
   mockApiRouteRateLimitOnce,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const mockQueryFreeBusy = vi.fn();
@@ -18,7 +19,7 @@ describe("/api/calendar/freebusy route", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     vi.clearAllMocks();
-    mockApiRouteAuthUser({ id: "user-1" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
     mockQueryFreeBusy.mockResolvedValue({
       calendars: {
         primary: {

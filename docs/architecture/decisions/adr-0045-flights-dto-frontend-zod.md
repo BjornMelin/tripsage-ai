@@ -77,6 +77,6 @@ Rejected: increases divergence risk and maintenance overhead; breaks DRY/KISS go
 
 ## References
 
-- Zod v4 migration guide (strictObject/extend recommendations)  
-- docs/development/standards.md (Zod schemas)  
+- [Zod v4 migration guide](https://zod.dev/v4/changelog) (strictObject/extend recommendations)  
+- [Zod Schemas](../../development/standards/standards.md#zod-schemas-v4)
 - ADR-0013 (Next.js 16), ADR-0023 (AI SDK v6), ADR-0032 (rate limiting), ADR-0046 (telemetry), ADR-0047 (runtime policy)

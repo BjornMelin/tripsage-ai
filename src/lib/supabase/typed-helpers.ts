@@ -2,52 +2,191 @@
  * @fileoverview Typed helper utilities for Supabase CRUD operations with Zod validation. These helpers centralize runtime validation using Zod schemas while preserving compile-time shapes using the generated `Database` types.
  */
 
-import { getSupabaseSchema } from "@schemas/supabase";
+import { getSupabaseSchema, type SupabaseSchemaName } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
-import type { Database, Tables, TablesInsert, TablesUpdate } from "./database.types";
+import type { Database } from "./database.types";
 
 export type TypedClient = SupabaseClient<Database>;
 
-type TableName = keyof Database["public"]["Tables"];
+type SchemaName = Extract<SupabaseSchemaName, keyof Database>;
+type TableName<S extends SchemaName> = Extract<keyof Database[S]["Tables"], string>;
+type TableRow<
+  S extends SchemaName,
+  T extends TableName<S>,
+> = Database[S]["Tables"][T] extends Record<"Row", infer R> ? R : never;
+type TableInsert<
+  S extends SchemaName,
+  T extends TableName<S>,
+> = Database[S]["Tables"][T] extends Record<"Insert", infer I> ? I : never;
+type TableUpdate<
+  S extends SchemaName,
+  T extends TableName<S>,
+> = Database[S]["Tables"][T] extends Record<"Update", infer U> ? U : never;
 /**
- * Query builder type alias using `any` intentionally.
- * Supabase's query builder is any-based internally; precise generics cause
- * excessive complexity and type instability. Biome rule suppressed below.
+ * Query builder type alias for Supabase chaining with minimal shape.
+ * Keep this loose enough for test doubles while avoiding `any`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing is any-based
-export type TableFilterBuilder = any;
+export type TableFilterBuilder = {
+  eq: (...args: unknown[]) => TableFilterBuilder;
+  in: (...args: unknown[]) => TableFilterBuilder;
+  is: (...args: unknown[]) => TableFilterBuilder;
+  gt: (...args: unknown[]) => TableFilterBuilder;
+  gte: (...args: unknown[]) => TableFilterBuilder;
+  lt: (...args: unknown[]) => TableFilterBuilder;
+  lte: (...args: unknown[]) => TableFilterBuilder;
+  neq: (...args: unknown[]) => TableFilterBuilder;
+  like: (...args: unknown[]) => TableFilterBuilder;
+  ilike: (...args: unknown[]) => TableFilterBuilder;
+  contains: (...args: unknown[]) => TableFilterBuilder;
+  overlaps: (...args: unknown[]) => TableFilterBuilder;
+  order: (...args: unknown[]) => TableFilterBuilder;
+  select: (...args: unknown[]) => TableFilterBuilder;
+  limit: (count: number) => TableFilterBuilder;
+  offset?: (count: number) => TableFilterBuilder;
+  range?: (from: number, to: number) => TableFilterBuilder;
+  single: () => PromiseLike<{ data: unknown; error: unknown }>;
+  maybeSingle: () => PromiseLike<{ data: unknown; error: unknown }>;
+  count?: number | null;
+  error?: unknown;
+  data?: unknown;
+  then?: unknown;
+};
 
-const SUPPORTED_TABLES = [
-  "accommodations",
-  "api_metrics",
-  "flights",
-  "trips",
-  "user_settings",
-] as const;
-type SupportedTable = (typeof SUPPORTED_TABLES)[number];
-const isSupportedTable = (table: TableName): table is SupportedTable =>
-  SUPPORTED_TABLES.includes(table as SupportedTable);
+type TableQueryBuilder = {
+  select: (...args: unknown[]) => TableFilterBuilder;
+  insert: (values: unknown) => TableFilterBuilder;
+  update: (values: unknown, options?: unknown) => TableFilterBuilder;
+  upsert: (values: unknown, options?: unknown) => TableFilterBuilder;
+  delete: (options?: unknown) => TableFilterBuilder;
+};
+
+type SupabaseTableSchema = {
+  insert?: z.ZodTypeAny;
+  row?: z.ZodTypeAny;
+  update?: z.ZodTypeAny;
+};
+
+type CountPreference = "exact" | "planned" | "estimated";
+
+/**
+ * Registry of tables supported by runtime Zod validation.
+ * authoritative source: src/domain/schemas/supabase.ts
+ * To add a new table:
+ * 1. Ensure schema exists in src/domain/schemas/supabase.ts
+ * 2. Add table name to the appropriate schema array below
+ */
+const SUPPORTED_TABLES = {
+  auth: ["sessions"],
+  memories: ["sessions", "turns"],
+  public: [
+    "accommodations",
+    "agent_config",
+    "agent_config_versions",
+    "api_metrics",
+    "auth_backup_codes",
+    "chat_messages",
+    "chat_sessions",
+    "chat_tool_calls",
+    "file_attachments",
+    "flights",
+    "itinerary_items",
+    "mfa_backup_code_audit",
+    "mfa_enrollments",
+    "rag_documents",
+    "saved_places",
+    "trip_collaborators",
+    "trips",
+    "user_settings",
+  ],
+} as const;
+
+type SupportedSchema = keyof typeof SUPPORTED_TABLES;
+
+const isSupportedTable = (schema: SchemaName, table: string): boolean => {
+  const tables = SUPPORTED_TABLES[schema as SupportedSchema];
+  return Array.isArray(tables) && tables.includes(table as never);
+};
+
+const resolveSchema = (schema?: SchemaName): SchemaName => schema ?? "public";
+
+const getFromClient = (
+  client: TypedClient,
+  schema: SchemaName
+): { from: (table: string) => TableQueryBuilder } | null => {
+  const schemaClient =
+    schema === "public" || typeof client.schema !== "function"
+      ? client
+      : client.schema(schema);
+  if (!schemaClient || typeof schemaClient.from !== "function") {
+    return null;
+  }
+  const schemaClientAny = schemaClient as { from: (table: string) => unknown };
+  return {
+    from: (table: string) => schemaClientAny.from(table as string) as TableQueryBuilder,
+  };
+};
+
+const getValidationSchema = (
+  schema: SchemaName,
+  table: string
+): SupabaseTableSchema | undefined => {
+  if (!isSupportedTable(schema, table)) return undefined;
+  return getSupabaseSchema(table as never, { schema }) as
+    | SupabaseTableSchema
+    | undefined;
+};
+
+const resolveMaybeSingle = async (
+  qb: TableFilterBuilder
+): Promise<{ data: unknown; error: unknown }> => {
+  if (qb && typeof qb.maybeSingle === "function") {
+    return await qb.maybeSingle();
+  }
+
+  if (qb && typeof qb.limit === "function") {
+    const limited = qb.limit(1);
+    if (limited && typeof limited.maybeSingle === "function") {
+      return await limited.maybeSingle();
+    }
+    if (limited && typeof limited.single === "function") {
+      return await limited.single();
+    }
+  }
+
+  if (qb && typeof qb.single === "function") {
+    return await qb.single();
+  }
+
+  return { data: null, error: new Error("maybeSingle_unavailable") };
+};
 
 /**
  * Inserts a row into the specified table and returns the single selected row.
  * Uses `.select().single()` to fetch the inserted record in one roundtrip.
  * Validates input and output using Zod schemas when available.
  *
- * Note: When inserting multiple rows, `.single()` will error. For batches,
- * add a dedicated `insertMany` helper without `.single()` if needed.
+ * Note: This function accepts only single objects, not arrays.
+ * For batch inserts, use `insertMany` instead.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param values Insert payload (validated via Zod schema)
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Insert payload (validated via Zod schema).
+ * @param options - Optional schema selection and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
-export function insertSingle<T extends keyof Database["public"]["Tables"]>(
+export function insertSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
   client: TypedClient,
   table: T,
-  values: TablesInsert<T> | TablesInsert<T>[]
-): Promise<{ data: Tables<T> | null; error: unknown }> {
+  values: TableInsert<S, T>,
+  options?: { schema?: S; validate?: boolean }
+): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.insert",
     {
@@ -59,9 +198,16 @@ export function insertSingle<T extends keyof Database["public"]["Tables"]>(
       },
     },
     async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const shouldValidate = options?.validate ?? true;
       // Validate input if schema exists
-      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
-      if (schema?.insert && !Array.isArray(values)) {
+      const schema = getValidationSchema(schemaName, table as string);
+      if (Array.isArray(values)) {
+        const error = new Error("insert_single_requires_object");
+        recordErrorOnSpan(span, error);
+        return { data: null, error };
+      }
+      if (schema?.insert && shouldValidate) {
         try {
           schema.insert.parse(values);
         } catch (validationError) {
@@ -72,22 +218,26 @@ export function insertSingle<T extends keyof Database["public"]["Tables"]>(
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = client as any;
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const insertQb = (anyClient as any)
-        .from(table as string)
-        .insert(values as unknown);
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: null, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.insert !== "function") {
+        return { data: null, error: new Error("insert_unavailable") };
+      }
+      const insertQb = base.insert(values as unknown);
       // Some tests stub a very lightweight query builder without select/single methods.
       // Gracefully handle those by treating the insert as fire-and-forget.
       if (insertQb && typeof insertQb.select === "function") {
         const { data, error } = await insertQb.select().single();
         if (error) return { data: null, error };
         // Validate output if schema exists
-        if (schema?.row && data) {
+        const rowSchema = schema?.row;
+        if (rowSchema && data && shouldValidate) {
           try {
-            const validated = schema.row.parse(data);
-            return { data: validated as Tables<T>, error: null };
+            const validated = rowSchema.parse(data);
+            return { data: validated as TableRow<S, T>, error: null };
           } catch (validationError) {
             if (validationError instanceof Error) {
               recordErrorOnSpan(span, validationError);
@@ -95,8 +245,14 @@ export function insertSingle<T extends keyof Database["public"]["Tables"]>(
             return { data: null, error: validationError };
           }
         }
-        return { data: (data ?? null) as Tables<T> | null, error: null };
+        return { data: data as TableRow<S, T>, error: null };
       }
+
+      if (insertQb && typeof insertQb.then === "function") {
+        const { error } = await insertQb;
+        return { data: null, error: error ?? null };
+      }
+
       return { data: null, error: null };
     }
   );
@@ -109,20 +265,29 @@ export function insertSingle<T extends keyof Database["public"]["Tables"]>(
  * that narrow the result to one row; this helper does not enforce uniqueness
  * and will update all matching rows before selecting `.single()`.
  * Validates input and output using Zod schemas when available.
+ * Use `options.select` to limit returned columns; validation defaults to
+ * `false` when selecting partial columns.
+ * Explicit validation with partial selects returns an error.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param updates Partial update payload (validated via Zod schema)
- * @param where Closure to apply filters to the builder
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param updates - Partial update payload (validated via Zod schema).
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, select columns, and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
-export function updateSingle<T extends TableName>(
+export function updateSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
   client: TypedClient,
   table: T,
-  updates: Partial<TablesUpdate<T>>,
-  where: (qb: TableFilterBuilder) => TableFilterBuilder
-): Promise<{ data: Tables<T> | null; error: unknown }> {
+  updates: Partial<TableUpdate<S, T>>,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: { schema?: S; select?: string; validate?: boolean }
+): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.update",
     {
@@ -134,9 +299,17 @@ export function updateSingle<T extends TableName>(
       },
     },
     async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const selectColumns = options?.select ?? "*";
+      if (options?.validate === true && selectColumns !== "*") {
+        const error = new Error("partial_select_validation_unavailable");
+        recordErrorOnSpan(span, error);
+        return { data: null, error };
+      }
+      const shouldValidate = options?.validate ?? selectColumns === "*";
       // Validate input if schema exists
-      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
-      if (schema?.update) {
+      const schema = getValidationSchema(schemaName, table as string);
+      if (schema?.update && shouldValidate) {
         try {
           schema.update.parse(updates);
         } catch (validationError) {
@@ -147,29 +320,115 @@ export function updateSingle<T extends TableName>(
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = client as any;
-      const filtered = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .update(updates as unknown) as TableFilterBuilder
-      );
-      const { data, error } = await filtered.select().single();
-      if (error) return { data: null, error };
-      // Validate output if schema exists
-      if (schema?.row && data) {
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: null, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.update !== "function") {
+        return { data: null, error: new Error("update_unavailable") };
+      }
+      const filtered = where(base.update(updates as unknown));
+      if (filtered && typeof filtered.select === "function") {
+        const { data, error } = await filtered.select(selectColumns).single();
+        if (error) return { data: null, error };
+        if (!data) return { data: null, error: null };
+        // Validate output if schema exists
+        const rowSchema = schema?.row;
+        if (rowSchema && shouldValidate) {
+          try {
+            const validated = rowSchema.parse(data);
+            return { data: validated as TableRow<S, T>, error: null };
+          } catch (validationError) {
+            if (validationError instanceof Error) {
+              recordErrorOnSpan(span, validationError);
+            }
+            return { data: null, error: validationError };
+          }
+        }
+        return { data: data as TableRow<S, T>, error: null };
+      }
+      if (filtered && typeof filtered === "object" && "error" in filtered) {
+        return {
+          data: null,
+          error: (filtered as { error?: unknown }).error ?? null,
+        };
+      }
+      return { data: null, error: null };
+    }
+  );
+}
+
+/**
+ * Updates rows in the specified table and returns the number of rows affected.
+ * A `where` closure receives the fluent query builder to apply filters
+ * (`eq`, `in`, etc.) prior to executing the update. This helper does not
+ * enforce uniqueness and is suitable for bulk updates.
+ * Validates input using Zod schemas when available.
+ * Use `options.count` to control PostgREST count behavior; set to `null`
+ * to skip counting entirely.
+ *
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param updates - Partial update payload (validated via Zod schema).
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, validation toggle, and count preference.
+ * @returns Count of updated rows and error (if any).
+ */
+export function updateMany<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  updates: Partial<TableUpdate<S, T>>,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: { schema?: S; validate?: boolean; count?: CountPreference | null }
+): Promise<{ count: number; error: unknown | null }> {
+  return withTelemetrySpan(
+    "supabase.update",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "update",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const shouldValidate = options?.validate ?? true;
+      const schema = getValidationSchema(schemaName, table as string);
+      if (schema?.update && shouldValidate) {
         try {
-          const validated = schema.row.parse(data);
-          return { data: validated as Tables<T>, error: null };
+          schema.update.parse(updates);
         } catch (validationError) {
           if (validationError instanceof Error) {
             recordErrorOnSpan(span, validationError);
           }
-          return { data: null, error: validationError };
+          return { count: 0, error: validationError };
         }
       }
-      return { data: (data ?? null) as Tables<T> | null, error: null };
+
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { count: 0, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.update !== "function") {
+        return { count: 0, error: new Error("update_unavailable") };
+      }
+      const countPreference = options?.count;
+      const updateBuilder =
+        countPreference === null
+          ? base.update(updates as unknown)
+          : base.update(updates as unknown, { count: countPreference ?? "exact" });
+      const qb = where(updateBuilder);
+      const { count, error } = await qb;
+      span.setAttribute("db.supabase.row_count", count ?? 0);
+      return { count: count ?? 0, error: error ?? null };
     }
   );
 }
@@ -182,17 +441,23 @@ export function updateSingle<T extends TableName>(
  * constraints and will surface Supabase errors if multiple rows match.
  * Validates output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, select columns, and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
-export function getSingle<T extends TableName>(
+export function getSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
   client: TypedClient,
   table: T,
-  where: (qb: TableFilterBuilder) => TableFilterBuilder
-): Promise<{ data: Tables<T> | null; error: unknown }> {
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: { schema?: S; select?: string; validate?: boolean }
+): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.select",
     {
@@ -204,22 +469,39 @@ export function getSingle<T extends TableName>(
       },
     },
     async (span) => {
-      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+      const schemaName = resolveSchema(options?.schema);
+      const schema = getValidationSchema(schemaName, table as string);
+      const selectColumns = options?.select ?? "*";
+      const shouldValidate = options?.validate ?? selectColumns === "*";
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = client as any;
-      const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any).from(table as string).select("*") as TableFilterBuilder
-      );
-      const { data, error } = await qb.single();
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: null, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.select !== "function") {
+        return { data: null, error: new Error("select_unavailable") };
+      }
+      const qb = where(base.select(selectColumns));
+      if (qb && typeof qb === "object" && "error" in qb) {
+        return { data: null, error: (qb as { error?: unknown }).error ?? null };
+      }
+      const limited = typeof qb.limit === "function" ? qb.limit(1) : null;
+      const result =
+        typeof qb.single === "function"
+          ? await qb.single()
+          : limited && typeof limited.single === "function"
+            ? await limited.single()
+            : { data: null, error: new Error("single_unavailable") };
+      const { data, error } = result;
       if (error) return { data: null, error };
       if (!data) return { data: null, error: null };
       // Validate output if schema exists
-      if (schema?.row) {
+      const rowSchema = schema?.row;
+      if (rowSchema && shouldValidate) {
         try {
-          const validated = schema.row.parse(data);
-          return { data: validated as Tables<T>, error: null };
+          const validated = rowSchema.parse(data);
+          return { data: validated as TableRow<S, T>, error: null };
         } catch (validationError) {
           if (validationError instanceof Error) {
             recordErrorOnSpan(span, validationError);
@@ -227,7 +509,7 @@ export function getSingle<T extends TableName>(
           return { data: null, error: validationError };
         }
       }
-      return { data: (data ?? null) as Tables<T> | null, error: null };
+      return { data: data as TableRow<S, T>, error: null };
     }
   );
 }
@@ -239,17 +521,32 @@ export function getSingle<T extends TableName>(
  * callers must provide filters that target the intended row(s). This helper
  * does not enforce single-row deletion and will delete all rows matching the
  * supplied filter.
+ * Use `options.count` to request a PostgREST count preference; set to `null`
+ * to skip counting entirely.
+ * Use `options.returning: "representation"` (with `options.select`) to request
+ * deleted rows when the caller needs return data or reliable count headers.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, count preference, returning mode, and select columns.
+ * @returns Count of deleted rows and error (if any).
  */
-export function deleteSingle<T extends TableName>(
+export function deleteSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
   client: TypedClient,
   table: T,
-  where: (qb: TableFilterBuilder) => TableFilterBuilder
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: {
+    schema?: S;
+    count?: CountPreference | null;
+    returning?: "representation";
+    select?: string;
+  }
 ): Promise<{ count: number; error: unknown | null }> {
   return withTelemetrySpan(
     "supabase.delete",
@@ -262,19 +559,65 @@ export function deleteSingle<T extends TableName>(
       },
     },
     async (span) => {
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = client as any;
-      const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any)
-          .from(table as string)
-          .delete({ count: "exact" }) as TableFilterBuilder
-      );
+      const schemaName = resolveSchema(options?.schema);
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { count: 0, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+
+      if (typeof base.delete !== "function") {
+        return { count: 0, error: new Error("delete_unavailable") };
+      }
+
+      const countPreference = options?.count;
+      const deleteBuilder =
+        countPreference === null
+          ? base.delete()
+          : base.delete({ count: countPreference ?? "exact" });
+
+      const selectColumns = options?.select ?? "*";
+      const returningBuilder =
+        options?.returning === "representation" &&
+        deleteBuilder &&
+        typeof deleteBuilder.select === "function"
+          ? deleteBuilder.select(selectColumns)
+          : deleteBuilder;
+
+      const qb = where(returningBuilder);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };
     }
   );
+}
+
+/**
+ * Deletes rows from the specified table matching the given criteria.
+ * Naming aligns with bulk operations (e.g., updateMany) and does not enforce
+ * single-row deletes.
+ * NOTE: deleteMany is an intentional alias for deleteSingle, and deleteSingle
+ * deletes all matching rows. This keeps naming consistent with updateMany and
+ * insertMany while sharing the same implementation.
+ *
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema and count preference.
+ * @returns Count of deleted rows and error (if any).
+ */
+export function deleteMany<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: { schema?: S; count?: CountPreference | null }
+): Promise<{ count: number; error: unknown | null }> {
+  return deleteSingle(client, table, where, options);
 }
 
 /**
@@ -284,17 +627,23 @@ export function deleteSingle<T extends TableName>(
  * (`eq`, `in`, etc.) prior to selecting the row.
  * Validates output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param where Closure to apply filters to the builder
- * @returns Selected row (validated) or null, and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, select columns, and validation toggle.
+ * @returns Selected row (validated) or null, and error (if any).
  */
-export function getMaybeSingle<T extends TableName>(
+export function getMaybeSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
   client: TypedClient,
   table: T,
-  where: (qb: TableFilterBuilder) => TableFilterBuilder
-): Promise<{ data: Tables<T> | null; error: unknown }> {
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: { schema?: S; select?: string; validate?: boolean }
+): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.select",
     {
@@ -306,22 +655,33 @@ export function getMaybeSingle<T extends TableName>(
       },
     },
     async (span) => {
-      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
+      const schemaName = resolveSchema(options?.schema);
+      const schema = getValidationSchema(schemaName, table as string);
+      const selectColumns = options?.select ?? "*";
+      const shouldValidate = options?.validate ?? selectColumns === "*";
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = client as any;
-      const qb = where(
-        // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-        (anyClient as any).from(table as string).select("*") as TableFilterBuilder
-      );
-      const { data, error } = await qb.maybeSingle();
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: null, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.select !== "function") {
+        return { data: null, error: new Error("select_unavailable") };
+      }
+      const qb = where(base.select(selectColumns));
+      if (qb && typeof qb === "object" && "error" in qb) {
+        return { data: null, error: (qb as { error?: unknown }).error ?? null };
+      }
+      const result = await resolveMaybeSingle(qb);
+      const { data, error } = result;
       if (error) return { data: null, error };
       if (!data) return { data: null, error: null };
       // Validate output if schema exists
-      if (schema?.row) {
+      const rowSchema = schema?.row;
+      if (rowSchema && shouldValidate) {
         try {
-          const validated = schema.row.parse(data);
-          return { data: validated as Tables<T>, error: null };
+          const validated = rowSchema.parse(data);
+          return { data: validated as TableRow<S, T>, error: null };
         } catch (validationError) {
           if (validationError instanceof Error) {
             recordErrorOnSpan(span, validationError);
@@ -329,7 +689,7 @@ export function getMaybeSingle<T extends TableName>(
           return { data: null, error: validationError };
         }
       }
-      return { data: data as Tables<T>, error: null };
+      return { data: data as TableRow<S, T>, error: null };
     }
   );
 }
@@ -339,19 +699,25 @@ export function getMaybeSingle<T extends TableName>(
  * Uses `.upsert()` with onConflict to perform insert-or-update operations.
  * Validates input and output using Zod schemas when available.
  *
- * @template T Table name constrained to `Database['public']['Tables']` keys
- * @param client Typed supabase client
- * @param table Target table name
- * @param values Upsert payload (validated via Zod schema)
- * @param onConflict Column name(s) to determine conflict (e.g., "user_id")
- * @returns Selected row (validated) and error (if any)
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Upsert payload (validated via Zod schema).
+ * @param onConflict - Column name(s) to determine conflict (e.g., "user_id").
+ * @param options - Optional schema and validation toggle.
+ * @returns Selected row (validated) and error (if any).
  */
-export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
+export function upsertSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
   client: TypedClient,
   table: T,
-  values: TablesInsert<T>,
-  onConflict: string
-): Promise<{ data: Tables<T> | null; error: unknown }> {
+  values: TableInsert<S, T>,
+  onConflict: string,
+  options?: { schema?: S; validate?: boolean }
+): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.upsert",
     {
@@ -363,8 +729,10 @@ export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
       },
     },
     async (span) => {
-      const schema = isSupportedTable(table) ? getSupabaseSchema(table) : undefined;
-      if (schema?.insert) {
+      const schemaName = resolveSchema(options?.schema);
+      const shouldValidate = options?.validate ?? true;
+      const schema = getValidationSchema(schemaName, table as string);
+      if (schema?.insert && shouldValidate) {
         try {
           schema.insert.parse(values);
         } catch (validationError) {
@@ -375,25 +743,29 @@ export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const anyClient = client as any;
-      // biome-ignore lint/suspicious/noExplicitAny: Supabase query builder typing
-      const upsertQb = (anyClient as any)
-        .from(table as string)
-        .upsert(values as unknown, {
-          ignoreDuplicates: false,
-          onConflict,
-        });
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: null, error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.upsert !== "function") {
+        return { data: null, error: new Error("upsert_unavailable") };
+      }
+      const upsertQb = base.upsert(values as unknown, {
+        ignoreDuplicates: false,
+        onConflict,
+      });
 
       // Chain select/single to return the upserted row
       if (upsertQb && typeof upsertQb.select === "function") {
         const { data, error } = await upsertQb.select().single();
         if (error) return { data: null, error };
         // Validate output if schema exists
-        if (schema?.row && data) {
+        const rowSchema = schema?.row;
+        if (rowSchema && data && shouldValidate) {
           try {
-            const validated = schema.row.parse(data);
-            return { data: validated as Tables<T>, error: null };
+            const validated = rowSchema.parse(data);
+            return { data: validated as TableRow<S, T>, error: null };
           } catch (validationError) {
             if (validationError instanceof Error) {
               recordErrorOnSpan(span, validationError);
@@ -401,9 +773,331 @@ export function upsertSingle<T extends keyof Database["public"]["Tables"]>(
             return { data: null, error: validationError };
           }
         }
-        return { data: (data ?? null) as Tables<T> | null, error: null };
+        return { data: (data ?? null) as TableRow<S, T> | null, error: null };
       }
       return { data: null, error: null };
+    }
+  );
+}
+
+/**
+ * Upserts multiple rows into the specified table and returns all selected rows.
+ * Uses `.upsert()` with onConflict to perform insert-or-update operations in batch.
+ * Validates input and output using Zod schemas when available.
+ *
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Array of upsert payloads (validated via Zod schema).
+ * @param onConflict - Column name(s) to determine conflict (e.g., "user_id").
+ * @param options - Optional schema and validation toggle.
+ * @returns Array of upserted rows (validated) and error (if any).
+ */
+export function upsertMany<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  values: TableInsert<S, T>[],
+  onConflict: string,
+  options?: { schema?: S; validate?: boolean }
+): Promise<{ data: TableRow<S, T>[]; error: unknown }> {
+  return withTelemetrySpan(
+    "supabase.upsert",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.batch_size": values.length,
+        "db.supabase.operation": "upsert",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const shouldValidate = options?.validate ?? true;
+      if (values.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const schema = getValidationSchema(schemaName, table as string);
+      if (schema?.insert && shouldValidate) {
+        try {
+          z.array(schema.insert).parse(values);
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: [], error: validationError };
+        }
+      }
+
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: [], error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.upsert !== "function") {
+        return { data: [], error: new Error("upsert_unavailable") };
+      }
+      const upsertQb = base.upsert(values as unknown, {
+        ignoreDuplicates: false,
+        onConflict,
+      });
+
+      if (upsertQb && typeof upsertQb.select === "function") {
+        const { data, error } = await upsertQb.select();
+        if (error) return { data: [], error };
+
+        const rows = (data ?? []) as TableRow<S, T>[];
+        span.setAttribute("db.supabase.row_count", rows.length);
+
+        const rowSchema = schema?.row;
+        if (rowSchema && shouldValidate && rows.length > 0) {
+          try {
+            const validated = rows.map((row) => rowSchema.parse(row)) as TableRow<
+              S,
+              T
+            >[];
+            return { data: validated, error: null };
+          } catch (validationError) {
+            if (validationError instanceof Error) {
+              recordErrorOnSpan(span, validationError);
+            }
+            return { data: [], error: validationError };
+          }
+        }
+        return { data: rows, error: null };
+      }
+      return { data: [], error: null };
+    }
+  );
+}
+
+/**
+ * Options for the `getMany` helper.
+ */
+export interface GetManyOptions {
+  /** Maximum number of rows to return. */
+  limit?: number;
+  /** Number of rows to skip (for pagination). */
+  offset?: number;
+  /** Column to order by. */
+  orderBy?: string;
+  /** If true, order ascending; otherwise descending. Default: true. */
+  ascending?: boolean;
+  /** Whether to include a count of total matching rows. */
+  count?: CountPreference;
+  /** Optional schema to query (defaults to public). */
+  schema?: SchemaName;
+  /** Optional column list for select (defaults to "*"). */
+  select?: string;
+  /** Whether to validate results against row schema (defaults true for "*" selects). */
+  validate?: boolean;
+}
+
+/**
+ * Fetches multiple rows from the specified table with optional pagination and ordering.
+ * A `where` closure receives the fluent query builder to apply filters
+ * (`eq`, `in`, etc.) prior to selecting rows.
+ * Validates output using Zod schemas when available.
+ *
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional pagination, ordering, and count settings.
+ * @returns Array of rows (validated), count if requested, and error (if any).
+ */
+export function getMany<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: GetManyOptions & { schema?: S }
+): Promise<{ data: TableRow<S, T>[]; count: number | null; error: unknown }> {
+  return withTelemetrySpan(
+    "supabase.select",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "select",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const schema = getValidationSchema(schemaName, table as string);
+      const selectColumns = options?.select ?? "*";
+      const shouldValidate = options?.validate ?? selectColumns === "*";
+
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { count: null, data: [], error: new Error("from_unavailable") };
+      }
+
+      // Build the initial query with optional count
+      const selectOptions = options?.count ? { count: options.count } : undefined;
+      const base = schemaClient.from(table as string);
+      if (typeof base.select !== "function") {
+        return { count: null, data: [], error: new Error("select_unavailable") };
+      }
+      let qb = base.select(selectColumns, selectOptions);
+
+      // Apply where clause
+      qb = where(qb);
+
+      // Apply ordering if specified
+      if (options?.orderBy && typeof qb.order === "function") {
+        qb = qb.order(options.orderBy, { ascending: options.ascending ?? true });
+      }
+
+      // Pagination: when options.offset is set without options.limit, end is undefined so
+      // we intentionally skip qb.range and fall back to qb.offset(start) (and qb.limit if
+      // present) to support the offset-only path.
+      // Apply pagination using range
+      if (options?.limit !== undefined || options?.offset !== undefined) {
+        const start = options?.offset ?? 0;
+        const end =
+          options?.limit !== undefined ? start + options.limit - 1 : undefined;
+        if (end !== undefined && typeof qb.range === "function") {
+          qb = qb.range(start, end);
+        } else {
+          if (options?.offset !== undefined && typeof qb.offset === "function") {
+            qb = qb.offset(start);
+          }
+          if (options?.limit !== undefined && typeof qb.limit === "function") {
+            qb = qb.limit(options.limit);
+          }
+        }
+      }
+
+      const { data, count, error } = await qb;
+
+      if (error) {
+        return { count: null, data: [], error };
+      }
+
+      const rows = (data ?? []) as TableRow<S, T>[];
+      span.setAttribute("db.supabase.row_count", rows.length);
+
+      // Validate output if schema exists
+      const rowSchema = schema?.row;
+      if (rowSchema && shouldValidate && rows.length > 0) {
+        try {
+          const validated = rows.map((row) => rowSchema.parse(row)) as TableRow<S, T>[];
+          return { count: count ?? null, data: validated, error: null };
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { count: null, data: [], error: validationError };
+        }
+      }
+
+      return { count: count ?? null, data: rows, error: null };
+    }
+  );
+}
+
+/**
+ * Inserts multiple rows into the specified table and returns all inserted records.
+ * Unlike `insertSingle`, this handles batch inserts without `.single()`.
+ * Validates input and output using Zod schemas when available.
+ *
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param values - Array of insert payloads (validated via Zod schema).
+ * @param options - Optional schema and validation toggle.
+ * @returns Array of inserted rows (validated) and error (if any).
+ */
+export function insertMany<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  values: TableInsert<S, T>[],
+  options?: { schema?: S; validate?: boolean }
+): Promise<{ data: TableRow<S, T>[]; error: unknown }> {
+  return withTelemetrySpan(
+    "supabase.insert",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.batch_size": values.length,
+        "db.supabase.operation": "insert",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const shouldValidate = options?.validate ?? true;
+      if (values.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Validate input if schema exists
+      const schema = getValidationSchema(schemaName, table as string);
+      if (schema?.insert && shouldValidate) {
+        try {
+          for (const value of values) {
+            schema.insert.parse(value);
+          }
+        } catch (validationError) {
+          if (validationError instanceof Error) {
+            recordErrorOnSpan(span, validationError);
+          }
+          return { data: [], error: validationError };
+        }
+      }
+
+      const schemaClient = getFromClient(client, schemaName);
+      if (!schemaClient) {
+        return { data: [], error: new Error("from_unavailable") };
+      }
+      const base = schemaClient.from(table as string);
+      if (typeof base.insert !== "function") {
+        return { data: [], error: new Error("insert_unavailable") };
+      }
+      const insertQb = base.insert(values as unknown);
+
+      // Chain select to return the inserted rows
+      if (insertQb && typeof insertQb.select === "function") {
+        const { data, error } = await insertQb.select();
+        if (error) return { data: [], error };
+
+        const rows = (data ?? []) as TableRow<S, T>[];
+        span.setAttribute("db.supabase.row_count", rows.length);
+
+        // Validate output if schema exists
+        const rowSchema = schema?.row;
+        if (rowSchema && shouldValidate && rows.length > 0) {
+          try {
+            const validated = rows.map((row) => rowSchema.parse(row)) as TableRow<
+              S,
+              T
+            >[];
+            return { data: validated, error: null };
+          } catch (validationError) {
+            if (validationError instanceof Error) {
+              recordErrorOnSpan(span, validationError);
+            }
+            return { data: [], error: validationError };
+          }
+        }
+        return { data: rows, error: null };
+      }
+      return { data: [], error: null };
     }
   );
 }

@@ -63,12 +63,10 @@ const CHAT_ERROR_REASON_MAP = new Map<string, string>([
   ],
 ]);
 
-const chatErrorPayloadSchema = z
-  .strictObject({
-    error: z.string().optional(),
-    reason: z.string().optional(),
-  })
-  .passthrough();
+const chatErrorPayloadSchema = z.looseObject({
+  error: z.string().optional(),
+  reason: z.string().optional(),
+});
 
 function resolveChatErrorMessage(error?: Error): string {
   if (!error?.message) return CHAT_ERROR_FALLBACK;
@@ -479,7 +477,7 @@ export function ChatClient(): ReactElement {
                 key={id}
                 className="inline-flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-xs"
               >
-                <span className="max-w-[200px] truncate">{file.name}</span>
+                <span className="min-w-0 max-w-[50px] truncate">{file.name}</span>
                 <Button
                   type="button"
                   variant="ghost"

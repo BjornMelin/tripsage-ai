@@ -8,6 +8,7 @@ import {
   mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 vi.mock("botid/server", async () => {
   const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
@@ -38,7 +39,7 @@ describe("POST /api/agents/router", () => {
   beforeEach(() => {
     resetApiRouteMocks();
     classifyUserMessage.mockReset();
-    mockApiRouteAuthUser({ id: "user-123" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
   });
 
   it("returns 400 when the sanitized message is empty/invalid", async () => {

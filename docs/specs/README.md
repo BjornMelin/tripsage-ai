@@ -44,6 +44,7 @@ specific features or components.
 | [SPEC-0109](active/0109-spec-testing-quality-and-ci.md) | Testing, quality, and CI | Final | 2026-01-05 |
 | [SPEC-0110](active/0110-spec-deployment-and-operations.md) | Deployment and operations (Vercel + Supabase + Upstash) | Final | 2026-01-05 |
 | [SPEC-0111](active/0111-spec-payments-and-stripe.md) | Payments and Stripe (server-only + webhooks) | Final | 2026-01-19 |
+| [SPEC-0112](active/0112-spec-markdown-rendering-streamdown-v2.md) | Markdown rendering (Streamdown v2) | Final | 2026-01-23 |
 
 ## Archived Specifications
 

@@ -4,7 +4,7 @@
 **Status**: Implemented
 **Date**: 2025-12-12
 
-> **Note:** This spec is archived. For the current, canonical Memory + RAG design, see `docs/specs/active/0104-spec-memory-and-rag.md`.
+> **Note:** This spec is archived. For the current, canonical Memory + RAG design, see [SPEC-0104](../active/0104-spec-memory-and-rag.md#spec-0104-memory-and-rag-supabase-pgvector--embeddings--reranking).
 > Implementation detail update: `public.rag_documents` uses a composite primary key `(id, chunk_index)` (not `id` alone).
 
 ## Overview

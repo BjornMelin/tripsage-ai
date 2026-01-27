@@ -91,7 +91,7 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **ONLY** use Zod v4 APIs; no Zod 3 deprecated APIs.
 - **Error handling:** Use unified `error` option (`z.string().min(5, { error: "Too short" })`); avoid `message`, `invalid_type_error`, `required_error`, `errorMap`.
 - **String helpers:** Use top‑level (`z.email()`, `z.uuid()`, `z.url()`, `z.ipv4()`, `z.ipv6()`, `z.base64()`, `z.base64url()`); avoid method style.
-- **Enums:** Use `z.enum(MyEnum)` for TS enums; not `z.nativeEnum()`.
+- **Enums:** Use `z.enum(MyEnum)` for TS enums; avoid the native enum helper.
 - **Objects/records:** Prefer `z.strictObject(...)`, `z.looseObject(...)`, `z.record(keySchema, valueSchema)`, `z.partialRecord(z.enum([...]), valueSchema)`. Avoid `z.record(valueSchema)`, `z.deepPartial()`, `.merge()`.
 - **Numbers:** Use `z.number().int()` for integers.
 - **Defaults/transforms:** Use `.default()` for output defaults; `.prefault()` when default must be parsed.
@@ -167,7 +167,14 @@ throw error; // Let withApiGuards handle unknown errors
 
 - Use AI SDK v6 primitives only; no custom streaming/tool-calling.
 - Chat/streaming: `convertToModelMessages()` → `streamText(tools, outputs)` → `result.toUIMessageStreamResponse()`.
-- Structured JSON: use `generateObject` or `streamObject` with Zod schemas from `@schemas/*`.
+- Structured JSON: use `generateText`/`streamText` with `Output.object({ schema })` and Zod schemas from `@schemas/*`.
+
+### 5.2.1 Markdown rendering (Streamdown v2)
+
+- **Canonical renderer:** `src/components/markdown/Markdown.tsx` is the only file allowed to import from `streamdown`.
+- **Chat text parts:** Use `src/components/ai-elements/response.tsx` (adapter over the canonical renderer).
+- **Plugins:** Streamdown v2.1+ uses a plugin architecture (`@streamdown/code`, `@streamdown/mermaid`, `@streamdown/math`) configured inside the canonical renderer.
+- **KaTeX CSS:** Required for math rendering; imported globally in `src/app/layout.tsx`.
 
 ### 5.3 Models and providers
 
@@ -180,6 +187,8 @@ throw error; // Let withApiGuards handle unknown errors
 
 - **Caching:** `cacheComponents: true` enabled. Directives (`'use cache'`/`'use cache: private'`) cannot access `cookies()`/`headers()`; public routes only. Auth/BYOK: dynamic. See ADR-0024.
 - **Supabase SSR:** `createServerSupabase()` (server-only, auto-dynamic). Never access cookies in Client Components.
+- **Supabase updateSingle:** If you only check `{ error }` and do not use returned data, pass `{ select: "id", validate: false }` to minimize payloads and skip row validation.
+- **Table Registry:** `SUPPORTED_TABLES` in `src/lib/supabase/typed-helpers.ts` must be updated when new tables are added; the authoritative source is `src/domain/schemas/supabase.ts`.
 - **Performance:** `next/font`, `next/image`, Server Components, Suspense, `useActionState`/`useOptimistic`.
 
 ### 5.5 Rate limiting and ephemeral state

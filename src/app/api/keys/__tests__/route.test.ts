@@ -9,11 +9,19 @@ import {
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
 import { unstubAllEnvs } from "@/test/helpers/env";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
 const MOCK_INSERT = vi.hoisted(() => vi.fn());
 const MOCK_DELETE = vi.hoisted(() => vi.fn());
 const MOCK_DELETE_GATEWAY = vi.hoisted(() => vi.fn());
+const MOCK_SPAN = vi.hoisted(() => ({
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+}));
 const TELEMETRY_SPY = vi.hoisted(() =>
   vi.fn(
     (
@@ -22,7 +30,7 @@ const TELEMETRY_SPY = vi.hoisted(() =>
       execute: (span: {
         setAttribute: (key: string, value: unknown) => void;
       }) => Promise<unknown>
-    ) => execute({ setAttribute: vi.fn() })
+    ) => execute(MOCK_SPAN)
   )
 );
 
@@ -33,6 +41,8 @@ vi.mock("@/lib/supabase/rpc", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordErrorOnActiveSpan: vi.fn(),
+  recordErrorOnSpan: vi.fn(),
   recordTelemetryEvent: vi.fn(),
   sanitizeAttributes: (attrs: unknown) => attrs,
   withTelemetrySpan: TELEMETRY_SPY,
@@ -43,7 +53,7 @@ describe("/api/keys routes", () => {
     resetApiRouteMocks();
     vi.clearAllMocks();
     unstubAllEnvs();
-    mockApiRouteAuthUser({ id: "test-user" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
     enableApiRouteRateLimit();
   });
 
@@ -68,7 +78,7 @@ describe("/api/keys routes", () => {
     });
     const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(204);
-    expect(MOCK_INSERT).toHaveBeenCalledWith("test-user", "openai", "abc123");
+    expect(MOCK_INSERT).toHaveBeenCalledWith(TEST_USER_ID, "openai", "abc123");
   });
 
   it("POST /api/keys enforces rate limits per user id", async () => {
@@ -87,7 +97,7 @@ describe("/api/keys routes", () => {
     const res = await POST(req, createRouteParamsContext());
     expect(apiRouteRateLimitSpy).toHaveBeenCalledWith(
       "keys:create",
-      "user:f85ac825d102b9f2d546aa1679ea991ae845994c1343730d564f3fcd0a2168c3"
+      "user:bd7662a5eeb41614e720d477abfcb2272e19a8a70a93b7e3bc8560d44ad326e9"
     );
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Limit")).toBe("5");
@@ -109,7 +119,7 @@ describe("/api/keys routes", () => {
   });
 
   it("DELETE /api/keys/[service] removes stored key", async () => {
-    mockApiRouteAuthUser({ id: "user-1" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
     const route = await import("@/app/api/keys/[service]/route");
     const req = createMockNextRequest({
       method: "DELETE",
@@ -119,7 +129,7 @@ describe("/api/keys routes", () => {
       params: Promise.resolve({ service: "openai" }),
     });
     expect(res.status).toBe(204);
-    expect(MOCK_DELETE).toHaveBeenCalledWith("user-1", "openai");
+    expect(MOCK_DELETE).toHaveBeenCalledWith(TEST_USER_ID, "openai");
   });
 
   it("DELETE /api/keys/[service] enforces rate limits", async () => {
@@ -134,7 +144,7 @@ describe("/api/keys routes", () => {
     });
     expect(apiRouteRateLimitSpy).toHaveBeenCalledWith(
       "keys:delete",
-      "user:f85ac825d102b9f2d546aa1679ea991ae845994c1343730d564f3fcd0a2168c3"
+      "user:bd7662a5eeb41614e720d477abfcb2272e19a8a70a93b7e3bc8560d44ad326e9"
     );
     expect(res.status).toBe(429);
   });
@@ -154,7 +164,7 @@ describe("/api/keys routes", () => {
   });
 
   it("DELETE /api/keys/[service] removes gateway key and config", async () => {
-    mockApiRouteAuthUser({ id: "user-1" });
+    mockApiRouteAuthUser({ id: TEST_USER_ID });
     MOCK_DELETE.mockResolvedValue(undefined);
     MOCK_DELETE_GATEWAY.mockResolvedValue(undefined);
     const route = await import("@/app/api/keys/[service]/route");
@@ -166,7 +176,7 @@ describe("/api/keys routes", () => {
       params: Promise.resolve({ service: "gateway" }),
     });
     expect(res.status).toBe(204);
-    expect(MOCK_DELETE_GATEWAY).toHaveBeenCalledWith("user-1");
-    expect(MOCK_DELETE).toHaveBeenCalledWith("user-1", "gateway");
+    expect(MOCK_DELETE_GATEWAY).toHaveBeenCalledWith(TEST_USER_ID);
+    expect(MOCK_DELETE).toHaveBeenCalledWith(TEST_USER_ID, "gateway");
   });
 });

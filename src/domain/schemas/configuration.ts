@@ -76,8 +76,9 @@ export type VersionId = z.infer<typeof versionIdSchema>;
 export const agentConfigRequestSchema = z
   .strictObject({
     description: z.string().max(500).trim().optional().nullable(),
-    maxTokens: z.number().int().min(1).max(8000).optional(),
+    maxOutputTokens: z.number().int().min(1).max(8000).optional(),
     model: modelNameSchema.optional(),
+    stepLimit: z.number().int().min(1).max(50).optional(),
     /** Per-step timeout in seconds. Must be ≤ timeoutSeconds when both are provided. */
     stepTimeoutSeconds: z.number().int().min(5).max(300).optional(),
     temperature: z.number().min(0.0).max(2.0).multipleOf(0.01).optional(),

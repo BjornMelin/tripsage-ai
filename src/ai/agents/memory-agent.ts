@@ -142,7 +142,7 @@ async function persistAndSummarize(
     { content: userPrompt, role: "user" },
   ];
   const desiredMaxTokens = 512; // Short summary for memory confirmations
-  const { maxTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(messages, desiredMaxTokens, deps.modelId);
   const stepTimeoutMs =
     typeof config.parameters?.stepTimeoutSeconds === "number" &&
     Number.isFinite(config.parameters.stepTimeoutSeconds)
@@ -164,7 +164,7 @@ async function persistAndSummarize(
         recordCount: input.records?.length ?? 0,
       },
     },
-    maxOutputTokens: maxTokens,
+    maxOutputTokens,
     messages: [
       { content: systemPrompt, role: "system" },
       { content: userPrompt, role: "user" },

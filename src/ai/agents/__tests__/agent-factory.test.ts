@@ -124,8 +124,8 @@ describe("createTripSageAgent", () => {
       defaultMessages: [],
       instructions: "You are a flight search assistant.",
       maxOutputTokens: 2048,
-      maxSteps: 15,
       name: "Flight Agent",
+      stepLimit: 15,
       temperature: 0.5,
       tools: {},
       topP: 0.9,
@@ -219,8 +219,8 @@ describe("extractAgentParameters", () => {
 
     const params = extractAgentParameters(config);
 
-    expect(params.maxSteps).toBe(10);
-    expect(params.maxTokens).toBe(4096);
+    expect(params.stepLimit).toBe(10);
+    expect(params.maxOutputTokens).toBe(4096);
     expect(params.temperature).toBe(0.3);
     expect(params.topP).toBeUndefined();
   });
@@ -233,8 +233,8 @@ describe("extractAgentParameters", () => {
       isEnabled: true,
       model: "gpt-4" as const,
       parameters: {
-        maxSteps: 20,
-        maxTokens: 8192,
+        maxOutputTokens: 8192,
+        stepLimit: 20,
         temperature: 0.7,
         topP: 0.95,
       },
@@ -244,8 +244,8 @@ describe("extractAgentParameters", () => {
 
     const params = extractAgentParameters(config);
 
-    expect(params.maxSteps).toBe(20);
-    expect(params.maxTokens).toBe(8192);
+    expect(params.stepLimit).toBe(20);
+    expect(params.maxOutputTokens).toBe(8192);
     expect(params.temperature).toBe(0.7);
     expect(params.topP).toBe(0.95);
   });

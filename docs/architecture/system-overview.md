@@ -16,18 +16,25 @@ graph TD
     FE --> RT["Supabase Realtime<br/>broadcast · presence"]
 ```
 
-## Stack Snapshot (from `package.json`)
+## Stack Versions (source of truth: package.json)
 
-- Next.js `^16.1.3`, React `^19.2.3`, TypeScript `^5.9.3`.
-- AI SDK core `ai@6.0.41`; React hooks `@ai-sdk/react@3.0.43`; providers `@ai-sdk/openai@3.0.12`, `@ai-sdk/anthropic@3.0.15`, `@ai-sdk/xai@3.0.26`; gateway via `createGateway`.
-- Supabase SSR `@supabase/ssr@^0.8.0`, browser client `@supabase/supabase-js@^2.90.1`, Vault, pgvector, Realtime.
-- Upstash `@upstash/redis@^1.36.1`, `@upstash/ratelimit@2.0.8`, `@upstash/qstash@^2.8.4`.
-- UI: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion.
-- Payments/Email: Stripe `20.2.0`, Resend `^6.7.0`.
-- Scheduling/Calendar: `ical-generator@10.0.0`, Google Calendar integration in `src/lib/calendar`.
-- State: Server Components by default; client state with Zustand; server state with TanStack Query.
-- Observability: `@vercel/otel`, `@opentelemetry/api` with helpers in `src/lib/telemetry` (see `docs/development/backend/observability.md`).
-- Testing/tooling: Biome format/lint, Vitest, Playwright, `tsc`.
+- ai: 6.0.49
+- @ai-sdk/react: 3.0.51
+- @ai-sdk/openai: 3.0.18
+- @ai-sdk/anthropic: 3.0.23
+- @ai-sdk/xai: 3.0.33
+- @ai-sdk/togetherai: 2.0.20
+- @ai-sdk/provider: 3.0.5
+- zod: 4.3.6
+
+## Stack Snapshot (high level)
+
+- Framework: Next.js App Router + React 19 + TypeScript
+- AI: AI SDK v6 with Gateway/BYOK provider routing
+- Data: Supabase Postgres (RLS-first), Realtime, Storage, Vault
+- Cache/Jobs: Upstash Redis/Ratelimit/QStash
+- UI: Radix primitives + Tailwind CSS v4 + Motion
+- Observability: OpenTelemetry via `@vercel/otel`
 
 ## Key Capabilities
 
@@ -45,7 +52,7 @@ graph TD
 
 - App Router with RSC-first rendering; client components only where interactivity is required.
 - Route handlers live in `src/app/api/**/route.ts`. They parse input (Zod), create request-scoped collaborators (Supabase, rate limiter, providers), and delegate to pure handlers. No module-scope state.
-- AI SDK v6 is the only LLM transport (`streamText`, `generateObject`, `streamObject`); structured outputs use Zod schemas under `src/schemas`.
+- AI SDK v6 is the only LLM transport (`streamText`, `generateText` + `Output.object`); structured outputs use Zod schemas under `src/schemas`.
 - Caching and rate limiting use per-request Upstash Redis/RateLimit instances. Auth-dependent routes remain dynamic (no cache).
 - Background/async work uses QStash webhooks; handlers are stateless and idempotent.
 
@@ -68,7 +75,7 @@ graph TD
 
 ### Observability
 
-- Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `src/lib/telemetry` and `docs/development/backend/observability.md`). Console logging is reserved for tests/client-only code.
+- Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `src/lib/telemetry` and [Observability](../development/backend/observability.md#approved-telemetry--logging-entrypoints)). Console logging is reserved for tests/client-only code.
 - OpenTelemetry exporters are wired through `@vercel/otel`; spans wrap API handlers and external calls.
 - Automatic tracing is registered in `src/instrumentation.ts` via `registerOTel({ serviceName: "tripsage-frontend" })`.
 - Critical-path failures should emit `emitOperationalAlert` for downstream alerting (see `src/lib/telemetry/alerts.ts`).

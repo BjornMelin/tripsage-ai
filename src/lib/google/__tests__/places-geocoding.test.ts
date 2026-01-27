@@ -9,8 +9,16 @@ vi.mock("../places-utils");
 vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: vi.fn(() => "test-api-key"),
 }));
+const mockSpan = {
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+};
+
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name, _opts, fn) => fn()),
+  withTelemetrySpan: vi.fn((_name, _opts, fn) => fn(mockSpan)),
 }));
 
 // Static imports after vi.mock() - Vitest hoists mocks automatically

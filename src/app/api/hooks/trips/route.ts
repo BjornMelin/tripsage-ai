@@ -9,6 +9,7 @@ import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators
 import { tryEnqueueJob } from "@/lib/qstash/client";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
@@ -39,16 +40,17 @@ export const POST = createWebhookHandler({
 
     if (tripId) {
       const supabase = getAdminSupabase();
-      const { data, error } = await supabase
-        .from("trips")
-        .select("id")
-        .eq("id", tripId)
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await getMaybeSingle(
+        supabase,
+        "trips",
+        (qb) => qb.eq("id", tripId),
+        { select: "id", validate: false }
+      );
 
       if (error) {
-        span.recordException(error);
-        throw error; // Will be caught by handler and return 500
+        const normalized = error instanceof Error ? error : new Error(String(error));
+        span.recordException(normalized);
+        throw normalized; // Will be caught by handler and return 500
       }
 
       if (!data) {

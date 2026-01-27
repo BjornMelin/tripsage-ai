@@ -130,7 +130,7 @@ export interface TripSageAgentConfig<
   defaultMessages: ChatMessage[];
 
   /** Maximum tool execution steps (used with stepCountIs). */
-  maxSteps?: number;
+  stepLimit?: number;
 
   /** Maximum output tokens (after clamping). */
   maxOutputTokens?: number;
@@ -375,7 +375,7 @@ export function createToolLifecycleHooks(
 /** Common agent parameters extracted from AgentConfig. */
 export interface AgentParameters {
   /** Maximum output tokens. */
-  maxTokens: number;
+  maxOutputTokens: number;
 
   /** Temperature for generation. */
   temperature: number;
@@ -384,7 +384,7 @@ export interface AgentParameters {
   topP?: number;
 
   /** Maximum tool execution steps. */
-  maxSteps: number;
+  stepLimit: number;
 }
 
 /**
@@ -392,18 +392,19 @@ export interface AgentParameters {
  *
  * @param config - Agent configuration from database.
  * @returns Typed agent parameters with sensible defaults.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
  */
 export function extractAgentParameters(config: AgentConfig): AgentParameters {
   const params = config.parameters;
   return {
-    maxSteps:
-      "maxSteps" in params && typeof params.maxSteps === "number"
-        ? params.maxSteps
-        : 10,
-    maxTokens:
-      "maxTokens" in params && typeof params.maxTokens === "number"
-        ? params.maxTokens
+    maxOutputTokens:
+      "maxOutputTokens" in params && typeof params.maxOutputTokens === "number"
+        ? params.maxOutputTokens
         : 4096,
+    stepLimit:
+      "stepLimit" in params && typeof params.stepLimit === "number"
+        ? params.stepLimit
+        : 10,
     temperature:
       "temperature" in params && typeof params.temperature === "number"
         ? params.temperature

@@ -49,7 +49,7 @@ pnpm ai-tools:check && pnpm check:fileoverviews && pnpm check:no-secrets && pnpm
 ## Architecture
 
 - **Framework**: Next.js 16 (TypeScript) — server route handlers + React Server Components
-- **AI**: Vercel AI SDK v6 (`ai@6.0.39`) with frontend-only agents
+- **AI**: Vercel AI SDK v6 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson))
 - **Database**: Supabase PostgreSQL with pgvector, RLS, Realtime
 - **Cache**: Upstash Redis (HTTP REST API) + QStash for async jobs
 - **State**: Zustand (client) + TanStack Query (server)

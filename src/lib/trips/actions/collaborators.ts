@@ -25,6 +25,12 @@ import {
 import { createAdminSupabase, type TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  deleteSingle,
+  getMaybeSingle,
+  insertSingle,
+  updateSingle,
+} from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { mapTripCollaboratorRoleToDb } from "@/lib/trips/mappers";
 import { getServerOrigin } from "@/lib/url/server-origin";
@@ -38,14 +44,18 @@ async function getTripOwnerOrError(
   supabase: Awaited<ReturnType<typeof createServerSupabase>>,
   tripId: number
 ): Promise<Result<TripRow, ResultError>> {
-  const { data, error } = await supabase
-    .from("trips")
-    .select("id,user_id")
-    .eq("id", tripId)
-    .maybeSingle();
+  const { data, error } = await getMaybeSingle(
+    supabase,
+    "trips",
+    (qb) => qb.eq("id", tripId),
+    { select: "id,user_id", validate: false }
+  );
 
   if (error) {
-    logger.error("trip_owner_lookup_failed", { error: error.message, tripId });
+    logger.error("trip_owner_lookup_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      tripId,
+    });
     return err({ error: "internal", reason: "Failed to load trip" });
   }
 
@@ -292,17 +302,13 @@ export async function addCollaboratorImpl(
         });
       }
 
-      const { data, error } = await supabase
-        .from("trip_collaborators")
-        .insert({
-          role: mapTripCollaboratorRoleToDb(payload.role),
-          // biome-ignore lint/style/useNamingConvention: Supabase column name.
-          trip_id: idResult.data,
-          // biome-ignore lint/style/useNamingConvention: Supabase column name.
-          user_id: targetUserId,
-        })
-        .select("id,trip_id,user_id,role,created_at")
-        .single();
+      const { data, error } = await insertSingle(supabase, "trip_collaborators", {
+        role: mapTripCollaboratorRoleToDb(payload.role),
+        // biome-ignore lint/style/useNamingConvention: Supabase column name.
+        trip_id: idResult.data,
+        // biome-ignore lint/style/useNamingConvention: Supabase column name.
+        user_id: targetUserId,
+      });
 
       if (error || !data) {
         const code = (error as { code?: string } | null)?.code ?? null;
@@ -322,7 +328,7 @@ export async function addCollaboratorImpl(
 
         logger.error("trips.collaborators.add_failed", {
           code,
-          message: error?.message ?? "insert returned no row",
+          message: error instanceof Error ? error.message : "insert returned no row",
           tripId: idResult.data,
         });
         return err({ error: "internal", reason: "Failed to add collaborator" });
@@ -399,13 +405,11 @@ export async function removeCollaboratorImpl(
         });
       }
 
-      const { data, error } = await supabase
-        .from("trip_collaborators")
-        .delete()
-        .eq("trip_id", idResult.data)
-        .eq("user_id", collaboratorUserId)
-        .select("id")
-        .maybeSingle();
+      const { count, error } = await deleteSingle(
+        supabase,
+        "trip_collaborators",
+        (qb) => qb.eq("trip_id", idResult.data).eq("user_id", collaboratorUserId)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -416,13 +420,13 @@ export async function removeCollaboratorImpl(
         }
         logger.error("trips.collaborators.remove_failed", {
           code: (error as { code?: unknown }).code ?? null,
-          message: error.message,
+          message: error instanceof Error ? error.message : "delete failed",
           tripId: idResult.data,
         });
         return err({ error: "internal", reason: "Failed to remove collaborator" });
       }
 
-      if (!data) {
+      if (count === 0) {
         return err({ error: "not_found", reason: "Collaborator not found" });
       }
 
@@ -498,15 +502,14 @@ export async function updateCollaboratorRoleImpl(
 
       const payload = validation.data;
 
-      const { data, error } = await supabase
-        .from("trip_collaborators")
-        .update({
+      const { data, error } = await updateSingle(
+        supabase,
+        "trip_collaborators",
+        {
           role: mapTripCollaboratorRoleToDb(payload.role),
-        })
-        .eq("trip_id", tripIdResult.data)
-        .eq("user_id", collaboratorUserId)
-        .select("id,trip_id,user_id,role,created_at")
-        .maybeSingle();
+        },
+        (qb) => qb.eq("trip_id", tripIdResult.data).eq("user_id", collaboratorUserId)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -516,10 +519,14 @@ export async function updateCollaboratorRoleImpl(
           });
         }
 
+        const code = (error as { code?: unknown } | null)?.code ?? null;
+        if (code === "PGRST116") {
+          return err({ error: "not_found", reason: "Collaborator not found" });
+        }
         logger.error("trips.collaborators.update_role_failed", {
-          code: (error as { code?: unknown }).code ?? null,
+          code,
           collaboratorUserId,
-          message: error.message,
+          message: error instanceof Error ? error.message : "update failed",
           tripId: tripIdResult.data,
         });
         return err({ error: "internal", reason: "Failed to update collaborator role" });

@@ -6,6 +6,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createRouteParamsContext, getMockCookiesForTest } from "@/test/helpers/route";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
@@ -40,7 +41,7 @@ vi.mock("@/lib/tokens/budget", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/tokens/budget")>();
   return {
     ...actual,
-    clampMaxTokens: vi.fn(() => ({ maxTokens: 256, reasons: [] })),
+    clampMaxTokens: vi.fn(() => ({ maxOutputTokens: 256, reasons: [] })),
     countPromptTokens: vi.fn(() => 42),
   };
 });
@@ -115,7 +116,10 @@ describe("ai stream route", () => {
     setSupabaseFactoryForTests(async () =>
       unsafeCast({
         auth: {
-          getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }),
+          getUser: async () => ({
+            data: { user: { id: TEST_USER_ID } },
+            error: null,
+          }),
         },
       })
     );

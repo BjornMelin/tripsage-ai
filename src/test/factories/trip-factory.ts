@@ -2,6 +2,8 @@
  * @fileoverview Factory for creating Trip and related test data.
  */
 
+import { TEST_USER_ID } from "@/test/helpers/ids";
+
 let tripIdCounter = 1;
 let flightIdCounter = 1;
 let hotelIdCounter = 1;
@@ -77,7 +79,7 @@ export const createTrip = (
     travelers: overrides.travelers ?? 1,
     tripType: overrides.tripType ?? "leisure",
     updatedAt: overrides.updatedAt ?? new Date().toISOString(),
-    userId: overrides.userId ?? "user-1",
+    userId: overrides.userId ?? TEST_USER_ID,
   };
 };
 

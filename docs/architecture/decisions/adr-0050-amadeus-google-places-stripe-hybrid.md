@@ -9,15 +9,15 @@
 **Related Specs**: SPEC-0027, SPEC-001, SPEC-0010, SPEC-0015  
 **Supersedes**: ADR-0043, ADR-0049
 
-- Any Expedia Rapid–focused ADRs under `docs/architecture/decisions/` (e.g. `adr-00N-expedia-rapid-hotel-provider.md`)  
-- Any Expedia Rapid–focused specs under `docs/specs/` (e.g. `expedia-rapid-accommodations.md`)
+- Any Expedia Rapid–focused ADRs under [Architecture Decisions](index.md) (e.g. `adr-00N-expedia-rapid-hotel-provider.md`)
+- Any Expedia Rapid–focused specs under [Specs](../../specs/README.md) (e.g. `expedia-rapid-accommodations.md`)
 
 ## 1. Supersession Instructions
 
 1. Locate existing Expedia Rapid ADRs and specs:
 
-   - `docs/architecture/decisions/adr-00N-expedia-rapid-*.md`
-   - `docs/specs/expedia-rapid-*.md`
+   - [Architecture Decisions](index.md) (ADR patterns)
+   - [Specs](../../specs/README.md) (spec patterns)
    - Any other Expedia Rapid–specific docs referenced from the README or `docs/`
 
 2. At the top of each Expedia-specific ADR/spec:
@@ -28,7 +28,7 @@
 3. Update navigation / index docs (if present) to:
    - Remove Expedia as “current provider”.
    - Point “Accommodations provider” to ADR-00X and the new spec:
-     `docs/specs/0027-spec-accommodations-amadeus-google-stripe.md`.
+   - [SPEC-0027](../../specs/archive/0027-spec-accommodations-amadeus-google-stripe.md).
 
 ## 2. Context
 
@@ -113,7 +113,7 @@
 - Architectural Adaptability (AA) – 10%
 
 | Option | SL | AV | MCL | AA | Weighted Total |
-|--------|----|----|-----|----|----------------|
+| --- | --- | --- | --- | --- |
 | Amadeus + Google Places (Hybrid) | 9 | 9 | 8 | 8 | 8.65 |
 | Amadeus only | 8 | 8 | 8 | 8 | 8.00 |
 | Google Places only | 6 | 5 | 8 | 7 | 6.30 |
@@ -193,7 +193,7 @@
 
 **Implementation is described in detail in:**
 
-- `docs/specs/archive/0027-spec-accommodations-amadeus-google-stripe.md`
+- [SPEC-0027](../../specs/archive/0027-spec-accommodations-amadeus-google-stripe.md)
 
 **That spec defines:**
 

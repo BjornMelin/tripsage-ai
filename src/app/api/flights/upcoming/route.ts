@@ -8,6 +8,7 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { nowIso } from "@/lib/security/random";
 import type { Json } from "@/lib/supabase/database.types";
+import { getMany } from "@/lib/supabase/typed-helpers";
 
 type UpcomingFlightStatus = "upcoming" | "boarding" | "delayed" | "cancelled";
 
@@ -137,16 +138,19 @@ export const GET = withApiGuards({
 
   const limit = parseLimit(req.nextUrl.searchParams.get("limit"));
 
-  const { data, error } = await supabase
-    .from("flights")
-    .select(
-      "airline,currency,departure_date,destination,flight_class,flight_number,id,metadata,origin,price,return_date,trip_id"
-    )
-    .eq("user_id", auth.data)
-    .gte("departure_date", nowIso())
-    .order("departure_date", { ascending: true })
-    .limit(limit)
-    .returns<FlightRow[]>();
+  const { data, error } = await getMany(
+    supabase,
+    "flights",
+    (qb) => qb.eq("user_id", auth.data).gte("departure_date", nowIso()),
+    {
+      ascending: true,
+      limit,
+      orderBy: "departure_date",
+      select:
+        "airline,currency,departure_date,destination,flight_class,flight_number,id,metadata,origin,price,return_date,trip_id",
+      validate: false,
+    }
+  );
 
   if (error) {
     return errorResponse({
@@ -157,5 +161,5 @@ export const GET = withApiGuards({
     });
   }
 
-  return Response.json((data ?? []).map(toUpcomingFlight));
+  return Response.json((data as FlightRow[]).map(toUpcomingFlight));
 });

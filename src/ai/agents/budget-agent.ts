@@ -73,14 +73,17 @@ export function createBudgetAgent(
     { content: instructions, role: "system" },
     schemaMessage,
   ];
-  const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampMessages,
+    params.maxOutputTokens,
+    deps.modelId
+  );
 
   return createTripSageAgent<typeof BUDGET_TOOLS>(deps, {
     agentType: "budgetPlanning",
     defaultMessages: [schemaMessage],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps: params.maxSteps,
+    maxOutputTokens,
     name: "Budget Planning Agent",
     // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
     // on the agent config (ToolLoopAgentSettings.output).
@@ -102,6 +105,7 @@ export function createBudgetAgent(
         activeTools: ["combineSearchResults", "searchPlaces", "searchPlaceDetails"],
       };
     },
+    stepLimit: params.stepLimit,
     temperature: params.temperature,
     tools: BUDGET_TOOLS,
     topP: params.topP,

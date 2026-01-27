@@ -76,8 +76,8 @@ Jobs (QStash workers):
 
 Stripe webhooks follow the same guardrail posture (bounded raw body reads, signature verification, idempotency, rate limiting, telemetry), but are documented separately as payments infrastructure:
 
-- SPEC-0111: `docs/specs/active/0111-spec-payments-and-stripe.md`
-- ADR-0070: `docs/architecture/decisions/adr-0070-stripe-webhook-verification-and-idempotency.md`
+- SPEC-0111: [Payments and Stripe](0111-spec-payments-and-stripe.md#spec-0111-payments-and-stripe-server-only--webhooks)
+- ADR-0070: [Stripe Webhook Verification + Idempotency](../../architecture/decisions/adr-0070-stripe-webhook-verification-and-idempotency.md)
 
 ## References
 

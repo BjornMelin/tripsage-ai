@@ -38,7 +38,7 @@ const logger = createServerLogger("agent-factory");
  * Default maximum tool execution steps for agents.
  * Allows complex multi-tool workflows while preventing infinite loops.
  */
-const DEFAULT_MAX_STEPS = 10;
+const DEFAULT_STEP_LIMIT = 10;
 
 /** Maximum number of tool repair attempts to avoid runaway costs. */
 const MAX_TOOL_REPAIR_ATTEMPTS = 2;
@@ -53,7 +53,7 @@ const DEFAULT_TEMPERATURE = 0.3;
  * Creates a TripSage agent using AI SDK v6 ToolLoopAgent.
  *
  * Instantiates a reusable agent for autonomous multi-step reasoning with tool calling.
- * Runs until a stop condition is met (default: stepCountIs(maxSteps)).
+ * Runs until a stop condition is met (default: stepCountIs(stepLimit)).
  *
  * Supports dynamic configuration via callOptionsSchema/prepareCall, per-step
  * tool/model selection via prepareStep, step-level telemetry via onStepFinish,
@@ -73,7 +73,7 @@ const DEFAULT_TEMPERATURE = 0.3;
  *   name: "Budget Agent",
  *   instructions: buildBudgetPrompt(input),
  *   tools: buildBudgetTools(deps.identifier),
- *   maxSteps: 10,
+ *   stepLimit: 10,
  *   prepareStep: async ({ stepNumber }) => {
  *     if (stepNumber <= 2) return { activeTools: ['webSearch'] };
  *     return {};
@@ -99,7 +99,7 @@ export function createTripSageAgent<
     defaultMessages,
     instructions,
     maxOutputTokens,
-    maxSteps = DEFAULT_MAX_STEPS,
+    stepLimit = DEFAULT_STEP_LIMIT,
     name,
     onStepFinish: configOnStepFinish,
     output,
@@ -115,16 +115,16 @@ export function createTripSageAgent<
 
   logger.info(`Creating agent: ${name}`, {
     agentType,
-    maxSteps,
     modelId: deps.modelId,
     requestId,
+    stepLimit,
   });
 
   // Build stop conditions: combine default step count with custom conditions
   const buildStopConditions = ():
     | StopCondition<TagentTools>
     | StopCondition<TagentTools>[] => {
-    const defaultCondition = stepCountIs(maxSteps);
+    const defaultCondition = stepCountIs(stepLimit);
     if (!customStopWhen) {
       return defaultCondition;
     }

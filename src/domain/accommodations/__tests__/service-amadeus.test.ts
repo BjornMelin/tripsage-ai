@@ -20,8 +20,6 @@ vi.mock("@/lib/telemetry/span", () => ({
   ) => await fn({ addEvent: vi.fn(), recordException: vi.fn() }),
 }));
 
-type TypedServerSupabase = import("@/lib/supabase/server").TypedServerSupabase;
-
 const { withTelemetrySpan } = await import("@/lib/telemetry/span");
 const { AccommodationsService } = await import("@domain/accommodations/service");
 
@@ -57,6 +55,8 @@ function createService(options: {
       `${prefix}:${JSON.stringify(params)}`,
     enrichHotelListingWithPlaces: options.enrich ?? defaultEnrich,
     getCachedJson,
+    getTripOwnership: vi.fn(async () => null),
+    persistBooking: vi.fn(async () => ({ error: null })),
     provider: options.provider,
     resolveLocationToLatLng: () =>
       Promise.resolve(
@@ -64,7 +64,6 @@ function createService(options: {
       ),
     retryWithBackoff: (fn) => fn(0),
     setCachedJson,
-    supabase: async () => unsafeCast<TypedServerSupabase>({}),
     versionedKey: async (_tag, key) => `tag:v1:${key}`,
     withTelemetrySpan,
   };

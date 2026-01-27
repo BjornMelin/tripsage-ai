@@ -11,8 +11,19 @@ import type {
 
 // Mock server-only and telemetry before imports
 vi.mock("server-only", () => ({}));
+const mockSpan = {
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+};
 vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: <T>(_name: string, _opts: unknown, fn: () => Promise<T>) => fn(),
+  withTelemetrySpan: <T>(
+    _name: string,
+    _opts: unknown,
+    fn: (span: typeof mockSpan) => Promise<T>
+  ) => fn(mockSpan),
 }));
 
 // Dynamic import after mocks

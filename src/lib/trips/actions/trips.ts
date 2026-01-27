@@ -25,6 +25,7 @@ import {
 import { nowIso } from "@/lib/security/random";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { deleteSingle, insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
 import { getTripByIdForUser, listTripsForUser } from "@/server/queries/trips";
@@ -168,16 +169,12 @@ export async function createTripImpl(
       user_id: user.id,
     };
 
-    const { data, error } = await supabase
-      .from("trips")
-      .insert(insertPayload)
-      .select("*")
-      .single();
+    const { data, error } = await insertSingle(supabase, "trips", insertPayload);
 
     if (error || !data) {
       logger.error("trips.create_failed", {
         code: (error as { code?: unknown } | null)?.code ?? null,
-        message: error?.message ?? "insert returned no row",
+        message: error instanceof Error ? error.message : "insert returned no row",
       });
       return err({ error: "internal", reason: "Failed to create trip" });
     }
@@ -262,12 +259,9 @@ export async function updateTripImpl(
         updated_at: nowIso(),
       };
 
-      const { data, error } = await supabase
-        .from("trips")
-        .update(updates)
-        .eq("id", idResult.data)
-        .select("*")
-        .maybeSingle();
+      const { data, error } = await updateSingle(supabase, "trips", updates, (qb) =>
+        qb.eq("id", idResult.data)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -277,9 +271,13 @@ export async function updateTripImpl(
           });
         }
 
+        const code = (error as { code?: unknown } | null)?.code ?? null;
+        if (code === "PGRST116") {
+          return err({ error: "not_found", reason: "Trip not found" });
+        }
         logger.error("trips.update_failed", {
-          code: (error as { code?: unknown }).code ?? null,
-          message: error.message,
+          code,
+          message: error instanceof Error ? error.message : "update failed",
           tripId: idResult.data,
         });
         return err({ error: "internal", reason: "Failed to update trip" });
@@ -339,12 +337,9 @@ export async function deleteTripImpl(
         return err({ error: "unauthorized", reason: "Unauthorized" });
       }
 
-      const { data, error } = await supabase
-        .from("trips")
-        .delete()
-        .eq("id", idResult.data)
-        .select("id")
-        .maybeSingle();
+      const { count, error } = await deleteSingle(supabase, "trips", (qb) =>
+        qb.eq("id", idResult.data)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -355,13 +350,13 @@ export async function deleteTripImpl(
         }
         logger.error("trips.delete_failed", {
           code: (error as { code?: unknown }).code ?? null,
-          message: error.message,
+          message: error instanceof Error ? error.message : "delete failed",
           tripId: idResult.data,
         });
         return err({ error: "internal", reason: "Failed to delete trip" });
       }
 
-      if (!data) {
+      if (count === 0) {
         return err({ error: "not_found", reason: "Trip not found" });
       }
 

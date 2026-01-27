@@ -9,6 +9,7 @@ import { activitySchema } from "@schemas/search";
 import { jsonSchema } from "@schemas/supabase";
 import { z } from "zod";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMany, getMaybeSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const activitiesCacheSourceSchema = z.enum(["googleplaces", "ai_fallback", "cached"]);
@@ -34,13 +35,18 @@ function createFindActivityInRecentSearches(
   supabase: TypedServerSupabase
 ): ActivitiesCache["findActivityInRecentSearches"] {
   return async ({ nowIso, placeId, userId }) => {
-    const { data } = await supabase
-      .from("search_activities")
-      .select("results")
-      .eq("user_id", userId)
-      .gt("expires_at", nowIso)
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const { data, error } = await getMany(
+      supabase,
+      "search_activities",
+      (qb) =>
+        qb
+          .eq("user_id", userId)
+          .gt("expires_at", nowIso)
+          .order("created_at", { ascending: false }),
+      { limit: 10, select: "results", validate: false }
+    );
+
+    if (error) return null;
 
     const rows = Array.isArray(data) ? data : [];
     return findActivityInRows(rows, placeId);
@@ -82,22 +88,24 @@ export function createSupabaseActivitiesSearchCache(
   return {
     findActivityInRecentSearches: createFindActivityInRecentSearches(supabase),
     getSearch: async ({ activityType, destination, nowIso, queryHash, userId }) => {
-      let query = supabase
-        .from("search_activities")
-        .select("source, results")
-        .eq("user_id", userId)
-        .eq("destination", destination)
-        .eq("query_hash", queryHash)
-        .gt("expires_at", nowIso)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      query =
-        activityType === null
-          ? query.is("activity_type", null)
-          : query.eq("activity_type", activityType);
-
-      const { data } = await query.maybeSingle();
+      const { data, error } = await getMaybeSingle(
+        supabase,
+        "search_activities",
+        (qb) => {
+          const scoped =
+            activityType === null
+              ? qb.is("activity_type", null)
+              : qb.eq("activity_type", activityType);
+          return scoped
+            .eq("user_id", userId)
+            .eq("destination", destination)
+            .eq("query_hash", queryHash)
+            .gt("expires_at", nowIso)
+            .order("created_at", { ascending: false });
+        },
+        { select: "source, results", validate: false }
+      );
+      if (error) return null;
       if (!data) return null;
 
       const sourceResult = activitiesCacheSourceSchema.safeParse(data.source);
@@ -146,7 +154,7 @@ export function createSupabaseActivitiesSearchCache(
       const results = resultsResult.data;
       const searchMetadata = searchMetadataResult.data;
 
-      const { error } = await supabase.from("search_activities").insert({
+      const { error } = await insertSingle(supabase, "search_activities", {
         // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
         activity_type: input.activityType,
         destination: input.destination,
@@ -166,7 +174,7 @@ export function createSupabaseActivitiesSearchCache(
 
       if (error) {
         createServerLogger("activities.cache").warn("Failed to cache activity search", {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     },

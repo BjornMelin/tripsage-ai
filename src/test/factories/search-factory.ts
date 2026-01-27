@@ -2,6 +2,9 @@
  * @fileoverview Factory for creating Search and SearchResult test data.
  */
 
+import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
+import { TEST_USER_ID } from "@/test/helpers/ids";
+
 let searchIdCounter = 1;
 let resultIdCounter = 1;
 
@@ -68,7 +71,7 @@ export const createSearchQuery = (
     start_date:
       overrides.start_date ??
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    user_id: overrides.user_id ?? "user-1",
+    user_id: overrides.user_id ?? TEST_USER_ID,
   };
 };
 
@@ -172,8 +175,6 @@ export const resetSearchFactory = (): void => {
   searchIdCounter = 1;
   resultIdCounter = 1;
 };
-
-import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 
 /**
  * Create mock search history item.

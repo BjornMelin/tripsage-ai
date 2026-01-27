@@ -12,6 +12,7 @@ import {
   stubRateLimitEnabled,
   unstubAllEnvs,
 } from "@/test/helpers/env";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -41,6 +42,13 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const mockCreateOpenAI = vi.hoisted(() => vi.fn());
 const mockCreateAnthropic = vi.hoisted(() => vi.fn());
+const MOCK_SPAN = vi.hoisted(() => ({
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+}));
 const MOCK_GET_REDIS = vi.hoisted(() =>
   vi.fn<() => Redis | undefined>(() => undefined)
 );
@@ -89,9 +97,11 @@ vi.mock("@ai-sdk/anthropic", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordErrorOnActiveSpan: vi.fn(),
+  recordErrorOnSpan: vi.fn(),
   recordTelemetryEvent: vi.fn(),
   sanitizeAttributes: vi.fn((attributes) => attributes),
-  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn()),
+  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn(MOCK_SPAN)),
 }));
 
 vi.mock("@/lib/env/server", () => ({
@@ -167,7 +177,7 @@ describe("/api/keys/validate route", () => {
     MOCK_GET_REDIS.mockReturnValue(undefined); // Disable rate limiting by default
     MOCK_SUPABASE.auth.getUser.mockReset();
     MOCK_SUPABASE.auth.getUser.mockResolvedValue({
-      data: { user: { id: "u1" } },
+      data: { user: { id: TEST_USER_ID } },
       error: null,
     });
     // Ensure Supabase SSR client does not throw when real module is imported

@@ -5,7 +5,9 @@ import {
   forbiddenResponse,
   notFoundResponse,
 } from "@/lib/api/route-helpers";
+import { extractErrorMessage } from "@/lib/errors/error-message";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const logger = createServerLogger("trip-access");
@@ -29,28 +31,29 @@ export async function ensureTripAccess(options: {
 
   // Run owner and collaborator checks in parallel to eliminate waterfall
   const [ownerResult, collaboratorResult] = await Promise.all([
-    supabase
-      .from("trips")
-      .select("id")
-      .eq("id", tripId)
-      .eq("user_id", userId)
-      .maybeSingle(),
-    supabase
-      .from("trip_collaborators")
-      .select("id")
-      .eq("trip_id", tripId)
-      .eq("user_id", userId)
-      .maybeSingle(),
+    getMaybeSingle(
+      supabase,
+      "trips",
+      (qb) => qb.eq("id", tripId).eq("user_id", userId),
+      { select: "id", validate: false }
+    ),
+    getMaybeSingle(
+      supabase,
+      "trip_collaborators",
+      (qb) => qb.eq("trip_id", tripId).eq("user_id", userId),
+      { select: "id", validate: false }
+    ),
   ]);
 
   if (ownerResult.error) {
+    const message = extractErrorMessage(ownerResult.error);
     logger.error("trip_access_owner_check_failed", {
-      error: ownerResult.error.message,
+      error: message,
       tripId,
       userId,
     });
     return errorResponse({
-      err: new Error(ownerResult.error.message),
+      err: ownerResult.error,
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,
@@ -61,13 +64,14 @@ export async function ensureTripAccess(options: {
   if (ownerResult.data) return null;
 
   if (collaboratorResult.error) {
+    const message = extractErrorMessage(collaboratorResult.error);
     logger.error("trip_access_collaborator_check_failed", {
-      error: collaboratorResult.error.message,
+      error: message,
       tripId,
       userId,
     });
     return errorResponse({
-      err: new Error(collaboratorResult.error.message),
+      err: collaboratorResult.error,
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,
@@ -76,20 +80,22 @@ export async function ensureTripAccess(options: {
 
   if (collaboratorResult.data) return null;
 
-  const { data: tripExists, error: existsError } = await supabase
-    .from("trips")
-    .select("id")
-    .eq("id", tripId)
-    .maybeSingle();
+  const { data: tripExists, error: existsError } = await getMaybeSingle(
+    supabase,
+    "trips",
+    (qb) => qb.eq("id", tripId),
+    { select: "id", validate: false }
+  );
 
   if (existsError) {
+    const message = extractErrorMessage(existsError);
     logger.error("trip_access_existence_check_failed", {
-      error: existsError.message,
+      error: message,
       tripId,
       userId,
     });
     return errorResponse({
-      err: new Error(existsError.message),
+      err: existsError,
       error: "internal",
       reason: "Failed to validate trip access",
       status: 500,

@@ -12,7 +12,6 @@ import {
   refundBookingPayment,
 } from "@/lib/payments/booking-payment";
 import { secureUuid } from "@/lib/security/random";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
@@ -62,13 +61,12 @@ type PersistPayload = {
 /** Dependencies for booking orchestrator. */
 export type BookingOrchestratorDeps = {
   provider: AccommodationProviderAdapter;
-  supabase: TypedServerSupabase;
 };
 
 /**
  * Executes booking workflow with telemetry and compensation.
  *
- * @param deps - Provider adapter and Supabase client.
+ * @param deps - Provider adapter.
  * @param command - Booking command with approval and payment hooks.
  * @returns Confirmed booking result or throws provider/payment error.
  */

@@ -106,7 +106,7 @@ describe("clampMaxTokens", () => {
     const promptTokens = countPromptTokens(messages, model);
     const desired = 999_999; // intentionally too large
     const result = clampMaxTokens(messages, desired, model);
-    expect(result.maxTokens).toBe(Math.max(1, limit - promptTokens));
+    expect(result.maxOutputTokens).toBe(Math.max(1, limit - promptTokens));
     expect(result.reasons).toContain("maxTokens_clamped_model_limit");
   });
 
@@ -114,7 +114,7 @@ describe("clampMaxTokens", () => {
     const model = "gpt-4o";
     const messages = [{ content: "test", role: "user" as const }];
     const result = clampMaxTokens(messages, 0, model);
-    expect(result.maxTokens).toBe(1);
+    expect(result.maxOutputTokens).toBe(1);
     expect(result.reasons).toContain("maxTokens_clamped_invalid_desired");
   });
 
@@ -123,7 +123,7 @@ describe("clampMaxTokens", () => {
     const messages = [{ content: "hi", role: "user" as const }];
     const result = clampMaxTokens(messages, 100_000, model);
     // No clamping expected if desired < DEFAULT_CONTEXT_LIMIT
-    expect(result.maxTokens).toBeGreaterThan(0);
+    expect(result.maxOutputTokens).toBeGreaterThan(0);
     expect(getModelContextLimit(model)).toBe(DEFAULT_CONTEXT_LIMIT);
   });
 
@@ -133,7 +133,7 @@ describe("clampMaxTokens", () => {
     const huge = "x".repeat(DEFAULT_CONTEXT_LIMIT * CHARS_PER_TOKEN_HEURISTIC + 1000);
     const messages = [{ content: huge, role: "user" as const }];
     const result = clampMaxTokens(messages, 1000, model);
-    expect(result.maxTokens).toBe(1);
+    expect(result.maxOutputTokens).toBe(1);
     expect(result.reasons).toContain("maxTokens_clamped_model_limit");
   });
 });

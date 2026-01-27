@@ -7,7 +7,7 @@
 - **Date**: 2025-12-03
 - **Owners**: Flights/Frontend
 - **Related ADRs**: ADR-0056, ADR-0045, ADR-0050
-- **Related Docs**: `docs/architecture/decisions/adr-0056-popular-routes-flights.md`
+- **Related Docs**: [ADR-0056](../../architecture/decisions/adr-0056-popular-routes-flights.md)
 
 ## 1. Summary
 

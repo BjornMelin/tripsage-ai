@@ -45,7 +45,7 @@
 ### Cleanup & audits
 
 - Attachments rely on the relational link for lifecycle; when a message/trip is deleted, delete the corresponding `file_attachments` row and storage object.
-- Use the storage owner audit runbook (`docs/operations/runbooks/storage-owner-audit.md`) to find path/owner mismatches or orphaned objects; run after RLS/schema changes.
+- Use the storage owner audit runbook ([Storage Owner Audit](../../operations/runbooks/storage-owner-audit.md)) to find path/owner mismatches or orphaned objects; run after RLS/schema changes.
 
 ## Security
 

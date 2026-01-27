@@ -4,7 +4,7 @@ This document covers AI-specific observability patterns (spans, events, and stru
 
 For the canonical repo-wide standards (server + client), see:
 
-- `docs/development/backend/observability.md`
+- [Observability](../backend/observability.md#approved-telemetry--logging-entrypoints)
 
 ## Principles
 
@@ -21,7 +21,7 @@ AI SDK calls should use `experimental_telemetry` with a stable `functionId`:
 - Use consistent `functionId` values for routing, tools, and agent workflows.
 - Put only low-cardinality values in `metadata` (counts, booleans, enum-like strings).
 
-The current `functionId` catalog lives in `docs/development/backend/observability.md` (AI SDK telemetry section).
+The current `functionId` catalog lives in [Observability](../backend/observability.md#ai-sdk-telemetry-experimental_telemetry).
 
 ## Tool telemetry (`createAiTool`)
 

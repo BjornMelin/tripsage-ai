@@ -21,6 +21,7 @@ function createSupabaseMock({ existingTurns = [] as ExistingTurn[] } = {}) {
 
   const memoriesSessionSelectBuilder = {
     eq: vi.fn(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { id: SESSION_ID }, error: null }),
     single: vi.fn().mockResolvedValue({ data: { id: SESSION_ID }, error: null }),
   };
   memoriesSessionSelectBuilder.eq.mockReturnValue(memoriesSessionSelectBuilder);

@@ -10,6 +10,14 @@ import type { MemorySyncJob } from "@schemas/webhooks";
 import { nowIso as secureNowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  getMany,
+  getMaybeSingle,
+  getSingle,
+  insertMany,
+  insertSingle,
+  updateSingle,
+} from "@/lib/supabase/typed-helpers";
 
 /**
  * Normalizes content for deduplication by extracting text from structured content.
@@ -65,6 +73,12 @@ export interface MemorySyncJobDeps {
   clock?: { now: () => string };
 }
 
+type ChatSessionUpdatePayload =
+  Database["public"]["Tables"]["chat_sessions"]["Update"] & {
+    // biome-ignore lint/style/useNamingConvention: Database field name
+    memory_synced_at?: string | null;
+  };
+
 /**
  * Handles memory sync jobs by validating session access, storing conversation turns,
  * and updating sync timestamps.
@@ -90,12 +104,12 @@ export async function handleMemorySyncJob(
   const MaxConversationBatchSize = 50;
 
   // Verify user has access to this session
-  const { data: session, error: sessionError } = await supabase
-    .from("chat_sessions")
-    .select("id")
-    .eq("id", payload.sessionId)
-    .eq("user_id", payload.userId)
-    .single();
+  const { data: session, error: sessionError } = await getSingle(
+    supabase,
+    "chat_sessions",
+    (qb) => qb.eq("id", payload.sessionId).eq("user_id", payload.userId),
+    { select: "id", validate: false }
+  );
 
   if (sessionError || !session) {
     throw new MemorySyncAccessError("Session not found or user unauthorized", {
@@ -120,15 +134,14 @@ export async function handleMemorySyncJob(
     }
 
     // Ensure memory session exists
-    const { data: memorySession, error: sessionCheckError } = await supabase
-      .schema("memories")
-      .from("sessions")
-      .select("id")
-      .eq("id", payload.sessionId)
-      .eq("user_id", payload.userId)
-      .single();
+    const { data: memorySession, error: sessionCheckError } = await getMaybeSingle(
+      supabase,
+      "sessions",
+      (qb) => qb.eq("id", payload.sessionId).eq("user_id", payload.userId),
+      { schema: "memories", select: "id", validate: false }
+    );
 
-    if (sessionCheckError && sessionCheckError.code !== "PGRST116") {
+    if (sessionCheckError) {
       throw new MemorySyncDatabaseError("Memory session check failed", {
         cause: sessionCheckError,
         operation: "session_check",
@@ -143,16 +156,18 @@ export async function handleMemorySyncJob(
         firstMessageContent.length > 0
           ? firstMessageContent.substring(0, 100)
           : "Untitled session";
-      const { error: createError } = await supabase
-        .schema("memories")
-        .from("sessions")
-        .insert({
+      const { error: createError } = await insertSingle(
+        supabase,
+        "sessions",
+        {
           id: payload.sessionId,
           metadata: {},
           title,
           // biome-ignore lint/style/useNamingConvention: Database field name
           user_id: payload.userId,
-        });
+        },
+        { schema: "memories" }
+      );
 
       if (createError) {
         throw new MemorySyncDatabaseError("Memory session creation failed", {
@@ -194,12 +209,16 @@ export async function handleMemorySyncJob(
 
       const turnTimestamps = normalizedTimestamps;
       // Indexed by memories_turns_session_idx (session_id, created_at).
-      const { data: existingTurns, error: existingError } = await supabase
-        .schema("memories")
-        .from("turns")
-        .select("created_at, role, content, attachments, tool_calls, tool_results")
-        .eq("session_id", payload.sessionId)
-        .in("created_at", turnTimestamps);
+      const { data: existingTurns, error: existingError } = await getMany(
+        supabase,
+        "turns",
+        (qb) => qb.eq("session_id", payload.sessionId).in("created_at", turnTimestamps),
+        {
+          schema: "memories",
+          select: "created_at, role, content, attachments, tool_calls, tool_results",
+          validate: false,
+        }
+      );
 
       if (existingError) {
         throw new MemorySyncDatabaseError("Memory turn dedupe lookup failed", {
@@ -236,10 +255,12 @@ export async function handleMemorySyncJob(
       });
 
       if (dedupedInserts.length > 0) {
-        const { error: insertError } = await supabase
-          .schema("memories")
-          .from("turns")
-          .insert(dedupedInserts);
+        const { error: insertError } = await insertMany(
+          supabase,
+          "turns",
+          dedupedInserts,
+          { schema: "memories" }
+        );
 
         if (insertError) {
           throw new MemorySyncDatabaseError("Memory turn insert failed", {
@@ -255,14 +276,16 @@ export async function handleMemorySyncJob(
     }
 
     // Update session last_synced_at
-    const { error: syncError } = await supabase
-      .schema("memories")
-      .from("sessions")
-      .update({
+    const { error: syncError } = await updateSingle(
+      supabase,
+      "sessions",
+      {
         // biome-ignore lint/style/useNamingConvention: Database field name
         last_synced_at: nowIso(),
-      })
-      .eq("id", payload.sessionId);
+      },
+      (qb) => qb.eq("id", payload.sessionId),
+      { schema: "memories", select: "id", validate: false }
+    );
     if (syncError) {
       throw new MemorySyncDatabaseError("Memory session sync update failed", {
         cause: syncError,
@@ -276,15 +299,20 @@ export async function handleMemorySyncJob(
 
   // Update memory context summary (simplified - could be enhanced with AI)
   {
-    const { error: updateError } = await supabase
-      .from("chat_sessions")
-      .update({
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        memory_synced_at: nowIso(),
-        // biome-ignore lint/style/useNamingConvention: Database field name
-        updated_at: nowIso(),
-      })
-      .eq("id", payload.sessionId);
+    const updatePayload: ChatSessionUpdatePayload = {
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      memory_synced_at: nowIso(),
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      updated_at: nowIso(),
+    };
+
+    const { error: updateError } = await updateSingle(
+      supabase,
+      "chat_sessions",
+      updatePayload,
+      (qb) => qb.eq("id", payload.sessionId),
+      { select: "id", validate: false }
+    );
 
     if (updateError) {
       throw new MemorySyncDatabaseError("Chat session update failed", {

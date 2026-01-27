@@ -9,6 +9,7 @@ type LocalSupabaseIds = {
   restId: string;
   dbId: string;
   storageId: string;
+  kongProxyId: string;
 };
 
 function getIdsFromProjectId(projectId: string): LocalSupabaseIds {
@@ -16,6 +17,7 @@ function getIdsFromProjectId(projectId: string): LocalSupabaseIds {
     authId: `supabase_auth_${projectId}`,
     dbId: `supabase_db_${projectId}`,
     kongId: `supabase_kong_${projectId}`,
+    kongProxyId: `supabase_kong_proxy_${projectId}`,
     networkId: `supabase_network_${projectId}`,
     projectId,
     restId: `supabase_rest_${projectId}`,
@@ -38,6 +40,10 @@ function trySh(cmd: string, args: string[]): string | null {
   }
 }
 
+function isWsl(): boolean {
+  return Boolean(process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP);
+}
+
 function decodeJwtPayload(token: string): unknown {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
@@ -53,11 +59,6 @@ function readKongConfigYaml(kongId: string): string {
   return sh("docker", ["exec", kongId, "sh", "-lc", "cat /home/kong/kong.yml"]);
 }
 
-function extractFirstMatch(text: string, re: RegExp): string | null {
-  const match = re.exec(text);
-  return match?.[0] ?? null;
-}
-
 function extractAll(text: string, re: RegExp): string[] {
   const matches: string[] = [];
   for (const match of text.matchAll(re)) {
@@ -71,13 +72,13 @@ function unique(items: string[]): string[] {
 }
 
 function getPublishableKey(kongYaml: string): string {
-  const key = extractFirstMatch(kongYaml, /\bsb_publishable_[A-Za-z0-9_-]+\b/);
+  const key = kongYaml.match(/\bsb_publishable_[A-Za-z0-9._-]+\b/)?.[0];
   if (!key) throw new Error("Could not find sb_publishable_* key in kong.yml");
   return key;
 }
 
 function getSecretKey(kongYaml: string): string {
-  const key = extractFirstMatch(kongYaml, /\bsb_secret_[A-Za-z0-9_-]+\b/);
+  const key = kongYaml.match(/\bsb_secret_[A-Za-z0-9._-]+\b/)?.[0];
   if (!key) throw new Error("Could not find sb_secret_* key in kong.yml");
   return key;
 }
@@ -139,20 +140,61 @@ function getDbPassword(dbId: string): string {
   return "postgres";
 }
 
-function waitForStorageReady(apiKey: string, label: string): void {
+function tryStorageReadyHost(apiKey: string): boolean {
+  const ready = trySh("curl", [
+    "-sSfL",
+    "--connect-timeout",
+    "2",
+    "--max-time",
+    "5",
+    "-H",
+    `apikey: ${apiKey}`,
+    "-H",
+    `Authorization: Bearer ${apiKey}`,
+    "http://127.0.0.1:54321/storage/v1/bucket",
+    "-o",
+    "/dev/null",
+  ]);
+  return ready !== null;
+}
+
+function tryStorageReadyNetwork(apiKey: string, ids: LocalSupabaseIds): boolean {
+  const ready = trySh("docker", [
+    "run",
+    "--rm",
+    "--network",
+    ids.networkId,
+    "curlimages/curl:8.6.0",
+    "-sSfL",
+    "--connect-timeout",
+    "2",
+    "--max-time",
+    "5",
+    "-H",
+    `apikey: ${apiKey}`,
+    "-H",
+    `Authorization: Bearer ${apiKey}`,
+    `http://${ids.kongId}:8000/storage/v1/bucket`,
+    "-o",
+    "/dev/null",
+  ]);
+  return ready !== null;
+}
+
+function waitForStorageReady(
+  apiKey: string,
+  label: string,
+  ids: LocalSupabaseIds
+): void {
   const maxAttempts = 10;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const ready = trySh("curl", [
-      "-sSfL",
-      "-H",
-      `apikey: ${apiKey}`,
-      "http://127.0.0.1:54321/storage/v1/bucket",
-      "-o",
-      "/dev/null",
-    ]);
-    if (ready !== null) return;
+    if (tryStorageReadyHost(apiKey)) return;
+    if (tryStorageReadyNetwork(apiKey, ids)) return;
     if (attempt === maxAttempts) {
-      throw new Error(`Storage container failed to become ready for ${label} key`);
+      throw new Error(
+        `Storage container failed to become ready for ${label} key. ` +
+          "If you're on WSL and 54321/storage returns 500, use the proxy port 54331."
+      );
     }
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
   }
@@ -163,6 +205,13 @@ export type EnsureStorageOptions = {
   supabaseDir: string;
 };
 
+/**
+ * Ensures the local Supabase storage container is running and wired to Kong.
+ *
+ * @param opts - Options describing the local Supabase project and paths.
+ * @throws Error when required containers, migrations, or readiness checks fail,
+ * or when the Kong proxy container fails to start.
+ */
 export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   const ids = getIdsFromProjectId(opts.projectId);
 
@@ -221,7 +270,7 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
     "-e",
     `DATABASE_URL=postgresql://supabase_storage_admin:${dbPassword}@${ids.dbId}:5432/postgres`,
     "-e",
-    "FILE_SIZE_LIMIT=50MiB",
+    "FILE_SIZE_LIMIT=52428800",
     "-e",
     "STORAGE_BACKEND=file",
     "-e",
@@ -242,6 +291,36 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   ]);
 
   // Quick sanity check through kong (ensures routing + auth headers work).
-  waitForStorageReady(publishableKey, "publishable");
-  waitForStorageReady(secretKey, "secret");
+  waitForStorageReady(publishableKey, "publishable", ids);
+  waitForStorageReady(secretKey, "secret", ids);
+
+  // WSL/port-proxy fallback: expose an alternate local port for the Kong gateway.
+  // This avoids cases where Docker Desktop port forwarding fails for /storage routes.
+  if (!isWsl()) return;
+  try {
+    sh("docker", ["rm", "-f", ids.kongProxyId]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("No such container")) throw error;
+  }
+  try {
+    sh("docker", [
+      "run",
+      "-d",
+      "--name",
+      ids.kongProxyId,
+      "--network",
+      ids.networkId,
+      "-p",
+      "54331:8000",
+      "alpine/socat",
+      "-d",
+      "-d",
+      "TCP-LISTEN:8000,fork,reuseaddr",
+      `TCP:${ids.kongId}:8000`,
+    ]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to start kong proxy container: ${message}`);
+  }
 }

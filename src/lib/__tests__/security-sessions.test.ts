@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -11,11 +12,15 @@ const mockLogger = vi.hoisted(() => ({
 const mockNowIso = vi.hoisted(() => vi.fn(() => "2025-01-01T03:00:00Z"));
 
 const mockSpan = vi.hoisted(() => ({
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
   setAttribute: vi.fn(),
+  setStatus: vi.fn(),
 }));
 
 const authUserResult = {
-  data: { user: { id: "user-1" } },
+  data: { user: { id: TEST_USER_ID } },
   error: null,
 };
 
@@ -32,11 +37,17 @@ vi.mock("@/lib/security/random", () => ({
   nowIso: mockNowIso,
 }));
 
-vi.mock("@/lib/telemetry/span", () => ({
-  withTelemetrySpan: vi.fn((_name: string, _opts: unknown, execute: unknown) =>
-    (execute as (span: unknown) => unknown)(mockSpan)
-  ),
-}));
+vi.mock("@/lib/telemetry/span", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/telemetry/span")>();
+  return {
+    ...actual,
+    recordErrorOnActiveSpan: vi.fn(),
+    recordErrorOnSpan: vi.fn(),
+    withTelemetrySpan: vi.fn((_name: string, _opts: unknown, execute: unknown) =>
+      (execute as (span: unknown) => unknown)(mockSpan)
+    ),
+  };
+});
 
 describe("lib/security/sessions", () => {
   beforeEach(() => {
@@ -52,7 +63,7 @@ describe("lib/security/sessions", () => {
       refreshed_at: "2025-01-01T01:00:00Z",
       updated_at: "2025-01-01T01:00:00Z",
       user_agent: "Chrome on macOS",
-      user_id: "user-1",
+      user_id: TEST_USER_ID,
     };
 
     const mockSessionRow2 = {
@@ -63,7 +74,7 @@ describe("lib/security/sessions", () => {
       refreshed_at: null,
       updated_at: "2025-01-01T02:00:00Z",
       user_agent: null,
-      user_id: "user-1",
+      user_id: TEST_USER_ID,
     };
 
     const query = {
@@ -82,7 +93,7 @@ describe("lib/security/sessions", () => {
     };
 
     const { listActiveSessions } = await import("@/lib/security/sessions");
-    const sessions = await listActiveSessions(adminSupabase as never, "user-1", {
+    const sessions = await listActiveSessions(adminSupabase as never, TEST_USER_ID, {
       currentSessionId: "sess-1",
     });
 
@@ -224,7 +235,7 @@ describe("lib/security/sessions", () => {
     );
 
     await expect(
-      listActiveSessions(adminSupabase as never, "user-1")
+      listActiveSessions(adminSupabase as never, TEST_USER_ID)
     ).rejects.toBeInstanceOf(SessionsListError);
   });
 
@@ -237,7 +248,7 @@ describe("lib/security/sessions", () => {
       refreshed_at: "2025-01-01T01:00:00Z",
       updated_at: "2025-01-01T01:00:00Z",
       user_agent: "Chrome on macOS",
-      user_id: "user-1",
+      user_id: TEST_USER_ID,
     };
 
     const query = {
@@ -257,7 +268,7 @@ describe("lib/security/sessions", () => {
     );
 
     await expect(
-      listActiveSessions(adminSupabase as never, "user-1")
+      listActiveSessions(adminSupabase as never, TEST_USER_ID)
     ).rejects.toBeInstanceOf(SessionsListError);
     expect(mockLogger.error).toHaveBeenCalledWith(
       "sessions_list_invalid_shape",

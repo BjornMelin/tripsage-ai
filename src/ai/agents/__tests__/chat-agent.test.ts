@@ -59,9 +59,14 @@ vi.mock("@/app/api/_helpers/attachments", () => ({
 }));
 
 // Mock tokens
+type CountTokens = (texts: string[], modelId?: string) => number;
+
 const tokenMocks = vi.hoisted(() => ({
-  clampMaxTokens: vi.fn(() => ({ maxTokens: 1024, reasons: [] })),
-  countTokens: vi.fn((_texts: string[], _modelId?: string) => 100),
+  clampMaxTokens: vi.fn(() => ({ maxOutputTokens: 1024, reasons: [] })),
+  countTokens: vi.fn<CountTokens>((texts, modelId) => {
+    if (texts.length > 0 && modelId) return 100;
+    return 100;
+  }),
 }));
 vi.mock("@/lib/tokens/budget", () => ({
   clampMaxTokens: tokenMocks.clampMaxTokens,
@@ -150,7 +155,7 @@ describe("createChatAgent", () => {
   beforeEach(() => {
     mockToolLoopAgent.mockClear();
     tokenMocks.clampMaxTokens.mockReset();
-    tokenMocks.clampMaxTokens.mockReturnValue({ maxTokens: 1024, reasons: [] });
+    tokenMocks.clampMaxTokens.mockReturnValue({ maxOutputTokens: 1024, reasons: [] });
     tokenMocks.countTokens.mockReset();
     tokenMocks.countTokens.mockReturnValue(100);
     limitMocks.getModelContextLimit.mockReset();
@@ -162,7 +167,7 @@ describe("createChatAgent", () => {
     const messages = createTestMessages();
     const result = createChatAgent(deps, messages, {
       desiredMaxTokens: 4096,
-      maxSteps: 20,
+      stepLimit: 20,
     });
 
     expect(result).toBeDefined();
@@ -177,7 +182,7 @@ describe("createChatAgent", () => {
 
     const result = createChatAgent(deps, messages, {
       desiredMaxTokens: 2048,
-      maxSteps: 10,
+      stepLimit: 10,
     });
 
     expect(result.modelId).toBe("claude-3-opus");
@@ -189,8 +194,8 @@ describe("createChatAgent", () => {
 
     const result = createChatAgent(deps, messages, {
       desiredMaxTokens: 2048,
-      maxSteps: 10,
       memorySummary: "User prefers boutique hotels.",
+      stepLimit: 10,
     });
 
     expect(result).toBeDefined();
@@ -225,7 +230,7 @@ describe("createChatAgent", () => {
 
     const deps = createTestDeps();
     const messages = createTestMessages();
-    createChatAgent(deps, messages, { desiredMaxTokens: 4096, maxSteps: 20 });
+    createChatAgent(deps, messages, { desiredMaxTokens: 4096, stepLimit: 20 });
 
     expect(mockToolLoopAgent).toHaveBeenCalled();
     const toolLoopConfig = mockToolLoopAgent.mock.calls[0]?.[0];

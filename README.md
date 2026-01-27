@@ -206,6 +206,8 @@ kubectl get pods -l app=tripsage-ai
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ⚠️ |
+| `NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES` | Extra link prefix allowlist for markdown hardening (comma-separated) | ⚠️ |
+| `NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES` | Image prefix allowlist for markdown hardening (comma-separated) | ⚠️ |
 
 ✅ Required | ⚠️ Optional (fallback available)
 
@@ -213,6 +215,7 @@ kubectl get pods -l app=tripsage-ai
 
 - All routes use Upstash REST credentials for rate limiting and caching via `@upstash/redis` and `@upstash/ratelimit`.
 - BYOK keys are stored encrypted in Supabase Vault and resolved server-side only.
+- Markdown rendering uses Streamdown v2.1+ and its plugin architecture (`@streamdown/code`, `@streamdown/mermaid`, `@streamdown/math`).
 
 ---
 

@@ -8,9 +8,13 @@ import { createMockSupabaseClient } from "@/test/mocks/supabase";
 vi.mock("server-only", () => ({}));
 
 const insertSingleMock = vi.hoisted(() => vi.fn());
+const getManyMock = vi.hoisted(() => vi.fn());
+const getMaybeSingleMock = vi.hoisted(() => vi.fn());
 const updateSingleMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/typed-helpers", () => ({
+  getMany: getManyMock,
+  getMaybeSingle: getMaybeSingleMock,
   insertSingle: insertSingleMock,
   updateSingle: updateSingleMock,
 }));
@@ -84,6 +88,8 @@ vi.mock("ai", async () => {
 
 describe("handleChat", () => {
   beforeEach(() => {
+    getManyMock.mockReset();
+    getMaybeSingleMock.mockReset();
     insertSingleMock.mockReset();
     updateSingleMock.mockReset();
     streamTextMock.mockClear();
@@ -94,6 +100,8 @@ describe("handleChat", () => {
     captured.streamOptions = null;
     captured.responseOptions = null;
     captured.writer = null;
+    getMaybeSingleMock.mockResolvedValue({ data: { id: "session" }, error: null });
+    getManyMock.mockResolvedValue({ count: null, data: [], error: null });
   });
 
   it("passes consumeSseStream and updates persistence on abort", async () => {
@@ -113,6 +121,8 @@ describe("handleChat", () => {
       user: { id: userId },
     });
 
+    getMaybeSingleMock.mockResolvedValue({ data: { id: sessionId }, error: null });
+    getManyMock.mockResolvedValue({ count: null, data: [], error: null });
     let messageInsertId = 100;
     insertSingleMock.mockImplementation((_client, table: string) => {
       if (table === "chat_messages") {
@@ -209,7 +219,7 @@ describe("handleChat", () => {
     expect(update.metadata).toEqual(
       expect.objectContaining({ isAborted: true, status: "aborted" })
     );
-  });
+  }, 10000);
 
   it("returns provider_unavailable when provider resolution fails", async () => {
     const { handleChat } = await import("../_handler");

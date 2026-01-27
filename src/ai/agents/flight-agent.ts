@@ -41,6 +41,9 @@ const FLIGHT_TOOLS = {
  * - Phase 1: Resolve locations via geocoding and POI lookup
  * - Phase 2: Search flights and compute distances
  *
+ * @remarks
+ * SPEC-0008 documents the AI SDK v6 foundations used by this agent.
+ *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated flight search request.
@@ -78,14 +81,17 @@ export function createFlightAgent(
     schemaMessage,
     ...contextMessages,
   ];
-  const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampMessages,
+    params.maxOutputTokens,
+    deps.modelId
+  );
 
   return createTripSageAgent<typeof FLIGHT_TOOLS>(deps, {
     agentType: "flightSearch",
     defaultMessages: [schemaMessage],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps: params.maxSteps,
+    maxOutputTokens,
     name: "Flight Search Agent",
     // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
     // on the agent config (ToolLoopAgentSettings.output).
@@ -102,6 +108,7 @@ export function createFlightAgent(
         activeTools: ["searchFlights", "distanceMatrix"],
       };
     },
+    stepLimit: params.stepLimit,
     temperature: params.temperature,
     tools: FLIGHT_TOOLS,
     topP: params.topP,

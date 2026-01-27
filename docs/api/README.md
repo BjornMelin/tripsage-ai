@@ -30,7 +30,7 @@ curl http://localhost:3000/api/dashboard
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
 | **Framework** | Next.js 16 | Server route handlers, React Server Components |
-| **AI** | AI SDK v6 (`ai@6.0.39`) | `streamText`, `generateObject`, tool calling, streaming |
+| **AI** | AI SDK v6 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson)) | `streamText`, `generateText` + `Output.object`, tool calling, streaming |
 | **Database** | Supabase (`@supabase/ssr@^0.8.0`) | PostgreSQL, Row Level Security, SSR cookie handling |
 | **Cache/Rate Limiting** | Upstash (`@upstash/redis`, `@upstash/ratelimit`) | Redis caching, sliding window rate limits |
 | **State Management** | TanStack Query (`@tanstack/react-query@5.x`) | Client-side data fetching, caching, mutations |
@@ -59,17 +59,19 @@ AI agents use Vercel AI SDK v6 with BYOK (Bring Your Own Key) provider resolutio
 
 ```typescript
 import { resolveProvider } from "@ai/models/registry";
-import { streamText } from "ai";
+import { convertToModelMessages, streamText } from "ai";
 
 // Resolve user's preferred AI provider (OpenAI, Anthropic, xAI, etc.)
 const { model } = await resolveProvider(userId, modelHint);
 
 // Stream AI response with tool calling
-return streamText({
+const result = streamText({
   model,
   tools: agentTools,
-  messages,
-}).toUIMessageStreamResponse();
+  messages: await convertToModelMessages(messages),
+});
+
+return result.toUIMessageStreamResponse({ originalMessages: messages });
 ```
 
 ## API Reference
@@ -243,19 +245,5 @@ pnpm biome:fix
 
 ## Key Dependencies
 
-| Package | Version | Usage |
-| :--- | :--- | :--- |
-| `ai` | 6.0.39 | AI SDK core: `streamText`, `generateObject`, tool calling |
-| `@ai-sdk/react` | 3.0.41 | React hooks: `useChat`, `useCompletion` |
-| `@ai-sdk/openai` | 3.0.12 | OpenAI provider |
-| `@ai-sdk/anthropic` | 3.0.15 | Anthropic provider |
-| `@ai-sdk/xai` | 3.0.26 | xAI provider |
-| `@ai-sdk/togetherai` | 2.0.13 | Together.ai provider |
-| `@supabase/ssr` | ^0.8.0 | Supabase SSR cookie handling |
-| `@supabase/supabase-js` | ^2.90.1 | Supabase client |
-| `@upstash/redis` | ^1.36.1 | Redis client |
-| `@upstash/ratelimit` | 2.0.8 | Rate limiting |
-| `@tanstack/react-query` | ^5.90.19 | Data fetching/caching |
-| `zod` | ^4.3.5 | Schema validation |
-| `@opentelemetry/api` | ^1.9.0 | Observability |
-| `amadeus` | ^11.0.0 | Flight/hotel search |
+Use [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson) as the canonical source for AI SDK and Zod versions.
+For other dependencies, reference `package.json` directly to avoid drift.

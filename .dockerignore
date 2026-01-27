@@ -1,0 +1,39 @@
+.git
+.github
+.gitignore
+.DS_Store
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.venv/
+venv/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+.next/
+.turbo/
+
+# General
+coverage/
+.firecrawl/
+*.log
+opensrc/
+vendor/
+third_party/

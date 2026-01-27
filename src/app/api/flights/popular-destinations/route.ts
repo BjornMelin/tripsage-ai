@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMany } from "@/lib/supabase/typed-helpers";
 
 /** Popular destination returned to the client. */
 interface PopularDestination {
@@ -64,18 +65,23 @@ async function fetchPersonalizedDestinations(
   supabase: TypedServerSupabase,
   userId: string
 ): Promise<PopularDestination[] | null> {
-  const { data, error } = await supabase
-    .from("search_flights")
-    .select("destination")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(100)
-    .returns<SearchFlightsDestinationRow[]>();
+  const { data, error } = await getMany(
+    supabase,
+    "search_flights",
+    (qb) => qb.eq("user_id", userId),
+    {
+      ascending: false,
+      limit: 100,
+      orderBy: "created_at",
+      select: "destination",
+      validate: false,
+    }
+  );
 
   if (error || !data || data.length === 0) return null;
 
   const destinationCounts = new Map<string, number>();
-  for (const row of data) {
+  for (const row of data as SearchFlightsDestinationRow[]) {
     if (!row.destination) continue;
     destinationCounts.set(
       row.destination,

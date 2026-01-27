@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it, vi } from "vitest";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import {
   createMockNextRequest,
   createRouteParamsContext,
@@ -12,7 +13,7 @@ const auditRows = [
     created_at: "2025-01-01T00:00:00Z",
     id: "evt-1",
     ip_address: "192.0.2.10",
-    payload: { action: "login", user_agent: "Chrome", user_id: "user-1" },
+    payload: { action: "login", user_agent: "Chrome", user_id: TEST_USER_ID },
   },
 ];
 
@@ -57,7 +58,10 @@ vi.mock("@/lib/supabase/server", () => ({
         data: { session: { access_token: "token" } },
         error: null,
       })),
-      getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
+      getUser: vi.fn(async () => ({
+        data: { user: { id: TEST_USER_ID } },
+        error: null,
+      })),
     },
   })),
 }));
@@ -65,24 +69,13 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabase: vi.fn(() => adminMock),
 }));
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: {
-      getSession: vi.fn(async () => ({
-        data: { session: { access_token: "token" } },
-        error: null,
-      })),
-      getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
-    },
-  })),
-}));
 
 describe("GET /api/security/events", () => {
   it("returns mapped security events", async () => {
     const { GET } = await import("../route");
     const res = await GET(
       createMockNextRequest({ method: "GET", url: "http://localhost" }),
-      { ...createRouteParamsContext(), user: { id: "user-1" } as never } as never
+      { ...createRouteParamsContext(), user: { id: TEST_USER_ID } as never } as never
     );
 
     expect(res.status).toBe(200);

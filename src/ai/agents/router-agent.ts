@@ -43,7 +43,6 @@ export class InvalidPatternsError extends Error {
  * Classify a user message into an agent workflow.
  *
  * Uses AI SDK v6 generateText with Output.object() for structured output.
- * This is the v6 unified API that replaces deprecated generateObject().
  *
  * @param deps Language model and optional telemetry identifiers.
  * @param userMessage User message to classify.

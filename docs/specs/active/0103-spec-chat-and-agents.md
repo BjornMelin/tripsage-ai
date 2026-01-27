@@ -40,7 +40,9 @@ Tool constraints:
 
 - Streaming Route Handler:
   - POST /api/chat
-  - Uses AI SDK v6 `streamText`
+  - Uses AI SDK v6 `streamText` and returns `toUIMessageStreamResponse()` with
+    `originalMessages` to avoid duplicate assistant messages
+  - `convertToModelMessages()` is awaited when transforming UI messages to model messages
 - Server Actions for non-stream mutations (rename chat, delete chat)
 
 ## UI flows
@@ -52,8 +54,6 @@ Tool constraints:
 
 ## References
 
-```text
-AI SDK docs: https://ai-sdk.dev/docs
-Chatbot tool usage: https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage
-Manual agent loop: https://ai-sdk.dev/cookbook/node/manual-agent-loop
-```
+- AI SDK docs: <https://ai-sdk.dev/docs>
+- Chatbot tool usage: <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage>
+- Manual agent loop: <https://ai-sdk.dev/cookbook/node/manual-agent-loop>

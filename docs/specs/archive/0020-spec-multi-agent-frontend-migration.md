@@ -44,7 +44,7 @@
 
 ### P3 - Router & Error Recovery
 
-- **Router**: Implement TypeScript intent router that uses AI SDK `generateObject` to classify user requests and set `currentAgent` before hitting specific route handlers.
+- **Router**: Implement TypeScript intent router that uses AI SDK `generateText` with `Output.object` to classify user requests and set `currentAgent` before hitting specific route handlers.
 - **Error Recovery**: Frontend ToolLoop handles fallback messaging and escalations.
 - **Note**: Python LangGraph orchestration and agents have been completely removed; all functionality now runs in TypeScript AI SDK v6.
 
@@ -61,7 +61,7 @@
 - **Telemetry**: Structured events for tool calls (name, duration, cacheHit, validationResult) exported via existing logging pipeline.
 - **Testing**: Vitest suites per agent, integration tests hitting API routes with mocked providers, Playwright e2e scenarios for each workflow wave.
 - **Rollout**: Full cutover (no flags). Monitor telemetry; rollback is a deploy revert.
-- **Runbook**: See `docs/operations/agent-frontend.md` for env and validation commands (full cutover; no flags).
+- **Runbook**: See [Agent Frontend Runbook](../../operations/agent-frontend.md) for env and validation commands (full cutover; no flags).
 
 ## Non-Goals
 

@@ -10,6 +10,7 @@
  */
 
 import { HttpResponse, http } from "msw";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { MSW_FIXED_ISO_DATE } from "../constants";
 
 /**
@@ -23,7 +24,7 @@ export const authHandlers = [
         // biome-ignore lint/style/useNamingConvention: align with Supabase response fields
         created_at: MSW_FIXED_ISO_DATE,
         email: "test@example.com",
-        id: "mock-user-id",
+        id: TEST_USER_ID,
       },
     });
   }),
@@ -39,7 +40,7 @@ export const authHandlers = [
       },
       user: {
         email: "test@example.com",
-        id: "mock-user-id",
+        id: TEST_USER_ID,
       },
     });
   }),
@@ -49,7 +50,7 @@ export const authHandlers = [
     return HttpResponse.json({
       user: {
         email: "test@example.com",
-        id: "mock-user-id",
+        id: TEST_USER_ID,
       },
     });
   }),

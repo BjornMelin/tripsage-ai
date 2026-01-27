@@ -69,7 +69,7 @@ This spec defines the TripSage Agent Router & Workflow HTTP API. It covers:
 
 1. Frontend sends the latest user message and context to `POST /api/agents/router`.
 2. Server validates input with `agentSchemas.routerRequestSchema`.
-3. Server calls `classifyUserMessage` which uses AI SDK v6 `generateObject`
+3. Server calls `classifyUserMessage` which uses AI SDK v6 `generateText` with `Output.object`
    with `routerClassificationSchema`.
 4. Server returns a JSON classification:
    - `agent` (`AgentWorkflowKind`)
@@ -125,14 +125,14 @@ Key schema groups (Zod v4):
 - **Router schemas**
   - `routerRequestSchema` – classification input.
   - `routerClassificationSchema` – classification output for AI SDK v6
-    `generateObject`.
+    `generateText` + `Output.object`.
 - **Monitoring & workflows (for dashboards and future tooling)**
   - `Agent`, `AgentActivity`, `ResourceUsage`, `AgentSession`.
   - `AgentWorkflowEntity`, `WorkflowConnection`.
 
 Schema requirements:
 
-- All schemas must be `.strict()` or equivalent via strongly typed fields.
+- All schemas must use `z.strictObject(...)` or equivalent via strongly typed fields.
 - No `any` types; ambiguous data uses `unknown` + narrowings.
 - Validation error messages should use `error:` options, not custom error maps.
 
@@ -149,7 +149,7 @@ All endpoints live under `src/app/api/agents/**/route.ts` and import
 - Response: JSON `RouterClassification`.
 - Behavior:
   - Validates request via Zod.
-  - Uses `resolveProvider` and AI SDK v6 `generateObject`.
+  - Uses `resolveProvider` and AI SDK v6 `generateText` with `Output.object`.
   - Returns classification result.
 
 ### 7.2 Workflow endpoints

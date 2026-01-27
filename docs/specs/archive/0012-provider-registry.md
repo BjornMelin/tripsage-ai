@@ -17,7 +17,7 @@ function resolveProvider(userId: string, modelHint?: string): Promise<ProviderRe
 ### Types
 
 - `ProviderId` = `"openai" | "openrouter" | "anthropic" | "xai"`
-- `ProviderResolution` = `{ provider: ProviderId; modelId: string; model: LanguageModel; maxTokens?: number }`
+- `ProviderResolution` = `{ provider: ProviderId; modelId: string; model: LanguageModel; maxOutputTokens?: number }`
 
 Behavior:
 

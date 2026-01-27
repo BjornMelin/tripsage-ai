@@ -1,122 +1,39 @@
 /** @vitest-environment node */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setRateLimitFactoryForTests } from "@/lib/api/factory";
-import {
-  createMockNextRequest,
-  createRouteParamsContext,
-  getMockCookiesForTest,
-} from "@/test/helpers/route";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetApiRouteMocks } from "@/test/helpers/api-route";
+import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { GET as MSG_GET, POST as MSG_POST } from "../[id]/messages/route";
 import { DELETE as SESS_ID_DELETE, GET as SESS_ID_GET } from "../[id]/route";
 import { GET as SESS_GET, POST as SESS_POST } from "../route";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("botid/server", async () => {
-  const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
-  return {
-    checkBotId: vi.fn(async () => mockBotIdHumanResponse),
-  };
-});
+const spanMock = {
+  addEvent: vi.fn(),
+  end: vi.fn(),
+  recordException: vi.fn(),
+  setAttribute: vi.fn(),
+  setStatus: vi.fn(),
+};
 
-// Mock next/headers cookies() BEFORE any imports that use it
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() =>
-    Promise.resolve(getMockCookiesForTest({ "sb-access-token": "test-token" }))
-  ),
-}));
-
-// Mock Supabase server client
-vi.mock("@/lib/supabase/server", () => {
-  type StoreRow = Record<string, unknown>;
-  type MockQueryBuilder = {
-    rows: StoreRow[];
-    delete: ReturnType<typeof vi.fn>;
-    eq: ReturnType<typeof vi.fn>;
-    insert: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    maybeSingle: ReturnType<typeof vi.fn>;
-    order: ReturnType<typeof vi.fn>;
-    select: ReturnType<typeof vi.fn>;
-  };
-
-  const store: Record<string, StoreRow[]> = { chat_messages: [], chat_sessions: [] };
-  return {
-    createServerSupabase: vi.fn(async () => ({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "u1" } }, error: null })),
-      },
-      from: vi.fn((table: string) => {
-        if (!store[table]) {
-          store[table] = [];
-        }
-        const rows = store[table];
-        const api: MockQueryBuilder = {
-          delete: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => {
-                store[table] = [];
-                return Promise.resolve({ error: null });
-              }),
-            })),
-          })),
-          eq: vi.fn(() => api),
-          insert: vi.fn((payload: unknown) => {
-            if (Array.isArray(payload)) {
-              for (const p of payload) rows.push(p);
-            } else {
-              rows.push(payload as StoreRow);
-            }
-            return Promise.resolve({ error: null });
-          }),
-          limit: vi.fn(() => api),
-          maybeSingle: vi.fn(async () => ({ data: api.rows[0] ?? null, error: null })),
-          order: vi.fn(async () => ({ data: api.rows, error: null })),
-          rows,
-          select: vi.fn(() => api),
-        };
-        return api;
-      }),
-    })),
-  };
-});
-
-// Mock Redis
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => ({})),
-}));
-
-// Mock route helpers
-vi.mock("@/lib/api/route-helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
-    "@/lib/api/route-helpers"
-  );
+vi.mock("@/lib/telemetry/span", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/telemetry/span")>();
   return {
     ...actual,
-    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+    recordTelemetryEvent: vi.fn(),
+    sanitizeAttributes: vi.fn((attrs) => attrs),
+    withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn(spanMock)),
   };
 });
-
-vi.mock("@/lib/telemetry/span", () => ({
-  recordTelemetryEvent: vi.fn(),
-  sanitizeAttributes: vi.fn((attrs) => attrs),
-  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn()),
-}));
 
 describe("/api/chat/sessions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setRateLimitFactoryForTests(async () => ({
-      limit: 60,
-      remaining: 59,
-      reset: Date.now() + 60_000,
-      success: true,
-    }));
-  });
-
-  afterEach(() => {
-    setRateLimitFactoryForTests(null);
+    Object.values(spanMock).forEach((fn) => {
+      fn.mockClear();
+    });
+    resetApiRouteMocks();
   });
   it("creates and lists sessions", async () => {
     const resCreate = await SESS_POST(

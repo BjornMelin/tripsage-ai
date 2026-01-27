@@ -7,6 +7,7 @@ import "server-only";
 import { tryEnqueueJob } from "@/lib/qstash/client";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { getSingle } from "@/lib/supabase/typed-helpers";
 import { WebhookServiceUnavailableError } from "@/lib/webhooks/errors";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
 
@@ -34,16 +35,17 @@ export const POST = createWebhookHandler({
     // Verify file attachment exists on INSERT with uploading status
     if (payload.type === "INSERT" && attachmentId && uploadStatus === "uploading") {
       const supabase = getAdminSupabase();
-      const { error } = await supabase
-        .from("file_attachments")
-        .select("id")
-        .eq("id", attachmentId)
-        .limit(1)
-        .single();
+      const { error } = await getSingle(
+        supabase,
+        "file_attachments",
+        (qb) => qb.eq("id", attachmentId),
+        { select: "id", validate: false }
+      );
 
       if (error) {
-        span.recordException(error);
-        throw error; // Will be caught by handler and return 500
+        const normalized = error instanceof Error ? error : new Error(String(error));
+        span.recordException(normalized);
+        throw normalized; // Will be caught by handler and return 500
       }
 
       span.setAttribute("file.verified", true);

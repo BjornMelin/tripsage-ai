@@ -128,7 +128,7 @@ export const activitySchema = z.object({
   description: z.string(),
   duration: z.number().int().positive(), // minutes
   id: z.string().min(1), // Google Place ID
-  images: z.array(z.string().url()).optional(),
+images: z.array(z.url()).optional(),
   location: z.string().min(1),
   name: z.string().min(1),
   /**

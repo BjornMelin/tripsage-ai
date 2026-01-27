@@ -129,12 +129,13 @@ References:
 - Pair schema and inferred type in the same file:
 
 ```ts
-export const userSchema = z.strictObject({ id: z.string().uuid(), email: z.string().email() });
+export const userSchema = z.strictObject({ id: z.uuid(), email: z.email() });
 export type User = z.infer<typeof userSchema>;
 ```
 
 - Registry helpers: use `primitiveSchemas`, `transformSchemas`, `refinedSchemas` from `@schemas/registry`.
 - Tool schemas (AI SDK v6): include `.describe()` on fields, `z.strictObject` inputs, `temperature: 0` for tool calls.
+- Advanced patterns (mutually exclusive fields, `z.xor()`): see [Zod Schema Guide](./zod-schema-guide.md).
 
 ## Architecture & Services
 

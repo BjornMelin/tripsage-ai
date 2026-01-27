@@ -15,6 +15,12 @@ import {
 import { toPgvector } from "@/lib/rag/pgvector";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  getMany,
+  getMaybeSingle,
+  insertSingle,
+  updateSingle,
+} from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import type {
   MemoryAdapter,
@@ -153,25 +159,26 @@ async function handleRecencyFetchContext(
 ): Promise<MemoryAdapterExecutionResult> {
   const limit = intent.limit && intent.limit > 0 ? intent.limit : MAX_CONTEXT_ITEMS;
 
-  // Fetch recent turns for this user (and session when available).
-  let query = supabase
-    .schema("memories")
-    .from("turns")
-    .select("id, content, created_at, session_id")
-    .eq("user_id", intent.userId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (intent.sessionId) {
-    // Filter by session when present to keep context scoped.
-    query = query.eq("session_id", intent.sessionId);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await getMany(
+    supabase,
+    "turns",
+    (qb) => {
+      const scoped = intent.sessionId ? qb.eq("session_id", intent.sessionId) : qb;
+      return scoped.eq("user_id", intent.userId);
+    },
+    {
+      ascending: false,
+      limit,
+      orderBy: "created_at",
+      schema: "memories",
+      select: "id, content, created_at, session_id",
+      validate: false,
+    }
+  );
 
   if (error) {
     return {
-      error: `supabase_memory_fetch_failed:${error.message}`,
+      error: `supabase_memory_fetch_failed:${error instanceof Error ? error.message : String(error)}`,
       status: "error",
     };
   }
@@ -233,38 +240,38 @@ async function handleOnTurnCommitted(
 ): Promise<MemoryAdapterExecutionResult> {
   try {
     // Ensure session exists
-    const { data: sessionData, error: sessionError } = await supabase
-      .schema("memories")
-      .from("sessions")
-      .select("id")
-      .eq("id", intent.sessionId)
-      .eq("user_id", intent.userId)
-      .single();
+    const { data: sessionData, error: sessionError } = await getMaybeSingle(
+      supabase,
+      "sessions",
+      (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
+      { schema: "memories", select: "id", validate: false }
+    );
 
-    if (sessionError && sessionError.code !== "PGRST116") {
-      // PGRST116 is "not found" - we'll create the session below
+    if (sessionError) {
       return {
-        error: `supabase_session_check_failed:${sessionError.message}`,
+        error: `supabase_session_check_failed:${sessionError instanceof Error ? sessionError.message : String(sessionError)}`,
         status: "error",
       };
     }
 
     // Create session if it doesn't exist
     if (!sessionData) {
-      const { error: createError } = await supabase
-        .schema("memories")
-        .from("sessions")
-        .insert({
+      const { error: createError } = await insertSingle(
+        supabase,
+        "sessions",
+        {
           id: intent.sessionId,
           metadata: {},
           title: intent.turn.content.substring(0, 100) || "Untitled session",
           // biome-ignore lint/style/useNamingConvention: database column uses snake_case
           user_id: intent.userId,
-        });
+        },
+        { schema: "memories" }
+      );
 
       if (createError) {
         return {
-          error: `supabase_session_create_failed:${createError.message}`,
+          error: `supabase_session_create_failed:${createError instanceof Error ? createError.message : String(createError)}`,
           status: "error",
         };
       }
@@ -290,25 +297,32 @@ async function handleOnTurnCommitted(
       user_id: intent.userId,
     };
 
-    const { error: turnError } = await supabase
-      .schema("memories")
-      .from("turns")
-      .insert(turnInsert);
+    const { error: turnError } = await insertSingle(supabase, "turns", turnInsert, {
+      schema: "memories",
+    });
 
     if (turnError) {
       return {
-        error: `supabase_turn_insert_failed:${turnError.message}`,
+        error: `supabase_turn_insert_failed:${turnError instanceof Error ? turnError.message : String(turnError)}`,
         status: "error",
       };
     }
 
     // Update session last_synced_at
-    await supabase
-      .schema("memories")
-      .from("sessions")
+    const { error: syncError } = await updateSingle(
+      supabase,
+      "sessions",
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      .update({ last_synced_at: new Date().toISOString() })
-      .eq("id", intent.sessionId);
+      { last_synced_at: new Date().toISOString() },
+      (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
+      { schema: "memories", select: "id", validate: false }
+    );
+    if (syncError) {
+      return {
+        error: `supabase_session_sync_failed:${syncError instanceof Error ? syncError.message : String(syncError)}`,
+        status: "error",
+      };
+    }
 
     return { status: "ok" };
   } catch (error) {
@@ -325,17 +339,18 @@ async function handleSyncSession(
 ): Promise<MemoryAdapterExecutionResult> {
   try {
     // Update session last_synced_at
-    const { error } = await supabase
-      .schema("memories")
-      .from("sessions")
+    const { error } = await updateSingle(
+      supabase,
+      "sessions",
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      .update({ last_synced_at: new Date().toISOString() })
-      .eq("id", intent.sessionId)
-      .eq("user_id", intent.userId);
+      { last_synced_at: new Date().toISOString() },
+      (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
+      { schema: "memories", select: "id", validate: false }
+    );
 
     if (error) {
       return {
-        error: `supabase_sync_session_failed:${error.message}`,
+        error: `supabase_sync_session_failed:${error instanceof Error ? error.message : String(error)}`,
         status: "error",
       };
     }

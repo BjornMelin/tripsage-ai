@@ -7,6 +7,7 @@
  */
 
 import { HttpResponse, http } from "msw";
+import { TEST_USER_ID } from "@/test/helpers/ids";
 import { MSW_FIXED_ISO_DATE, MSW_SUPABASE_URL } from "../constants";
 
 /**
@@ -21,7 +22,7 @@ export const supabaseHandlers = [
       // biome-ignore lint/style/useNamingConvention: match Supabase auth payload
       created_at: MSW_FIXED_ISO_DATE,
       email: "test@example.com",
-      id: "mock-user-id",
+      id: TEST_USER_ID,
       // biome-ignore lint/style/useNamingConvention: match Supabase auth payload
       user_metadata: {},
     });

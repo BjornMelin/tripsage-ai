@@ -30,7 +30,7 @@ Upgrade the app to Next.js 16 by migrating middleware -> proxy, enforcing async 
 - [x] Removed legacy `dynamic`/`revalidate` segment configs that conflict with `cacheComponents`.
 - [x] Docs
   - [x] ADR-0013 captures design.
-  - [x] `docs/index.md` lists Next 16 migration notes; users section requires no changes.
+  - [x] [Docs index](../../index.md) lists Next 16 migration notes; users section requires no changes.
 
 ## Notes
 

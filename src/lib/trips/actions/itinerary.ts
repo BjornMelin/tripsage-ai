@@ -24,6 +24,7 @@ import {
 import { nowIso } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { deleteSingle, insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import {
   mapItineraryItemUpsertToDbInsert,
@@ -156,15 +157,11 @@ export async function upsertItineraryItemImpl(
       const now = nowIso();
 
       if (payload.id === undefined) {
-        const { data, error } = await supabase
-          .from("itinerary_items")
-          .insert({
-            ...mapItineraryItemUpsertToDbInsert(payload, user.id),
-            // biome-ignore lint/style/useNamingConvention: Supabase column name
-            updated_at: now,
-          })
-          .select("*")
-          .single();
+        const { data, error } = await insertSingle(supabase, "itinerary_items", {
+          ...mapItineraryItemUpsertToDbInsert(payload, user.id),
+          // biome-ignore lint/style/useNamingConvention: Supabase column name
+          updated_at: now,
+        });
 
         if (error || !data) {
           if (error && isPermissionDeniedError(error)) {
@@ -175,7 +172,7 @@ export async function upsertItineraryItemImpl(
           }
           logger.error("itinerary_item_insert_failed", {
             code: (error as { code?: unknown } | null)?.code ?? null,
-            message: error?.message ?? "insert returned no row",
+            message: error instanceof Error ? error.message : "insert returned no row",
             tripId: tripIdResult.data,
           });
           return err({ error: "internal", reason: "Failed to add itinerary item" });
@@ -206,17 +203,16 @@ export async function upsertItineraryItemImpl(
         });
       }
 
-      const { data, error } = await supabase
-        .from("itinerary_items")
-        .update({
+      const { data, error } = await updateSingle(
+        supabase,
+        "itinerary_items",
+        {
           ...mapItineraryItemUpsertToDbUpdate(payload),
           // biome-ignore lint/style/useNamingConvention: Supabase column name
           updated_at: now,
-        })
-        .eq("id", idResult.data)
-        .eq("trip_id", tripIdResult.data)
-        .select("*")
-        .maybeSingle();
+        },
+        (qb) => qb.eq("id", idResult.data).eq("trip_id", tripIdResult.data)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -225,10 +221,14 @@ export async function upsertItineraryItemImpl(
             reason: "You do not have permission to update itinerary items",
           });
         }
+        const code = (error as { code?: unknown } | null)?.code ?? null;
+        if (code === "PGRST116") {
+          return err({ error: "not_found", reason: "Itinerary item not found" });
+        }
         logger.error("itinerary_item_update_failed", {
-          code: (error as { code?: unknown }).code ?? null,
+          code,
           itemId: idResult.data,
-          message: error.message,
+          message: error instanceof Error ? error.message : "update failed",
           tripId: tripIdResult.data,
         });
         return err({ error: "internal", reason: "Failed to update itinerary item" });
@@ -293,13 +293,9 @@ export async function deleteItineraryItemImpl(
         return err({ error: "unauthorized", reason: "Unauthorized" });
       }
 
-      const { data, error } = await supabase
-        .from("itinerary_items")
-        .delete()
-        .eq("id", itemIdResult.data)
-        .eq("trip_id", tripIdResult.data)
-        .select("id")
-        .maybeSingle();
+      const { count, error } = await deleteSingle(supabase, "itinerary_items", (qb) =>
+        qb.eq("id", itemIdResult.data).eq("trip_id", tripIdResult.data)
+      );
 
       if (error) {
         if (isPermissionDeniedError(error)) {
@@ -311,13 +307,13 @@ export async function deleteItineraryItemImpl(
         logger.error("itinerary_item_delete_failed", {
           code: (error as { code?: unknown }).code ?? null,
           itemId: itemIdResult.data,
-          message: error.message,
+          message: error instanceof Error ? error.message : "delete failed",
           tripId: tripIdResult.data,
         });
         return err({ error: "internal", reason: "Failed to delete itinerary item" });
       }
 
-      if (!data) {
+      if (count === 0) {
         return err({ error: "not_found", reason: "Itinerary item not found" });
       }
 

@@ -29,8 +29,11 @@ import {
   DETERMINISTIC_TEXT_EMBEDDING_MODEL_ID,
   deterministicTextEmbedding,
 } from "../../src/lib/ai/embeddings/deterministic";
-import { TEXT_EMBEDDING_DIMENSIONS } from "../../src/lib/ai/embeddings/text-embedding-model";
-import { toPgvector as toPgvectorShared } from "../../src/lib/rag/pgvector";
+
+// Canonical source: src/lib/ai/embeddings/text-embedding-model.ts
+// Intentional duplication to keep seed script self-contained and avoid "server-only" imports.
+const TEXT_EMBEDDING_DIMENSIONS = 1536;
+
 import type { Database, Json } from "../../src/lib/supabase/database.types";
 import { SUPABASE_CLI_VERSION } from "../supabase/supabase-cli";
 
@@ -38,7 +41,8 @@ type SeedProfile = "dev" | "e2e" | "payments" | "calendar" | "edge-cases";
 
 const envSchema = z.object({
   serviceRoleKey: z.string().min(1),
-  supabaseUrl: z.string().url(),
+  storageUrl: z.url().optional(),
+  supabaseUrl: z.url(),
 });
 
 const argvProfile = process.argv
@@ -101,12 +105,26 @@ const localFallback =
     ? {}
     : resolveLocalSupabaseEnvFallback();
 
+const storageUrlRaw = process.env.SUPABASE_STORAGE_URL?.trim();
+const storageUrl = storageUrlRaw?.replace(/\/storage\/v1\/?$/, "") || undefined;
+
 const env = envSchema.parse({
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? localFallback.serviceRoleKey,
+  storageUrl,
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? localFallback.supabaseUrl,
 });
 
 const supabase = createClient<Database>(env.supabaseUrl, env.serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
+const storageBaseUrl = (env.storageUrl ?? env.supabaseUrl).replace(
+  /\/storage\/v1\/?$/,
+  ""
+);
+const storageClient = createClient<Database>(storageBaseUrl, env.serviceRoleKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
@@ -163,6 +181,53 @@ const USERS = {
 
 const GATEWAY_TEXT_EMBEDDING_MODEL_ID = "openai/text-embedding-3-small" as const;
 const OPENAI_TEXT_EMBEDDING_MODEL_ID = "text-embedding-3-small" as const;
+const STORAGE_BUCKETS = [
+  {
+    allowedMimeTypes: [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/plain",
+      "text/csv",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+    ],
+    fileSizeLimit: 52_428_800,
+    name: "attachments",
+    public: false,
+  },
+  {
+    allowedMimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/avif",
+    ],
+    fileSizeLimit: 5_242_880,
+    name: "avatars",
+    public: true,
+  },
+  {
+    allowedMimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/avif",
+      "image/heic",
+      "image/heif",
+    ],
+    fileSizeLimit: 20_971_520,
+    name: "trip-images",
+    public: false,
+  },
+] as const;
 
 function stableUuid(seed: string): string {
   const bytes = createHash("sha256").update(seed).digest().subarray(0, 16);
@@ -174,6 +239,20 @@ function stableUuid(seed: string): string {
     16,
     20
   )}-${hex.slice(20)}`;
+}
+
+// Intentionally duplicates src/lib/rag/pgvector.ts (and mirrors the
+// TEXT_EMBEDDING_DIMENSIONS duplication) to keep the seed script self-contained,
+// avoid server-only imports, and prevent runtime/import issues during seeding.
+// Keep this in sync with pgvector helpers to ease maintenance.
+function serializePgvector(embedding: readonly number[]): string {
+  const parts = embedding.map((value, idx) => {
+    if (!Number.isFinite(value)) {
+      throw new Error(`Invalid embedding value at index ${idx}`);
+    }
+    return String(value);
+  });
+  return `[${parts.join(",")}]`;
 }
 
 function getSeedTextEmbeddingModelId(): string {
@@ -224,10 +303,69 @@ async function embedTextValues(values: string[]): Promise<{
   return { embeddings, modelId };
 }
 
+async function ensureStorageBuckets(): Promise<void> {
+  for (const bucket of STORAGE_BUCKETS) {
+    const { data, error } = await storageClient.storage.getBucket(bucket.name);
+    if (data) continue;
+    if (error) {
+      const status =
+        typeof error === "object" && error && "status" in error
+          ? Number((error as { status?: number }).status)
+          : undefined;
+      const message = error instanceof Error ? error.message : String(error);
+      const isNotFound = status === 404 || message.toLowerCase().includes("not found");
+      if (isNotFound) {
+        const { error: createError } = await storageClient.storage.createBucket(
+          bucket.name,
+          {
+            allowedMimeTypes: [...bucket.allowedMimeTypes],
+            fileSizeLimit: bucket.fileSizeLimit,
+            public: bucket.public,
+          }
+        );
+        if (!createError) {
+          continue;
+        }
+        throw new Error(`createBucket failed (${bucket.name}): ${createError.message}`);
+      } else {
+        throw new Error(`getBucket failed (${bucket.name}): ${message}`);
+      }
+    }
+    throw new Error(`getBucket failed (${bucket.name}): missing data and error`);
+  }
+}
+
+async function waitForPostgrestReady(): Promise<void> {
+  const maxAttempts = 12;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let failureDetail: string | null = null;
+    try {
+      const res = await fetch(`${env.supabaseUrl}/rest/v1/`, {
+        headers: {
+          Authorization: `Bearer ${env.serviceRoleKey}`,
+          apikey: env.serviceRoleKey,
+        },
+        method: "GET",
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) return;
+      failureDetail = `${res.status} ${res.statusText}`.trim();
+    } catch (error) {
+      failureDetail = error instanceof Error ? error.message : String(error);
+    }
+    if (attempt === maxAttempts) {
+      throw new Error(
+        `Supabase REST health failed (${failureDetail ?? "unknown"}). Is PostgREST ready?`
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
 /**
  * Serialize embedding to pgvector format with strict dimension validation.
  *
- * Wraps the shared toPgvector function to enforce standard embedding dimensions.
+ * Enforces standard embedding dimensions before serializing to pgvector format.
  */
 function toPgvector(embedding: readonly number[]): string {
   if (embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {
@@ -235,7 +373,7 @@ function toPgvector(embedding: readonly number[]): string {
       `Invalid embedding dimensions (expected ${TEXT_EMBEDDING_DIMENSIONS}, got ${embedding.length})`
     );
   }
-  return toPgvectorShared(embedding);
+  return serializePgvector(embedding);
 }
 
 function chunkText(
@@ -390,7 +528,7 @@ async function ensureAvatarForUser(input: {
   const avatar = await readFixture("avatar.png");
   const objectPath = `seed/${input.profile}/${input.userId}.png`;
 
-  const upload = await supabase.storage
+  const upload = await storageClient.storage
     .from("avatars")
     .upload(objectPath, new Blob([new Uint8Array(avatar)], { type: "image/png" }), {
       contentType: "image/png",
@@ -400,7 +538,7 @@ async function ensureAvatarForUser(input: {
     throw new Error(`upload avatar failed: ${upload.error.message}`);
   }
 
-  const { data } = supabase.storage.from("avatars").getPublicUrl(objectPath);
+  const { data } = storageClient.storage.from("avatars").getPublicUrl(objectPath);
   if (!data.publicUrl) {
     throw new Error("getPublicUrl failed: missing publicUrl");
   }
@@ -818,7 +956,7 @@ async function seedAttachmentAndRag(params: {
     );
   }
 
-  const upload = await supabase.storage
+  const upload = await storageClient.storage
     .from("attachments")
     .upload(filePath, new Blob([new Uint8Array(buffer)], { type: params.mimeType }), {
       contentType: params.mimeType,
@@ -1463,6 +1601,9 @@ async function main(): Promise<void> {
       `Supabase auth health failed (${health.status} ${health.statusText}). Is local Supabase running?`
     );
   }
+
+  await waitForPostgrestReady();
+  await ensureStorageBuckets();
 
   if (profile === "dev") {
     await runDevSeed();

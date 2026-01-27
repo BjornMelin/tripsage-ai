@@ -9,6 +9,7 @@ import { nowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
+import { getMany } from "@/lib/supabase/typed-helpers";
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
@@ -154,22 +155,27 @@ export async function listActiveSessions(
     "security.sessions.list",
     { attributes: userIdHash ? { "user.id_hash": userIdHash } : {} },
     async (span) => {
-      const query = adminSupabase
-        .schema("auth")
-        .from("sessions")
-        .select("id, user_agent, ip, refreshed_at, updated_at, created_at")
-        .eq("user_id", userId)
-        .is("not_after", null)
-        .order("refreshed_at", { ascending: false })
-        .order("updated_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      const { data, error } = await query;
+      const { data, error } = await getMany(
+        adminSupabase,
+        "sessions",
+        (qb) =>
+          qb
+            .eq("user_id", userId)
+            .is("not_after", null)
+            .order("refreshed_at", { ascending: false })
+            .order("updated_at", { ascending: false })
+            .order("created_at", { ascending: false }),
+        {
+          limit: 50,
+          schema: "auth",
+          select: "id, user_agent, ip, refreshed_at, updated_at, created_at",
+          validate: false,
+        }
+      );
       if (error) {
         span.setAttribute("security.sessions.list.error", true);
         logger.error("sessions_list_failed", {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           userIdHash: userIdHash ?? undefined,
         });
         throw new SessionsListError("sessions_list_failed", error);

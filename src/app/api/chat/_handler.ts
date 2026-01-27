@@ -40,7 +40,12 @@ import { sanitizeWithInjectionDetection } from "@/lib/security/prompt-sanitizer"
 import { nowIso, secureUuid } from "@/lib/security/random";
 import type { Json } from "@/lib/supabase/database.types";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
-import { insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
+import {
+  getMany,
+  getMaybeSingle,
+  insertSingle,
+  updateSingle,
+} from "@/lib/supabase/typed-helpers";
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import type { ServerLogger } from "@/lib/telemetry/logger";
 import type { ChatMessage } from "@/lib/tokens/budget";
@@ -73,7 +78,7 @@ export interface ChatDeps {
   memorySummaryCache?: MemorySummaryCache;
   config?: {
     defaultMaxTokens?: number;
-    maxSteps?: number;
+    stepLimit?: number;
     timeoutSeconds?: number;
     stepTimeoutSeconds?: number;
   };
@@ -285,17 +290,18 @@ async function ensureChatSession(options: {
     if (allowEphemeralSession) {
       return { created: false, ok: true, sessionId: existingId };
     }
-    const { data, error } = await supabase
-      .from("chat_sessions")
-      .select("id")
-      .eq("id", existingId)
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data, error } = await getMaybeSingle(
+      supabase,
+      "chat_sessions",
+      (qb) => qb.eq("id", existingId).eq("user_id", userId),
+      { select: "id", validate: false }
+    );
     if (error) {
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
       return {
         ok: false,
         res: errorResponse({
-          err: new Error(error.message),
+          err: normalizedError,
           error: "db_error",
           reason: "Failed to verify session",
           status: 500,
@@ -532,9 +538,9 @@ function buildTokenBudget(options: {
     { content: options.system, role: "system" },
     { content: tokenTexts.join(" "), role: "user" },
   ];
-  const { maxTokens } = clampMaxTokens(clampInput, desired, options.modelId);
+  const { maxOutputTokens } = clampMaxTokens(clampInput, desired, options.modelId);
 
-  return { maxOutputTokens: Math.min(maxTokens, safeAvailable), ok: true };
+  return { maxOutputTokens: Math.min(maxOutputTokens, safeAvailable), ok: true };
 }
 
 function parseToolCall(value: unknown): ParsedToolCall | null {
@@ -597,13 +603,18 @@ async function loadChatHistory(options: {
 > {
   const limit = options.limit ?? HISTORY_LIMIT;
 
-  const { data: rows, error } = await options.supabase
-    .from("chat_messages")
-    .select("id, role, content, metadata")
-    .eq("session_id", options.sessionId)
-    .eq("user_id", options.userId)
-    .order("id", { ascending: false })
-    .limit(limit);
+  const { data: rows, error } = await getMany(
+    options.supabase,
+    "chat_messages",
+    (qb) => qb.eq("session_id", options.sessionId).eq("user_id", options.userId),
+    {
+      ascending: false,
+      limit,
+      orderBy: "id",
+      select: "id, role, content, metadata",
+      validate: false,
+    }
+  );
 
   if (error) {
     if (options.allowEphemeral) {
@@ -616,10 +627,12 @@ async function loadChatHistory(options: {
       });
       return { messages: [], ok: true };
     }
+    const message = error instanceof Error ? error.message : String(error);
+    const normalizedError = error instanceof Error ? error : new Error(message);
     return {
       ok: false,
       res: errorResponse({
-        err: new Error(error.message),
+        err: normalizedError,
         error: "db_error",
         reason: "Failed to load chat history",
         status: 500,
@@ -634,13 +647,18 @@ async function loadChatHistory(options: {
 
   const { data: toolCalls, error: toolError } =
     messageIds.length > 0
-      ? await options.supabase
-          .from("chat_tool_calls")
-          .select(
-            "message_id, tool_id, tool_name, arguments, result, status, error_message"
-          )
-          .in("message_id", messageIds)
-          .order("id", { ascending: true })
+      ? await getMany(
+          options.supabase,
+          "chat_tool_calls",
+          (qb) => qb.in("message_id", messageIds),
+          {
+            ascending: true,
+            orderBy: "id",
+            select:
+              "message_id, tool_id, tool_name, arguments, result, status, error_message",
+            validate: false,
+          }
+        )
       : { data: [], error: null };
 
   if (toolError) {
@@ -653,10 +671,14 @@ async function loadChatHistory(options: {
         }),
       });
     } else {
+      const message =
+        toolError instanceof Error ? toolError.message : String(toolError);
+      const normalizedError =
+        toolError instanceof Error ? toolError : new Error(message);
       return {
         ok: false,
         res: errorResponse({
-          err: new Error(toolError.message),
+          err: normalizedError,
           error: "db_error",
           reason: "Failed to load tool calls",
           status: 500,
@@ -1021,7 +1043,8 @@ export async function handleChat(
         deps.supabase,
         "chat_messages",
         { metadata: supersededMeta },
-        (qb) => qb.eq("id", target.dbId).eq("user_id", userId)
+        (qb) => qb.eq("id", target.dbId).eq("user_id", userId),
+        { select: "id", validate: false }
       );
 
       if (error) {
@@ -1061,7 +1084,7 @@ export async function handleChat(
 
   const system = buildSystemPrompt({ memorySummary });
 
-  const maxSteps = deps.config?.maxSteps ?? 10;
+  const stepLimit = deps.config?.stepLimit ?? 10;
 
   // Tools that require user scope injection.
   const baseTools = wrapToolsWithUserId(
@@ -1161,7 +1184,8 @@ export async function handleChat(
             deps.supabase,
             "chat_messages",
             { content, metadata: updatedMeta },
-            (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+            (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
+            { select: "id", validate: false }
           );
 
           if (error) {
@@ -1268,7 +1292,8 @@ export async function handleChat(
                   deps.supabase,
                   "chat_messages",
                   { metadata: stepMetadata },
-                  (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+                  (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
+                  { select: "id", validate: false }
                 );
 
                 if (stepError) {
@@ -1285,7 +1310,7 @@ export async function handleChat(
             }
           }
         },
-        stopWhen: stepCountIs(maxSteps),
+        stopWhen: stepCountIs(stepLimit),
         system,
         timeout: timeoutConfig,
         tools: chatTools,
@@ -1360,7 +1385,8 @@ export async function handleChat(
         deps.supabase,
         "chat_messages",
         { content, metadata: updatedMeta },
-        (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId)
+        (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
+        { select: "id", validate: false }
       );
 
       if (error) {

@@ -80,10 +80,14 @@ export function createItineraryAgent(
     { content: instructions, role: "system" },
     schemaMessage,
   ];
-  const { maxTokens } = clampMaxTokens(clampMessages, params.maxTokens, deps.modelId);
+  const { maxOutputTokens } = clampMaxTokens(
+    clampMessages,
+    params.maxOutputTokens,
+    deps.modelId
+  );
 
   // Itinerary planning may need more steps for comprehensive plans
-  const maxSteps = Math.max(params.maxSteps, 15);
+  const stepLimit = Math.max(params.stepLimit, 15);
 
   // Define phased tool sets with type safety
   type ToolName = keyof typeof BASE_ITINERARY_TOOLS;
@@ -96,9 +100,9 @@ export function createItineraryAgent(
   const PlanningTools: ToolName[] = ["createTravelPlan", "searchPlaces"];
   const SaveTools: ToolName[] = ["saveTravelPlan", "createTravelPlan"];
 
-  // Compute phase boundaries from maxSteps (40% research, 33% planning, 27% save)
-  const phase1End = Math.floor(maxSteps * 0.4);
-  const phase2End = Math.floor(maxSteps * 0.73);
+  // Compute phase boundaries from stepLimit (40% research, 33% planning, 27% save)
+  const phase1End = Math.floor(stepLimit * 0.4);
+  const phase2End = Math.floor(stepLimit * 0.73);
 
   if (!deps.userId) {
     throw new Error(
@@ -119,8 +123,7 @@ export function createItineraryAgent(
     agentType: "itineraryPlanning",
     defaultMessages: [schemaMessage],
     instructions,
-    maxOutputTokens: maxTokens,
-    maxSteps,
+    maxOutputTokens,
     name: "Itinerary Planning Agent",
     // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
     // on the agent config (ToolLoopAgentSettings.output).
@@ -143,6 +146,7 @@ export function createItineraryAgent(
         activeTools: SaveTools,
       };
     },
+    stepLimit,
     temperature: params.temperature,
     tools: itineraryTools,
     topP: params.topP,

@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { secureUuid } from "@/lib/security/random";
+import { deleteSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { ensureTripAccess } from "@/lib/trips/trip-access";
 
@@ -65,6 +66,28 @@ function buildAttachmentStoragePath(options: {
   }
 
   throw new Error("Invariant violation: either chatId or tripId is required.");
+}
+
+/**
+ * Normalize an unknown error into an Error object or undefined.
+ *
+ * @param err - Error or unknown value to normalize.
+ * @returns An Error instance or undefined if the input was falsy.
+ */
+function normalizeError(err: unknown): Error | undefined {
+  if (!err) return undefined;
+  if (err instanceof Error) return err;
+  if (typeof err === "string") {
+    return new Error(err.length > 0 ? err : "unknown_error");
+  }
+  if (typeof err === "number" || typeof err === "boolean") {
+    return new Error(String(err));
+  }
+  const message =
+    typeof (err as { message?: unknown }).message === "string"
+      ? (err as { message?: string }).message
+      : undefined;
+  return new Error(message ?? "unknown_error");
 }
 
 /**
@@ -113,13 +136,16 @@ export const POST = withApiGuards({
   const cleanupInserted = async (): Promise<void> => {
     if (insertedIds.length === 0) return;
     try {
-      const { error: cleanupError } = await supabase
-        .from("file_attachments")
-        .delete()
-        .in("id", insertedIds);
+      const { error: cleanupError } = await deleteSingle(
+        supabase,
+        "file_attachments",
+        (qb) => qb.in("id", insertedIds),
+        { count: null }
+      );
       if (cleanupError) {
         logger.warn("Failed to cleanup inserted attachment rows", {
-          error: cleanupError.message,
+          error:
+            cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
           insertedCount: insertedIds.length,
           userId,
         });
@@ -146,7 +172,7 @@ export const POST = withApiGuards({
       });
 
       // Insert metadata row first so Storage RLS can authorize the upload.
-      const { error: insertError } = await supabase.from("file_attachments").insert({
+      const { error: insertError } = await insertSingle(supabase, "file_attachments", {
         bucket_name: STORAGE_BUCKET,
         chat_id: body.chatId ?? null,
         chat_message_id: body.chatMessageId ?? null,
@@ -163,8 +189,9 @@ export const POST = withApiGuards({
 
       if (insertError) {
         await cleanupInserted();
+        const normalizedError = normalizeError(insertError);
         return errorResponse({
-          err: new Error(insertError.message),
+          err: normalizedError,
           error: "db_error",
           reason: "Failed to create attachment record",
           status: 500,
@@ -187,8 +214,11 @@ export const POST = withApiGuards({
         // Best-effort cleanup: remove metadata rows so the paths cannot authorize uploads.
         await cleanupInserted();
 
+        const normalizedError =
+          normalizeError(signedError) ??
+          new Error("Signed upload URL missing from Supabase response");
         return errorResponse({
-          err: signedError ? new Error(signedError.message) : undefined,
+          err: normalizedError,
           error: "internal",
           reason: "Failed to create signed upload URLs",
           status: 500,

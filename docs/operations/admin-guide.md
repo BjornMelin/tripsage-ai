@@ -5,7 +5,7 @@ Admin surfaces are implemented in Next.js route handlers and rely on Supabase SS
 ## Access requirements
 
 - Valid Supabase session cookie (SSR) with `app_metadata.is_admin: true`.
-- Environment variables populated for Supabase + Upstash (see `docs/operations/deployment-guide.md`).
+- Environment variables populated for Supabase + Upstash (see [Deployment Guide](deployment-guide.md#required-environment-variables)).
 - Admin routes are telemetry-instrumented; no server `console.*`.
 
 ## Admin endpoints
@@ -74,6 +74,88 @@ GET /api/dashboard?window=24h|7d|30d|all
       -b "sb-refresh-token=<refresh-token>" \
       "https://<app>/api/dashboard?window=24h"
     ```
+
+## Data migrations
+
+### Agent config normalization (id format)
+
+Do you need to run this migration?
+
+- **No** if your base schema migration ran on or after **2026-01-24**.
+- **Yes** if the base schema ran before **2026-01-24** or you manage migrations
+  manually. Run the pre-checks below; if both counts are 0, skip the migration.
+
+Prerequisite: `gen_random_uuid()` requires the Postgres `pgcrypto` extension.
+Supabase enables `pgcrypto` by default; self-managed Postgres must enable it
+before running the `UPDATE`s on `agent_config` and `agent_config_versions`.
+Run:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+```
+
+Tip: creating extensions typically requires superuser or database owner
+permissions (or a role granted `CREATE` on the database).
+
+```sql
+-- Pre-migration checks (skip if both counts are 0)
+SELECT COUNT(*) AS agent_config_invalid
+FROM agent_config
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+SELECT COUNT(*) AS agent_config_versions_invalid
+FROM agent_config_versions
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+BEGIN;
+
+UPDATE agent_config
+SET config = jsonb_set(
+  config,
+  '{id}',
+  to_jsonb(
+    concat(
+      'v',
+      extract(epoch from COALESCE(created_at, clock_timestamp()))::bigint,
+      '_',
+      substr(md5(COALESCE(version_id::text, gen_random_uuid()::text)), 1, 8)
+    )
+  ),
+  true
+)
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+UPDATE agent_config_versions
+SET config = jsonb_set(
+  config,
+  '{id}',
+  to_jsonb(
+    concat(
+      'v',
+      extract(epoch from COALESCE(created_at, clock_timestamp()))::bigint,
+      '_',
+      substr(md5(COALESCE(id::text, gen_random_uuid()::text)), 1, 8)
+    )
+  ),
+  true
+)
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+-- Post-migration checks (expect both counts to be 0)
+SELECT COUNT(*) AS agent_config_invalid
+FROM agent_config
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+SELECT COUNT(*) AS agent_config_versions_invalid
+FROM agent_config_versions
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+COMMIT;
+```
+
+If any statement errors, the transaction rolls back. Inspect the error output,
+fix any schema or data issues (missing extension, invalid columns, permissions),
+and retry the migration.
 
 ## Security & auditing
 

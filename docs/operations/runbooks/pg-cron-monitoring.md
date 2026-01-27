@@ -14,7 +14,7 @@ Purpose: alert when scheduled `pg_cron` jobs (especially memory retention) fail 
   "name": "[TripSage] pg_cron cleanup_memories_180d failures",
   "type": "log alert",
   "query": "service:postgres @message:\"pg_cron\" @message:\"cleanup_memories_180d\" @status:error",
-  "message": "pg_cron cleanup_memories_180d is failing. Investigate Supabase logs and rerun the job. See docs/operations/runbooks/pg-cron-monitoring.md",
+  "message": "pg_cron cleanup_memories_180d is failing. Investigate Supabase logs and rerun the job. See pg-cron-monitoring runbook.",
   "tags": ["service:postgres", "component:pg_cron", "env:prod"],
   "options": {
     "evaluation_delay": 300,

@@ -18,7 +18,7 @@
   messages: { id: string, role: 'system'|'user'|'assistant', parts?: { type: 'text', text: string }[] }[],
   model?: string,
   temperature?: number,
-  maxTokens?: number,
+  maxOutputTokens?: number,
   tools?: string[]
 }
 ```

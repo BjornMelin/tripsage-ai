@@ -36,6 +36,14 @@ Populate `.env.local` with at least:
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only; use the `sb_secret_…` key printed by `pnpm supabase:status`; never `NEXT_PUBLIC_*`)
 - (Recommended) `SUPABASE_JWT_SECRET` (use `JWT_SECRET` from `pnpm supabase:status` for local non-test flows like MFA)
 
+### WSL storage proxy workaround
+
+If `/storage/v1/*` returns `500` from `http://127.0.0.1:54321`, use the storage proxy:
+
+- `SUPABASE_STORAGE_URL=http://127.0.0.1:54331`
+- Keep `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321` for REST/Auth.
+- Re-run `pnpm supabase:bootstrap`
+
 ## Seed data (dev + e2e)
 
 TripSage keeps a deterministic seed script for local development and E2E testing:

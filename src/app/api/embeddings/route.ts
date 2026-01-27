@@ -28,6 +28,7 @@ import { toPgvector } from "@/lib/rag/pgvector";
 import { isValidInternalKey } from "@/lib/security/internal-key";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { TablesInsert } from "@/lib/supabase/database.types";
+import { upsertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 const MAX_INPUT_LENGTH = 8000;
@@ -88,12 +89,17 @@ async function persistAccommodationEmbedding(
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase
-    .from("accommodation_embeddings")
-    .upsert(payload, { onConflict: "id" });
+  const { error } = await upsertSingle(
+    supabase,
+    "accommodation_embeddings",
+    payload,
+    "id",
+    { validate: false }
+  );
 
   if (error) {
-    throw new Error(error.message);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(message);
   }
 }
 

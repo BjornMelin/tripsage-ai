@@ -23,6 +23,7 @@ import {
   zodErrorToFieldErrors,
 } from "@/lib/result";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getMany, getSingle, insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import { mapDbTripToUi, mapItineraryItemUpsertToDbInsert } from "@/lib/trips/mappers";
@@ -34,6 +35,9 @@ const tripIdSchema = z.coerce.number().int().positive();
  * Validates/normalizes activity search parameters inside a server-side telemetry span.
  *
  * Note: this action does not execute the activity search itself.
+ *
+ * @param params - Activity search parameters to validate and normalize.
+ * @returns A result containing validated parameters or validation errors.
  */
 // biome-ignore lint/suspicious/useAwait: withTelemetrySpan returns a Promise synchronously
 export async function submitActivitySearch(
@@ -68,8 +72,8 @@ export async function submitActivitySearch(
  * Retrieves trips with "planning" or "active" status from Supabase.
  * Results are mapped to the UI trip format.
  *
- * @returns A list of UI-formatted trips.
- * @throws Error if unauthorized or fetch fails.
+ * @returns A Result with the list of UI-formatted trips, or a ResultError if
+ * unauthorized or fetch fails.
  */
 export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>> {
   const supabase = await createServerSupabase();
@@ -84,19 +88,16 @@ export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>>
     });
   }
 
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("user_id", user.id)
-    .in("status", ["planning", "active"])
-    .order("created_at", { ascending: false });
+  const { data, error } = await getMany(
+    supabase,
+    "trips",
+    (qb) => qb.eq("user_id", user.id).in("status", ["planning", "active"]),
+    { ascending: false, orderBy: "created_at" }
+  );
 
   if (error) {
     logger.error("Failed to fetch trips", {
-      data,
-      details: error.details,
       error,
-      message: error.message,
     });
     return err({
       error: "internal",
@@ -126,7 +127,10 @@ export async function getPlanningTrips(): Promise<Result<UiTrip[], ResultError>>
  *
  * @param tripId - The ID of the trip to add the activity to.
  * @param activityData - The activity details including title, price, etc.
- * @throws Error if unauthorized, trip not found, or validation fails.
+ * @returns A Result with `{ success: true }` on success, or a ResultError
+ * with one of: "unauthorized" (not authenticated), "forbidden" (trip not
+ * found or access denied), "invalid_request" (validation failure with
+ * fieldErrors), or "internal" (database insert error).
  */
 export async function addActivityToTrip(
   tripId: number | string,
@@ -166,14 +170,15 @@ export async function addActivityToTrip(
   }
 
   // Validate trip ownership
-  const { error: tripError } = await supabase
-    .from("trips")
-    .select("id")
-    .eq("id", validatedTripId)
-    .eq("user_id", user.id)
-    .single();
+  // Skip schema validation since we only select `id` for an existence check.
+  const { data: tripData, error: tripError } = await getSingle(
+    supabase,
+    "trips",
+    (qb) => qb.eq("id", validatedTripId).eq("user_id", user.id),
+    { select: "id", validate: false }
+  );
 
-  if (tripError) {
+  if (tripError || !tripData) {
     return err({
       error: "forbidden",
       reason: "Trip not found or access denied",
@@ -209,15 +214,16 @@ export async function addActivityToTrip(
 
   const insertPayload = mapItineraryItemUpsertToDbInsert(validation.data, user.id);
 
-  const { error: insertError } = await supabase
-    .from("itinerary_items")
-    .insert(insertPayload);
+  const { error: insertError } = await insertSingle(
+    supabase,
+    "itinerary_items",
+    insertPayload
+  );
 
   if (insertError) {
     logger.error("Failed to add activity to trip", {
-      code: insertError.code,
-      details: insertError.details,
-      message: insertError.message,
+      code: (insertError as { code?: unknown } | null)?.code ?? null,
+      message: insertError instanceof Error ? insertError.message : "insert failed",
     });
     return err({
       error: "internal",
