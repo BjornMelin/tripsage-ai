@@ -49,6 +49,9 @@ function validateClientEnv(): ClientEnv {
     NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: normalizeOptionalEnvVar(
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY
     ),
+    NEXT_PUBLIC_OTEL_CLIENT_ENABLED: normalizeOptionalEnvVar(
+      process.env.NEXT_PUBLIC_OTEL_CLIENT_ENABLED
+    ),
     NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: normalizeOptionalEnvVar(
       process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT
     ),
@@ -79,7 +82,8 @@ function validateClientEnv(): ClientEnv {
         // Return partial object with defaults for development/build
         return {
           NEXT_PUBLIC_APP_NAME: "TripSage",
-          NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/v1/traces",
+          NEXT_PUBLIC_OTEL_CLIENT_ENABLED: undefined,
+          NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: undefined,
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
           NEXT_PUBLIC_SUPABASE_URL: "",
         };
