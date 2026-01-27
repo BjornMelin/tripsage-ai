@@ -79,9 +79,10 @@ GET /api/dashboard?window=24h|7d|30d|all
 
 ### Agent config normalization (id format)
 
-Handled automatically by the base schema migration as of 2026-01-24. If your
-environment applied the base schema before that date or you manage migrations
-manually, run once to normalize stored configs.
+Do you need to run this migration?
+- **No** if your base schema migration ran on or after **2026-01-24**.
+- **Yes** if the base schema ran before **2026-01-24** or you manage migrations
+  manually. Run the pre-checks below; if both counts are 0, skip the migration.
 
 Prerequisite: `gen_random_uuid()` requires the Postgres `pgcrypto` extension.
 Supabase enables `pgcrypto` by default; self-managed Postgres must enable it
@@ -96,6 +97,15 @@ Tip: creating extensions typically requires superuser or database owner
 permissions (or a role granted `CREATE` on the database).
 
 ```sql
+-- Pre-migration checks (skip if both counts are 0)
+SELECT COUNT(*) AS agent_config_invalid
+FROM agent_config
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+SELECT COUNT(*) AS agent_config_versions_invalid
+FROM agent_config_versions
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
 BEGIN;
 
 UPDATE agent_config
@@ -130,8 +140,21 @@ SET config = jsonb_set(
 )
 WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
 
+-- Post-migration checks (expect both counts to be 0)
+SELECT COUNT(*) AS agent_config_invalid
+FROM agent_config
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
+SELECT COUNT(*) AS agent_config_versions_invalid
+FROM agent_config_versions
+WHERE (config->>'id') IS NULL OR NOT (config->>'id') ~ '^v\\d+_[a-f0-9]{8}$';
+
 COMMIT;
 ```
+
+If any statement errors, the transaction rolls back. Inspect the error output,
+fix any schema or data issues (missing extension, invalid columns, permissions),
+and retry the migration.
 
 ## Security & auditing
 

@@ -247,13 +247,22 @@ function TripSageMarkdownLink({
  *   the caret defaults to `"block"`; otherwise caret/controls use the provided props.
  * - `linkSafety` is disabled, and default remark/mermaid/shiki plugins are wired.
  *
- * `@param` props - Markdown rendering options including `content`, `mode`,
- * `isAnimating`, `caret`, `controls`, `rehypePlugins`, `remarkPlugins`, `remend`,
- * `mermaid`, and `securityProfile`.
+ * @param props - Markdown rendering options for Streamdown.
+ *   - props.content: Markdown string or ReactNode content to render.
+ *   - props.mode: Rendering mode (`"streaming"` or `"static"`).
+ *   - props.isAnimating: Whether streaming animation is active.
+ *   - props.caret: Optional caret style for streaming output.
+ *   - props.controls: Control configuration or `false` to disable controls.
+ *   - props.remarkPlugins: Remark plugins overriding the defaults.
+ *   - props.rehypePlugins: Rehype plugins overriding the defaults.
+ *   - props.remend: Remend transformer for Streamdown.
+ *   - props.mermaid: Mermaid renderer options.
+ *   - props.securityProfile: Plugin security profile (`"ai"` or `"trusted"`).
+ *   - props.components: Component overrides for Streamdown renderers.
  * @returns Rendered Markdown component with Streamdown rendering.
  */
-export const Markdown = memo(
-  ({
+export const Markdown = memo((props: MarkdownProps) => {
+  const {
     className,
     content,
     mode = "streaming",
@@ -266,46 +275,44 @@ export const Markdown = memo(
     rehypePlugins,
     securityProfile = "ai",
     components,
-    ...props
-  }: MarkdownProps) => {
-    const origin = getClientOrigin();
-    const resolvedCaret =
-      caret ?? (mode === "streaming" && isAnimating ? "block" : undefined);
+    ...rest
+  } = props;
+  const origin = getClientOrigin();
+  const resolvedCaret =
+    caret ?? (mode === "streaming" && isAnimating ? "block" : undefined);
 
-    // Disable controls while streaming animation is active to avoid interacting with
-    // partially-rendered content and to reduce visual churn.
-    const resolvedControls: ControlsConfig =
-      mode === "streaming" && isAnimating ? false : controls;
+  // Disable controls while streaming animation is active to avoid interacting with
+  // partially-rendered content and to reduce visual churn.
+  const resolvedControls: ControlsConfig =
+    mode === "streaming" && isAnimating ? false : controls;
 
-    const resolvedRehypePlugins = useMemo<PluggableList>(() => {
-      return (
-        rehypePlugins ??
-        CreateDefaultRehypePlugins({ origin, profile: securityProfile })
-      );
-    }, [origin, rehypePlugins, securityProfile]);
-
+  const resolvedRehypePlugins = useMemo<PluggableList>(() => {
     return (
-      <Streamdown
-        className={cn("max-w-none", className)}
-        caret={resolvedCaret}
-        components={{ ...(components ?? {}), a: TripSageMarkdownLink }}
-        controls={resolvedControls}
-        isAnimating={isAnimating}
-        linkSafety={{ enabled: false }}
-        mermaid={mermaid as MermaidOptions}
-        mode={mode}
-        plugins={{ code: codePlugin, math: mathPlugin, mermaid: mermaidPlugin }}
-        parseIncompleteMarkdown={mode === "streaming"}
-        rehypePlugins={resolvedRehypePlugins}
-        remarkPlugins={remarkPlugins}
-        remend={remend}
-        shikiTheme={DefaultShikiTheme}
-        {...props}
-      >
-        {content}
-      </Streamdown>
+      rehypePlugins ?? CreateDefaultRehypePlugins({ origin, profile: securityProfile })
     );
-  }
-);
+  }, [origin, rehypePlugins, securityProfile]);
+
+  return (
+    <Streamdown
+      className={cn("max-w-none", className)}
+      caret={resolvedCaret}
+      components={{ ...(components ?? {}), a: TripSageMarkdownLink }}
+      controls={resolvedControls}
+      isAnimating={isAnimating}
+      linkSafety={{ enabled: false }}
+      mermaid={mermaid as MermaidOptions}
+      mode={mode}
+      plugins={{ code: codePlugin, math: mathPlugin, mermaid: mermaidPlugin }}
+      parseIncompleteMarkdown={mode === "streaming"}
+      rehypePlugins={resolvedRehypePlugins}
+      remarkPlugins={remarkPlugins}
+      remend={remend}
+      shikiTheme={DefaultShikiTheme}
+      {...rest}
+    >
+      {content}
+    </Streamdown>
+  );
+});
 
 Markdown.displayName = "Markdown";
