@@ -36,96 +36,97 @@
   --color-highlight-foreground: hsl(var(--highlight-foreground));
 }
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 215 16% 38%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+  --border: 0 0% 89%;
+  --input: 0 0% 89%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+  /* Monochrome brand base (buttons, key CTAs) */
+  --primary: 222 47% 11%;
+  --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 222 47% 11%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 0 0% 96%;
+  --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
 
-    --success: 142.1 76.2% 36.3%;
-    --success-foreground: 210 40% 98%;
+  --success: 142 71% 36%;
+  --success-foreground: 210 40% 98%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 222.2 47.4% 11.2%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 222 47% 11%;
 
-    --info: 221.2 83.2% 53.3%;
-    --info-foreground: 210 40% 98%;
+  /* Single accent hue (sparingly used for emphasis) */
+  --info: 221 83% 53%;
+  --info-foreground: 210 40% 98%;
 
-    --highlight: 262 83% 58%;
-    --highlight-foreground: 210 40% 98%;
+  --highlight: 221 83% 53%;
+  --highlight-foreground: 210 40% 98%;
 
-    --ring: 222.2 84% 4.9%;
-    --overlay: 0 0% 0%;
+  --ring: 222 47% 11%;
+  --overlay: 0 0% 0%;
 
-    --radius: 0.5rem;
-  }
+  --radius: 0.75rem;
+}
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+.dark {
+  --background: 222 47% 4%;
+  --foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+  --muted: 223 28% 12%;
+  --muted-foreground: 215 20% 70%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+  --popover: 222 47% 6%;
+  --popover-foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+  --card: 222 47% 6%;
+  --card-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+  --border: 223 24% 16%;
+  --input: 223 24% 16%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+  /* Invert primary for dark mode for crisp monochrome CTAs */
+  --primary: 210 40% 98%;
+  --primary-foreground: 222 47% 11%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+  --secondary: 223 28% 12%;
+  --secondary-foreground: 210 40% 98%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+  --accent: 223 28% 12%;
+  --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 40% 98%;
 
-    --success: 142.1 70.6% 45.3%;
-    --success-foreground: 210 40% 98%;
+  --success: 142 71% 45%;
+  --success-foreground: 222 47% 11%;
 
-    --warning: 48 96% 53%;
-    --warning-foreground: 222.2 47.4% 11.2%;
+  --warning: 48 96% 53%;
+  --warning-foreground: 222 47% 11%;
 
-    --info: 213 94% 68%;
-    --info-foreground: 210 40% 98%;
+  --info: 221 83% 66%;
+  --info-foreground: 222 47% 11%;
 
-    --highlight: 268 83% 70%;
-    --highlight-foreground: 210 40% 98%;
+  --highlight: 221 83% 66%;
+  --highlight-foreground: 222 47% 11%;
 
-    --ring: 212.7 26.8% 83.9%;
-    --overlay: 0 0% 0%;
-  }
+  --ring: 210 40% 98%;
+  --overlay: 0 0% 0%;
 }
 
 @layer base {

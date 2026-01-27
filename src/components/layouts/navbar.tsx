@@ -32,11 +32,11 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-50 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="font-bold text-xl flex items-center">
-            TripSage<span className="text-primary ml-1">AI</span>
+            TripSage<span className="text-highlight ml-1">AI</span>
           </Link>
 
           {/* Desktop navigation */}
@@ -91,7 +91,7 @@ export function Navbar() {
       {/* Mobile navigation */}
       {mobileMenuOpen && (
         <nav id="mobile-navigation" className="md:hidden py-4 border-t">
-          <div className="container flex flex-col space-y-3">
+          <div className="mx-auto flex w-full max-w-6xl flex-col space-y-3 px-4 sm:px-6 lg:px-8">
             {NavItems.map((item) => (
               <Link
                 key={item.href}

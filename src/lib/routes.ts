@@ -24,6 +24,7 @@ export const ROUTES = {
     team: "/dashboard/team",
     trips: "/dashboard/trips",
   },
+  faq: "/faq",
 
   // Root
   home: "/",
