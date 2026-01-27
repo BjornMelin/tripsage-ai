@@ -4,6 +4,7 @@
 
 "use client";
 
+import "katex/dist/katex.min.css";
 import { code as codePlugin } from "@streamdown/code";
 import { math as mathPlugin } from "@streamdown/math";
 import { mermaid as mermaidPlugin } from "@streamdown/mermaid";
@@ -239,7 +240,7 @@ function TripSageMarkdownLink({
  * Markdown renders Streamdown content with streaming-friendly defaults and hardened
  * security profiles.
  *
- * `@remarks`
+ * @remarks
  * - `securityProfile` controls which rehype plugins are created in
  *   `createDefaultRehypePlugins` and uses `getClientOrigin()` for allowlists.
  * - `rehypePlugins` overrides the default rehype pipeline entirely.
