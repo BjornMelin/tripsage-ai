@@ -248,7 +248,7 @@ function TripSageMarkdownLink({
  * - `linkSafety` is disabled, and default remark/mermaid/shiki plugins are wired.
  *
  * @param props - Markdown rendering options for Streamdown.
- *   - props.content: Markdown string or ReactNode content to render.
+ *   - props.content: Markdown string content to render.
  *   - props.mode: Rendering mode (`"streaming"` or `"static"`).
  *   - props.isAnimating: Whether streaming animation is active.
  *   - props.caret: Optional caret style for streaming output.
@@ -257,7 +257,7 @@ function TripSageMarkdownLink({
  *   - props.rehypePlugins: Rehype plugins overriding the defaults.
  *   - props.remend: Remend transformer for Streamdown.
  *   - props.mermaid: Mermaid renderer options.
- *   - props.securityProfile: Plugin security profile (`"ai"` or `"trusted"`).
+ *   - props.securityProfile: Plugin security profile (`"ai"`, `"trusted"`, or `"user"`).
  *   - props.components: Component overrides for Streamdown renderers.
  * @returns Rendered Markdown component with Streamdown rendering.
  */

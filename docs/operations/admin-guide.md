@@ -80,6 +80,7 @@ GET /api/dashboard?window=24h|7d|30d|all
 ### Agent config normalization (id format)
 
 Do you need to run this migration?
+
 - **No** if your base schema migration ran on or after **2026-01-24**.
 - **Yes** if the base schema ran before **2026-01-24** or you manage migrations
   manually. Run the pre-checks below; if both counts are 0, skip the migration.
@@ -115,7 +116,7 @@ SET config = jsonb_set(
   to_jsonb(
     concat(
       'v',
-      extract(epoch from COALESCE(created_at, now()))::bigint,
+      extract(epoch from COALESCE(created_at, clock_timestamp()))::bigint,
       '_',
       substr(md5(COALESCE(version_id::text, gen_random_uuid()::text)), 1, 8)
     )
@@ -131,7 +132,7 @@ SET config = jsonb_set(
   to_jsonb(
     concat(
       'v',
-      extract(epoch from COALESCE(created_at, now()))::bigint,
+      extract(epoch from COALESCE(created_at, clock_timestamp()))::bigint,
       '_',
       substr(md5(COALESCE(id::text, gen_random_uuid()::text)), 1, 8)
     )
