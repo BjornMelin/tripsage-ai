@@ -6,6 +6,10 @@
 
 import { useEffect } from "react";
 
+const ENABLE_CLIENT_TELEMETRY =
+  process.env.NEXT_PUBLIC_OTEL_CLIENT_ENABLED === "true" &&
+  Boolean(process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT);
+
 /**
  * TelemetryProvider component.
  *
@@ -18,16 +22,17 @@ import { useEffect } from "react";
  */
 export function TelemetryProvider(): null {
   useEffect(() => {
+    if (!ENABLE_CLIENT_TELEMETRY) {
+      return;
+    }
+
     // Lazy-load telemetry to keep OTEL libs out of the critical client bundle.
     import("@/lib/telemetry/client")
       .then(({ initTelemetry }) => {
         initTelemetry();
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         // Telemetry is optional on the client; swallow errors to avoid impacting UX.
-        if (process.env.NODE_ENV === "development") {
-          console.error("Telemetry initialization failed:", error);
-        }
       });
   }, []);
 

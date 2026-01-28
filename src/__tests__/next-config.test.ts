@@ -25,13 +25,6 @@ describe("next.config.ts", () => {
         expect.objectContaining({ key: "Permissions-Policy" }),
       ])
     );
-
-    expect(rules).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ source: "/_next/static/:path*" }),
-        expect.objectContaining({ source: "/static/:path*" }),
-      ])
-    );
   });
 
   it("keeps image content security policy enabled", () => {

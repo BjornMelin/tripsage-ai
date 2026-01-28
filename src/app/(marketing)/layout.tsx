@@ -8,9 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function NavbarFallback() {
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 z-50 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <nav
-        className="container flex h-16 items-center justify-between"
+        className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8"
         aria-busy="true"
         aria-label="Loading navigation"
       >
@@ -40,6 +40,8 @@ function NavbarFallback() {
  * Marketing route-group layout that renders the public Navbar (via Suspense) and page content.
  *
  * Uses a skeleton fallback to preserve navbar layout while the Navbar loads.
+ *
+ * @param children - React content to render as the layout body.
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (

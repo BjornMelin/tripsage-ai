@@ -10,7 +10,7 @@
 import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
-import { configDefaults, defineConfig } from "vitest/config";
+import { configDefaults, coverageConfigDefaults, defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
 
@@ -30,21 +30,24 @@ const maxForks = isCi
   : Math.max(1, Math.min(4, Math.floor(cpuCount / 4)));
 
 export default defineConfig({
-  plugins: [react()],
   cacheDir: ".vitest-cache",
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@ai": path.resolve(__dirname, "./src/ai"),
       "@domain": path.resolve(__dirname, "./src/domain"),
       "@schemas": path.resolve(__dirname, "./src/domain/schemas"),
+      "botid/server": path.resolve(__dirname, "./src/test/mocks/botid-server.ts"),
       "katex/dist/katex.min.css": path.resolve(
         __dirname,
         "./src/test/mocks/empty-css.ts"
       ),
       "rehype-harden": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
-      "rehype-harden/dist/index.js": path.resolve(__dirname, "./src/test/mocks/rehype-harden.ts"),
-      "botid/server": path.resolve(__dirname, "./src/test/mocks/botid-server.ts"),
+      "rehype-harden/dist/index.js": path.resolve(
+        __dirname,
+        "./src/test/mocks/rehype-harden.ts"
+      ),
       "server-only": path.resolve(__dirname, "./src/test/mocks/server-only.ts"),
     },
   },
@@ -55,26 +58,29 @@ export default defineConfig({
     // Core settings
     bail: isCi ? 5 : 0,
     clearMocks: true,
-    restoreMocks: true,
-    unstubEnvs: true,
-    globals: true,
 
-    // CRITICAL: Extend defaults, do not replace
-    exclude: [...configDefaults.exclude, "**/e2e/**", "**/*.e2e.*"],
+    coverage: {
+      ...coverageConfigDefaults,
+      exclude: [
+        ...coverageConfigDefaults.exclude,
+        "**/dist/**",
+        "**/e2e/**",
+        "**/*.config.*",
+      ],
+      provider: "v8",
+      reporter: ["text", "json", "lcov"],
+      thresholds: {
+        // Global baseline thresholds (raise incrementally).
+        // See docs/development/testing/coverage-milestones.md for current measurements and raise plan.
+        branches: 40,
+        functions: 55,
+        lines: 50,
+        statements: 50,
+      },
+    },
 
     // Disable CSS processing globally
     css: false,
-
-    // Timeouts (balanced for speed and reliability)
-    testTimeout: 5000,
-    hookTimeout: 3000,
-    teardownTimeout: 2000,
-
-    // Prefer forks for compatibility and reliable shutdown across Node + jsdom.
-    pool: "forks",
-    // Worker limit is pool-agnostic; keep this conservative for Node projects.
-    // JSDOM forks are memory-heavy, so that project overrides the worker cap.
-    maxWorkers: maxThreads,
 
     // Fixed dependency optimization
     deps: {
@@ -95,22 +101,17 @@ export default defineConfig({
       },
     },
 
-    // Reporters (blob only for sharding)
-    reporters: isCi ? ["dot", "github-actions"] : ["default"],
+    // CRITICAL: Extend defaults, do not replace
+    exclude: [...configDefaults.exclude, "**/e2e/**", "**/*.e2e.*"],
+    globals: true,
+    hookTimeout: 3000,
+    // Worker limit is pool-agnostic; keep this conservative for Node projects.
+    // JSDOM forks are memory-heavy, so that project overrides the worker cap.
+    maxWorkers: maxThreads,
+    passWithNoTests: false,
 
-    coverage: {
-      exclude: ["**/dist/**", "**/e2e/**", "**/*.config.*"],
-      provider: "v8",
-      reporter: ["text", "json", "lcov"],
-      thresholds: {
-        // Global baseline thresholds (raise incrementally).
-        // See docs/development/testing/coverage-milestones.md for current measurements and raise plan.
-        branches: 40,
-        functions: 55,
-        lines: 50,
-        statements: 50,
-      },
-    },
+    // Prefer forks for compatibility and reliable shutdown across Node + jsdom.
+    pool: "forks",
 
     // Projects: schemas, integration, api, component, unit
     projects: [
@@ -185,12 +186,12 @@ export default defineConfig({
             "src/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/**/*.dom.{test,spec}.?(c|m)[jt]s?(x)",
           ],
-          name: "component",
           // Forked workers are memory-heavy; keep this capped regardless of CPU count.
           maxWorkers: maxForks,
-          setupFiles: ["./src/test/setup-jsdom.ts"],
+          name: "component",
           pool: "forks",
           sequence: { groupOrder: 1 },
+          setupFiles: ["./src/test/setup-jsdom.ts"],
         },
       },
       {
@@ -219,6 +220,10 @@ export default defineConfig({
       },
     ],
 
+    // Reporters
+    reporters: isCi ? ["dot", "github-actions"] : ["default"],
+    restoreMocks: true,
+
     server: {
       deps: {
         // Inline Streamdown so its KaTeX CSS dynamic import is handled by Vitest/Vite
@@ -228,6 +233,10 @@ export default defineConfig({
     },
 
     setupFiles: ["./src/test/setup-node.ts"],
-    passWithNoTests: false,
+    teardownTimeout: 2000,
+
+    // Timeouts (balanced for speed and reliability)
+    testTimeout: 5000,
+    unstubEnvs: true,
   },
 });

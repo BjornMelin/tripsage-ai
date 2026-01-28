@@ -77,25 +77,14 @@ const nextConfig: NextConfig = {
       ...(isProd ? [HSTS_HEADER] : []),
     ];
 
-    return [
+    const headers = [
       {
         headers: securityHeaders,
         source: "/:path*",
       },
-      // Cache static assets for better performance
-      {
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
-        source: "/_next/static/:path*",
-      },
-      {
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
-        source: "/static/:path*",
-      },
     ];
+
+    return headers;
   },
 
   // Image optimization with modern formats

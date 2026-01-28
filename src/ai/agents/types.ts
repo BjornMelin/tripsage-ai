@@ -252,7 +252,8 @@ export interface AgentExecutionMeta {
 /**
  * Tool lifecycle hook context for AI SDK v6.
  *
- * These hooks are passed to streamText/streamObject at call time,
+ * These hooks are passed to streamText (with Output.object for structured output) at
+ * call time,
  * not to ToolLoopAgent creation. They enable observing tool input
  * construction during streaming.
  *

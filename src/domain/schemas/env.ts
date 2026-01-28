@@ -341,6 +341,7 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_BASE_URL: z.url().optional(),
   NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
   NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_OTEL_CLIENT_ENABLED: z.enum(["true", "false"]).optional(),
   NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
   NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES: z.string().optional(),

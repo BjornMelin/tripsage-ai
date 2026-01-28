@@ -9,13 +9,7 @@ import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
 import { Ratelimit } from "@upstash/ratelimit";
-import type {
-  Agent,
-  FinishReason,
-  LanguageModelResponseMetadata,
-  LanguageModelUsage,
-  ToolSet,
-} from "ai";
+import type { Agent, ToolSet } from "ai";
 import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -768,36 +762,14 @@ export function withApiGuards<SchemaType extends z.ZodType>(
 /**
  * Represents the output specification for an AI SDK Agent.
  *
- * The `ai` package exports `Output` as a runtime namespace (factory functions)
- * rather than a directly importable type. We therefore use a structural type
- * that matches the SDK's internal `Output<OUTPUT, PARTIAL, ELEMENT>` interface.
+ * The AI SDK exports `Output` as a runtime namespace with a nested type. Use the
+ * namespace-qualified type to match the SDK's internal `Output` interface.
  */
-type AgentOutput<OutputType = unknown, PartialType = unknown, ElementType = unknown> = {
-  name: string;
-  responseFormat: PromiseLike<
-    { type: "text" } | { type: "json"; schema?: unknown } | undefined
-  >;
-  parseCompleteOutput: (
-    options: { text: string },
-    context: {
-      response: LanguageModelResponseMetadata;
-      usage: LanguageModelUsage;
-      finishReason: FinishReason;
-    }
-  ) => Promise<OutputType>;
-  parsePartialOutput: (options: { text: string }) => Promise<
-    | {
-        partial: PartialType;
-      }
-    | undefined
-  >;
-  createElementStreamTransform: () =>
-    | TransformStream<
-        { part: unknown; partialOutput: PartialType | undefined },
-        ElementType
-      >
-    | undefined;
-};
+type AgentOutput<
+  OutputType = unknown,
+  PartialType = unknown,
+  ElementType = unknown,
+> = import("ai").Output.Output<OutputType, PartialType, ElementType>;
 
 type AgentRouteFactoryResult<
   CallOptions = never,

@@ -47,6 +47,7 @@ QUICK-START*.md
 CONTEXT-OPTIMIZATION*.md
 COMPREHENSIVE-REVIEW*.md
 AI-REVIEW*.md
+artifacts/
 
 # Logs
 dev-debug.log
@@ -273,3 +274,4 @@ opensrc/
 
 # Firecrawl outputs
 .firecrawl
+.vercel

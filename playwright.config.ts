@@ -43,22 +43,23 @@ export default defineConfig({
     env: {
       ...process.env,
       E2E: process.env.E2E ?? "1",
-      PORT: `${e2ePort}`,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? baseURL,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? baseURL,
+      NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ?? baseURL,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? baseURL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY:
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "anon-test-key",
       // Allow dev server to boot in local/e2e without real Supabase credentials.
       NEXT_PUBLIC_SUPABASE_URL:
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54329",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY:
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "anon-test-key",
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? baseURL,
-      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? baseURL,
-      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? baseURL,
-      NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ?? baseURL,
       NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED ?? "1",
+      PORT: `${e2ePort}`,
     },
     reuseExistingServer: false,
-    url: baseURL,
     timeout: 120_000,
+    url: baseURL,
   },
   // Workers accepts number, percentage string ("50%"), or undefined for auto.
-  workers: typeof workers === "string" && workers.includes("%") ? workers : Number(workers),
+  workers:
+    typeof workers === "string" && workers.includes("%") ? workers : Number(workers),
 });
