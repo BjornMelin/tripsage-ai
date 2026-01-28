@@ -29,7 +29,6 @@ describe("next.config.ts", () => {
     expect(rules).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ source: "/_next/static/:path*" }),
-        expect.objectContaining({ source: "/static/:path*" }),
       ])
     );
   });

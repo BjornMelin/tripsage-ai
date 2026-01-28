@@ -94,10 +94,6 @@ const nextConfig: NextConfig = {
       {
         headers: [{ key: "Cache-Control", value: staticCacheControl }],
         source: "/_next/static/:path*",
-      },
-      {
-        headers: [{ key: "Cache-Control", value: staticCacheControl }],
-        source: "/static/:path*",
       }
     );
 

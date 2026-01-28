@@ -18,6 +18,7 @@ import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
+/** Metadata for the marketing FAQ page. */
 export const metadata: Metadata = {
   description:
     "Answers to common questions about TripSage AI: how planning works, budgets, editing, sharing, and more.",
@@ -63,6 +64,7 @@ const FAQS = [
   },
 ] as const;
 
+/** Renders the marketing FAQ page content. */
 export default function FaqPage() {
   return (
     <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1">

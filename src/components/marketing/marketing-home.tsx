@@ -148,6 +148,14 @@ const TESTIMONIALS = [
   },
 ] as const;
 
+const TESTIMONIAL_TITLE_REGEX = /^[^.!?]+[.!?]/;
+
+function GetTestimonialTitle(body: string) {
+  const match = body.match(TESTIMONIAL_TITLE_REGEX);
+  return match ? match[0].trim() : body;
+}
+
+/** Renders the marketing homepage sections and CTA. */
 export function MarketingHome() {
   return (
     <>
@@ -330,12 +338,14 @@ export function MarketingHome() {
                     <li key={mark}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="bg-background/60 text-muted-foreground"
-                          >
-                            {mark}
-                          </Badge>
+                          <span className="inline-flex">
+                            <Badge
+                              variant="outline"
+                              className="bg-background/60 text-muted-foreground"
+                            >
+                              {mark}
+                            </Badge>
+                          </span>
                         </TooltipTrigger>
                         <TooltipContent sideOffset={8}>
                           {TRUST_MARK_DESCRIPTIONS[mark]}
@@ -510,7 +520,7 @@ export function MarketingHome() {
                             {label}
                           </Badge>
                           <CardTitle className="text-lg leading-snug">
-                            “{body.split(".")[0]}.”
+                            “{GetTestimonialTitle(body)}”
                           </CardTitle>
                         </div>
                         <Avatar className="size-10 border bg-background shadow-xs">

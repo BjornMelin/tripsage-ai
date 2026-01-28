@@ -40,6 +40,8 @@ function NavbarFallback() {
  * Marketing route-group layout that renders the public Navbar (via Suspense) and page content.
  *
  * Uses a skeleton fallback to preserve navbar layout while the Navbar loads.
+ *
+ * @param children - React content to render as the layout body.
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
