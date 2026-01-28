@@ -475,7 +475,7 @@
       }
     },
     {
-      "includes": ["playwright.config.ts"],
+      "includes": ["playwright.config.ts", "playwright.prod.config.ts"],
       "linter": {
         "rules": {
           "style": {

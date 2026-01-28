@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * Variants for badge components.
  */
 const BadgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium tracking-tight text-nowrap select-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium tracking-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:size-3.5 [&_svg]:shrink-0",
   {
     defaultVariants: {
       variant: "default",
@@ -40,7 +40,10 @@ const BadgeVariants = cva(
  */
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof BadgeVariants> {}
+    VariantProps<typeof BadgeVariants> {
+  isDecorative?: boolean;
+  truncate?: boolean;
+}
 
 /**
  * Badge component for displaying content in a badge-like format.
@@ -49,11 +52,16 @@ export interface BadgeProps
  * @param variant - Variant of the badge.
  * @returns A styled div element with badge appearance.
  */
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, isDecorative, truncate, variant, ...props }: BadgeProps) {
   return (
     <div
       data-slot="badge"
-      className={cn(BadgeVariants({ variant }), className)}
+      className={cn(
+        BadgeVariants({ variant }),
+        isDecorative && "select-none",
+        truncate && "truncate",
+        className
+      )}
       {...props}
     />
   );
