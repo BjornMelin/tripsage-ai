@@ -48,8 +48,11 @@ export interface BadgeProps
 /**
  * Badge component for displaying content in a badge-like format.
  *
- * @param className - Optional extra classes.
- * @param variant - Variant of the badge.
+ * @param className - Optional extra classes for the badge.
+ * @param isDecorative - When true, marks the badge as decorative and disables text selection.
+ * @param truncate - When true, truncates overflowing text with an ellipsis.
+ * @param variant - Visual variant of the badge.
+ * @param props - Additional div attributes passed to the root element.
  * @returns A styled div element with badge appearance.
  */
 function Badge({ className, isDecorative, truncate, variant, ...props }: BadgeProps) {

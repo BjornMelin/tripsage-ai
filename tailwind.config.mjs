@@ -12,7 +12,6 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "arial"],
         mono: [
           "var(--font-geist-mono)",
           "ui-monospace",
@@ -20,6 +19,7 @@ export default {
           "Consolas",
           "monospace",
         ],
+        sans: ["var(--font-geist-sans)", "system-ui", "arial"],
       },
     },
   },
