@@ -68,8 +68,6 @@ function Badge({ className, isDecorative, truncate, variant, ...props }: BadgePr
 }
 
 /**
- * Export the Badge component and variants.
- *
- * @returns An object containing the Badge component and variants.
+ * Badge component and variant styles for consistent badge rendering.
  */
 export { Badge, BadgeVariants };
