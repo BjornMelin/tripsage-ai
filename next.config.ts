@@ -84,17 +84,6 @@ const nextConfig: NextConfig = {
       },
     ];
 
-    const staticCacheControl = isProd
-      ? "public, max-age=31536000, immutable"
-      : "no-store, must-revalidate";
-
-    // Cache static assets for better performance.
-    // In development/test, avoid long-lived caching to prevent stale assets in the browser.
-    headers.push({
-      headers: [{ key: "Cache-Control", value: staticCacheControl }],
-      source: "/_next/static/:path*",
-    });
-
     return headers;
   },
 

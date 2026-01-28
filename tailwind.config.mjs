@@ -19,7 +19,7 @@ export default {
           "Consolas",
           "monospace",
         ],
-        sans: ["var(--font-geist-sans)", "system-ui", "arial"],
+        sans: ["var(--font-geist-sans)", "system-ui", "arial", "sans-serif"],
       },
     },
   },

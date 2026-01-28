@@ -10,7 +10,7 @@
 import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
-import { configDefaults, defineConfig } from "vitest/config";
+import { configDefaults, coverageConfigDefaults, defineConfig } from "vitest/config";
 
 const isCi = process.env.CI === "true" || process.env.CI === "1";
 
@@ -60,7 +60,13 @@ export default defineConfig({
     clearMocks: true,
 
     coverage: {
-      exclude: ["**/dist/**", "**/e2e/**", "**/*.config.*"],
+      ...coverageConfigDefaults,
+      exclude: [
+        ...coverageConfigDefaults.exclude,
+        "**/dist/**",
+        "**/e2e/**",
+        "**/*.config.*",
+      ],
       provider: "v8",
       reporter: ["text", "json", "lcov"],
       thresholds: {
@@ -214,7 +220,7 @@ export default defineConfig({
       },
     ],
 
-    // Reporters (blob only for sharding)
+    // Reporters
     reporters: isCi ? ["dot", "github-actions"] : ["default"],
     restoreMocks: true,
 
