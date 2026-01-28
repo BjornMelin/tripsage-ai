@@ -5,13 +5,22 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/** Root tabs container backed by Radix UI. */
 export const Tabs = TabsPrimitive.Root;
 
+/** Props for the tabs list container. */
 export interface TabsListProps
   extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> {
   ref?: React.Ref<React.ComponentRef<typeof TabsPrimitive.List>>;
 }
-export function TabsList({ className, ref, ...props }: TabsListProps) {
+/**
+ * Renders the tabs list container.
+ *
+ * @param props - Props forwarded to the Radix tabs list.
+ * @returns The tabs list element.
+ */
+export function TabsList(props: TabsListProps) {
+  const { className, ref, ...rest } = props;
   return (
     <TabsPrimitive.List
       ref={ref}
@@ -19,17 +28,25 @@ export function TabsList({ className, ref, ...props }: TabsListProps) {
         "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
         className
       )}
-      {...props}
+      {...rest}
     />
   );
 }
 TabsList.displayName = TabsPrimitive.List.displayName;
 
+/** Props for a tabs trigger button. */
 export interface TabsTriggerProps
   extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> {
   ref?: React.Ref<React.ComponentRef<typeof TabsPrimitive.Trigger>>;
 }
-export function TabsTrigger({ className, ref, ...props }: TabsTriggerProps) {
+/**
+ * Renders a tabs trigger button.
+ *
+ * @param props - Props forwarded to the Radix tabs trigger.
+ * @returns The tabs trigger element.
+ */
+export function TabsTrigger(props: TabsTriggerProps) {
+  const { className, ref, ...rest } = props;
   return (
     <TabsPrimitive.Trigger
       ref={ref}
@@ -37,17 +54,25 @@ export function TabsTrigger({ className, ref, ...props }: TabsTriggerProps) {
         "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-[color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
         className
       )}
-      {...props}
+      {...rest}
     />
   );
 }
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
+/** Props for tabs content panels. */
 export interface TabsContentProps
   extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> {
   ref?: React.Ref<React.ComponentRef<typeof TabsPrimitive.Content>>;
 }
-export function TabsContent({ className, ref, ...props }: TabsContentProps) {
+/**
+ * Renders a tabs content panel.
+ *
+ * @param props - Props forwarded to the Radix tabs content.
+ * @returns The tabs content element.
+ */
+export function TabsContent(props: TabsContentProps) {
+  const { className, ref, ...rest } = props;
   return (
     <TabsPrimitive.Content
       ref={ref}
@@ -55,7 +80,7 @@ export function TabsContent({ className, ref, ...props }: TabsContentProps) {
         "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className
       )}
-      {...props}
+      {...rest}
     />
   );
 }
