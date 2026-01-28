@@ -1,3 +1,16 @@
+## [1.30.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.30.0...v1.30.1) (2026-01-28)
+
+### Bug Fixes
+
+* **ai:** align agent mocks and usage schema ([9ecd443](https://github.com/BjornMelin/tripsage-ai/commit/9ecd4436d168fdc9ba555a0842bf898ed815bd2d))
+* **config:** address pr review feedback ([5f05199](https://github.com/BjornMelin/tripsage-ai/commit/5f05199b47554c95a289b1de5e8b0426167e2e37))
+* **config:** resolve biome diagnostics ([d352f40](https://github.com/BjornMelin/tripsage-ai/commit/d352f40d1b551643ffcb0ed1fe36d28ca1224b79))
+* **fonts:** align next/font with Tailwind ([b30f814](https://github.com/BjornMelin/tripsage-ai/commit/b30f814424d70eb2ef7f55005de23571c69eddd0))
+* **marketing:** address PR review feedback ([0dd6d59](https://github.com/BjornMelin/tripsage-ai/commit/0dd6d590e826df35c66999099f6b1a6261ec1cac))
+* **telemetry:** make client OTEL opt-in ([693eb03](https://github.com/BjornMelin/tripsage-ai/commit/693eb03a456b0dba1d5be8aebd36ec7796be212b))
+* **ui:** add docs and align ai output types ([ba0f6b3](https://github.com/BjornMelin/tripsage-ai/commit/ba0f6b3ba8f88d7069c300cf43e5a651fedd1c59))
+* **ui:** address review feedback ([9c29936](https://github.com/BjornMelin/tripsage-ai/commit/9c299367a50d8ce90bb33265ed1035a2a95b4f53))
+
 ## [1.30.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.29.0...v1.30.0) (2026-01-27)
 
 ### Features
