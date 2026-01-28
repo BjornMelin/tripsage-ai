@@ -28,7 +28,7 @@ vi.mock("ai", () => {
   };
 
   return {
-    convertToModelMessages: vi.fn().mockReturnValue([]),
+    convertToModelMessages: vi.fn().mockResolvedValue([]),
     createAgentUIStreamResponse: vi.fn(),
     generateText: vi.fn(),
     InvalidToolInputError: { isInstance: () => false },

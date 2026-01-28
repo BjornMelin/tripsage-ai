@@ -8,7 +8,6 @@ import { z } from "zod";
 // ===== CORE SCHEMAS =====
 
 export const languageModelUsageSchema = z.looseObject({
-  cachedInputTokens: z.number().int().nonnegative().optional(),
   inputTokenDetails: z
     .looseObject({
       cacheReadTokens: z.number().int().nonnegative().optional(),
@@ -25,7 +24,6 @@ export const languageModelUsageSchema = z.looseObject({
     .optional(),
   outputTokens: z.number().int().nonnegative().optional(),
   raw: z.unknown().optional(),
-  reasoningTokens: z.number().int().nonnegative().optional(),
   totalTokens: z.number().int().nonnegative().optional(),
 });
 
