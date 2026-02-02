@@ -11,23 +11,24 @@ import { QSTASH_RETRY_CONFIG } from "./config";
 
 // ===== TYPES =====
 
-// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+// biome-ignore lint/style/useNamingConvention: QStashPublishJsonOptions mirrors @upstash/qstash API name. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
 type QStashPublishJsonOptions = Parameters<Client["publishJSON"]>[0];
-// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+// biome-ignore lint/style/useNamingConvention: QStashPublishJsonResult mirrors @upstash/qstash API name. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
 type QStashPublishJsonResult = Awaited<ReturnType<Client["publishJSON"]>>;
 
 /**
  * Flow control configuration for rate-limiting QStash jobs by key.
  */
+// FlowControlOptions mirrors @upstash/qstash flowControl naming. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
 export type FlowControlOptions = NonNullable<QStashPublishJsonOptions["flowControl"]>;
 
 /**
  * QStash client interface for dependency injection.
  * Matches the subset of Client methods we use.
  */
-// biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
+// biome-ignore lint/style/useNamingConvention: QStashClientLike mirrors @upstash/qstash API naming. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
 export type QStashClientLike = {
-  // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash method name
+  // biome-ignore lint/style/useNamingConvention: QStashClientLike.publishJSON mirrors @upstash/qstash method name. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
   publishJSON: (opts: QStashPublishJsonOptions) => Promise<QStashPublishJsonResult>;
 };
 
@@ -52,7 +53,7 @@ let testClientFactory: (() => QStashClientLike) | null = null;
  * setQStashClientFactoryForTests(null);
  * ```
  */
-// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+// biome-ignore lint/style/useNamingConvention: setQStashClientFactoryForTests mirrors QStash naming. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
 export function setQStashClientFactoryForTests(
   factory: (() => QStashClientLike) | null
 ): void {

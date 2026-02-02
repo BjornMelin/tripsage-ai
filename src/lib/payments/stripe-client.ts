@@ -9,7 +9,7 @@ import { getServerEnvVar } from "@/lib/env/server";
 import { getRequiredServerOrigin } from "@/lib/url/server-origin";
 
 let stripeClient: Stripe | null = null;
-const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-12-15.clover";
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2026-01-28.clover";
 
 /**
  * Get or create Stripe client instance.
