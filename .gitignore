@@ -8,6 +8,7 @@
 # Node
 node_modules/
 npm-debug.log*
+bun.lock
 
 # Supabase / PostgreSQL
 .supabase/
@@ -39,6 +40,7 @@ Thumbs.db
 *.local.md
 .cursorindexingignore
 CLAUDE.md
+.agents/
 
 # repomix and AI-assisted code review artifacts
 repomix-output.*
@@ -275,3 +277,5 @@ opensrc/
 # Firecrawl outputs
 .firecrawl
 .vercel
+# next-agents-md
+.next-docs/
