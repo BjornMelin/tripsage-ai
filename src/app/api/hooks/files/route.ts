@@ -5,6 +5,7 @@
 import "server-only";
 
 import { tryEnqueueJob } from "@/lib/qstash/client";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { getSingle } from "@/lib/supabase/typed-helpers";
@@ -66,6 +67,7 @@ export const POST = createWebhookHandler({
         {
           deduplicationId: `attachments-ingest:${attachmentId}`,
           delay: 0,
+          label: QSTASH_JOB_LABELS.ATTACHMENTS_INGEST,
         }
       );
 

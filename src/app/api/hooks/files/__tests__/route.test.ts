@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveKeyOptions } from "@/lib/idempotency/redis";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
 
@@ -15,7 +16,7 @@ type TryEnqueueJob = (
   jobType: string,
   payload: unknown,
   path: string,
-  options?: { deduplicationId?: string; delay?: number }
+  options?: { deduplicationId?: string; delay?: number; label?: string }
 ) => Promise<
   { success: true; messageId: string } | { success: false; error: Error | null }
 >;
@@ -82,7 +83,7 @@ vi.mock("@/lib/qstash/client", () => ({
     jobType: string,
     payload: unknown,
     path: string,
-    options?: { deduplicationId?: string; delay?: number }
+    options?: { deduplicationId?: string; delay?: number; label?: string }
   ) => tryEnqueueJobMock(jobType, payload, path, options),
 }));
 
@@ -323,7 +324,11 @@ describe("POST /api/hooks/files", () => {
       "attachments-ingest",
       { attachmentId: "file-123" },
       "/api/jobs/attachments-ingest",
-      { deduplicationId: "attachments-ingest:file-123", delay: 0 }
+      {
+        deduplicationId: "attachments-ingest:file-123",
+        delay: 0,
+        label: QSTASH_JOB_LABELS.ATTACHMENTS_INGEST,
+      }
     );
   });
 

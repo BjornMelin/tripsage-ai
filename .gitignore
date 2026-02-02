@@ -39,6 +39,7 @@ Thumbs.db
 *.local.md
 .cursorindexingignore
 CLAUDE.md
+.agents/
 
 # repomix and AI-assisted code review artifacts
 repomix-output.*
@@ -275,3 +276,5 @@ opensrc/
 # Firecrawl outputs
 .firecrawl
 .vercel
+# Next.js docs output (next-agents-md)
+.next-docs/

@@ -6,6 +6,8 @@ import "server-only";
 
 import { ATTACHMENT_MAX_FILE_SIZE } from "@schemas/attachments";
 import type { AttachmentsIngestJob, RagIndexJob } from "@schemas/webhooks";
+import type { EnqueueJobOptions } from "@/lib/qstash/client";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -23,7 +25,7 @@ export interface AttachmentsIngestDeps {
     jobType: string,
     payload: unknown,
     path: string,
-    options?: { deduplicationId?: string }
+    options?: EnqueueJobOptions
   ) => Promise<
     { success: true; messageId: string } | { success: false; error: Error | null }
   >;
@@ -268,6 +270,7 @@ export async function handleAttachmentsIngest(
 
   const enqueue = await deps.tryEnqueueJob("rag-index", ragJob, "/api/jobs/rag-index", {
     deduplicationId: `rag-index:attachment:${job.attachmentId}`,
+    label: QSTASH_JOB_LABELS.RAG_INDEX,
   });
 
   if (!enqueue.success) {

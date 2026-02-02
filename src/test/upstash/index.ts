@@ -145,6 +145,24 @@ export function getPublishedQStashMessages(): QStashMessage[] {
 }
 
 /**
+ * Get published QStash messages filtered by label.
+ */
+// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+export function getQStashMessagesByLabel(label: string): QStashMessage[] {
+  return getPublishedQStashMessages().filter((message) => message.label === label);
+}
+
+/**
+ * Get published QStash messages that include flow control options.
+ */
+// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+export function getQStashMessagesWithFlowControl(): QStashMessage[] {
+  return getPublishedQStashMessages().filter((message) =>
+    Boolean(message.flowControl?.key)
+  );
+}
+
+/**
  * Force QStash signature verification outcome.
  * @param outcome - true/false for verify result, or Error to throw
  */

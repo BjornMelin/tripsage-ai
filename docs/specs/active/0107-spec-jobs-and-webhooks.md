@@ -67,6 +67,17 @@ Jobs (QStash workers):
 - Optionally enable content-based deduplication for idempotent bodies:
   - `Upstash-Content-Based-Deduplication: true`
 
+## Labels (publishing)
+
+- Apply QStash labels for log filtering, DLQ queries, and cancellation.
+- Convention: `tripsage:<job-type>` (see `QSTASH_JOB_LABELS` in `src/lib/qstash/config.ts`).
+
+## Flow control
+
+- Use `flowControl` to rate-limit by key without FIFO queues.
+- Required: `key` (e.g., `user-<id>`, `tenant-<id>`).
+- Optional: `parallelism`, `rate`, and `period` (seconds or duration string).
+
 ## Dead Letter Queue (DLQ)
 
 - Configure a QStash DLQ for your topic/endpoint to retain failed messages after retries.

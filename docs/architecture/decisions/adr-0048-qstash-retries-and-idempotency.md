@@ -74,9 +74,17 @@ Key implementation details:
   - `qstash.final_attempt` - Boolean indicating if this is the last retry
   - `qstash.dlq` - Boolean indicating the response was non-retryable (eligible for DLQ forwarding)
 
+## v2.9.0 Enhancements
+
+- **Labels**: tag all publishes with `tripsage:<job-type>` to enable filtering in logs, DLQ queries, and cancellations. Canonical labels live in `src/lib/qstash/config.ts`.
+- **Flow control**: use `flowControl` with a key (e.g., `user-<id>`, `tenant-<id>`) plus optional `parallelism`, `rate`, and `period` to bound concurrency without FIFO queues.
+- **Failure callback**: configure `failureCallback` for endpoints that want final-failure notifications without polling the DLQ; still keep DLQ configured for manual recovery.
+
 ## References
 
 - Upstash QStash – Retry: <https://upstash.com/docs/qstash/features/retry>
 - Upstash QStash – Verify signatures (raw body required): <https://upstash.com/docs/qstash/howto/signature>
+- Upstash QStash – Flow Control: <https://upstash.com/docs/qstash/features/flowcontrol>
+- Upstash QStash – Callbacks: <https://upstash.com/docs/qstash/features/callbacks>
 - ADR-0041 (webhook notifications), ADR-0032 (rate limiting), ADR-0047 (runtime policy)
 - SPEC-0021 (Supabase Webhooks Consolidation)

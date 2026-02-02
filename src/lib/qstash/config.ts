@@ -42,3 +42,23 @@ export const QSTASH_DEDUPLICATION_ID_HEADER = "Upstash-Deduplication-Id" as cons
 /** QStash content-based deduplication toggle header (publishing) */
 export const QSTASH_CONTENT_BASED_DEDUP_HEADER =
   "Upstash-Content-Based-Deduplication" as const;
+
+/**
+ * Canonical job labels for QStash message filtering, DLQ queries, and cancellation.
+ */
+export const QSTASH_JOB_LABELS = {
+  // biome-ignore lint/style/useNamingConvention: QSTASH_JOB_LABELS.ATTACHMENTS_INGEST is a fixed QStash label. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
+  ATTACHMENTS_INGEST: "tripsage:attachments-ingest",
+  // biome-ignore lint/style/useNamingConvention: QSTASH_JOB_LABELS.MEMORY_SYNC is a fixed QStash label. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
+  MEMORY_SYNC: "tripsage:memory-sync",
+  // biome-ignore lint/style/useNamingConvention: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS is a fixed QStash label. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
+  NOTIFY_COLLABORATORS: "tripsage:notify-collaborators",
+  // biome-ignore lint/style/useNamingConvention: QSTASH_JOB_LABELS.RAG_INDEX is a fixed QStash label. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
+  RAG_INDEX: "tripsage:rag-index",
+} as const;
+
+/**
+ * Union type of all valid QStash job label values.
+ */
+// biome-ignore lint/style/useNamingConvention: QStashJobLabel keeps QStash casing. See https://github.com/BjornMelin/tripsage-ai/blob/main/docs/architecture/decisions/adr-0048-qstash-retries-and-idempotency.md
+export type QStashJobLabel = (typeof QSTASH_JOB_LABELS)[keyof typeof QSTASH_JOB_LABELS];
