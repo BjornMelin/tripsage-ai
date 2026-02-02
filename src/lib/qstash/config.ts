@@ -43,6 +43,9 @@ export const QSTASH_DEDUPLICATION_ID_HEADER = "Upstash-Deduplication-Id" as cons
 export const QSTASH_CONTENT_BASED_DEDUP_HEADER =
   "Upstash-Content-Based-Deduplication" as const;
 
+/**
+ * Canonical job labels for QStash message filtering, DLQ queries, and cancellation.
+ */
 export const QSTASH_JOB_LABELS = {
   // biome-ignore lint/style/useNamingConvention: QStash labels are constants
   ATTACHMENTS_INGEST: "tripsage:attachments-ingest",
@@ -54,5 +57,8 @@ export const QSTASH_JOB_LABELS = {
   RAG_INDEX: "tripsage:rag-index",
 } as const;
 
+/**
+ * Union type of all valid QStash job label values.
+ */
 // biome-ignore lint/style/useNamingConvention: keep QStash casing
 export type QStashJobLabel = (typeof QSTASH_JOB_LABELS)[keyof typeof QSTASH_JOB_LABELS];

@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { createQStashMock } from "@/test/upstash/qstash-mock";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { installUpstashMocks, resetUpstashMocks } from "@/test/upstash";
 
 const mockSpan = vi.hoisted(() => ({
   end: vi.fn(),
@@ -28,12 +28,15 @@ vi.mock("@/lib/telemetry/span", async (importOriginal) => {
 });
 
 describe("enqueueJob", () => {
-  const qstash = createQStashMock();
+  const { qstash } = installUpstashMocks();
+
+  beforeEach(() => {
+    resetUpstashMocks();
+  });
 
   afterEach(async () => {
     const { setQStashClientFactoryForTests } = await import("@/lib/qstash/client");
     setQStashClientFactoryForTests(null);
-    qstash.__reset();
     GET_ENV_FALLBACK.mockReset();
     mockSpan.setAttribute.mockReset();
   });

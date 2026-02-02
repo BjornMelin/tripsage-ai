@@ -16,6 +16,9 @@ type QStashPublishJsonOptions = Parameters<Client["publishJSON"]>[0];
 // biome-ignore lint/style/useNamingConvention: mirrors QStash naming
 type QStashPublishJsonResult = Awaited<ReturnType<Client["publishJSON"]>>;
 
+/**
+ * Flow control configuration for rate-limiting QStash jobs by key.
+ */
 export type FlowControlOptions = NonNullable<QStashPublishJsonOptions["flowControl"]>;
 
 /**

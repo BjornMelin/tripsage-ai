@@ -8,7 +8,6 @@
 # Node
 node_modules/
 npm-debug.log*
-bun.lock
 
 # Supabase / PostgreSQL
 .supabase/
@@ -277,5 +276,5 @@ opensrc/
 # Firecrawl outputs
 .firecrawl
 .vercel
-# next-agents-md
+# Next.js docs output (next-agents-md)
 .next-docs/
