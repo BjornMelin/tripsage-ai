@@ -253,9 +253,6 @@ importers:
       use-stick-to-bottom:
         specifier: ^1.1.2
         version: 1.1.2(react@19.2.4)
-      vercel:
-        specifier: ^50.9.6
-        version: 50.9.6(rollup@4.56.0)(typescript@5.9.3)
       web-vitals:
         specifier: ^5.1.0
         version: 5.1.0
@@ -380,6 +377,9 @@ importers:
       unified:
         specifier: ^11.0.5
         version: 11.0.5
+      vercel:
+        specifier: ^50.9.6
+        version: 50.9.6(rollup@4.56.0)(typescript@5.9.3)
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.9)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(tsx@4.21.0)
