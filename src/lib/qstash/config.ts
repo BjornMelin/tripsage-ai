@@ -42,3 +42,17 @@ export const QSTASH_DEDUPLICATION_ID_HEADER = "Upstash-Deduplication-Id" as cons
 /** QStash content-based deduplication toggle header (publishing) */
 export const QSTASH_CONTENT_BASED_DEDUP_HEADER =
   "Upstash-Content-Based-Deduplication" as const;
+
+export const QSTASH_JOB_LABELS = {
+  // biome-ignore lint/style/useNamingConvention: QStash labels are constants
+  ATTACHMENTS_INGEST: "tripsage:attachments-ingest",
+  // biome-ignore lint/style/useNamingConvention: QStash labels are constants
+  MEMORY_SYNC: "tripsage:memory-sync",
+  // biome-ignore lint/style/useNamingConvention: QStash labels are constants
+  NOTIFY_COLLABORATORS: "tripsage:notify-collaborators",
+  // biome-ignore lint/style/useNamingConvention: QStash labels are constants
+  RAG_INDEX: "tripsage:rag-index",
+} as const;
+
+// biome-ignore lint/style/useNamingConvention: keep QStash casing
+export type QStashJobLabel = (typeof QSTASH_JOB_LABELS)[keyof typeof QSTASH_JOB_LABELS];

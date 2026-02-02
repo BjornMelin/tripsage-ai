@@ -5,6 +5,7 @@
 import "server-only";
 
 import { tryEnqueueJob } from "@/lib/qstash/client";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import { getRedis } from "@/lib/redis";
 import type {
   MemoryAdapter,
@@ -48,6 +49,7 @@ async function handleOnTurnCommitted(
       {
         deduplicationId: `memory-sync:${idempotencyKey}`,
         delay: 1,
+        label: QSTASH_JOB_LABELS.MEMORY_SYNC,
       }
     );
     if (!result.success) {
@@ -85,6 +87,7 @@ async function handleSyncSession(
       "/api/jobs/memory-sync",
       {
         delay: isFull ? undefined : 5,
+        label: QSTASH_JOB_LABELS.MEMORY_SYNC,
       }
     );
 

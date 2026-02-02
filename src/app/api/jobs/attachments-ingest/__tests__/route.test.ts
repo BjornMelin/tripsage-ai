@@ -2,6 +2,7 @@
 
 import { ATTACHMENT_MAX_FILE_SIZE } from "@schemas/attachments";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const {
@@ -14,7 +15,7 @@ type TryEnqueueJob = (
   jobType: string,
   payload: unknown,
   path: string,
-  options?: { deduplicationId?: string }
+  options?: { deduplicationId?: string; label?: string }
 ) => Promise<
   { success: true; messageId: string } | { success: false; error: Error | null }
 >;
@@ -45,7 +46,7 @@ vi.mock("@/lib/qstash/client", () => ({
     jobType: string,
     payload: unknown,
     path: string,
-    options?: { deduplicationId?: string }
+    options?: { deduplicationId?: string; label?: string }
   ) => tryEnqueueJobMock(jobType, payload, path, options),
 }));
 
@@ -153,7 +154,10 @@ describe("POST /api/jobs/attachments-ingest", () => {
         userId: "11111111-1111-4111-8111-111111111111",
       }),
       "/api/jobs/rag-index",
-      { deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }
+      {
+        deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        label: QSTASH_JOB_LABELS.RAG_INDEX,
+      }
     );
   });
 
@@ -335,7 +339,10 @@ describe("POST /api/jobs/attachments-ingest", () => {
         ],
       }),
       "/api/jobs/rag-index",
-      { deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }
+      {
+        deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        label: QSTASH_JOB_LABELS.RAG_INDEX,
+      }
     );
   });
 

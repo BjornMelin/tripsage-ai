@@ -7,6 +7,7 @@ import "server-only";
 import { after } from "next/server";
 import { sendCollaboratorNotifications } from "@/lib/notifications/collaborators";
 import { tryEnqueueJob } from "@/lib/qstash/client";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
@@ -64,7 +65,10 @@ export const POST = createWebhookHandler({
       "notify-collaborators",
       { eventKey, payload },
       "/api/jobs/notify-collaborators",
-      { deduplicationId: `notify:${eventKey}` }
+      {
+        deduplicationId: `notify:${eventKey}`,
+        label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+      }
     );
 
     if (result.success) {

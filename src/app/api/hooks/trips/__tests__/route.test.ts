@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
@@ -276,7 +277,10 @@ describe("POST /api/hooks/trips", () => {
       "notify-collaborators",
       { eventKey: "event-key-1", payload: expect.any(Object) },
       "/api/jobs/notify-collaborators",
-      { deduplicationId: "notify:event-key-1" }
+      {
+        deduplicationId: "notify:event-key-1",
+        label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+      }
     );
   });
 

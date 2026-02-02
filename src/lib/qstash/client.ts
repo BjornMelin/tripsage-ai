@@ -7,9 +7,16 @@ import "server-only";
 import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import { QSTASH_CONTENT_BASED_DEDUP_HEADER, QSTASH_RETRY_CONFIG } from "./config";
+import { QSTASH_RETRY_CONFIG } from "./config";
 
 // ===== TYPES =====
+
+// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+type QStashPublishJsonOptions = Parameters<Client["publishJSON"]>[0];
+// biome-ignore lint/style/useNamingConvention: mirrors QStash naming
+type QStashPublishJsonResult = Awaited<ReturnType<Client["publishJSON"]>>;
+
+export type FlowControlOptions = NonNullable<QStashPublishJsonOptions["flowControl"]>;
 
 /**
  * QStash client interface for dependency injection.
@@ -18,16 +25,7 @@ import { QSTASH_CONTENT_BASED_DEDUP_HEADER, QSTASH_RETRY_CONFIG } from "./config
 // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
 export type QStashClientLike = {
   // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash method name
-  publishJSON: (opts: {
-    url: string;
-    body: unknown;
-    headers?: Record<string, string>;
-    retries?: number;
-    retryDelay?: string;
-    delay?: number;
-    deduplicationId?: string;
-    callback?: string;
-  }) => Promise<{ messageId: string; url?: string; scheduled?: boolean }>;
+  publishJSON: (opts: QStashPublishJsonOptions) => Promise<QStashPublishJsonResult>;
 };
 
 // ===== TEST INJECTION =====
@@ -131,6 +129,14 @@ export interface EnqueueJobOptions {
   deduplicationId?: string;
   /** Enable content-based deduplication at publish time (optional) */
   contentBasedDeduplication?: boolean;
+  /** Label for log filtering and DLQ queries */
+  label?: string;
+  /** Flow control options for rate limiting by key */
+  flowControl?: FlowControlOptions;
+  /** URL invoked when all retries are exhausted */
+  failureCallback?: string;
+  /** HTTP timeout in seconds */
+  timeout?: number;
   /** Delay before first delivery in seconds */
   delay?: number;
   /** Override default retry count */
@@ -147,6 +153,8 @@ export interface EnqueueJobOptions {
 export interface EnqueueJobResult {
   /** QStash message ID for tracking */
   messageId: string;
+  /** True when QStash deduplicated the message */
+  deduplicated?: boolean;
 }
 
 /**
@@ -219,11 +227,26 @@ export async function enqueueJob(
         span.setAttribute("qstash.dedup_id_missing", true);
       }
 
-      const headers: Record<string, string> = { ...(options.headers ?? {}) };
       if (options.contentBasedDeduplication) {
-        headers[QSTASH_CONTENT_BASED_DEDUP_HEADER] = "true";
         span.setAttribute("qstash.content_based_dedup", true);
       }
+
+      if (options.label) {
+        span.setAttribute("qstash.label", options.label);
+      }
+
+      if (options.flowControl?.key) {
+        span.setAttribute("qstash.flow_control_key", options.flowControl.key);
+      }
+
+      if (options.failureCallback) {
+        span.setAttribute("qstash.has_failure_callback", true);
+      }
+
+      const headers =
+        options.headers && Object.keys(options.headers).length > 0
+          ? options.headers
+          : undefined;
 
       // Parse delay from config (e.g., "10s" -> 10)
       const defaultDelay = parseDelayToSeconds(QSTASH_RETRY_CONFIG.delay);
@@ -231,19 +254,34 @@ export async function enqueueJob(
       // Publish with enforced retry policy from ADR-0048
       const response = await client.publishJSON({
         body: payload,
+        contentBasedDeduplication: options.contentBasedDeduplication,
         deduplicationId,
         delay: options.delay ?? defaultDelay,
-        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        failureCallback: options.failureCallback,
+        flowControl: options.flowControl,
+        headers,
+        label: options.label,
         retries: options.retries ?? QSTASH_RETRY_CONFIG.retries,
         retryDelay: options.retryDelay ?? QSTASH_RETRY_CONFIG.retryDelay,
+        timeout: options.timeout,
         url,
       });
+
+      if (Array.isArray(response) || !("messageId" in response)) {
+        span.setAttribute("qstash.unexpected_response", true);
+        throw new Error("qstash_unexpected_response");
+      }
 
       // Handle response - messageId is present on PublishToUrlResponse
       const messageId = response.messageId;
       span.setAttribute("qstash.message_id", messageId);
+      const deduplicated =
+        "deduplicated" in response ? response.deduplicated : undefined;
+      if (deduplicated !== undefined) {
+        span.setAttribute("qstash.deduplicated", deduplicated);
+      }
 
-      return { messageId };
+      return { deduplicated, messageId };
     }
   );
 }
@@ -266,12 +304,17 @@ export async function tryEnqueueJob(
   path: string,
   options: EnqueueJobOptions = {}
 ): Promise<
-  { success: true; messageId: string } | { success: false; error: Error | null }
+  | { success: true; messageId: string; deduplicated?: boolean }
+  | { success: false; error: Error | null }
 > {
   try {
     const result = await enqueueJob(jobType, payload, path, options);
     if (result) {
-      return { messageId: result.messageId, success: true };
+      return {
+        deduplicated: result.deduplicated,
+        messageId: result.messageId,
+        success: true,
+      };
     }
     return { error: null, success: false };
   } catch (error) {

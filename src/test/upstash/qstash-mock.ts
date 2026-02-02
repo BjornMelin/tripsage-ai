@@ -5,25 +5,14 @@
  * Compatible with vi.doMock() for thread-safe testing with --pool=threads.
  */
 
+import type { PublishRequest, PublishToUrlResponse } from "@upstash/qstash";
+
 // Types matching official @upstash/qstash API
 // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
-export type QStashPublishOptions = {
-  url: string;
-  body: unknown;
-  headers?: Record<string, string>;
-  retries?: number;
-  retryDelay?: string;
-  delay?: number;
-  deduplicationId?: string;
-  callback?: string;
-};
+export type QStashPublishOptions = PublishRequest<unknown>;
 
 // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
-export type QStashPublishResult = {
-  messageId: string;
-  url?: string;
-  scheduled?: boolean;
-};
+export type QStashPublishResult = PublishToUrlResponse & { scheduled?: boolean };
 
 // biome-ignore lint/style/useNamingConvention: mirrors @upstash/qstash API naming
 export type QStashMessage = QStashPublishOptions & {
@@ -104,11 +93,15 @@ export function createQStashMock(): QStashMockModule {
     publishJSON(opts: QStashPublishOptions): Promise<QStashPublishResult> {
       messageCounter += 1;
       const messageId = `qstash-mock-${messageCounter}`;
+      const scheduled =
+        typeof opts.delay === "number" ? opts.delay > 0 : Boolean(opts.delay);
+      const url =
+        typeof opts.url === "string" ? opts.url : "https://qstash-mock.invalid";
       publishedMessages.push({ ...opts, messageId, publishedAt: Date.now() });
       return Promise.resolve({
         messageId,
-        scheduled: (opts.delay ?? 0) > 0,
-        url: opts.url,
+        scheduled,
+        url,
       });
     }
   }
