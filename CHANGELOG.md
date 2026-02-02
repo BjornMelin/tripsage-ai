@@ -1,3 +1,13 @@
+## [1.31.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.30.1...v1.31.0) (2026-02-02)
+
+### Features
+
+* **qstash:** add publish options and job labels ([5a7ebf3](https://github.com/BjornMelin/tripsage-ai/commit/5a7ebf3cb547cb923252702c77283b7590714b1a))
+
+### Bug Fixes
+
+* **qstash:** align upstash mocks and docs ([d280c87](https://github.com/BjornMelin/tripsage-ai/commit/d280c87b4b7c113c81d6b1ff870b954df4137840))
+
 ## [1.30.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.30.0...v1.30.1) (2026-01-28)
 
 ### Bug Fixes
