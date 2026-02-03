@@ -1,7 +1,3 @@
-/**
- * @fileoverview MSW handlers for the remote image proxy tests.
- */
-
 import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
 
