@@ -6,6 +6,36 @@ import { submitFlightSearch } from "./actions";
 import FlightsSearchClient from "./flights-search-client";
 
 /** Flight search page that renders the client component and handles server submission. */
-export default function FlightSearchPage() {
-  return <FlightsSearchClient onSubmitServer={submitFlightSearch} />;
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function getFirstParam(value: SearchParams[string]): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * Server page for flight search (RSC shell).
+ * @param searchParams - The search params from the URL.
+ * @returns The flight search client.
+ */
+export default async function FlightSearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+
+  return (
+    <FlightsSearchClient
+      initialUrlParams={{
+        class: getFirstParam(params.class),
+        departDate: getFirstParam(params.departDate),
+        destination: getFirstParam(params.destination),
+        origin: getFirstParam(params.origin),
+        passengers: getFirstParam(params.passengers),
+        returnDate: getFirstParam(params.returnDate),
+      }}
+      onSubmitServer={submitFlightSearch}
+    />
+  );
 }

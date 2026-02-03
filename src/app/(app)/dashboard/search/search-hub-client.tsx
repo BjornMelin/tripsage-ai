@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { SearchAnalytics } from "@/features/search/components/search-analytics";
 import { SearchCollections } from "@/features/search/components/search-collections";
-import { useSearchHistoryStore } from "@/features/search/store/search-history/index";
+import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import { ROUTES } from "@/lib/routes";
 
 type RepeatSearchParams = Record<string, string | number | boolean | null | undefined>;
@@ -59,7 +59,7 @@ function getSearchPath(searchType: SearchType): string {
 
 /** Search hub client component. */
 export default function SearchHubClient() {
-  const { recentSearches } = useSearchHistoryStore();
+  const recentSearches = useSearchHistoryStore((state) => state.recentSearches);
 
   // Get the 6 most recent searches
   const displayedSearches = recentSearches.slice(0, 6);

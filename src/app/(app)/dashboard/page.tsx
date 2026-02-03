@@ -118,9 +118,6 @@ export default function DashboardPage() {
 }
 
 async function DashboardContent() {
-  // Simulate API delay for demonstration of streaming
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
   return (
     <>
       {/* Top Row - Quick Actions */}

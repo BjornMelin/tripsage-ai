@@ -18,14 +18,6 @@ const { mockCancelRequests, mockCreateTrip, mockGetSuggestions, mockPush, mockTo
     mockToast: vi.fn(),
   }));
 
-const navigationState = vi.hoisted(() => ({
-  params: new URLSearchParams(),
-}));
-
-const searchParamsApi = {
-  get: (key: string) => navigationState.params.get(key),
-};
-
 const authenticatedApiMock = {
   get: mockGetSuggestions,
 };
@@ -34,7 +26,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  useSearchParams: () => searchParamsApi,
 }));
 
 vi.mock("next/link", () => ({
@@ -95,7 +86,7 @@ vi.mock("@/hooks/use-trips", () => ({
 }));
 
 // Import after mocks so Vitest applies them before module evaluation.
-import CreateTripPage from "../page";
+import CreateTripClient from "../create-trip-client";
 
 const apiSuggestion = (overrides?: Partial<TripSuggestion>): TripSuggestion => ({
   bestTimeToVisit: "Spring",
@@ -112,15 +103,14 @@ const apiSuggestion = (overrides?: Partial<TripSuggestion>): TripSuggestion => (
   ...overrides,
 });
 
-describe("CreateTripPage", () => {
+describe("CreateTripClient", () => {
   beforeEach(() => {
-    navigationState.params = new URLSearchParams();
     vi.clearAllMocks();
     mockIsPending.mockReturnValue(false);
   });
 
   it("disables submit until the destination is valid", async () => {
-    render(<CreateTripPage />);
+    render(<CreateTripClient initialSuggestionLimit={6} />);
 
     const createButton = screen.getByRole("button", { name: /create trip/i });
     expect(createButton).toBeDisabled();
@@ -134,16 +124,20 @@ describe("CreateTripPage", () => {
   });
 
   it("prefills from cached suggestions when the suggestion is available", async () => {
-    navigationState.params = new URLSearchParams(
-      "suggestion=sug-1&limit=6&budget_max=2500"
-    );
     const queryClient = getTestQueryClient();
     queryClient.setQueryData(
       keys.trips.suggestion("user-123", { budget_max: 2500, limit: 6 }),
       [apiSuggestion()]
     );
 
-    render(<CreateTripPage />, { queryClient });
+    render(
+      <CreateTripClient
+        initialBudgetMax={2500}
+        initialSuggestionId="sug-1"
+        initialSuggestionLimit={6}
+      />,
+      { queryClient }
+    );
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText("Tokyo, Japan")).toHaveValue("Paris");
@@ -154,17 +148,19 @@ describe("CreateTripPage", () => {
   });
 
   it("fetches suggestions when not cached and shows a loading indicator", async () => {
-    navigationState.params = new URLSearchParams(
-      "suggestion=sug-2&limit=6&budget_max=3000"
-    );
-
     let resolveRequest: (value: TripSuggestion[]) => void = () => undefined;
     const deferred = new Promise<TripSuggestion[]>((resolve) => {
       resolveRequest = resolve;
     });
     mockGetSuggestions.mockReturnValueOnce(deferred);
 
-    render(<CreateTripPage />);
+    render(
+      <CreateTripClient
+        initialBudgetMax={3000}
+        initialSuggestionId="sug-2"
+        initialSuggestionLimit={6}
+      />
+    );
     expect(screen.getByText(/loading details/i)).toBeInTheDocument();
 
     resolveRequest([
@@ -183,7 +179,7 @@ describe("CreateTripPage", () => {
   it("submits a create payload and navigates to the created trip", async () => {
     mockCreateTrip.mockResolvedValueOnce(unsafeCast<UiTrip>({ id: "trip-123" }));
 
-    render(<CreateTripPage />);
+    render(<CreateTripClient initialSuggestionLimit={6} />);
 
     const destinationInput = screen.getByPlaceholderText("Tokyo, Japan");
     fireEvent.change(destinationInput, { target: { value: "Tokyo, Japan" } });
@@ -223,7 +219,7 @@ describe("CreateTripPage", () => {
   it("shows a destructive toast when create fails", async () => {
     mockCreateTrip.mockRejectedValueOnce(new Error("boom"));
 
-    render(<CreateTripPage />);
+    render(<CreateTripClient initialSuggestionLimit={6} />);
 
     const destinationInput = screen.getByPlaceholderText("Tokyo, Japan");
     fireEvent.change(destinationInput, { target: { value: "Tokyo, Japan" } });

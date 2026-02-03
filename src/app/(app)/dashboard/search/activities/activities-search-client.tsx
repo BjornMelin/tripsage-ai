@@ -13,7 +13,6 @@ import {
   SparklesIcon,
   TicketIcon,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -59,13 +58,23 @@ const ACTIVITY_COLORS = {
 
 /** Activity search client component props. */
 interface ActivitiesSearchClientProps {
+  initialUrlParams?: {
+    category?: string;
+    destination?: string;
+  };
   onSubmitServer: (
     params: ActivitySearchParams
   ) => Promise<Result<ActivitySearchParams, ResultError>>;
 }
 
-/** Activity search client component. */
+/**
+ * Activity search client component.
+ * @param initialUrlParams - The initial URL params.
+ * @param onSubmitServer - The server-side submit function.
+ * @returns The activity search client.
+ */
 export default function ActivitiesSearchClient({
+  initialUrlParams,
   onSubmitServer,
 }: ActivitiesSearchClientProps) {
   const { toast } = useToast();
@@ -74,11 +83,11 @@ export default function ActivitiesSearchClient({
   const searchError = useSearchResultsStore((state) => state.error);
   const activities = useSearchResultsStore((state) => state.results.activities ?? []);
   const searchMetadata = useSearchResultsStore((state) => state.metrics);
-  const searchParams = useSearchParams();
   const primaryActionRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const didInitFromUrlParams = useRef(false);
   const { addItem, removeItem, clearByType, hasItem } = useComparisonStore((state) => ({
     addItem: state.addItem,
     clearByType: state.clearByType,
@@ -113,8 +122,11 @@ export default function ActivitiesSearchClient({
 
   // Initialize search with URL parameters
   useEffect(() => {
-    const destination = searchParams.get("destination");
-    const category = searchParams.get("category");
+    if (didInitFromUrlParams.current) return;
+    didInitFromUrlParams.current = true;
+
+    const destination = initialUrlParams?.destination;
+    const category = initialUrlParams?.category;
     const controller = new AbortController();
 
     if (destination) {
@@ -154,7 +166,7 @@ export default function ActivitiesSearchClient({
       })();
     }
     return () => controller.abort();
-  }, [searchParams, executeSearch, onSubmitServer, toast]);
+  }, [executeSearch, initialUrlParams, onSubmitServer, toast]);
 
   const handleSearch = useCallback(
     async (params: ActivitySearchParams) => {
