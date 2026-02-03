@@ -14,6 +14,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -62,13 +63,22 @@ export function SearchCollections({
   const [expandedCollection, setExpandedCollection] = useState<string | null>(null);
 
   const {
-    savedSearches = [],
-    searchCollections = [],
     createCollection,
-    updateCollection,
     deleteCollection,
     removeSearchFromCollection,
-  } = useSearchHistoryStore();
+    savedSearches,
+    searchCollections,
+    updateCollection,
+  } = useSearchHistoryStore(
+    useShallow((state) => ({
+      createCollection: state.createCollection,
+      deleteCollection: state.deleteCollection,
+      removeSearchFromCollection: state.removeSearchFromCollection,
+      savedSearches: state.savedSearches ?? [],
+      searchCollections: state.searchCollections ?? [],
+      updateCollection: state.updateCollection,
+    }))
+  );
   const collections = searchCollections;
 
   /** Get saved searches for a collection */
@@ -374,11 +384,14 @@ export function AddToCollectionDropdown({
   searchId,
   trigger,
 }: AddToCollectionDropdownProps) {
-  const {
-    addSearchToCollection,
-    createCollection,
-    searchCollections = [],
-  } = useSearchHistoryStore();
+  const { addSearchToCollection, createCollection, searchCollections } =
+    useSearchHistoryStore(
+      useShallow((state) => ({
+        addSearchToCollection: state.addSearchToCollection,
+        createCollection: state.createCollection,
+        searchCollections: state.searchCollections ?? [],
+      }))
+    );
   const collections = searchCollections;
   const [isCreating, setIsCreating] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");

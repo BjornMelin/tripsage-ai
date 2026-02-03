@@ -46,9 +46,15 @@ type AdditionalSettingKey =
   | "locationServices"
   | "smartSuggestions";
 
+/**
+ * Preferences section component.
+ * @returns The preferences section component.
+ */
 export function PreferencesSection() {
-  const { user: authUser, setUser } = useAuthCore();
-  const { baseCurrency, setBaseCurrency } = useCurrencyStore();
+  const authUser = useAuthCore((state) => state.user);
+  const setUser = useAuthCore((state) => state.setUser);
+  const baseCurrency = useCurrencyStore((state) => state.baseCurrency);
+  const setBaseCurrency = useCurrencyStore((state) => state.setBaseCurrency);
   const { toast } = useToast();
   const { setTheme } = useTheme();
 

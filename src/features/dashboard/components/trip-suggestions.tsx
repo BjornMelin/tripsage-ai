@@ -266,7 +266,7 @@ export function TripSuggestions({
   userId,
   showMemoryBased = true,
 }: TripSuggestionsProps) {
-  const { activeBudget } = useBudgetStore();
+  const activeBudget = useBudgetStore((state) => state.activeBudget);
   const suggestionFetchLimit = limit + 2;
 
   // Use React Query hook to fetch trip suggestions

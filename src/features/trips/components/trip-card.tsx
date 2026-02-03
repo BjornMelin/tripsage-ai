@@ -47,7 +47,7 @@ interface TripCardProps {
  * @returns Styled card with trip details and actions.
  */
 export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
-  const { budgetsByTrip } = useBudgetStore();
+  const budgetsByTrip = useBudgetStore((state) => state.budgetsByTrip);
   const tripBudgets = budgetsByTrip[trip.id] || [];
 
   const startDate = trip.startDate ? DateUtils.parse(trip.startDate) : null;

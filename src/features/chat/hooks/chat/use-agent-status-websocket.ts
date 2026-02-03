@@ -6,6 +6,7 @@
 
 import type { AgentStatusType, AgentTask } from "@schemas/agent-status";
 import { useCallback, useEffect, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   type AgentTaskUpdate,
   useAgentStatusStore,
@@ -114,18 +115,30 @@ const DEFAULT_STATUS: AgentStatusType = "active";
  * @returns Connection control surface with monitoring helpers.
  */
 export function useAgentStatusWebSocket(): AgentStatusRealtimeControls {
-  const { user } = useAuthCore();
+  const user = useAuthCore((state) => state.user);
   const {
+    connection,
     isMonitoring,
-    setMonitoring,
-    resetAgentStatusState,
-    updateAgentStatus,
-    updateAgentTask,
     recordActivity,
     recordResourceUsage,
+    resetAgentStatusState,
     setAgentStatusConnection,
-    connection,
-  } = useAgentStatusStore();
+    setMonitoring,
+    updateAgentStatus,
+    updateAgentTask,
+  } = useAgentStatusStore(
+    useShallow((state) => ({
+      connection: state.connection,
+      isMonitoring: state.isMonitoring,
+      recordActivity: state.recordActivity,
+      recordResourceUsage: state.recordResourceUsage,
+      resetAgentStatusState: state.resetAgentStatusState,
+      setAgentStatusConnection: state.setAgentStatusConnection,
+      setMonitoring: state.setMonitoring,
+      updateAgentStatus: state.updateAgentStatus,
+      updateAgentTask: state.updateAgentTask,
+    }))
+  );
   const retryCounterRef = useRef(0);
   const topic = user?.id ? `user:${user.id}` : null;
   const shouldSubscribe = Boolean(topic && isMonitoring);

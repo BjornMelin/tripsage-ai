@@ -13,6 +13,7 @@ import {
   TrendingUpIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   Card,
   CardContent,
@@ -36,11 +37,13 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
   const [activeTab, setActiveTab] = useState("overview");
 
   /** Get search analytics and trends from store */
-  const {
-    getSearchAnalytics,
-    getSearchTrends,
-    recentSearches = [],
-  } = useSearchHistoryStore();
+  const { getSearchAnalytics, getSearchTrends, recentSearches } = useSearchHistoryStore(
+    useShallow((state) => ({
+      getSearchAnalytics: state.getSearchAnalytics,
+      getSearchTrends: state.getSearchTrends,
+      recentSearches: state.recentSearches ?? [],
+    }))
+  );
 
   const emptyAnalytics = {
     averageSearchDuration: 0,

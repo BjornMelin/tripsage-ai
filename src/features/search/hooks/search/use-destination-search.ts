@@ -6,14 +6,29 @@ import type { PlacesSearchRequest } from "@schemas/api";
 import { searchPlacesResultSchema } from "@schemas/places";
 import type { Destination } from "@schemas/search";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 
+/**
+ * Destination search parameters.
+ * @param query - The search query.
+ * @param types - The types of destinations to search for.
+ * @param limit - The maximum number of results to return.
+ */
 export interface DestinationSearchParams {
   query: string;
   types?: string[];
   limit?: number;
 }
 
+/**
+ * Destination search result.
+ * @param placeId - The place ID of the destination.
+ * @param name - The name of the destination.
+ * @param address - The address of the destination.
+ * @param location - The location of the destination.
+ * @param types - The types of the destination.
+ */
 export interface DestinationResult {
   placeId: string;
   name: string;
@@ -22,6 +37,14 @@ export interface DestinationResult {
   types: string[];
 }
 
+/**
+ * Use destination search result.
+ * @param searchDestinations - The function to search for destinations.
+ * @param isSearching - Whether the search is in progress.
+ * @param searchError - The error that occurred during the search.
+ * @param resetSearch - The function to reset the search.
+ * @param results - The results of the search.
+ */
 export interface UseDestinationSearchResult {
   searchDestinations: (
     params: DestinationSearchParams,
@@ -59,7 +82,14 @@ export function useDestinationSearch(): UseDestinationSearchResult {
     setSearchResults,
     setSearchError: setStoreSearchError,
     cancelSearch,
-  } = useSearchResultsStore();
+  } = useSearchResultsStore(
+    useShallow((state) => ({
+      cancelSearch: state.cancelSearch,
+      setSearchError: state.setSearchError,
+      setSearchResults: state.setSearchResults,
+      startSearch: state.startSearch,
+    }))
+  );
 
   const toDestination = useCallback((result: DestinationResult): Destination | null => {
     if (!result.location) {
