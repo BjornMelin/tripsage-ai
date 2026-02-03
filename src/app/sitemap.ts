@@ -4,14 +4,14 @@
 
 import type { MetadataRoute } from "next";
 import { ROUTES } from "@/lib/routes";
-import { getServerOrigin } from "@/lib/url/server-origin";
+import { getRequiredServerOrigin } from "@/lib/url/server-origin";
 
 /**
  * sitemap.xml metadata route.
  * @returns The sitemap.xml metadata.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const origin = getServerOrigin();
+  const origin = getRequiredServerOrigin();
 
   const urls = [
     ROUTES.home,

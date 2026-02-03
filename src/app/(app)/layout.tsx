@@ -2,21 +2,17 @@
  * @fileoverview Authenticated app layout wrapper for client-side providers.
  */
 
-import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
-
-import { createServerSupabase } from "@/lib/supabase/server";
+import { AuthedAppShell } from "@/components/providers/app-shell";
 import { Providers } from "./providers";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  return <Providers>{children}</Providers>;
+  return (
+    <AuthedAppShell nonce={nonce}>
+      <Providers>{children}</Providers>
+    </AuthedAppShell>
+  );
 }
