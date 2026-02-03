@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { revalidateTag } from "next/cache";
 import { getTagsForTable } from "@/lib/cache/registry";
 import { bumpTags } from "@/lib/cache/tags";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
@@ -29,6 +30,16 @@ export const POST = createWebhookHandler({
 
     // Bump version counters for all affected tags
     const bumped = await bumpTags(tags);
+
+    // Mirror invalidation into Next.js Cache Components tag cache (if used).
+    // Webhook callers generally expect immediate expiration semantics.
+    try {
+      for (const tag of tags) {
+        revalidateTag(tag, { expire: 0 });
+      }
+    } catch {
+      // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
+    }
 
     return { bumped, tags };
   },

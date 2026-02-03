@@ -22,6 +22,10 @@ export const CACHE_TAG_REGISTRY = {
   // Accommodation-related tables
   accommodations: ["accommodation", "hotel_search", "search", "search_cache"],
 
+  // Agent configuration tables
+  agent_config: ["configuration"],
+  agent_config_versions: ["configuration"],
+
   // Chat/memory tables
   chat_messages: ["memory", "conversation", "chat_memory"],
   chat_sessions: ["memory", "conversation", "chat_memory"],

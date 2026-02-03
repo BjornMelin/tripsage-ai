@@ -137,7 +137,6 @@ describe("config routes", () => {
     expect(await res.json()).toEqual({ config: supabaseData.config });
     expect(mockResolveAgentConfig).toHaveBeenCalledWith("budgetAgent", {
       scope: "global",
-      supabase: expect.anything(),
     });
   });
 

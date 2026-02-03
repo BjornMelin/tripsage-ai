@@ -9,6 +9,7 @@ import {
   agentTypeSchema,
   configurationAgentConfigSchema,
 } from "@schemas/configuration";
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -153,6 +154,13 @@ export const POST = withApiGuards({
       }
 
       await bumpTag("configuration");
+      try {
+        revalidateTag("configuration", { expire: 0 });
+        revalidateTag(`configuration:${agentValidation.data}`, { expire: 0 });
+        revalidateTag(`configuration:${agentValidation.data}:${scope}`, { expire: 0 });
+      } catch {
+        // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
+      }
 
       emitOperationalAlert("agent_config.rollback", {
         attributes: {

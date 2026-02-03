@@ -11,6 +11,7 @@ import {
   agentTypeSchema,
   configurationAgentConfigSchema,
 } from "@schemas/configuration";
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
@@ -71,54 +72,44 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "config:agents:read",
   telemetry: "config.agents.get",
-})(
-  async (
-    req: NextRequest,
-    { user, supabase },
-    _data,
-    routeContext: RouteParamsContext
-  ) => {
-    try {
-      ensureAdmin(user);
-      const agentTypeResult = await parseStringId(routeContext, "agentType");
-      if (!agentTypeResult.ok) return agentTypeResult.error;
-      const agentType = agentTypeResult.data;
-      const agentValidation = validateSchema(agentTypeSchema, agentType);
-      if (!agentValidation.ok) return agentValidation.error;
-      const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
-      if (!scopeResult.ok) return scopeResult.error;
-      const scope = scopeResult.data;
-      const result = await resolveAgentConfig(agentValidation.data, {
-        scope,
-        supabase,
-      });
-      return NextResponse.json(result);
-    } catch (err) {
-      if ((err as { status?: number }).status === 404) {
-        return errorResponse({
-          err,
-          error: "not_found",
-          reason: "Agent configuration not found",
-          status: 404,
-        });
-      }
-      if ((err as { status?: number }).status === 403) {
-        return errorResponse({
-          err,
-          error: "forbidden",
-          reason: "Admin access required",
-          status: 403,
-        });
-      }
+})(async (req: NextRequest, { user }, _data, routeContext: RouteParamsContext) => {
+  try {
+    ensureAdmin(user);
+    const agentTypeResult = await parseStringId(routeContext, "agentType");
+    if (!agentTypeResult.ok) return agentTypeResult.error;
+    const agentType = agentTypeResult.data;
+    const agentValidation = validateSchema(agentTypeSchema, agentType);
+    if (!agentValidation.ok) return agentValidation.error;
+    const scopeResult = parseScopeParam(req.nextUrl.searchParams.get("scope"));
+    if (!scopeResult.ok) return scopeResult.error;
+    const scope = scopeResult.data;
+    const result = await resolveAgentConfig(agentValidation.data, { scope });
+    return NextResponse.json(result);
+  } catch (err) {
+    if ((err as { status?: number }).status === 404) {
       return errorResponse({
         err,
-        error: "internal",
-        reason: "Failed to load agent configuration",
-        status: 500,
+        error: "not_found",
+        reason: "Agent configuration not found",
+        status: 404,
       });
     }
+    if ((err as { status?: number }).status === 403) {
+      return errorResponse({
+        err,
+        error: "forbidden",
+        reason: "Admin access required",
+        status: 403,
+      });
+    }
+    return errorResponse({
+      err,
+      error: "internal",
+      reason: "Failed to load agent configuration",
+      status: 500,
+    });
   }
-);
+});
 
 export const PUT = withApiGuards({
   auth: true,
@@ -219,6 +210,13 @@ export const PUT = withApiGuards({
       }
 
       await bumpTag("configuration");
+      try {
+        revalidateTag("configuration", { expire: 0 });
+        revalidateTag(`configuration:${agentValidation.data}`, { expire: 0 });
+        revalidateTag(`configuration:${agentValidation.data}:${scope}`, { expire: 0 });
+      } catch {
+        // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
+      }
 
       emitOperationalAlert("agent_config.updated", {
         attributes: {
