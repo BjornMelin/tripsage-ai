@@ -54,6 +54,7 @@ describe("aggregate", () => {
 
   describe("aggregateDashboardMetrics", () => {
     it("returns cached data when available", async () => {
+      const userId = "user_123";
       const cachedData = {
         activeTrips: 5,
         avgLatencyMs: 123.45,
@@ -66,14 +67,15 @@ describe("aggregate", () => {
 
       const { aggregateDashboardMetrics } = await import("../aggregate");
 
-      const result = await aggregateDashboardMetrics(24);
+      const result = await aggregateDashboardMetrics(userId, 24);
 
       expect(result).toEqual(cachedData);
-      expect(mockRedisGet).toHaveBeenCalledWith("dashboard:metrics:24h");
+      expect(mockRedisGet).toHaveBeenCalledWith(`dashboard:metrics:${userId}:24h`);
     });
 
     it("queries Supabase and caches result on cache miss", async () => {
       const { createServerSupabase } = await import("@/lib/supabase/server");
+      const userId = "user_123";
 
       const mockTrips = [
         { status: "completed" },
@@ -94,13 +96,13 @@ describe("aggregate", () => {
 
       const { aggregateDashboardMetrics } = await import("../aggregate");
 
-      const result = await aggregateDashboardMetrics(24);
+      const result = await aggregateDashboardMetrics(userId, 24);
 
       expect(result.totalTrips).toBe(5);
       expect(result.completedTrips).toBe(2);
       expect(result.activeTrips).toBe(2);
       expect(mockRedisSet).toHaveBeenCalledWith(
-        "dashboard:metrics:24h",
+        `dashboard:metrics:${userId}:24h`,
         expect.any(Object),
         { ex: 300 }
       );
@@ -108,6 +110,7 @@ describe("aggregate", () => {
 
     it("handles missing trips gracefully", async () => {
       const { createServerSupabase } = await import("@/lib/supabase/server");
+      const userId = "user_123";
 
       const mockSelect = vi.fn().mockResolvedValue({
         data: null,
@@ -120,7 +123,7 @@ describe("aggregate", () => {
 
       const { aggregateDashboardMetrics } = await import("../aggregate");
 
-      const result = await aggregateDashboardMetrics(24);
+      const result = await aggregateDashboardMetrics(userId, 24);
 
       expect(result.totalTrips).toBe(0);
       expect(result.completedTrips).toBe(0);
@@ -129,6 +132,7 @@ describe("aggregate", () => {
 
     it("calculates metrics correctly with api_metrics data", async () => {
       const { createServerSupabase } = await import("@/lib/supabase/server");
+      const userId = "user_123";
 
       // Reset redis mock to not return cached
       mockRedisGet.mockResolvedValue(null);
@@ -157,7 +161,7 @@ describe("aggregate", () => {
 
       const { aggregateDashboardMetrics } = await import("../aggregate");
 
-      const result = await aggregateDashboardMetrics(24);
+      const result = await aggregateDashboardMetrics(userId, 24);
 
       expect(result.totalRequests).toBe(4);
       // (100 + 200 + 150 + 250) / 4 = 175
@@ -170,21 +174,23 @@ describe("aggregate", () => {
   describe("invalidateDashboardCache", () => {
     it("invalidates specific window cache", async () => {
       const { invalidateDashboardCache } = await import("../aggregate");
+      const userId = "user_123";
 
-      await invalidateDashboardCache(24);
+      await invalidateDashboardCache(userId, 24);
 
-      expect(mockRedisDel).toHaveBeenCalledWith("dashboard:metrics:24h");
+      expect(mockRedisDel).toHaveBeenCalledWith(`dashboard:metrics:${userId}:24h`);
     });
 
     it("invalidates all window caches when no window specified", async () => {
       const { invalidateDashboardCache } = await import("../aggregate");
+      const userId = "user_123";
 
-      await invalidateDashboardCache();
+      await invalidateDashboardCache(userId);
 
-      expect(mockRedisDel).toHaveBeenCalledWith("dashboard:metrics:24h");
-      expect(mockRedisDel).toHaveBeenCalledWith("dashboard:metrics:168h");
-      expect(mockRedisDel).toHaveBeenCalledWith("dashboard:metrics:720h");
-      expect(mockRedisDel).toHaveBeenCalledWith("dashboard:metrics:0h");
+      expect(mockRedisDel).toHaveBeenCalledWith(`dashboard:metrics:${userId}:24h`);
+      expect(mockRedisDel).toHaveBeenCalledWith(`dashboard:metrics:${userId}:168h`);
+      expect(mockRedisDel).toHaveBeenCalledWith(`dashboard:metrics:${userId}:720h`);
+      expect(mockRedisDel).toHaveBeenCalledWith(`dashboard:metrics:${userId}:0h`);
     });
   });
 

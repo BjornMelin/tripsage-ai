@@ -12,7 +12,7 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { validateSchema } from "@/lib/api/route-helpers";
+import { requireUserId, validateSchema } from "@/lib/api/route-helpers";
 import { aggregateDashboardMetrics } from "@/lib/metrics/aggregate";
 
 /**
@@ -37,7 +37,10 @@ export const GET = withApiGuards({
 })(
   async (
     req: NextRequest,
-    { supabase: _supabase, user: _user }: { supabase: unknown; user: unknown }
+    {
+      supabase: _supabase,
+      user,
+    }: { supabase: unknown; user: { id: string } | null | undefined }
   ) => {
     // Parse and validate query parameters
     const searchParams = req.nextUrl.searchParams;
@@ -50,7 +53,9 @@ export const GET = withApiGuards({
     const hours = windowToHours(window);
 
     // Aggregate metrics
-    const metrics = await aggregateDashboardMetrics(hours);
+    const userIdResult = requireUserId(user);
+    if (!userIdResult.ok) return userIdResult.error;
+    const metrics = await aggregateDashboardMetrics(userIdResult.data, hours);
 
     // Validate response shape (defense in depth)
     const validated = dashboardMetricsSchema.parse(metrics);

@@ -26,18 +26,20 @@ type ApiMetricRow = Pick<Tables<"api_metrics">, "duration_ms" | "status_code">;
  * @returns Aggregated dashboard metrics
  */
 export function aggregateDashboardMetrics(
+  userId: string,
   windowHours: number = 24
 ): Promise<DashboardMetrics> {
   return withTelemetrySpan(
     "metrics.aggregate",
     {
       attributes: {
+        "cache.scope": "user",
         "window.hours": windowHours,
       },
     },
     async (span) => {
       const redis = getRedis();
-      const cacheKey = `dashboard:metrics:${windowHours}h`;
+      const cacheKey = `dashboard:metrics:${userId}:${windowHours}h`;
 
       // 1. Check cache first
       if (redis) {
@@ -176,19 +178,22 @@ async function fetchApiMetrics(
  *
  * @param windowHours - Specific window to invalidate, or undefined for all windows
  */
-export async function invalidateDashboardCache(windowHours?: number): Promise<void> {
+export async function invalidateDashboardCache(
+  userId: string,
+  windowHours?: number
+): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
 
   if (windowHours !== undefined) {
-    await redis.del(`dashboard:metrics:${windowHours}h`);
+    await redis.del(`dashboard:metrics:${userId}:${windowHours}h`);
   } else {
     // Invalidate all common windows
     await Promise.all([
-      redis.del("dashboard:metrics:24h"),
-      redis.del("dashboard:metrics:168h"),
-      redis.del("dashboard:metrics:720h"),
-      redis.del("dashboard:metrics:0h"),
+      redis.del(`dashboard:metrics:${userId}:24h`),
+      redis.del(`dashboard:metrics:${userId}:168h`),
+      redis.del(`dashboard:metrics:${userId}:720h`),
+      redis.del(`dashboard:metrics:${userId}:0h`),
     ]);
   }
 }
