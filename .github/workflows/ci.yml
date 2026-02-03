@@ -84,7 +84,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.27.0
+          npm install -g pnpm@10.28.2
           pnpm install --frozen-lockfile
 
       - name: Cache Vite/Vitest/TS caches
@@ -107,6 +107,12 @@ jobs:
 
       - name: Reject @fileoverview drift (changed files)
         run: pnpm check:fileoverviews
+
+      - name: Enforce Zod v4 style (changed files)
+        run: pnpm check:zod-v4
+
+      - name: Enforce API route error helpers (changed files)
+        run: pnpm check:api-route-errors
 
       - name: Reject secrets (PR diff)
         if: github.event_name == 'pull_request'
@@ -234,7 +240,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.27.0
+          npm install -g pnpm@10.28.2
           pnpm install --frozen-lockfile
 
       - name: Cache Vite/Vitest/TS caches
@@ -272,7 +278,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install -g pnpm@10.27.0
+          npm install -g pnpm@10.28.2
           pnpm install --frozen-lockfile
 
       - name: Download shard artifacts
