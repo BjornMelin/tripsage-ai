@@ -46,18 +46,16 @@ const formatDuration = (minutes: number): string => {
   return `${hours}h ${remaining}m`;
 };
 
-/**
- * Flight results client component props.
- * @param searchId - The search ID of the search.
- */
+/** Props for the FlightResultsClient component. */
 export interface FlightResultsClientProps {
+  /** The search identifier to load results for, or null if not yet available. */
   searchId: string | null;
 }
 
 /**
  * Flight results client component.
- * @param searchId - The search ID of the search.
- * @returns The flight results client.
+ * @param searchId - Identifier for the search whose results should be displayed.
+ * @returns A React element rendering the flight search results UI.
  */
 export default function FlightResultsClient({ searchId }: FlightResultsClientProps) {
   const { currentContext, results, resultsBySearch, searchProgress, status } =
@@ -302,7 +300,13 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
                       <div className="text-sm text-muted-foreground mb-3">
                         per person
                       </div>
-                      <Button className="w-24">Select</Button>
+                      <Button
+                        className="w-24"
+                        disabled
+                        title="Flight selection is not available yet."
+                      >
+                        Select
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -311,7 +315,13 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
 
             {/* Load More */}
             <div className="text-center pt-4">
-              <Button variant="outline">Load More Results</Button>
+              <Button
+                disabled
+                title="Pagination is not available yet."
+                variant="outline"
+              >
+                Load More Results
+              </Button>
             </div>
           </div>
         </div>

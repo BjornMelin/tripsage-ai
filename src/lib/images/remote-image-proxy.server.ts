@@ -17,6 +17,22 @@ function parseAllowedHostsFromEnv(): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+let cachedAllowedHosts: string[] | null = null;
+
+function getAllowedHosts(): string[] {
+  if (cachedAllowedHosts === null) {
+    cachedAllowedHosts = parseAllowedHostsFromEnv();
+  }
+  return cachedAllowedHosts;
+}
+
+/**
+ * Resets cached allowlist values for tests.
+ */
+export function resetRemoteImageProxyAllowedHostsCacheForTest(): void {
+  cachedAllowedHosts = null;
+}
+
 function normalizeHostname(hostname: string): string {
   return hostname.toLowerCase().replace(/\.$/, "");
 }
@@ -70,9 +86,12 @@ function isIpAddressHost(hostname: string): boolean {
 export function getRemoteImageProxyMaxBytes(): number {
   const fallback = 10 * 1024 * 1024;
   const raw = getServerEnvVarWithFallback("IMAGE_PROXY_MAX_BYTES", undefined);
-  if (typeof raw !== "number") return fallback;
-  if (!Number.isFinite(raw) || raw <= 0) return fallback;
-  return Math.min(raw, 25 * 1024 * 1024);
+  if (raw === undefined || raw === null) return fallback;
+  const normalized = String(raw).trim();
+  if (!normalized) return fallback;
+  const parsed = Number.parseInt(normalized, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, 25 * 1024 * 1024);
 }
 
 /**
@@ -89,7 +108,7 @@ export function isAllowedRemoteImageUrl(url: URL): boolean {
   if (hostname === "localhost" || hostname.endsWith(".local")) return false;
   if (isIpAddressHost(hostname)) return false;
 
-  const allowed = parseAllowedHostsFromEnv();
+  const allowed = getAllowedHosts();
   if (allowed.length === 0) return false;
 
   return allowed.some((allowedHost) => {

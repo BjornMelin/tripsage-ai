@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
+import { resetRemoteImageProxyAllowedHostsCacheForTest } from "@/lib/images/remote-image-proxy.server";
 
 import { handleRemoteImageProxy } from "../_handler";
 
@@ -10,12 +11,14 @@ describe("handleRemoteImageProxy", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
   });
 
   it("returns 403 when the remote host is not allowlisted", async () => {
@@ -119,10 +122,43 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     vi.stubEnv("IMAGE_PROXY_MAX_BYTES", "1");
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const upstream = new Response(new Uint8Array([0x00, 0x01]), {
       headers: {
         "content-length": "2",
+        "content-type": "image/png",
+      },
+      status: 200,
+    });
+    Object.defineProperty(upstream, "url", {
+      configurable: true,
+      value: "https://example.com/image.png",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => upstream)
+    );
+
+    const response = await handleRemoteImageProxy({
+      url: "https://example.com/image.png",
+    });
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({ error: "payload_too_large" })
+    );
+  });
+
+  it("returns 413 when streaming body exceeds the limit without content-length", async () => {
+    vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
+    vi.stubEnv("IMAGE_PROXY_MAX_BYTES", "1");
+    __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
+
+    const upstream = new Response(new Uint8Array([0x00, 0x01]), {
+      headers: {
         "content-type": "image/png",
       },
       status: 200,

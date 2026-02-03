@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { createMockModel } from "@/test/ai-sdk/mock-model";
+import { createMockModelWithTracking } from "@/test/ai-sdk/mock-model";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock server-only module before imports
@@ -108,7 +108,7 @@ import type { AgentDependencies } from "../types";
 function createTestDeps(): AgentDependencies {
   return {
     identifier: "test-user-123",
-    model: createMockModel({ text: "Mock response" }),
+    model: createMockModelWithTracking({ text: "Mock response" }).model,
     modelId: "gpt-4",
     sessionId: "test-session-456",
     userId: "test-user-123",

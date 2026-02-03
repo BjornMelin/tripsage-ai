@@ -62,11 +62,10 @@ interface QuickAction {
   actionVariant?: ActionVariant;
 }
 
-/**
- * Props interface for the QuickActions component.
- */
+/** Layout options for QuickActions rendering. */
 type QuickActionsLayout = "grid" | "list";
 
+/** Props for the internal QuickActionsView component. */
 type QuickActionsViewProps = {
   compact: boolean;
   layout: QuickActionsLayout;

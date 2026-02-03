@@ -29,13 +29,8 @@ class RawStringRedisMock extends RedisMockClient {
   }
 }
 
-vi.mock("@upstash/redis", () => ({
-  ...redis,
-  Redis: class extends RawStringRedisMock {
-    constructor(_options?: { url?: string; token?: string }) {
-      super(redis.store);
-    }
-  },
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => new RawStringRedisMock(redis.store)),
 }));
 
 vi.mock("next/headers", () => ({

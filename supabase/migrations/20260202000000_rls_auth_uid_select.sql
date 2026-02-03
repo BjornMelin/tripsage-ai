@@ -327,7 +327,7 @@ BEGIN
       TO authenticated
       USING (
         realtime.topic() ~* '^user:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        AND public.rt_topic_suffix() = (select auth.uid())::text
+        AND lower(public.rt_topic_suffix()) = lower((select auth.uid())::text)
         AND realtime.messages.extension IN ('broadcast', 'presence')
       )
     $pol$;
@@ -339,7 +339,7 @@ BEGIN
       TO authenticated
       WITH CHECK (
         realtime.topic() ~* '^user:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        AND public.rt_topic_suffix() = (select auth.uid())::text
+        AND lower(public.rt_topic_suffix()) = lower((select auth.uid())::text)
         AND realtime.messages.extension IN ('broadcast', 'presence')
       )
     $pol$;

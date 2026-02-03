@@ -123,8 +123,8 @@ export async function handleRemoteImageProxy(params: RemoteImageProxyRequest) {
     return errorResponse({
       err: new Error(`Remote image returned ${response.status}`),
       error: "external_api_error",
-      reason: `Remote image returned ${response.status}`,
-      status: response.status >= 400 && response.status < 500 ? response.status : 502,
+      reason: "Remote image returned an upstream error",
+      status: 502,
     });
   }
 
@@ -173,7 +173,9 @@ export async function handleRemoteImageProxy(params: RemoteImageProxyRequest) {
       "Content-Length": String(bytes.byteLength),
       "Content-Type": contentType,
     };
-    return new NextResponse(bytes.buffer as ArrayBuffer, { headers });
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    return new NextResponse(buffer, { headers });
   } catch (error) {
     if (error instanceof Error && error.message === "payload_too_large") {
       return errorResponse({

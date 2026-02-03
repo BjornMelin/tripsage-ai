@@ -18,6 +18,7 @@ const DEFAULT_FALLBACK = (
   </div>
 );
 
+/** Props for the ProxiedImage component. */
 export interface ProxiedImageProps {
   src: unknown;
   alt: string;

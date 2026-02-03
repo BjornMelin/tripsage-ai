@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 
 const SKIP_LINK_CLASSNAME =
-  "sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow";
+  "sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:text-foreground focus-visible:shadow";
 
 interface AppShellProps {
   children: ReactNode;

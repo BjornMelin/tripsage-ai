@@ -11,7 +11,7 @@ import type {
 } from "@schemas/currency";
 import { UPDATE_EXCHANGE_RATES_RESPONSE_SCHEMA } from "@schemas/currency";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
@@ -172,13 +172,20 @@ export function useCurrencyConverter() {
  * @returns Currency data helpers plus popular and recent selections.
  */
 export function useCurrencyData() {
-  const { getCurrencyByCode, popularCurrencies, recentPairs } = useCurrencyStore(
-    useShallow((state) => ({
-      getCurrencyByCode: state.getCurrencyByCode,
-      popularCurrencies: state.getPopularCurrencies(),
-      recentPairs: state.getRecentCurrencyPairs(),
-    }))
+  const { getCurrencyByCode, getPopularCurrencies, getRecentCurrencyPairs } =
+    useCurrencyStore(
+      useShallow((state) => ({
+        getCurrencyByCode: state.getCurrencyByCode,
+        getPopularCurrencies: state.getPopularCurrencies,
+        getRecentCurrencyPairs: state.getRecentCurrencyPairs,
+      }))
+    );
+
+  const popularCurrencies = useMemo(
+    () => getPopularCurrencies(),
+    [getPopularCurrencies]
   );
+  const recentPairs = useMemo(() => getRecentCurrencyPairs(), [getRecentCurrencyPairs]);
 
   return {
     getCurrencyByCode,

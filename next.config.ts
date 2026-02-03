@@ -28,9 +28,9 @@ const nextConfig: NextConfig = {
     // Agent configuration is read frequently and updated infrequently (admin-only).
     // Keep this explicit so cached behavior is inspectable without tracing nested caches.
     agentConfiguration: {
-      stale: 60, // 1 minute
-      revalidate: 15 * 60, // 15 minutes
       expire: 60 * 60, // 1 hour
+      revalidate: 15 * 60, // 15 minutes
+      stale: 60, // 1 minute
     },
   },
 

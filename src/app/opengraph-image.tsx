@@ -13,6 +13,11 @@ export const size = { height: 630, width: 1200 };
 /** MIME type for the generated image. */
 export const contentType = "image/png";
 
+/**
+ * Generates the default Open Graph image for social previews.
+ *
+ * @returns The rendered Open Graph ImageResponse.
+ */
 export default function OpenGraphImage() {
   return new ImageResponse(
     <div

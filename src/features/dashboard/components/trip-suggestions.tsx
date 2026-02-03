@@ -470,6 +470,12 @@ function TripSuggestionsImpl({
   );
 }
 
+/**
+ * Renders trip suggestions with memory-based personalization and empty-state UI.
+ *
+ * @param props - Component configuration including limit and userId.
+ * @returns Trip suggestions card with personalized recommendations.
+ */
 export function TripSuggestions(props: TripSuggestionsProps) {
   return <TripSuggestionsImpl {...props} showEmpty showMemoryBased />;
 }

@@ -12,18 +12,12 @@ export type TypedClient = SupabaseClient<Database>;
 
 type SchemaName = Extract<SupabaseSchemaName, keyof Database>;
 type TableName<S extends SchemaName> = Extract<keyof Database[S]["Tables"], string>;
-type TableRow<
-  S extends SchemaName,
-  T extends TableName<S>,
-> = Database[S]["Tables"][T] extends Record<"Row", infer R> ? R : never;
-type TableInsert<
-  S extends SchemaName,
-  T extends TableName<S>,
-> = Database[S]["Tables"][T] extends Record<"Insert", infer I> ? I : never;
-type TableUpdate<
-  S extends SchemaName,
-  T extends TableName<S>,
-> = Database[S]["Tables"][T] extends Record<"Update", infer U> ? U : never;
+type TableRow<S extends SchemaName, T extends TableName<S>> =
+  Database[S]["Tables"][T] extends Record<"Row", infer R> ? R : never;
+type TableInsert<S extends SchemaName, T extends TableName<S>> =
+  Database[S]["Tables"][T] extends Record<"Insert", infer I> ? I : never;
+type TableUpdate<S extends SchemaName, T extends TableName<S>> =
+  Database[S]["Tables"][T] extends Record<"Update", infer U> ? U : never;
 /**
  * Query builder type alias for Supabase chaining with minimal shape.
  * Keep this loose enough for test doubles while avoiding `any`.

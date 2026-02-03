@@ -30,9 +30,9 @@ function extractInlineScriptContents(html) {
   for (const script of scripts) {
     if (script.hasAttribute("src")) continue;
     if (script.hasAttribute("nonce")) continue;
-    const trimmed = script.textContent?.trim();
-    if (!trimmed) continue;
-    results.push(trimmed);
+    const content = script.textContent ?? "";
+    if (!content.trim()) continue;
+    results.push(content);
   }
   return results;
 }

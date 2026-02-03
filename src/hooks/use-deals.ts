@@ -95,7 +95,7 @@ export function useDeals() {
   const allDeals = useMemo(() => Object.values(deals), [deals]);
 
   // Get filtered deals based on current filters
-  const filteredDeals = getFilteredDeals();
+  const filteredDeals = useMemo(() => getFilteredDeals(), [getFilteredDeals]);
 
   // Get featured deals
   const featuredDeals = featuredDealItems;
@@ -107,18 +107,22 @@ export function useDeals() {
   const recentlyViewedDeals = recentlyViewedDealItems;
 
   // Get deal statistics
-  const dealStats = getDealsStats();
+  const dealStats = useMemo(() => getDealsStats(), [getDealsStats]);
+
+  // Convert IDs to Sets for O(1) membership checks.
+  const savedDealIdSet = useMemo(() => new Set(savedDealIds), [savedDealIds]);
+  const featuredDealIdSet = useMemo(() => new Set(featuredDealIds), [featuredDealIds]);
 
   // Utility to check if a deal is saved
   const isDealSaved = useCallback(
-    (dealId: string) => savedDealIds.includes(dealId),
-    [savedDealIds]
+    (dealId: string) => savedDealIdSet.has(dealId),
+    [savedDealIdSet]
   );
 
   // Utility to check if a deal is featured
   const isDealFeatured = useCallback(
-    (dealId: string) => featuredDealIds.includes(dealId),
-    [featuredDealIds]
+    (dealId: string) => featuredDealIdSet.has(dealId),
+    [featuredDealIdSet]
   );
 
   // Filter by deal type

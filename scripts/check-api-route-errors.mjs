@@ -147,7 +147,7 @@ function scanBalancedObject(text, startIndex) {
     }
 
     if (mode === "sq" || mode === "dq") {
-      if (ch === "\\" && next) {
+      if (ch === "\\") {
         i += 2;
         continue;
       }
@@ -158,7 +158,7 @@ function scanBalancedObject(text, startIndex) {
     }
 
     if (mode === "bt") {
-      if (ch === "\\" && next) {
+      if (ch === "\\") {
         i += 2;
         continue;
       }
@@ -227,6 +227,107 @@ function scanBalancedObject(text, startIndex) {
   return null;
 }
 
+function findMatchingParen(text, openIndex) {
+  if (text[openIndex] !== "(") return null;
+
+  let i = openIndex;
+  let depth = 0;
+  let mode = "code"; // code | line_comment | block_comment | sq | dq | bt
+  let templateExprDepth = 0;
+
+  while (i < text.length) {
+    const ch = text[i];
+    const next = i + 1 < text.length ? text[i + 1] : "";
+
+    if (mode === "line_comment") {
+      if (ch === "\n") mode = "code";
+      i += 1;
+      continue;
+    }
+
+    if (mode === "block_comment") {
+      if (ch === "*" && next === "/") {
+        mode = "code";
+        i += 2;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (mode === "sq" || mode === "dq") {
+      if (ch === "\\") {
+        i += 2;
+        continue;
+      }
+      const quote = mode === "sq" ? "'" : '"';
+      if (ch === quote) mode = "code";
+      i += 1;
+      continue;
+    }
+
+    if (mode === "bt") {
+      if (ch === "\\") {
+        i += 2;
+        continue;
+      }
+      if (ch === "`" && templateExprDepth === 0) {
+        mode = "code";
+        i += 1;
+        continue;
+      }
+      if (ch === "$" && next === "{") {
+        templateExprDepth += 1;
+        i += 2;
+        continue;
+      }
+      if (templateExprDepth > 0) {
+        if (ch === "{") templateExprDepth += 1;
+        if (ch === "}") templateExprDepth -= 1;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (ch === "/" && next === "/") {
+      mode = "line_comment";
+      i += 2;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      mode = "block_comment";
+      i += 2;
+      continue;
+    }
+    if (ch === "'") {
+      mode = "sq";
+      i += 1;
+      continue;
+    }
+    if (ch === '"') {
+      mode = "dq";
+      i += 1;
+      continue;
+    }
+    if (ch === "`") {
+      mode = "bt";
+      templateExprDepth = 0;
+      i += 1;
+      continue;
+    }
+
+    if (ch === "(") {
+      depth += 1;
+    } else if (ch === ")") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+    i += 1;
+  }
+
+  return null;
+}
+
 function findObjectLiteralAfter(text, startIndex) {
   let i = startIndex;
   while (i < text.length) {
@@ -284,12 +385,16 @@ function scanForbiddenNewResponseJson(text) {
     if (at === -1) break;
     index = at + needle.length;
 
-    // Quick filter: look for JSON.stringify soon after.
-    const stringifyAt = text.indexOf("JSON.stringify", at);
-    if (stringifyAt === -1 || stringifyAt - at > 250) continue;
+    const callOpen = text.indexOf("(", index);
+    if (callOpen === -1) continue;
+    const callEnd = findMatchingParen(text, callOpen);
+    if (callEnd === null) continue;
+
+    const stringifyAt = text.indexOf("JSON.stringify", callOpen);
+    if (stringifyAt === -1 || stringifyAt > callEnd) continue;
 
     const openParen = text.indexOf("(", stringifyAt);
-    if (openParen === -1) continue;
+    if (openParen === -1 || openParen > callEnd) continue;
 
     const objectStart = findObjectLiteralAfter(text, openParen + 1);
     if (objectStart === null) continue;

@@ -11,6 +11,8 @@ import "next/cache";
 declare module "next/cache" {
   /**
    * Registers a cache lifetime profile by name for Cache Components.
+   *
+   * @param profile - The name of a cache profile defined in next.config.ts.
    */
   export function cacheLife(profile: string): void;
 }

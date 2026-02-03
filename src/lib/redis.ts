@@ -47,6 +47,5 @@ export async function incrCounter(
     return value ?? null;
   }
 
-  const [value] = await redis.pipeline().incr(key).exec<[number]>();
-  return value ?? null;
+  return await redis.incr(key);
 }

@@ -6,6 +6,7 @@ import {
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
+import { createMockModelWithTracking } from "@/test/ai-sdk/mock-model";
 import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createRouteParamsContext, getMockCookiesForTest } from "@/test/helpers/route";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
@@ -25,13 +26,16 @@ vi.mock("ai", () => ({
 }));
 
 // Mock provider resolution (registry + gateway/BYOK)
-vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({
-    model: "openai/gpt-4o",
-    modelId: "openai/gpt-4o",
-    provider: "openai",
-  })),
-}));
+vi.mock("@ai/models/registry", () => {
+  const { model } = createMockModelWithTracking({ text: "Mock response" });
+  return {
+    resolveProvider: vi.fn(async () => ({
+      model,
+      modelId: "openai/gpt-4o",
+      provider: "openai",
+    })),
+  };
+});
 
 vi.mock("botid/server", async () => {
   const { mockBotIdHumanResponse } = await import("@/test/mocks/botid");
@@ -242,7 +246,7 @@ describe("ai stream route", () => {
             role: "user",
           },
         ],
-        model: "openai/gpt-4o",
+        model: expect.any(Object),
       })
     );
     expect(mockToUiMessageStreamResponse).toHaveBeenCalled();
@@ -275,7 +279,7 @@ describe("ai stream route", () => {
             role: "user",
           },
         ],
-        model: "openai/gpt-4o",
+        model: expect.any(Object),
       })
     );
   });
@@ -307,7 +311,7 @@ describe("ai stream route", () => {
             role: "user",
           },
         ],
-        model: "openai/gpt-4o",
+        model: expect.any(Object),
       })
     );
   });
@@ -398,7 +402,7 @@ describe("ai stream route", () => {
             role: "user",
           },
         ],
-        model: "openai/gpt-4o",
+        model: expect.any(Object),
       })
     );
   });
@@ -487,7 +491,7 @@ describe("ai stream route", () => {
             role: "user",
           },
         ],
-        model: "openai/gpt-4o",
+        model: expect.any(Object),
       })
     );
   });

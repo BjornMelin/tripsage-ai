@@ -132,6 +132,41 @@ export function createMockModel(options: MockModelOptions = {}) {
 }
 
 /**
+ * Creates a mock language model with call tracking.
+ *
+ * @param options Configuration for the mock model
+ * @returns Mock model plus a mutable call log for assertions
+ */
+export function createMockModelWithTracking(options: MockModelOptions = {}) {
+  const calls: Array<{ input: unknown }> = [];
+  const {
+    text = "Mock AI response",
+    finishReason = "stop",
+    usage = {},
+    warnings = [],
+  } = options;
+
+  const inputTokens = usage.inputTokens ?? 10;
+  const outputTokens = usage.outputTokens ?? 20;
+
+  const result: MockGenerateResult = {
+    content: [{ text, type: "text" }],
+    finishReason,
+    usage: createUsage(inputTokens, outputTokens),
+    warnings: warnings as never[],
+  };
+
+  const model = new MockLanguageModelV3({
+    doGenerate: (input) => {
+      calls.push({ input });
+      return unsafeCast(result);
+    },
+  });
+
+  return { calls, model };
+}
+
+/**
  * Creates a mock language model that supports tool calls.
  *
  * @param options Configuration including tool calls to return

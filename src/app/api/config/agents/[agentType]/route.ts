@@ -20,6 +20,8 @@ import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import {
   errorResponse,
+  forbiddenResponse,
+  notFoundResponse,
   parseJsonBody,
   parseStringId,
   requireUserId,
@@ -92,20 +94,10 @@ export const GET = withApiGuards({
     return NextResponse.json(result);
   } catch (err) {
     if ((err as { status?: number }).status === 404) {
-      return errorResponse({
-        err,
-        error: "not_found",
-        reason: "Agent configuration not found",
-        status: 404,
-      });
+      return notFoundResponse("Agent configuration not found");
     }
     if ((err as { status?: number }).status === 403) {
-      return errorResponse({
-        err,
-        error: "forbidden",
-        reason: "Admin access required",
-        status: 403,
-      });
+      return forbiddenResponse("Admin access required");
     }
     return errorResponse({
       err,
