@@ -11,6 +11,7 @@
 import crypto from "node:crypto";
 import { existsSync, promises as fs } from "node:fs";
 import path from "node:path";
+import { JSDOM } from "jsdom";
 
 function sha256Base64(value) {
   return crypto.createHash("sha256").update(value, "utf8").digest("base64");
@@ -32,18 +33,12 @@ async function listFilesRecursive(dir) {
 
 function extractInlineScriptContents(html) {
   const results = [];
-  const scriptTagRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-  while (true) {
-    const match = scriptTagRegex.exec(html);
-    if (!match) break;
-    const attrs = match[1] ?? "";
-    const body = match[2] ?? "";
-    const hasSrc = /\bsrc\s*=/.test(attrs);
-    if (hasSrc) continue;
-    const hasNonceAttr = /\bnonce\s*=/.test(attrs);
-    if (hasNonceAttr) continue;
-
-    const trimmed = body.trim();
+  const dom = new JSDOM(html);
+  const scripts = dom.window.document.querySelectorAll("script");
+  for (const script of scripts) {
+    if (script.hasAttribute("src")) continue;
+    if (script.hasAttribute("nonce")) continue;
+    const trimmed = script.textContent?.trim();
     if (!trimmed) continue;
     results.push(trimmed);
   }
