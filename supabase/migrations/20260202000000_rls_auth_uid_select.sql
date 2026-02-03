@@ -42,6 +42,21 @@ CREATE POLICY trips_insert_own
   TO authenticated
   WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS trips_select_accessible ON public.trips;
+CREATE POLICY trips_select_accessible
+  ON public.trips
+  FOR SELECT
+  TO authenticated
+  USING (public.user_has_trip_access((select auth.uid()), id));
+
+DROP POLICY IF EXISTS trips_update_collaborators ON public.trips;
+CREATE POLICY trips_update_collaborators
+  ON public.trips
+  FOR UPDATE
+  TO authenticated
+  USING (public.user_has_trip_edit_access((select auth.uid()), id))
+  WITH CHECK (public.user_has_trip_edit_access((select auth.uid()), id));
+
 DROP POLICY IF EXISTS trips_delete_own ON public.trips;
 CREATE POLICY trips_delete_own
   ON public.trips

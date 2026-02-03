@@ -110,10 +110,16 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
 
   const priceRange = useMemo(() => {
     if (flights.length === 0) return null;
-    const prices = flights.map((flight) => flight.price);
+    let min = flights[0].price;
+    let max = min;
+    for (let i = 1; i < flights.length; i += 1) {
+      const price = flights[i].price;
+      if (price < min) min = price;
+      if (price > max) max = price;
+    }
     return {
-      max: Math.max(...prices),
-      min: Math.min(...prices),
+      max,
+      min,
     };
   }, [flights]);
 
@@ -147,6 +153,11 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
             <CardTitle>Invalid Search</CardTitle>
             <CardDescription>No search ID provided.</CardDescription>
           </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <a href="/dashboard/search/flights">Start New Search</a>
+            </Button>
+          </CardContent>
         </Card>
       </SearchLayout>
     );
@@ -202,9 +213,9 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
         ) : null}
 
         {/* Results */}
-        <div className="flex gap-6">
+        <div className="flex flex-col gap-6 lg:flex-row">
           {/* Filters Sidebar */}
-          <div className="w-64 space-y-4">
+          <div className="w-full space-y-4 lg:w-64">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">

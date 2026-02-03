@@ -1,8 +1,10 @@
 /** @vitest-environment node */
 
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
+import { server } from "@/test/msw/server";
 
 let handleRemoteImageProxy: typeof import("../_handler").handleRemoteImageProxy;
 
@@ -53,32 +55,22 @@ describe("handleRemoteImageProxy", () => {
     __resetServerEnvCacheForTest();
 
     const bytes = new Uint8Array([0x00, 0x01, 0x02]);
-    const upstream = new Response(bytes, {
-      headers: {
-        "content-length": String(bytes.byteLength),
-        "content-type": "image/png",
-      },
-      status: 200,
-    });
-    Object.defineProperty(upstream, "url", {
-      configurable: true,
-      value: "https://example.com/image.png",
-    });
-
-    const fetchMock = vi.fn(async () => upstream);
-    vi.stubGlobal("fetch", fetchMock);
+    server.use(
+      http.get("https://example.com/image.png", () => {
+        return HttpResponse.arrayBuffer(bytes.buffer, {
+          headers: {
+            "content-length": String(bytes.byteLength),
+            "content-type": "image/png",
+          },
+          status: 200,
+        });
+      })
+    );
 
     const response = await handleRemoteImageProxy({
       url: "https://example.com/image.png",
     });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.com/image.png",
-      expect.objectContaining({
-        redirect: "follow",
-        signal: expect.any(AbortSignal),
-      })
-    );
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("public, max-age=86400");
     expect(response.headers.get("content-type")).toBe("image/png");
@@ -91,20 +83,15 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
 
-    const upstream = new Response("nope", {
-      headers: {
-        "content-type": "text/plain",
-      },
-      status: 200,
-    });
-    Object.defineProperty(upstream, "url", {
-      configurable: true,
-      value: "https://example.com/image.png",
-    });
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => upstream)
+    server.use(
+      http.get("https://example.com/image.png", () => {
+        return new HttpResponse("nope", {
+          headers: {
+            "content-type": "text/plain",
+          },
+          status: 200,
+        });
+      })
     );
 
     const response = await handleRemoteImageProxy({
@@ -122,21 +109,16 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_MAX_BYTES", "1");
     __resetServerEnvCacheForTest();
 
-    const upstream = new Response(new Uint8Array([0x00, 0x01]), {
-      headers: {
-        "content-length": "2",
-        "content-type": "image/png",
-      },
-      status: 200,
-    });
-    Object.defineProperty(upstream, "url", {
-      configurable: true,
-      value: "https://example.com/image.png",
-    });
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => upstream)
+    server.use(
+      http.get("https://example.com/image.png", () => {
+        return HttpResponse.arrayBuffer(new Uint8Array([0x00, 0x01]).buffer, {
+          headers: {
+            "content-length": "2",
+            "content-type": "image/png",
+          },
+          status: 200,
+        });
+      })
     );
 
     const response = await handleRemoteImageProxy({
@@ -154,20 +136,15 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_MAX_BYTES", "1");
     __resetServerEnvCacheForTest();
 
-    const upstream = new Response(new Uint8Array([0x00, 0x01]), {
-      headers: {
-        "content-type": "image/png",
-      },
-      status: 200,
-    });
-    Object.defineProperty(upstream, "url", {
-      configurable: true,
-      value: "https://example.com/image.png",
-    });
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => upstream)
+    server.use(
+      http.get("https://example.com/image.png", () => {
+        return HttpResponse.arrayBuffer(new Uint8Array([0x00, 0x01]).buffer, {
+          headers: {
+            "content-type": "image/png",
+          },
+          status: 200,
+        });
+      })
     );
 
     const response = await handleRemoteImageProxy({
@@ -184,20 +161,18 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
 
-    const upstream = new Response(new Uint8Array([0x00]), {
-      headers: {
-        "content-type": "image/png",
-      },
-      status: 200,
-    });
-    Object.defineProperty(upstream, "url", {
-      configurable: true,
-      value: "https://evil.com/image.png",
-    });
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => upstream)
+    server.use(
+      http.get("https://example.com/redirect-to-evil", () => {
+        return HttpResponse.redirect("https://evil.com/image.png");
+      }),
+      http.get("https://evil.com/image.png", () => {
+        return HttpResponse.arrayBuffer(new Uint8Array([0x00]).buffer, {
+          headers: {
+            "content-type": "image/png",
+          },
+          status: 200,
+        });
+      })
     );
 
     const response = await handleRemoteImageProxy({

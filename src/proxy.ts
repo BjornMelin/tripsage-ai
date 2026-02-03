@@ -9,6 +9,8 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 type CspMode = "authed" | "public";
 
+const AUTHED_ROUTE_PREFIXES = ["/chat", "/dashboard"] as const;
+
 function base64EncodeBytes(value: Uint8Array): string {
   if (typeof Buffer !== "undefined") {
     return Buffer.from(value).toString("base64");
@@ -28,8 +30,10 @@ function createNonce(): string {
 }
 
 function getCspModeFromPathname(pathname: string): CspMode {
-  if (pathname === "/chat" || pathname.startsWith("/chat/")) return "authed";
-  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return "authed";
+  const isAuthedRoute = AUTHED_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+  if (isAuthedRoute) return "authed";
   return "public";
 }
 

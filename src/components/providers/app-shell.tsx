@@ -14,7 +14,8 @@ const SKIP_LINK_CLASSNAME =
 /**
  * Props for public and authenticated application shell components.
  *
- * @property children - React nodes rendered inside the shell.
+ * @remarks
+ * The `children` property contains React nodes rendered inside the shell.
  */
 interface AppShellProps {
   children: ReactNode;
@@ -48,8 +49,8 @@ export function PublicAppShell({ children }: AppShellProps) {
 /**
  * Props for the authenticated application shell.
  *
- * @extends AppShellProps
- * @property nonce - Optional CSP nonce for inline script execution.
+ * @remarks
+ * Extends `AppShellProps` and adds an optional `nonce` string for CSP inline scripts.
  */
 interface AuthedAppShellProps extends AppShellProps {
   nonce?: string;
