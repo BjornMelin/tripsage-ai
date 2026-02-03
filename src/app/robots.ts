@@ -3,14 +3,14 @@
  */
 
 import type { MetadataRoute } from "next";
-import { getRequiredServerOrigin } from "@/lib/url/server-origin";
+import { getServerOrigin } from "@/lib/url/server-origin";
 
 /**
  * robots.txt metadata route.
  * @returns The robots.txt metadata.
  */
 export default function robots(): MetadataRoute.Robots {
-  const origin = getRequiredServerOrigin();
+  const origin = getServerOrigin();
 
   return {
     rules: [
