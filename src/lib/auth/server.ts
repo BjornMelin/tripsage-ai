@@ -7,14 +7,25 @@ import "server-only";
 import { AUTH_USER_PREFERENCES_SCHEMA, type AuthUser } from "@schemas/stores";
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerSupabase, getCurrentUser } from "@/lib/supabase/server";
 
+/**
+ * Auth context.
+ * @param supabase - The Supabase client.
+ * @param user - The user.
+ */
 export interface AuthContext {
   supabase: TypedServerSupabase;
   user: User;
 }
 
+/**
+ * Optional auth context.
+ * @param supabase - The Supabase client.
+ * @param user - The user.
+ */
 export interface OptionalAuthContext {
   supabase: TypedServerSupabase;
   user: User | null;
@@ -72,10 +83,22 @@ export function mapSupabaseUserToAuthUser(user: User): AuthUser {
  *
  * @returns Supabase client and optional user
  */
-export async function getOptionalUser(): Promise<OptionalAuthContext> {
+const getOptionalUserCached = cache(async (): Promise<OptionalAuthContext> => {
   const supabase = await createServerSupabase();
   const { user } = await getCurrentUser(supabase);
   return { supabase, user };
+});
+
+/**
+ * Returns the current user if present, or null when unauthenticated.
+ *
+ * Uses request-scoped memoization to avoid redundant `auth.getUser()` calls
+ * across nested layouts/pages during a single render.
+ *
+ * @returns Supabase client and optional user
+ */
+export function getOptionalUser(): Promise<OptionalAuthContext> {
+  return getOptionalUserCached();
 }
 
 /**
