@@ -29,14 +29,15 @@ import { isMfaRequiredError } from "./supabase-errors";
 const logger = createServerLogger("auth.actions");
 
 async function enforceBotIdForAuthAction(
-  actionName: string
+  actionName: string,
+  requestHeaders?: Headers
 ): Promise<{ status: "error"; error: string } | null> {
   if (!isBotIdEnabledForCurrentEnvironment()) return null;
   try {
-    const requestHeaders = await headers();
+    const effectiveHeaders = requestHeaders ?? (await headers());
     await assertHumanOrThrow(actionName, {
       allowVerifiedAiAssistants: false,
-      headers: requestHeaders,
+      headers: effectiveHeaders,
     });
     return null;
   } catch (error) {
@@ -55,10 +56,11 @@ async function enforceBotIdForAuthAction(
 }
 
 async function enforceRateLimitForAuthAction(
-  rateLimitKey: RouteRateLimitKey
+  rateLimitKey: RouteRateLimitKey,
+  requestHeaders?: Headers
 ): Promise<{ status: "error"; error: string } | null> {
-  const requestHeaders = await headers();
-  const ipHash = getTrustedRateLimitIdentifierFromHeaders(requestHeaders);
+  const effectiveHeaders = requestHeaders ?? (await headers());
+  const ipHash = getTrustedRateLimitIdentifierFromHeaders(effectiveHeaders);
   const identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
 
   const degradedMode =
@@ -224,10 +226,18 @@ export async function loginWithPasswordAction(
   _prevState: LoginActionState,
   formData: FormData
 ): Promise<LoginActionState | never> {
-  const rateLimitResult = await enforceRateLimitForAuthAction("auth:login");
+  const requestHeaders = await headers();
+
+  const rateLimitResult = await enforceRateLimitForAuthAction(
+    "auth:login",
+    requestHeaders
+  );
   if (rateLimitResult) return rateLimitResult;
 
-  const botIdResult = await enforceBotIdForAuthAction("auth.login.action");
+  const botIdResult = await enforceBotIdForAuthAction(
+    "auth.login.action",
+    requestHeaders
+  );
   if (botIdResult) return botIdResult;
 
   const nextPath = safeNextPath(getFormString(formData, "next"));
@@ -343,10 +353,18 @@ export async function verifyMfaAction(
   _prevState: VerifyMfaActionState,
   formData: FormData
 ): Promise<VerifyMfaActionState | never> {
-  const rateLimitResult = await enforceRateLimitForAuthAction("auth:mfa:verify");
+  const requestHeaders = await headers();
+
+  const rateLimitResult = await enforceRateLimitForAuthAction(
+    "auth:mfa:verify",
+    requestHeaders
+  );
   if (rateLimitResult) return rateLimitResult;
 
-  const botIdResult = await enforceBotIdForAuthAction("auth.mfa.verify.action");
+  const botIdResult = await enforceBotIdForAuthAction(
+    "auth.mfa.verify.action",
+    requestHeaders
+  );
   if (botIdResult) return botIdResult;
 
   const parsed = mfaVerificationSchema.safeParse({
@@ -390,10 +408,18 @@ export async function registerWithPasswordAction(
   _prevState: RegisterActionState,
   formData: FormData
 ): Promise<RegisterActionState | never> {
-  const rateLimitResult = await enforceRateLimitForAuthAction("auth:register");
+  const requestHeaders = await headers();
+
+  const rateLimitResult = await enforceRateLimitForAuthAction(
+    "auth:register",
+    requestHeaders
+  );
   if (rateLimitResult) return rateLimitResult;
 
-  const botIdResult = await enforceBotIdForAuthAction("auth.register.action");
+  const botIdResult = await enforceBotIdForAuthAction(
+    "auth.register.action",
+    requestHeaders
+  );
   if (botIdResult) return botIdResult;
 
   const nextParam = getFormString(formData, "next");
