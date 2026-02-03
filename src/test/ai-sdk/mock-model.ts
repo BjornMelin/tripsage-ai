@@ -134,8 +134,9 @@ export function createMockModel(options: MockModelOptions = {}) {
 /**
  * Creates a mock language model with call tracking.
  *
- * @param options Configuration for the mock model
- * @returns Mock model plus a mutable call log for assertions
+ * @param options - Configuration for the mock model.
+ * @returns Mock model plus a mutable call log for assertions.
+ * @see https://sdk.vercel.ai/docs
  */
 export function createMockModelWithTracking(options: MockModelOptions = {}) {
   const calls: Array<{ input: unknown }> = [];

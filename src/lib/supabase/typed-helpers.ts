@@ -163,6 +163,9 @@ const resolveMaybeSingle = async (
  * Use `options.select` to limit returned columns; validation defaults to
  * `false` when selecting partial columns.
  * Explicit validation with partial selects returns an error.
+ * When `options.select` is provided, the returned data only contains those
+ * columns and may not satisfy the full `TableRow<S, T>` shape at runtime.
+ * TODO: Add a type-narrowing overload or dedicated helper for partial selects.
  *
  * Note: This function accepts only single objects, not arrays.
  * For batch inserts, use `insertMany` instead.

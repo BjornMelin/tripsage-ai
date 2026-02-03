@@ -82,13 +82,6 @@ CREATE POLICY bookings_update_own
   WITH CHECK ((select auth.uid()) = user_id);
 
 -- accommodations
-DROP POLICY IF EXISTS accommodations_select_own ON public.accommodations;
-CREATE POLICY accommodations_select_own
-  ON public.accommodations
-  FOR SELECT
-  TO authenticated
-  USING (trip_id IN (SELECT id FROM public.trips WHERE user_id = (select auth.uid())));
-
 DROP POLICY IF EXISTS accommodations_mutate_own ON public.accommodations;
 CREATE POLICY accommodations_mutate_own
   ON public.accommodations
@@ -138,6 +131,9 @@ CREATE POLICY memories_turns_owner
   TO authenticated
   USING ((select auth.uid()) = user_id)
   WITH CHECK ((select auth.uid()) = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_memories_turns_user_id
+  ON memories.turns (user_id);
 
 DROP POLICY IF EXISTS memories_turn_embeddings_owner ON memories.turn_embeddings;
 CREATE POLICY memories_turn_embeddings_owner

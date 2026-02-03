@@ -118,6 +118,8 @@ function getLineText(text, index) {
   return text.slice(start, end);
 }
 
+const BACKSLASH = "\\";
+
 function scanBalancedObject(text, startIndex) {
   if (text[startIndex] !== "{") return null;
 
@@ -147,8 +149,8 @@ function scanBalancedObject(text, startIndex) {
     }
 
     if (mode === "sq" || mode === "dq") {
-      if (ch === "\\") {
-        i += 2;
+      if (ch === BACKSLASH) {
+        i += i + 1 < text.length ? 2 : 1;
         continue;
       }
       const quote = mode === "sq" ? "'" : '"';
@@ -158,8 +160,8 @@ function scanBalancedObject(text, startIndex) {
     }
 
     if (mode === "bt") {
-      if (ch === "\\") {
-        i += 2;
+      if (ch === BACKSLASH) {
+        i += i + 1 < text.length ? 2 : 1;
         continue;
       }
       if (ch === "`" && templateExprDepth === 0) {
@@ -256,8 +258,8 @@ function findMatchingParen(text, openIndex) {
     }
 
     if (mode === "sq" || mode === "dq") {
-      if (ch === "\\") {
-        i += 2;
+      if (ch === BACKSLASH) {
+        i += i + 1 < text.length ? 2 : 1;
         continue;
       }
       const quote = mode === "sq" ? "'" : '"';
@@ -267,8 +269,8 @@ function findMatchingParen(text, openIndex) {
     }
 
     if (mode === "bt") {
-      if (ch === "\\") {
-        i += 2;
+      if (ch === BACKSLASH) {
+        i += i + 1 < text.length ? 2 : 1;
         continue;
       }
       if (ch === "`" && templateExprDepth === 0) {

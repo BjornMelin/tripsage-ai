@@ -11,6 +11,11 @@ import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 const SKIP_LINK_CLASSNAME =
   "sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:text-foreground focus-visible:shadow";
 
+/**
+ * Props for public and authenticated application shell components.
+ *
+ * @property children - React nodes rendered inside the shell.
+ */
 interface AppShellProps {
   children: ReactNode;
 }
@@ -40,6 +45,12 @@ export function PublicAppShell({ children }: AppShellProps) {
   );
 }
 
+/**
+ * Props for the authenticated application shell.
+ *
+ * @extends AppShellProps
+ * @property nonce - Optional CSP nonce for inline script execution.
+ */
 interface AuthedAppShellProps extends AppShellProps {
   nonce?: string;
 }

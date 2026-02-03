@@ -118,7 +118,7 @@ export async function getTimezoneCached(input: {
   }
 
   if (!response.ok) {
-    const details = response.status < 500 ? await response.text() : "";
+    const details = response.status < 500 ? await response.text().catch(() => "") : "";
     tryApplyCacheDirectives(["google-timezone"], {
       expire: 60,
       revalidate: 30,
@@ -245,7 +245,7 @@ export async function computeRoutesCached(input: {
   }
 
   if (!response.ok) {
-    const details = response.status < 500 ? await response.text() : "";
+    const details = response.status < 500 ? await response.text().catch(() => "") : "";
     tryApplyCacheDirectives(["google-routes"], {
       expire: 60,
       revalidate: 30,
@@ -363,7 +363,7 @@ export async function computeRouteMatrixCached(input: {
   }
 
   if (!response.ok) {
-    const details = response.status < 500 ? await response.text() : "";
+    const details = response.status < 500 ? await response.text().catch(() => "") : "";
     tryApplyCacheDirectives(["google-route-matrix"], {
       expire: 60,
       revalidate: 30,

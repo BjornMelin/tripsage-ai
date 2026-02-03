@@ -29,9 +29,13 @@ class RawStringRedisMock extends RedisMockClient {
   }
 }
 
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => new RawStringRedisMock(redis.store)),
-}));
+vi.mock("@/lib/redis", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/redis")>("@/lib/redis");
+  return {
+    ...actual,
+    getRedis: vi.fn(() => new RawStringRedisMock(redis.store)),
+  };
+});
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => Promise.resolve(new Map())),
@@ -61,6 +65,7 @@ describe("/api/flights/popular-routes", () => {
     redis.__reset();
     ratelimit.__reset();
     setSupabaseFactoryForTests(null);
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
   });
 

@@ -4,6 +4,7 @@
 
 "use client";
 
+import type { StaticImageData } from "next/image";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import {
@@ -20,7 +21,7 @@ const DEFAULT_FALLBACK = (
 
 /** Props for the ProxiedImage component. */
 export interface ProxiedImageProps {
-  src: unknown;
+  src: string | StaticImageData | null | undefined;
   alt: string;
   fill?: boolean;
   className?: string;
@@ -33,6 +34,10 @@ export interface ProxiedImageProps {
 
 /**
  * Renders a Next.js Image using the proxy for remote URLs with a fallback.
+ *
+ * @remarks
+ * When `fill` is false, provide explicit `width` and `height` props to avoid
+ * CLS. If omitted, the component falls back to the placeholder.
  *
  * @param props - Image rendering options and raw source input.
  * @returns A proxied Next.js Image element or a fallback node.
@@ -48,13 +53,26 @@ export function ProxiedImage({
   priority,
   fallback,
 }: ProxiedImageProps) {
-  const normalized = normalizeNextImageSrc(src);
+  const normalized = typeof src === "string" ? normalizeNextImageSrc(src) : null;
   const imageSrc =
-    normalized && isAbsoluteHttpUrl(normalized)
-      ? buildImageProxyUrl(normalized)
-      : normalized;
+    typeof src === "string"
+      ? normalized && isAbsoluteHttpUrl(normalized)
+        ? buildImageProxyUrl(normalized)
+        : normalized
+      : src;
 
   if (!imageSrc) {
+    return fallback ?? DEFAULT_FALLBACK;
+  }
+
+  if (!fill && (width == null || height == null)) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("ProxiedImage requires width and height when fill is false.", {
+        alt,
+        height,
+        width,
+      });
+    }
     return fallback ?? DEFAULT_FALLBACK;
   }
 
@@ -75,8 +93,8 @@ export function ProxiedImage({
     <Image
       src={imageSrc}
       alt={alt}
-      width={width ?? 1}
-      height={height ?? 1}
+      width={width}
+      height={height}
       className={className}
       sizes={sizes}
       priority={priority}

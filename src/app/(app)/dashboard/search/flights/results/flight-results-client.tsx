@@ -5,7 +5,7 @@
 "use client";
 
 import { ArrowRightIcon, FilterIcon, PlaneIcon } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useUser } from "@/features/auth/store/auth/auth-core";
+import { formatCurrency } from "@/features/search/components/common/format";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
+import { useBaseCurrency } from "@/features/shared/store/currency-store";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { cn } from "@/lib/utils";
 
@@ -29,14 +32,6 @@ import { cn } from "@/lib/utils";
 const FLIGHT_RESULTS_COLORS = {
   priceDisplay: "text-success",
 } as const;
-
-const formatTime = (value: string): string => {
-  try {
-    return DateUtils.format(DateUtils.parse(value), "HH:mm");
-  } catch {
-    return value;
-  }
-};
 
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -58,6 +53,8 @@ export interface FlightResultsClientProps {
  * @returns A React element rendering the flight search results UI.
  */
 export default function FlightResultsClient({ searchId }: FlightResultsClientProps) {
+  const authUser = useUser();
+  const baseCurrency = useBaseCurrency();
   const { currentContext, results, resultsBySearch, searchProgress, status } =
     useSearchResultsStore(
       useShallow((state) => ({
@@ -68,6 +65,43 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
         status: state.status,
       }))
     );
+
+  const contextCurrency =
+    typeof currentContext?.searchParams?.currency === "string"
+      ? currentContext.searchParams.currency
+      : undefined;
+  const preferredLanguage = authUser?.preferences?.language;
+  const preferredTimeFormat = authUser?.preferences?.timeFormat;
+  const currency = contextCurrency ?? authUser?.preferences?.currency ?? baseCurrency;
+  const locale = useMemo(
+    () =>
+      preferredLanguage ??
+      (typeof navigator !== "undefined" ? navigator.language : "en"),
+    [preferredLanguage]
+  );
+  const timeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        hour: "2-digit",
+        hour12: preferredTimeFormat ? preferredTimeFormat === "12h" : undefined,
+        minute: "2-digit",
+      }),
+    [locale, preferredTimeFormat]
+  );
+  const formatPrice = useCallback(
+    (value: number) => formatCurrency(value, currency, locale),
+    [currency, locale]
+  );
+  const formatTime = useCallback(
+    (value: string): string => {
+      try {
+        return timeFormatter.format(DateUtils.parse(value));
+      } catch {
+        return value;
+      }
+    },
+    [timeFormatter]
+  );
 
   const flights = useMemo(() => {
     if (!searchId) return [];
@@ -183,7 +217,7 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
                   <h4 className="font-medium mb-2">Price Range</h4>
                   <div className="text-sm text-muted-foreground">
                     {priceRange
-                      ? `$${priceRange.min} - $${priceRange.max}`
+                      ? `${formatPrice(priceRange.min)} - ${formatPrice(priceRange.max)}`
                       : "No results yet"}
                   </div>
                 </div>
@@ -295,7 +329,7 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
                           FLIGHT_RESULTS_COLORS.priceDisplay
                         )}
                       >
-                        ${flight.price}
+                        {formatPrice(flight.price)}
                       </div>
                       <div className="text-sm text-muted-foreground mb-3">
                         per person

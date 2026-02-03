@@ -95,7 +95,11 @@ export function useDeals() {
   const allDeals = useMemo(() => Object.values(deals), [deals]);
 
   // Get filtered deals based on current filters
-  const filteredDeals = useMemo(() => getFilteredDeals(), [getFilteredDeals]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ensure memo recomputes on state changes used inside store selectors.
+  const filteredDeals = useMemo(
+    () => getFilteredDeals(),
+    [getFilteredDeals, deals, filters]
+  );
 
   // Get featured deals
   const featuredDeals = featuredDealItems;
@@ -107,7 +111,8 @@ export function useDeals() {
   const recentlyViewedDeals = recentlyViewedDealItems;
 
   // Get deal statistics
-  const dealStats = useMemo(() => getDealsStats(), [getDealsStats]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ensure memo recomputes on state changes used inside store selectors.
+  const dealStats = useMemo(() => getDealsStats(), [getDealsStats, deals, filters]);
 
   // Convert IDs to Sets for O(1) membership checks.
   const savedDealIdSet = useMemo(() => new Set(savedDealIds), [savedDealIds]);
