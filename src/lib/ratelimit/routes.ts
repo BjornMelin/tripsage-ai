@@ -94,6 +94,9 @@ export const ROUTE_RATE_LIMITS = {
   "flights:upcoming": { limit: 30, window: "1 m" },
   geocode: { limit: 60, window: "1 m" },
 
+  // Images
+  "images:proxy": { limit: 60, window: "1 m" },
+
   // Itineraries
   "itineraries:create": { limit: 30, window: "1 m" },
   "itineraries:list": { limit: 60, window: "1 m" },
