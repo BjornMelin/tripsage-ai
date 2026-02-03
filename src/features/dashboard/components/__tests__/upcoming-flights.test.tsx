@@ -7,7 +7,7 @@ import type { UpcomingFlight } from "@/hooks/use-trips";
 import type { AppError } from "@/lib/api/error-types";
 import { UPCOMING_FLIGHT_A, UPCOMING_FLIGHT_B } from "@/test/fixtures/flights";
 import { render, screen } from "@/test/test-utils";
-import { UpcomingFlights } from "../upcoming-flights";
+import { UpcomingFlights, UpcomingFlightsNoEmptyState } from "../upcoming-flights";
 
 vi.mock("@/hooks/use-trips", () => ({
   useUpcomingFlights: vi.fn(),
@@ -79,7 +79,7 @@ describe("UpcomingFlights", () => {
   });
 
   it("respects showEmpty=false", () => {
-    render(<UpcomingFlights showEmpty={false} />);
+    render(<UpcomingFlightsNoEmptyState />);
     expect(screen.queryByText(/search flights/i)).not.toBeInTheDocument();
   });
 

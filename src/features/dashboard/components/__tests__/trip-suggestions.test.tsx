@@ -5,7 +5,7 @@ import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { render } from "@/test/test-utils";
-import { TripSuggestions } from "../trip-suggestions";
+import { TripSuggestions, TripSuggestionsNoEmptyState } from "../trip-suggestions";
 
 /** Mock the stores with essential methods */
 const MockBudgetStore = {
@@ -254,12 +254,12 @@ describe("TripSuggestions", () => {
         updatedAt: "2024-01-01T00:00:00Z",
       };
 
-      const { rerender } = render(<TripSuggestions showEmpty={false} />);
+      const { rerender } = render(<TripSuggestionsNoEmptyState />);
 
       /** With showEmpty=false, should not show chat suggestion */
       expect(screen.queryByText(/chat with ai/i)).not.toBeInTheDocument();
 
-      rerender(<TripSuggestions showEmpty={true} />);
+      rerender(<TripSuggestions />);
 
       /** With showEmpty=true, might show chat suggestion or alternative empty state */
       expect(screen.getByText("Trip Suggestions")).toBeInTheDocument();

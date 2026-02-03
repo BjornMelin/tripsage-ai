@@ -25,12 +25,14 @@ import { DateUtils } from "@/lib/dates/unified-date-utils";
  *
  * @interface UpcomingFlightsProps
  */
-interface UpcomingFlightsProps {
+export interface UpcomingFlightsProps {
   /** Maximum number of flights to display. Defaults to 3. */
   limit?: number;
-  /** Whether to show an empty state when no flights are available. Defaults to true. */
-  showEmpty?: boolean;
 }
+
+type UpcomingFlightsVariantProps = UpcomingFlightsProps & {
+  showEmpty: boolean;
+};
 
 /**
  * Skeleton loading component for flight cards.
@@ -252,7 +254,11 @@ function EmptyState() {
  * preference.
  * @returns Card containing fetched flights or fallback UIs.
  */
-export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlightsProps) {
+export function UpcomingFlights(props: UpcomingFlightsProps) {
+  return <UpcomingFlightsImpl {...props} showEmpty />;
+}
+
+function UpcomingFlightsImpl({ limit = 3, showEmpty }: UpcomingFlightsVariantProps) {
   const { data: upcomingFlights = [], isLoading } = useUpcomingFlights({
     limit: limit,
   });
@@ -307,4 +313,8 @@ export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlights
       )}
     </Card>
   );
+}
+
+export function UpcomingFlightsNoEmptyState(props: UpcomingFlightsProps) {
+  return <UpcomingFlightsImpl {...props} showEmpty={false} />;
 }

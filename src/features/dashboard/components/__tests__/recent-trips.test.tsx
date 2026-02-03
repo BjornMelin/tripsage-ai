@@ -42,7 +42,7 @@ vi.mock("@/hooks/use-trips", () => ({
 }));
 
 // Static import after mocks are set up - single module load
-import { RecentTrips } from "../recent-trips";
+import { RecentTrips, RecentTripsNoEmptyState } from "../recent-trips";
 
 const MockTrips: Array<Record<string, unknown>> = [
   {
@@ -187,10 +187,10 @@ describe("RecentTrips", () => {
 
   it("handles showEmpty prop correctly", () => {
     setTrips([]);
-    const { rerender } = renderWithProviders(<RecentTrips showEmpty={false} />);
+    const { rerender } = renderWithProviders(<RecentTripsNoEmptyState />);
     expect(screen.queryByText("Create your first trip")).not.toBeInTheDocument();
     expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
-    rerender(<RecentTrips showEmpty={true} />);
+    rerender(<RecentTrips />);
     expect(screen.getByText("Create your first trip")).toBeInTheDocument();
   });
 
