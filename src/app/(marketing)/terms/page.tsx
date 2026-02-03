@@ -5,6 +5,7 @@
 "use cache";
 
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { MarketingContainer } from "@/components/marketing/marketing-container";
 import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 
 // biome-ignore lint/suspicious/useAwait: Next.js `"use cache"` requires an async function export.
 export default async function TermsPage() {
+  cacheLife("weeks");
   return (
     <main id={MAIN_CONTENT_ID} className="flex-1" tabIndex={-1}>
       <MarketingContainer className="py-12 space-y-8">
