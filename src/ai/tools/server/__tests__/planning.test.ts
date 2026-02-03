@@ -30,7 +30,7 @@ type RedisMock = {
   data: Map<string, unknown>;
   ttl: Map<string, number>;
   get: (key: string) => Promise<unknown | null>;
-  set: (key: string, value: unknown) => Promise<void>;
+  set: (key: string, value: unknown, options?: { ex?: number }) => Promise<void>;
   expire: (key: string, seconds: number) => Promise<void>;
   incr: (key: string) => Promise<number>;
   del: (key: string) => Promise<number>;
@@ -57,8 +57,11 @@ vi.mock("@/lib/redis", () => {
       data.set(key, next);
       return Promise.resolve(next);
     },
-    set: (key, value) => {
+    set: (key, value, options) => {
       data.set(key, value);
+      if (options?.ex && options.ex > 0) {
+        ttl.set(key, options.ex);
+      }
       return Promise.resolve();
     },
     ttl,
