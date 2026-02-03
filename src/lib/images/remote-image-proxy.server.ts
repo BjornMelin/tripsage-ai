@@ -6,13 +6,20 @@ import "server-only";
 
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
+let cachedAllowedHosts: string[] | null = null;
+
 function parseAllowedHostsFromEnv(): string[] {
+  if (cachedAllowedHosts) return cachedAllowedHosts;
   const raw = getServerEnvVarWithFallback("IMAGE_PROXY_ALLOWED_HOSTS", undefined);
-  if (!raw) return [];
-  return raw
+  if (!raw) {
+    cachedAllowedHosts = [];
+    return cachedAllowedHosts;
+  }
+  cachedAllowedHosts = raw
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => entry.length > 0);
+  return cachedAllowedHosts;
 }
 
 function normalizeHostname(hostname: string): string {
