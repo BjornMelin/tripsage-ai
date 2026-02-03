@@ -114,6 +114,55 @@ describe("typed-helpers", () => {
       expect(data?.name).toBe("Test Trip");
     });
 
+    it("supports partial selects when validation is disabled", async () => {
+      const { client, chain } = makeClientWithChain();
+      const payload: TablesInsert<"trips"> = {
+        budget: 1000,
+        destination: "NYC",
+        end_date: "2025-01-10",
+        name: "Test Trip",
+        start_date: "2025-01-01",
+        travelers: 1,
+        user_id: userId,
+      };
+
+      chain.single.mockResolvedValue({
+        data: unsafeCast<Tables<"trips">>({ id: 1 }),
+        error: null,
+      });
+
+      const { data, error } = await insertSingle(client, "trips", payload, {
+        select: "id",
+        validate: false,
+      });
+
+      expect(error).toBeNull();
+      expect(chain.select).toHaveBeenCalledWith("id");
+      expect(data?.id).toBe(1);
+    });
+
+    it("returns error when validation is requested with a partial select", async () => {
+      const { client, chain } = makeClientWithChain();
+      const payload: TablesInsert<"trips"> = {
+        budget: 1000,
+        destination: "NYC",
+        end_date: "2025-01-10",
+        name: "Test Trip",
+        start_date: "2025-01-01",
+        travelers: 1,
+        user_id: userId,
+      };
+
+      const { data, error } = await insertSingle(client, "trips", payload, {
+        select: "id",
+        validate: true,
+      });
+
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+      expect(chain.insert).not.toHaveBeenCalled();
+    });
+
     it("returns error when insert fails", async () => {
       const { client, chain } = makeClientWithChain();
       chain.single.mockResolvedValue({

@@ -9,7 +9,7 @@ import {
   geocodeRequestSchema,
   upstreamGeocodeResponseSchema,
 } from "@schemas/api";
-import { type NextRequest, NextResponse } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
@@ -110,11 +110,13 @@ export const POST = withApiGuards({
       const location = data.results[0].geometry.location;
       if (typeof location.lat === "number" && typeof location.lng === "number") {
         // Cache with 30-day max TTL
-        await cacheLatLng(
-          cacheKey,
-          { lat: location.lat, lon: location.lng },
-          30 * 24 * 60 * 60
-        );
+        after(async () => {
+          await cacheLatLng(
+            cacheKey,
+            { lat: location.lat, lon: location.lng },
+            30 * 24 * 60 * 60
+          );
+        });
       }
     }
 

@@ -252,8 +252,7 @@ export const createTravelPlan = createAiTool({
 
     const key = redisKeyForPlan(planId);
     try {
-      await redis.set(key, valid.data);
-      await redis.expire(key, TTL_DRAFT_SECONDS);
+      await redis.set(key, valid.data, { ex: TTL_DRAFT_SECONDS });
     } catch {
       return { error: "redis_set_failed", success: false } as const;
     }
@@ -455,8 +454,9 @@ export const saveTravelPlan = createAiTool({
       next.finalizedAt = nowIso();
     }
 
-    await redis.set(key, next);
-    await redis.expire(key, finalize ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS);
+    await redis.set(key, next, {
+      ex: finalize ? TTL_FINAL_SECONDS : TTL_DRAFT_SECONDS,
+    });
 
     return {
       message: finalize ? "finalized_and_saved" : "saved",

@@ -32,16 +32,17 @@ import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 /**
  * Props interface for the TripSuggestions component.
  */
-interface TripSuggestionsProps {
+export interface TripSuggestionsProps {
   /** Maximum number of suggestions to display. */
   limit?: number;
-  /** Whether to show empty state when no suggestions available. */
-  showEmpty?: boolean;
   /** User ID for personalized memory-based suggestions. */
   userId?: string;
-  /** Whether to show AI memory-based personalized suggestions. */
-  showMemoryBased?: boolean;
 }
+
+type TripSuggestionsVariantProps = TripSuggestionsProps & {
+  showEmpty: boolean;
+  showMemoryBased: boolean;
+};
 
 /**
  * Skeleton loading component for trip suggestion cards.
@@ -255,18 +256,16 @@ function EmptyState() {
  * supports budget filtering, loading states, and interactive trip planning.
  *
  * @param limit - Maximum number of suggestions to display.
- * @param showEmpty - Whether to show empty state when no suggestions available.
  * @param userId - User ID for personalized memory-based suggestions.
- * @param showMemoryBased - Whether to show AI memory-based personalized suggestions.
  * @returns The TripSuggestions component.
  */
-export function TripSuggestions({
+function TripSuggestionsImpl({
   limit = 4,
-  showEmpty = true,
+  showEmpty,
   userId,
-  showMemoryBased = true,
-}: TripSuggestionsProps) {
-  const { activeBudget } = useBudgetStore();
+  showMemoryBased,
+}: TripSuggestionsVariantProps) {
+  const activeBudget = useBudgetStore((state) => state.activeBudget);
   const suggestionFetchLimit = limit + 2;
 
   // Use React Query hook to fetch trip suggestions
@@ -469,4 +468,34 @@ export function TripSuggestions({
       )}
     </Card>
   );
+}
+
+/**
+ * Renders trip suggestions with memory-based personalization and empty-state UI.
+ *
+ * @param props - Component configuration including limit and userId.
+ * @returns Trip suggestions card with personalized recommendations.
+ */
+export function TripSuggestions(props: TripSuggestionsProps) {
+  return <TripSuggestionsImpl {...props} showEmpty showMemoryBased />;
+}
+
+/**
+ * Renders trip suggestions without the interactive empty state.
+ *
+ * @param props - Component configuration including limit and userId.
+ * @returns Trip suggestions card with minimal fallback when empty.
+ */
+export function TripSuggestionsNoEmptyState(props: TripSuggestionsProps) {
+  return <TripSuggestionsImpl {...props} showEmpty={false} showMemoryBased />;
+}
+
+/**
+ * Renders trip suggestions without memory-based personalization.
+ *
+ * @param props - Component configuration including limit and userId.
+ * @returns Trip suggestions card using only API-based recommendations.
+ */
+export function TripSuggestionsNoMemory(props: TripSuggestionsProps) {
+  return <TripSuggestionsImpl {...props} showEmpty showMemoryBased={false} />;
 }

@@ -24,6 +24,15 @@ if (!existsSync(TURBOPACK_ROOT)) {
 const nextConfig: NextConfig = {
   // Enable Cache Components (required for "use cache" directives in codebase)
   cacheComponents: true,
+  cacheLife: {
+    // Agent configuration is read frequently and updated infrequently (admin-only).
+    // Keep this explicit so cached behavior is inspectable without tracing nested caches.
+    agentConfiguration: {
+      expire: 60 * 60, // 1 hour
+      revalidate: 15 * 60, // 15 minutes
+      stale: 60, // 1 minute
+    },
+  },
 
   compiler: {
     // Remove console.log statements in production

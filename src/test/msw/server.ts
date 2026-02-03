@@ -20,6 +20,7 @@ import { chatHandlers } from "./handlers/chat";
 import { errorReportingHandlers } from "./handlers/error-reporting";
 import { externalApiHandlers } from "./handlers/external-apis";
 import { googleHandlers } from "./handlers/google";
+import { imageProxyHandlers } from "./handlers/image-proxy";
 import { stripeHandlers } from "./handlers/stripe";
 import { supabaseHandlers } from "./handlers/supabase";
 import { telemetryHandlers } from "./handlers/telemetry";
@@ -36,6 +37,7 @@ const handlers = composeHandlers(
   externalApiHandlers,
   errorReportingHandlers,
   googleHandlers,
+  imageProxyHandlers,
   aiProviderHandlers,
   stripeHandlers,
   supabaseHandlers,

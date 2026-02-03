@@ -4,18 +4,13 @@
 
 import "server-only";
 
-import {
-  type RouteMatrixRequest,
-  routeMatrixRequestSchema,
-  upstreamRouteMatrixResponseSchema,
-} from "@schemas/api";
+import { type RouteMatrixRequest, routeMatrixRequestSchema } from "@schemas/api";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { formatUpstreamErrorReason } from "@/lib/api/upstream-errors";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { parseNdjsonResponse, postComputeRouteMatrix } from "@/lib/google/client";
+import { computeRouteMatrixCached } from "@/lib/google/cache-components";
 
 /**
  * POST /api/route-matrix
@@ -42,61 +37,31 @@ export const POST = withApiGuards({
     });
   }
 
-  const apiKey = getGoogleMapsServerKey();
-
-  // Field mask: request only fields needed by client
-  const fieldMask = "originIndex,destinationIndex,duration,distanceMeters,status";
-
-  const requestBody = {
+  const result = await computeRouteMatrixCached({
     destinations: validated.destinations,
     origins: validated.origins,
     travelMode: validated.travelMode ?? "DRIVE",
-  };
-
-  const response = await postComputeRouteMatrix({
-    apiKey,
-    body: requestBody,
-    fieldMask,
   });
 
-  if (!response.ok) {
-    const status = response.status;
-    const errorText = status < 500 ? await response.text() : null;
+  if (!result.ok) {
+    if (result.error === "upstream_error") {
+      return errorResponse({
+        error: "upstream_error",
+        reason: formatUpstreamErrorReason({
+          details: result.details ?? null,
+          service: "Routes API",
+          status: result.upstreamStatus ?? result.status,
+        }),
+        status: result.status,
+      });
+    }
+
     return errorResponse({
-      error: "upstream_error",
-      reason: formatUpstreamErrorReason({
-        details: errorText,
-        service: "Routes API",
-        status,
-      }),
-      status: status >= 400 && status < 500 ? status : 502,
+      error: result.error,
+      reason: result.reason,
+      status: result.status,
     });
   }
 
-  // Parse NDJSON stream: computeRouteMatrix returns newline-delimited JSON
-  let rawData: unknown[];
-  try {
-    rawData = await parseNdjsonResponse(response);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return errorResponse({
-      error: "upstream_parse_error",
-      reason: `Failed to parse NDJSON response: ${message}`,
-      status: 502,
-    });
-  }
-
-  // Validate upstream response (array of matrix entries)
-  const parseResult = upstreamRouteMatrixResponseSchema.safeParse(rawData);
-  if (!parseResult.success) {
-    return errorResponse({
-      err: parseResult.error,
-      error: "upstream_validation_error",
-      issues: parseResult.error.issues,
-      reason: "Invalid response from Routes API",
-      status: 502,
-    });
-  }
-
-  return NextResponse.json(parseResult.data);
+  return NextResponse.json(result.data);
 });

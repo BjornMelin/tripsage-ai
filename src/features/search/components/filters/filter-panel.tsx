@@ -7,6 +7,7 @@
 import type { FilterValue, ValidatedFilterOption } from "@schemas/stores";
 import { SlidersHorizontalIcon, XIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   Accordion,
   AccordionContent,
@@ -108,12 +109,21 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const {
     activeFilters,
-    currentSearchType,
-    setActiveFilter,
-    removeActiveFilter,
     clearAllFilters,
     clearFiltersByCategory,
-  } = useSearchFiltersStore();
+    currentSearchType,
+    removeActiveFilter,
+    setActiveFilter,
+  } = useSearchFiltersStore(
+    useShallow((state) => ({
+      activeFilters: state.activeFilters,
+      clearAllFilters: state.clearAllFilters,
+      clearFiltersByCategory: state.clearFiltersByCategory,
+      currentSearchType: state.currentSearchType,
+      removeActiveFilter: state.removeActiveFilter,
+      setActiveFilter: state.setActiveFilter,
+    }))
+  );
   const currentFilters = useCurrentFilters();
   const activeFilterCount = useActiveFilterCount();
   const hasActiveFilters = useHasActiveFilters();

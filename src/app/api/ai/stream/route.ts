@@ -4,13 +4,13 @@
 
 import "server-only";
 
+import { resolveProvider } from "@ai/models/registry";
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
-import { openai } from "@ai-sdk/openai";
 import { consumeStream, streamText } from "ai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { type RouteParamsContext, withApiGuards } from "@/lib/api/factory";
-import { errorResponse } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import {
   type ChatMessage,
@@ -30,7 +30,7 @@ const STREAM_BODY_SCHEMA = z.strictObject({
     )
     .max(16)
     .default([]),
-  model: z.enum(["gpt-4o", "gpt-4o-mini"]).default("gpt-4o"),
+  model: z.string().trim().min(1).max(200).optional(),
   prompt: z
     .string()
     .max(4000)
@@ -59,8 +59,12 @@ const guardedPOST = withApiGuards({
   rateLimit: "ai:stream",
   schema: STREAM_BODY_SCHEMA,
   telemetry: "ai.stream",
-})((req, _ctx, body) => {
-  const { desiredMaxTokens, model, prompt } = body;
+})(async (req, { user }, body) => {
+  const auth = requireUserId(user);
+  if (!auth.ok) return auth.error;
+  const userId = auth.data;
+
+  const { desiredMaxTokens, model: modelHint, prompt } = body;
   const messages: ChatMessage[] | undefined = body.messages.length
     ? body.messages
     : undefined;
@@ -68,22 +72,36 @@ const guardedPOST = withApiGuards({
   // Build message list if not provided
   const finalMessages: ChatMessage[] = messages ?? [{ content: prompt, role: "user" }];
 
+  let resolved: Awaited<ReturnType<typeof resolveProvider>>;
+  try {
+    resolved = await resolveProvider(userId, modelHint);
+  } catch (error) {
+    return errorResponse({
+      err: error instanceof Error ? error : new Error(String(error)),
+      error: "provider_unavailable",
+      reason: "AI provider is not configured yet.",
+      status: 503,
+    });
+  }
+
   const { maxOutputTokens, reasons } = clampMaxTokens(
     finalMessages,
     desiredMaxTokens,
-    model
+    resolved.modelId
   );
 
   // If prompt already exhausts the model context window, return a 400 with reasons
-  const modelLimit = getModelContextLimit(model);
-  const promptTokens = countPromptTokens(finalMessages, model);
+  const modelLimit = getModelContextLimit(resolved.modelId);
+  const promptTokens = countPromptTokens(finalMessages, resolved.modelId);
   if (modelLimit - promptTokens <= 0) {
     return errorResponse({
       error: "token_budget_exceeded",
       extras: {
-        model,
         modelContextLimit: modelLimit,
+        modelHint: modelHint ?? null,
+        modelId: resolved.modelId,
         promptTokens,
+        provider: resolved.provider,
         reasons,
       },
       reason: "No output tokens available for the given prompt and model.",
@@ -98,14 +116,15 @@ const guardedPOST = withApiGuards({
       isEnabled: true,
       metadata: {
         hasMessages: Boolean(messages?.length),
-        modelId: model,
+        modelId: resolved.modelId,
+        provider: resolved.provider,
+        ...(typeof modelHint === "string" ? { modelHint } : {}),
       },
     },
-    model: openai(model),
-    timeout: buildTimeoutConfigFromSeconds(STREAM_TIMEOUT_SECONDS),
-    // Prefer messages when available; otherwise prompt.
-    ...(messages ? { messages: finalMessages } : { prompt }),
     maxOutputTokens,
+    messages: finalMessages,
+    model: resolved.model,
+    timeout: buildTimeoutConfigFromSeconds(STREAM_TIMEOUT_SECONDS),
   });
 
   // Return a UI Message Stream response suitable for AI Elements consumers

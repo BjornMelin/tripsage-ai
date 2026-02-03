@@ -4,17 +4,12 @@
 
 import "server-only";
 
-import {
-  type TimezoneRequest,
-  timezoneRequestSchema,
-  upstreamTimezoneResponseSchema,
-} from "@schemas/api";
+import { type TimezoneRequest, timezoneRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { formatUpstreamErrorReason } from "@/lib/api/upstream-errors";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { getTimezone } from "@/lib/google/client";
+import { getTimezoneCached } from "@/lib/google/cache-components";
 
 /**
  * POST /api/timezone
@@ -32,61 +27,31 @@ export const POST = withApiGuards({
   schema: timezoneRequestSchema,
   telemetry: "timezone.lookup",
 })(async (_req: NextRequest, _context, validated: TimezoneRequest) => {
-  const apiKey = getGoogleMapsServerKey();
+  const result = await getTimezoneCached({
+    lat: validated.lat,
+    lng: validated.lng,
+    timestamp: validated.timestamp,
+  });
 
-  let response: Response;
-  try {
-    response = await getTimezone({
-      apiKey,
-      lat: validated.lat,
-      lng: validated.lng,
-      timestamp: validated.timestamp,
-    });
-  } catch (err) {
+  if (!result.ok) {
+    if (result.error === "upstream_error") {
+      return errorResponse({
+        error: "upstream_error",
+        reason: formatUpstreamErrorReason({
+          details: result.details ?? null,
+          service: "Time Zone API",
+          status: result.upstreamStatus ?? result.status,
+        }),
+        status: result.status,
+      });
+    }
+
     return errorResponse({
-      err: err instanceof Error ? err : new Error("Timezone fetch failed"),
-      error: "external_api_error",
-      reason: "Failed to fetch timezone data",
-      status: 502,
+      error: result.error,
+      reason: result.reason,
+      status: result.status,
     });
   }
 
-  if (!response.ok) {
-    const status = response.status;
-    const errorText = status < 500 ? await response.text() : null;
-    return errorResponse({
-      error: "upstream_error",
-      reason: formatUpstreamErrorReason({
-        details: errorText,
-        service: "Time Zone API",
-        status,
-      }),
-      status: status >= 400 && status < 500 ? status : 502,
-    });
-  }
-
-  let rawData: unknown;
-  try {
-    rawData = await response.json();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return errorResponse({
-      err,
-      error: "upstream_parse_error",
-      reason: `Failed to parse JSON response from Timezone API: ${message}`,
-      status: 502,
-    });
-  }
-
-  // Validate upstream response
-  const parseResult = upstreamTimezoneResponseSchema.safeParse(rawData);
-  if (!parseResult.success) {
-    return errorResponse({
-      error: "upstream_validation_error",
-      reason: "Invalid response from Timezone API",
-      status: 502,
-    });
-  }
-
-  return NextResponse.json(parseResult.data);
+  return NextResponse.json(result.data);
 });

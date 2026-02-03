@@ -220,9 +220,11 @@ export async function recordSuccess(
 
     if (successCount >= successThreshold) {
       // Enough successes, close circuit
-      await redis.del(openedAtKey);
-      await redis.del(getFailureCountKey(name));
-      await redis.del(successCountKey);
+      await Promise.all([
+        redis.del(openedAtKey),
+        redis.del(getFailureCountKey(name)),
+        redis.del(successCountKey),
+      ]);
 
       recordTelemetryEvent("circuit_breaker.closed", {
         attributes: {
@@ -284,9 +286,11 @@ export async function resetCircuit(name: string): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
 
-  await redis.del(getOpenedAtKey(name));
-  await redis.del(getFailureCountKey(name));
-  await redis.del(getSuccessCountKey(name));
+  await Promise.all([
+    redis.del(getOpenedAtKey(name)),
+    redis.del(getFailureCountKey(name)),
+    redis.del(getSuccessCountKey(name)),
+  ]);
 
   recordTelemetryEvent("circuit_breaker.reset", {
     attributes: { "circuit.name": name },

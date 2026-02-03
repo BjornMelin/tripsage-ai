@@ -366,7 +366,7 @@ export async function removeCollaboratorImpl(
         });
       }
 
-      const userIdValidation = z.string().uuid().safeParse(collaboratorUserId);
+      const userIdValidation = z.uuid().safeParse(collaboratorUserId);
       if (!userIdValidation.success) {
         return err({
           error: "invalid_request",
@@ -454,7 +454,7 @@ export async function updateCollaboratorRoleImpl(
         });
       }
 
-      const userIdValidation = z.string().uuid().safeParse(collaboratorUserId);
+      const userIdValidation = z.uuid().safeParse(collaboratorUserId);
       if (!userIdValidation.success) {
         return err({
           error: "invalid_request",

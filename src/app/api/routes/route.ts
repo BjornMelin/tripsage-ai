@@ -4,16 +4,12 @@
 
 import "server-only";
 
-import {
-  type ComputeRoutesRequest,
-  computeRoutesRequestSchema,
-  upstreamRoutesResponseSchema,
-} from "@schemas/api";
+import { type ComputeRoutesRequest, computeRoutesRequestSchema } from "@schemas/api";
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
-import { getGoogleMapsServerKey } from "@/lib/env/server";
-import { postComputeRoutes } from "@/lib/google/client";
+import { formatUpstreamErrorReason } from "@/lib/api/upstream-errors";
+import { computeRoutesCached } from "@/lib/google/cache-components";
 
 /**
  * POST /api/routes
@@ -31,44 +27,32 @@ export const POST = withApiGuards({
   schema: computeRoutesRequestSchema,
   telemetry: "routes.compute",
 })(async (_req: NextRequest, _context, validated: ComputeRoutesRequest) => {
-  const apiKey = getGoogleMapsServerKey();
-
-  // Field mask: only fields we render
-  const fieldMask =
-    "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.stepCount,routes.routeLabels";
-
-  const requestBody = {
+  const result = await computeRoutesCached({
     destination: validated.destination,
     origin: validated.origin,
     routingPreference: validated.routingPreference ?? "TRAFFIC_UNAWARE",
     travelMode: validated.travelMode ?? "DRIVE",
-  };
-
-  const response = await postComputeRoutes({
-    apiKey,
-    body: requestBody,
-    fieldMask,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    return NextResponse.json(
-      { details: errorText, error: `Routes API error: ${response.status}` },
-      { status: response.status }
-    );
-  }
+  if (!result.ok) {
+    if (result.error === "upstream_error") {
+      return errorResponse({
+        error: "upstream_error",
+        reason: formatUpstreamErrorReason({
+          details: result.details ?? null,
+          service: "Routes API",
+          status: result.upstreamStatus ?? result.status,
+        }),
+        status: result.status,
+      });
+    }
 
-  const rawData = await response.json();
-
-  // Validate upstream response
-  const parseResult = upstreamRoutesResponseSchema.safeParse(rawData);
-  if (!parseResult.success) {
     return errorResponse({
-      error: "upstream_validation_error",
-      reason: "Invalid response from Routes API",
-      status: 502,
+      error: result.error,
+      reason: result.reason,
+      status: result.status,
     });
   }
 
-  return NextResponse.json(parseResult.data);
+  return NextResponse.json(result.data);
 });

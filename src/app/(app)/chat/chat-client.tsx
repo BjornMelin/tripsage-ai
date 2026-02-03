@@ -12,11 +12,11 @@ import {
   chatMessageMetadataSchema,
 } from "@schemas/ai";
 import { attachmentCreateSignedUploadResponseSchema } from "@schemas/attachments";
-import type { UIMessage } from "ai";
+import type { ChatOnDataCallback, ChatOnFinishCallback, UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { PaperclipIcon, RefreshCwIcon, StopCircleIcon, XIcon } from "lucide-react";
 import type { ReactElement } from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
   Conversation,
@@ -108,22 +108,11 @@ export function ChatClient(): ReactElement {
     };
   }, []);
 
-  const { messages, sendMessage, status, error, stop, regenerate } =
-    useChat<ChatUiMessage>({
-      dataPartSchemas: chatDataPartSchemas,
-      messageMetadataSchema: chatMessageMetadataSchema,
-      onData: (dataPart) => {
-        if (dataPart.type === "data-status") {
-          setStreamStatus(dataPart.data);
-        }
-      },
-      onFinish: ({ message }) => {
-        const maybeSessionId = message.metadata?.sessionId;
-        if (typeof maybeSessionId === "string" && maybeSessionId.trim().length > 0) {
-          setSessionId(maybeSessionId);
-        }
-      },
-      transport: new DefaultChatTransport({
+  const generateChatId = useCallback(() => secureId(16), []);
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
         api: "/api/chat",
         prepareSendMessagesRequest: ({ body, id, messageId, messages, trigger }) => {
           const sessionId =
@@ -149,6 +138,33 @@ export function ChatClient(): ReactElement {
           return { body: requestBody };
         },
       }),
+    []
+  );
+
+  const handleChatData: ChatOnDataCallback<ChatUiMessage> = useCallback((dataPart) => {
+    if (dataPart.type === "data-status") {
+      setStreamStatus(dataPart.data);
+    }
+  }, []);
+
+  const handleChatFinish: ChatOnFinishCallback<ChatUiMessage> = useCallback(
+    ({ message }) => {
+      const maybeSessionId = message.metadata?.sessionId;
+      if (typeof maybeSessionId === "string" && maybeSessionId.trim().length > 0) {
+        setSessionId(maybeSessionId);
+      }
+    },
+    []
+  );
+
+  const { messages, sendMessage, status, error, stop, regenerate } =
+    useChat<ChatUiMessage>({
+      dataPartSchemas: chatDataPartSchemas,
+      generateId: generateChatId,
+      messageMetadataSchema: chatMessageMetadataSchema,
+      onData: handleChatData,
+      onFinish: handleChatFinish,
+      transport,
     });
 
   useEffect(() => {
@@ -195,7 +211,7 @@ export function ChatClient(): ReactElement {
         (err instanceof Error && err.name === "AbortError");
       if (isAbort) return null;
 
-      if (process.env.NODE_ENV !== "production") {
+      if (process.env.NODE_ENV === "development") {
         console.error("Failed to create chat session:", err);
       }
       return null;
@@ -378,16 +394,18 @@ export function ChatClient(): ReactElement {
 
       <div className="border-t p-2">
         {streamStatus && isLoading ? (
-          <div
+          <output
             className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"
             data-testid="chat-stream-status"
+            aria-live="polite"
+            aria-atomic="true"
           >
             <span className="inline-flex size-2 animate-pulse rounded-full bg-success/70" />
             <span>
               {streamStatus.step ? `Step ${streamStatus.step}: ` : ""}
               {streamStatus.label}
             </span>
-          </div>
+          </output>
         ) : null}
 
         <PromptInput onSubmit={({ text }) => handleSubmit(text)}>
@@ -505,6 +523,7 @@ export function ChatClient(): ReactElement {
           <div
             className="mt-2 flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2"
             data-testid="chat-error"
+            role="alert"
           >
             <p className="text-sm text-destructive">{resolveChatErrorMessage(error)}</p>
             <Button

@@ -12,18 +12,12 @@ export type TypedClient = SupabaseClient<Database>;
 
 type SchemaName = Extract<SupabaseSchemaName, keyof Database>;
 type TableName<S extends SchemaName> = Extract<keyof Database[S]["Tables"], string>;
-type TableRow<
-  S extends SchemaName,
-  T extends TableName<S>,
-> = Database[S]["Tables"][T] extends Record<"Row", infer R> ? R : never;
-type TableInsert<
-  S extends SchemaName,
-  T extends TableName<S>,
-> = Database[S]["Tables"][T] extends Record<"Insert", infer I> ? I : never;
-type TableUpdate<
-  S extends SchemaName,
-  T extends TableName<S>,
-> = Database[S]["Tables"][T] extends Record<"Update", infer U> ? U : never;
+type TableRow<S extends SchemaName, T extends TableName<S>> =
+  Database[S]["Tables"][T] extends Record<"Row", infer R> ? R : never;
+type TableInsert<S extends SchemaName, T extends TableName<S>> =
+  Database[S]["Tables"][T] extends Record<"Insert", infer I> ? I : never;
+type TableUpdate<S extends SchemaName, T extends TableName<S>> =
+  Database[S]["Tables"][T] extends Record<"Update", infer U> ? U : never;
 /**
  * Query builder type alias for Supabase chaining with minimal shape.
  * Keep this loose enough for test doubles while avoiding `any`.
@@ -166,6 +160,12 @@ const resolveMaybeSingle = async (
  * Inserts a row into the specified table and returns the single selected row.
  * Uses `.select().single()` to fetch the inserted record in one roundtrip.
  * Validates input and output using Zod schemas when available.
+ * Use `options.select` to limit returned columns; validation defaults to
+ * `false` when selecting partial columns.
+ * Explicit validation with partial selects returns an error.
+ * When `options.select` is provided, the returned data only contains those
+ * columns and may not satisfy the full `TableRow<S, T>` shape at runtime.
+ * TODO: Add a type-narrowing overload or dedicated helper for partial selects.
  *
  * Note: This function accepts only single objects, not arrays.
  * For batch inserts, use `insertMany` instead.
@@ -175,7 +175,7 @@ const resolveMaybeSingle = async (
  * @param client - Typed Supabase client.
  * @param table - Target table name.
  * @param values - Insert payload (validated via Zod schema).
- * @param options - Optional schema selection and validation toggle.
+ * @param options - Optional schema selection, select columns, and validation toggle.
  * @returns Selected row (validated) and error (if any).
  */
 export function insertSingle<
@@ -185,7 +185,7 @@ export function insertSingle<
   client: TypedClient,
   table: T,
   values: TableInsert<S, T>,
-  options?: { schema?: S; validate?: boolean }
+  options?: { schema?: S; select?: string; validate?: boolean }
 ): Promise<{ data: TableRow<S, T> | null; error: unknown }> {
   return withTelemetrySpan(
     "supabase.insert",
@@ -199,7 +199,13 @@ export function insertSingle<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      const shouldValidate = options?.validate ?? true;
+      const selectColumns = options?.select ?? "*";
+      if (options?.validate === true && selectColumns !== "*") {
+        const error = new Error("partial_select_validation_unavailable");
+        recordErrorOnSpan(span, error);
+        return { data: null, error };
+      }
+      const shouldValidate = options?.validate ?? selectColumns === "*";
       // Validate input if schema exists
       const schema = getValidationSchema(schemaName, table as string);
       if (Array.isArray(values)) {
@@ -230,7 +236,9 @@ export function insertSingle<
       // Some tests stub a very lightweight query builder without select/single methods.
       // Gracefully handle those by treating the insert as fire-and-forget.
       if (insertQb && typeof insertQb.select === "function") {
-        const { data, error } = await insertQb.select().single();
+        const selected =
+          selectColumns === "*" ? insertQb.select() : insertQb.select(selectColumns);
+        const { data, error } = await selected.single();
         if (error) return { data: null, error };
         // Validate output if schema exists
         const rowSchema = schema?.row;

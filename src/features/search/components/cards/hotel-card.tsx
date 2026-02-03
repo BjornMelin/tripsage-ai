@@ -17,10 +17,10 @@ import {
   TrendingUpIcon,
   ZapIcon,
 } from "lucide-react";
-import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProxiedImage } from "@/components/ui/proxied-image";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
 import { formatCurrency } from "../common/format";
@@ -72,6 +72,9 @@ export function HotelCard({
   onSelect,
   onToggleWishlist,
 }: HotelCardProps) {
+  const mainImageSizes =
+    viewMode === "list" ? "256px" : "(max-width: 768px) 100vw, 33vw";
+
   return (
     <Card
       className={cn(
@@ -117,19 +120,19 @@ export function HotelCard({
             viewMode === "list" ? "w-64 h-48" : "h-48 w-full"
           )}
         >
-          {hotel.images.main ? (
-            <Image
-              src={hotel.images.main}
-              alt={hotel.name}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex flex-col items-center text-muted-foreground">
-              <ImageIcon aria-hidden="true" className="h-8 w-8 mb-2" />
-              <span className="text-sm">No image</span>
-            </div>
-          )}
+          <ProxiedImage
+            src={hotel.images.main}
+            alt={hotel.name}
+            fill
+            className="object-cover"
+            sizes={mainImageSizes}
+            fallback={
+              <div className="flex flex-col items-center text-muted-foreground">
+                <ImageIcon aria-hidden="true" className="h-8 w-8 mb-2" />
+                <span className="text-sm">No image</span>
+              </div>
+            }
+          />
 
           {/* Image Count Badge */}
           {hotel.images.count > 1 && (

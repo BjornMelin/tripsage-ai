@@ -105,11 +105,16 @@ describe("mapAccommodationToHotelResult", () => {
 
   it("uses provided images for main and gallery", () => {
     const result = mapAccommodationToHotelResult(
-      buildBaseAccommodation({ images: ["img-1", "img-2"] })
+      buildBaseAccommodation({
+        images: ["https://example.com/img-1.jpg", "https://example.com/img-2.jpg"],
+      })
     );
     expect(result.images.count).toBe(2);
-    expect(result.images.main).toBe("img-1");
-    expect(result.images.gallery).toEqual(["img-1", "img-2"]);
+    expect(result.images.main).toBe("https://example.com/img-1.jpg");
+    expect(result.images.gallery).toEqual([
+      "https://example.com/img-1.jpg",
+      "https://example.com/img-2.jpg",
+    ]);
   });
 
   it("prefers district from address when provided", () => {

@@ -42,49 +42,9 @@ vi.mock("@/hooks/use-current-user-id", () => ({
 
 // Mock the budget store
 vi.mock("@/features/budget/store/budget-store", () => ({
-  useBudgetStore: vi.fn().mockImplementation(() => ({
-    activeBudget: {
-      categories: [],
-      createdAt: "2025-05-20T12:00:00Z",
-      currency: "USD",
-      id: "budget-1",
-      isActive: true,
-      name: "Summer Vacation",
-      totalAmount: 5000,
-      updatedAt: "2025-05-20T12:00:00Z",
-    },
-    activeBudgetId: "budget-1",
-    addAlert: vi.fn(),
-    addBudget: vi.fn(),
-    addBudgetCategory: vi.fn(),
-    addExpense: vi.fn(),
-    alerts: {
-      "budget-1": [
-        {
-          budgetId: "budget-1",
-          createdAt: "2025-05-20T12:00:00Z",
-          id: "alert-1",
-          isRead: false,
-          message: "Almost at budget limit",
-          threshold: 80,
-          type: "threshold",
-        },
-      ],
-    },
-    baseCurrency: "USD",
-    budgetSummary: {
-      dailyAverage: 100,
-      dailyLimit: 300,
-      isOverBudget: false,
-      percentageSpent: 10,
-      projectedTotal: 1500,
-      spentByCategory: { flights: 500 },
-      totalBudget: 5000,
-      totalRemaining: 4500,
-      totalSpent: 500,
-    },
-    budgets: {
-      "budget-1": {
+  useBudgetStore: vi.fn((selector?: (state: unknown) => unknown) => {
+    const state = {
+      activeBudget: {
         categories: [],
         createdAt: "2025-05-20T12:00:00Z",
         currency: "USD",
@@ -94,20 +54,77 @@ vi.mock("@/features/budget/store/budget-store", () => ({
         totalAmount: 5000,
         updatedAt: "2025-05-20T12:00:00Z",
       },
-    },
-    budgetsByTrip: {
-      "trip-1": ["budget-1"],
-    },
-    clearAlerts: vi.fn(),
-    currencies: {
-      EUR: {
-        code: "EUR",
-        lastUpdated: "2025-05-20T12:00:00Z",
-        rate: 0.85,
+      activeBudgetId: "budget-1",
+      addAlert: vi.fn(),
+      addBudget: vi.fn(),
+      addBudgetCategory: vi.fn(),
+      addExpense: vi.fn(),
+      alerts: {
+        "budget-1": [
+          {
+            budgetId: "budget-1",
+            createdAt: "2025-05-20T12:00:00Z",
+            id: "alert-1",
+            isRead: false,
+            message: "Almost at budget limit",
+            threshold: 80,
+            type: "threshold",
+          },
+        ],
       },
-    },
-    expenses: {
-      "budget-1": [
+      baseCurrency: "USD",
+      budgetSummary: {
+        dailyAverage: 100,
+        dailyLimit: 300,
+        isOverBudget: false,
+        percentageSpent: 10,
+        projectedTotal: 1500,
+        spentByCategory: { flights: 500 },
+        totalBudget: 5000,
+        totalRemaining: 4500,
+        totalSpent: 500,
+      },
+      budgets: {
+        "budget-1": {
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          id: "budget-1",
+          isActive: true,
+          name: "Summer Vacation",
+          totalAmount: 5000,
+          updatedAt: "2025-05-20T12:00:00Z",
+        },
+      },
+      budgetsByTrip: {
+        "trip-1": ["budget-1"],
+      },
+      clearAlerts: vi.fn(),
+      currencies: {
+        EUR: {
+          code: "EUR",
+          lastUpdated: "2025-05-20T12:00:00Z",
+          rate: 0.85,
+        },
+      },
+      expenses: {
+        "budget-1": [
+          {
+            amount: 500,
+            budgetId: "budget-1",
+            category: "flights",
+            createdAt: "2025-05-20T12:00:00Z",
+            currency: "USD",
+            date: "2025-06-01",
+            description: "Flight to NYC",
+            id: "expense-1",
+            isShared: false,
+            updatedAt: "2025-05-20T12:00:00Z",
+          },
+        ],
+      },
+      markAlertAsRead: vi.fn(),
+      recentExpenses: [
         {
           amount: 500,
           budgetId: "budget-1",
@@ -121,36 +138,23 @@ vi.mock("@/features/budget/store/budget-store", () => ({
           updatedAt: "2025-05-20T12:00:00Z",
         },
       ],
-    },
-    markAlertAsRead: vi.fn(),
-    recentExpenses: [
-      {
-        amount: 500,
-        budgetId: "budget-1",
-        category: "flights",
-        createdAt: "2025-05-20T12:00:00Z",
-        currency: "USD",
-        date: "2025-06-01",
-        description: "Flight to NYC",
-        id: "expense-1",
-        isShared: false,
-        updatedAt: "2025-05-20T12:00:00Z",
-      },
-    ],
-    removeBudget: vi.fn(),
-    removeBudgetCategory: vi.fn(),
-    removeExpense: vi.fn(),
-    setActiveBudget: vi.fn(),
-    setAlerts: vi.fn(),
-    setBaseCurrency: vi.fn(),
-    setBudgets: vi.fn(),
-    setCurrencies: vi.fn(),
-    setExpenses: vi.fn(),
-    updateBudget: vi.fn(),
-    updateBudgetCategory: vi.fn(),
-    updateCurrencyRate: vi.fn(),
-    updateExpense: vi.fn(),
-  })),
+      removeBudget: vi.fn(),
+      removeBudgetCategory: vi.fn(),
+      removeExpense: vi.fn(),
+      setActiveBudget: vi.fn(),
+      setAlerts: vi.fn(),
+      setBaseCurrency: vi.fn(),
+      setBudgets: vi.fn(),
+      setCurrencies: vi.fn(),
+      setExpenses: vi.fn(),
+      updateBudget: vi.fn(),
+      updateBudgetCategory: vi.fn(),
+      updateCurrencyRate: vi.fn(),
+      updateExpense: vi.fn(),
+    };
+
+    return typeof selector === "function" ? selector(state) : state;
+  }),
 }));
 
 describe("Budget Hooks", () => {

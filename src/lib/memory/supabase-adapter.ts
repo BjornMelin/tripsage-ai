@@ -266,7 +266,7 @@ async function handleOnTurnCommitted(
           // biome-ignore lint/style/useNamingConvention: database column uses snake_case
           user_id: intent.userId,
         },
-        { schema: "memories" }
+        { schema: "memories", select: "id", validate: false }
       );
 
       if (createError) {
@@ -299,6 +299,8 @@ async function handleOnTurnCommitted(
 
     const { error: turnError } = await insertSingle(supabase, "turns", turnInsert, {
       schema: "memories",
+      select: "id",
+      validate: false,
     });
 
     if (turnError) {

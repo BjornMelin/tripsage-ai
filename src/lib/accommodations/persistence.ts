@@ -66,7 +66,10 @@ export function createAccommodationPersistence(deps: AccommodationPersistenceDep
     bookingRow: AccommodationBookingInsert
   ): Promise<PersistBookingResult> => {
     const supabase = await deps.supabase();
-    const { error } = await insertSingle(supabase, "bookings", bookingRow);
+    const { error } = await insertSingle(supabase, "bookings", bookingRow, {
+      select: "id",
+      validate: false,
+    });
     return { error: error ?? null };
   };
 

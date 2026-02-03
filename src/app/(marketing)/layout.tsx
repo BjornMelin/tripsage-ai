@@ -4,6 +4,7 @@
 
 import { type ReactNode, Suspense } from "react";
 import { Navbar } from "@/components/layouts/navbar";
+import { PublicAppShell } from "@/components/providers/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function NavbarFallback() {
@@ -45,11 +46,11 @@ function NavbarFallback() {
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <>
+    <PublicAppShell>
       <Suspense fallback={<NavbarFallback />}>
         <Navbar />
       </Suspense>
       {children}
-    </>
+    </PublicAppShell>
   );
 }

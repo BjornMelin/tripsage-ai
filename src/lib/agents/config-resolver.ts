@@ -6,25 +6,35 @@ import "server-only";
 
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import { configurationAgentConfigSchema } from "@schemas/configuration";
+import { cacheLife, cacheTag } from "next/cache";
 import { versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 const CACHE_TAG = "configuration";
 const CACHE_TTL_SECONDS = 15 * 60; // 15 minutes
+const CACHE_PROFILE: string = "agentConfiguration";
 
+/**
+ * Resolved agent configuration.
+ * @param config - The agent configuration.
+ * @param versionId - The version ID of the agent configuration.
+ */
 export type ResolvedAgentConfig = {
   config: AgentConfig;
   versionId: string;
 };
 
+/**
+ * Resolve agent configuration options.
+ * @param scope - The scope of the agent configuration.
+ * @param cacheTtlSeconds - The cache TTL in seconds.
+ */
 export type ResolveAgentConfigOptions = {
   scope?: string;
-  supabase?: TypedServerSupabase;
   cacheTtlSeconds?: number;
 };
 
@@ -40,8 +50,30 @@ export async function resolveAgentConfig(
   agentType: AgentType,
   options: ResolveAgentConfigOptions = {}
 ): Promise<ResolvedAgentConfig> {
+  "use cache";
+
   const scope = options.scope ?? "global";
   const cacheTtl = options.cacheTtlSeconds ?? CACHE_TTL_SECONDS;
+  const usesDefaultTtl = options.cacheTtlSeconds === undefined;
+
+  try {
+    cacheTag(
+      CACHE_TAG,
+      `${CACHE_TAG}:${agentType}`,
+      `${CACHE_TAG}:${agentType}:${scope}`
+    );
+    if (usesDefaultTtl) {
+      cacheLife(CACHE_PROFILE);
+    } else {
+      cacheLife({
+        expire: Math.max(cacheTtl * 4, cacheTtl + 60),
+        revalidate: cacheTtl,
+        stale: 60,
+      });
+    }
+  } catch {
+    // Ignore Cache Components directives when executed outside the Next runtime (e.g. unit tests).
+  }
 
   return await withTelemetrySpan(
     "agent_config.resolve",
@@ -57,7 +89,7 @@ export async function resolveAgentConfig(
 
       // Use admin client to bypass RLS for agent config lookup
       // Agent configs are protected by RLS and require admin privileges
-      const supabase = options.supabase ?? createAdminSupabase();
+      const supabase = createAdminSupabase();
       const { data, error } = await getMaybeSingle(
         supabase,
         "agent_config",

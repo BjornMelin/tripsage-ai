@@ -37,7 +37,7 @@ export function ensureBotIdClientInitialized(): void {
     // BotID client init failed; server-side verification remains enforced.
     globalThis.tripsageBotIdClientInitFailed = true;
     globalThis.tripsageBotIdClientInitialized = false;
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV === "development") {
       console.warn("[BotID] Client initialization failed:", error);
     }
   }

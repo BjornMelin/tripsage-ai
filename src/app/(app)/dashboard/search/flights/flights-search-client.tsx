@@ -14,7 +14,7 @@ import {
   TrendingUpIcon,
 } from "lucide-react";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { z } from "zod";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -48,6 +48,15 @@ import { cn } from "@/lib/utils";
 
 /** Flight search client component props. */
 interface FlightsSearchClientProps {
+  initialUrlParams?: {
+    /** Cabin class query param. */
+    class?: string;
+    departDate?: string;
+    destination?: string;
+    origin?: string;
+    passengers?: string;
+    returnDate?: string;
+  };
   onSubmitServer: (
     params: FlightSearchParams
   ) => Promise<Result<FlightSearchParams, ResultError>>;
@@ -94,16 +103,22 @@ const FLIGHT_URL_PARAMS_SCHEMA = z.strictObject({
   returnDate: FLIGHT_URL_DATE_SCHEMA,
 });
 
-/** Flight search client component. */
+/**
+ * Flight search client component.
+ * @param initialUrlParams - The initial URL params.
+ * @param onSubmitServer - The server-side submit function.
+ * @returns The flight search client.
+ */
 export default function FlightsSearchClient({
+  initialUrlParams,
   onSubmitServer,
 }: FlightsSearchClientProps) {
   const { initializeSearch, executeSearch } = useSearchOrchestration();
   const router = useRouter();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
   const activeFilters = useSearchFiltersStore((s) => s.activeFilters);
   const currentSearchController = React.useRef<AbortController | null>(null);
+  const didInitFromUrlParams = React.useRef(false);
   const {
     data: popularRoutes = [],
     isError: popularRoutesError,
@@ -128,19 +143,23 @@ export default function FlightsSearchClient({
     };
   }, []);
 
-  // Initialize flight search type on mount
   React.useEffect(() => {
-    const controller = new AbortController();
     initializeSearch("flight");
+  }, [initializeSearch]);
 
-    // Check for search parameters in URL
+  React.useEffect(() => {
+    if (didInitFromUrlParams.current) return;
+    didInitFromUrlParams.current = true;
+
+    const controller = new AbortController();
+
     const parsed = FLIGHT_URL_PARAMS_SCHEMA.safeParse({
-      cabinClass: searchParams.get("class"),
-      departDate: searchParams.get("departDate"),
-      destination: searchParams.get("destination"),
-      origin: searchParams.get("origin"),
-      passengers: searchParams.get("passengers"),
-      returnDate: searchParams.get("returnDate"),
+      cabinClass: initialUrlParams?.class,
+      departDate: initialUrlParams?.departDate,
+      destination: initialUrlParams?.destination,
+      origin: initialUrlParams?.origin,
+      passengers: initialUrlParams?.passengers,
+      returnDate: initialUrlParams?.returnDate,
     });
 
     if (
@@ -182,7 +201,7 @@ export default function FlightsSearchClient({
     }
 
     return () => controller.abort();
-  }, [initializeSearch, executeSearch, searchParams, onSubmitServer, toast]);
+  }, [executeSearch, initialUrlParams, onSubmitServer, toast]);
 
   const handleSearch = async (params: FlightSearchParams) => {
     currentSearchController.current?.abort();

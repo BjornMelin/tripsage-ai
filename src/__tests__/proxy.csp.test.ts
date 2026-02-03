@@ -79,6 +79,7 @@ describe("src/proxy.ts CSP nonce", () => {
       const request = unsafeCast<NextRequest>({
         cookies: createMockRequestCookies({}),
         headers: new Headers(),
+        url: "https://example.com/dashboard",
       });
 
       const response = await proxy(request);
@@ -100,6 +101,31 @@ describe("src/proxy.ts CSP nonce", () => {
     }
   });
 
+  it("does not inject CSP nonce for public routes (production)", async () => {
+    const { proxy } = await import("@/proxy");
+    vi.stubEnv("NODE_ENV", "production");
+
+    try {
+      const request = unsafeCast<NextRequest>({
+        cookies: createMockRequestCookies({}),
+        headers: new Headers(),
+        url: "https://example.com/",
+      });
+
+      const response = await proxy(request);
+      const cspHeader = response.headers.get("Content-Security-Policy");
+
+      expect(cspHeader).toBeTypeOf("string");
+      expect(cspHeader).not.toContain("'nonce-");
+      expect(response.headers.get("x-middleware-request-x-nonce")).toBeNull();
+      expect(
+        response.headers.get("x-middleware-request-content-security-policy")
+      ).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("keeps dev-only CSP allowances (development)", async () => {
     const { proxy } = await import("@/proxy");
     vi.stubEnv("NODE_ENV", "development");
@@ -108,6 +134,7 @@ describe("src/proxy.ts CSP nonce", () => {
       const request = unsafeCast<NextRequest>({
         cookies: createMockRequestCookies({}),
         headers: new Headers(),
+        url: "https://example.com/",
       });
 
       const response = await proxy(request);
@@ -136,6 +163,7 @@ describe("src/proxy.ts CSP nonce", () => {
           "sb-refresh-token": "stale-refresh",
         }),
         headers: new Headers(),
+        url: "https://example.com/dashboard",
       });
 
       const response = await proxy(request);

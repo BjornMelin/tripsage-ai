@@ -11,7 +11,8 @@ import type {
 } from "@schemas/currency";
 import { UPDATE_EXCHANGE_RATES_RESPONSE_SCHEMA } from "@schemas/currency";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
@@ -37,10 +38,20 @@ function shouldRetryCurrencyQuery(failureCount: number, error: AppError): boolea
 
 /**
  * Hook for accessing currency state.
+ *
+ * @returns Currency state slices used by consumers.
  */
 export function useCurrency() {
-  const { currencies, baseCurrency, exchangeRates, favoriteCurrencies, lastUpdated } =
-    useCurrencyStore();
+  const { baseCurrency, currencies, exchangeRates, favoriteCurrencies, lastUpdated } =
+    useCurrencyStore(
+      useShallow((state) => ({
+        baseCurrency: state.baseCurrency,
+        currencies: state.currencies,
+        exchangeRates: state.exchangeRates,
+        favoriteCurrencies: state.favoriteCurrencies,
+        lastUpdated: state.lastUpdated,
+      }))
+    );
 
   return {
     baseCurrency,
@@ -53,15 +64,25 @@ export function useCurrency() {
 
 /**
  * Hook for currency management operations.
+ *
+ * @returns Currency management action handlers.
  */
 export function useCurrencyActions() {
   const {
-    setBaseCurrency,
     addCurrency,
-    removeCurrency,
     addFavoriteCurrency,
+    removeCurrency,
     removeFavoriteCurrency,
-  } = useCurrencyStore();
+    setBaseCurrency,
+  } = useCurrencyStore(
+    useShallow((state) => ({
+      addCurrency: state.addCurrency,
+      addFavoriteCurrency: state.addFavoriteCurrency,
+      removeCurrency: state.removeCurrency,
+      removeFavoriteCurrency: state.removeFavoriteCurrency,
+      setBaseCurrency: state.setBaseCurrency,
+    }))
+  );
 
   return {
     addCurrency,
@@ -74,6 +95,8 @@ export function useCurrencyActions() {
 
 /**
  * Hook for exchange rate operations.
+ *
+ * @returns Exchange rate state and update actions.
  */
 export function useExchangeRates() {
   const {
@@ -82,7 +105,15 @@ export function useExchangeRates() {
     lastUpdated,
     updateExchangeRate,
     updateAllExchangeRates,
-  } = useCurrencyStore();
+  } = useCurrencyStore(
+    useShallow((state) => ({
+      baseCurrency: state.baseCurrency,
+      exchangeRates: state.exchangeRates,
+      lastUpdated: state.lastUpdated,
+      updateAllExchangeRates: state.updateAllExchangeRates,
+      updateExchangeRate: state.updateExchangeRate,
+    }))
+  );
 
   return {
     baseCurrency,
@@ -95,9 +126,16 @@ export function useExchangeRates() {
 
 /**
  * Hook for currency conversion operations.
+ *
+ * @returns Conversion helpers for amounts and rates.
  */
 export function useCurrencyConverter() {
-  const { convertAmount, formatAmountWithCurrency } = useCurrencyStore();
+  const { convertAmount, formatAmountWithCurrency } = useCurrencyStore(
+    useShallow((state) => ({
+      convertAmount: state.convertAmount,
+      formatAmountWithCurrency: state.formatAmountWithCurrency,
+    }))
+  );
 
   const convert = useCallback(
     (amount: number, from: CurrencyCode, to: CurrencyCode): ConversionResult | null => {
@@ -130,13 +168,24 @@ export function useCurrencyConverter() {
 
 /**
  * Hook for getting currency data like recent pairs and popular currencies.
+ *
+ * @returns Currency data helpers plus popular and recent selections.
  */
 export function useCurrencyData() {
-  const { getRecentCurrencyPairs, getPopularCurrencies, getCurrencyByCode } =
-    useCurrencyStore();
+  const { getCurrencyByCode, getPopularCurrencies, getRecentCurrencyPairs } =
+    useCurrencyStore(
+      useShallow((state) => ({
+        getCurrencyByCode: state.getCurrencyByCode,
+        getPopularCurrencies: state.getPopularCurrencies,
+        getRecentCurrencyPairs: state.getRecentCurrencyPairs,
+      }))
+    );
 
-  const recentPairs = getRecentCurrencyPairs();
-  const popularCurrencies = getPopularCurrencies();
+  const popularCurrencies = useMemo(
+    () => getPopularCurrencies(),
+    [getPopularCurrencies]
+  );
+  const recentPairs = useMemo(() => getRecentCurrencyPairs(), [getRecentCurrencyPairs]);
 
   return {
     getCurrencyByCode,
@@ -147,9 +196,13 @@ export function useCurrencyData() {
 
 /**
  * Hook for fetching exchange rates from API.
+ *
+ * @returns React Query result for the exchange rates fetch.
  */
 export function useFetchExchangeRates() {
-  const { updateAllExchangeRates } = useCurrencyStore();
+  const updateAllExchangeRates = useCurrencyStore(
+    (state) => state.updateAllExchangeRates
+  );
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   const query = useQuery<UpdateExchangeRatesResponse, AppError>({
@@ -191,9 +244,15 @@ export function useFetchExchangeRates() {
  * Hook for fetching a specific exchange rate.
  *
  * @param targetCurrency - Currency code to fetch rate for
+ * @returns React Query result for the requested exchange rate.
  */
 export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
-  const { baseCurrency, updateExchangeRate } = useCurrencyStore();
+  const { baseCurrency, updateExchangeRate } = useCurrencyStore(
+    useShallow((state) => ({
+      baseCurrency: state.baseCurrency,
+      updateExchangeRate: state.updateExchangeRate,
+    }))
+  );
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   const query = useQuery<{ rate: number; timestamp: string }, AppError>({

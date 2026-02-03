@@ -172,20 +172,25 @@ export const POST = withApiGuards({
       });
 
       // Insert metadata row first so Storage RLS can authorize the upload.
-      const { error: insertError } = await insertSingle(supabase, "file_attachments", {
-        bucket_name: STORAGE_BUCKET,
-        chat_id: body.chatId ?? null,
-        chat_message_id: body.chatMessageId ?? null,
-        file_path: storagePath,
-        file_size: file.size,
-        filename: attachmentId,
-        id: attachmentId,
-        mime_type: file.mimeType,
-        original_filename: file.originalName,
-        trip_id: body.tripId ?? null,
-        upload_status: UPLOAD_STATUS.UPLOADING,
-        user_id: userId,
-      });
+      const { error: insertError } = await insertSingle(
+        supabase,
+        "file_attachments",
+        {
+          bucket_name: STORAGE_BUCKET,
+          chat_id: body.chatId ?? null,
+          chat_message_id: body.chatMessageId ?? null,
+          file_path: storagePath,
+          file_size: file.size,
+          filename: attachmentId,
+          id: attachmentId,
+          mime_type: file.mimeType,
+          original_filename: file.originalName,
+          trip_id: body.tripId ?? null,
+          upload_status: UPLOAD_STATUS.UPLOADING,
+          user_id: userId,
+        },
+        { select: "id", validate: false }
+      );
 
       if (insertError) {
         await cleanupInserted();

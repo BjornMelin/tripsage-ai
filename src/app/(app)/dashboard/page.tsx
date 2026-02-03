@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardMetrics } from "@/features/dashboard/components/dashboard-metrics";
-import { QuickActions } from "@/features/dashboard/components/quick-actions";
+import { QuickActionsCompact } from "@/features/dashboard/components/quick-actions";
 import { RecentTrips } from "@/features/dashboard/components/recent-trips";
 import { TripSuggestions } from "@/features/dashboard/components/trip-suggestions";
 import { UpcomingFlights } from "@/features/dashboard/components/upcoming-flights";
@@ -117,14 +117,11 @@ export default function DashboardPage() {
   );
 }
 
-async function DashboardContent() {
-  // Simulate API delay for demonstration of streaming
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
+function DashboardContent() {
   return (
     <>
       {/* Top Row - Quick Actions */}
-      <QuickActions compact />
+      <QuickActionsCompact />
 
       {/* Dashboard Metrics */}
       <DashboardMetrics />

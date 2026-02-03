@@ -7,6 +7,7 @@
 import type { FilterPreset } from "@schemas/stores";
 import { BookmarkIcon, CheckIcon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,15 +57,26 @@ export function FilterPresets({ className }: FilterPresetsProps) {
   const [editingPreset, setEditingPreset] = useState<FilterPreset | null>(null);
 
   const {
-    filterPresets,
     activePreset,
     currentSearchType,
-    saveFilterPreset,
-    loadFilterPreset,
     deleteFilterPreset,
-    updateFilterPreset,
     duplicateFilterPreset,
-  } = useSearchFiltersStore();
+    filterPresets,
+    loadFilterPreset,
+    saveFilterPreset,
+    updateFilterPreset,
+  } = useSearchFiltersStore(
+    useShallow((state) => ({
+      activePreset: state.activePreset,
+      currentSearchType: state.currentSearchType,
+      deleteFilterPreset: state.deleteFilterPreset,
+      duplicateFilterPreset: state.duplicateFilterPreset,
+      filterPresets: state.filterPresets,
+      loadFilterPreset: state.loadFilterPreset,
+      saveFilterPreset: state.saveFilterPreset,
+      updateFilterPreset: state.updateFilterPreset,
+    }))
+  );
   const hasActiveFilters = useHasActiveFilters();
 
   const effectiveSearchType = currentSearchType ?? "flight";

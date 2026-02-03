@@ -13,7 +13,7 @@ import {
   WifiOffIcon,
   XCircleIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,22 +79,39 @@ function StatusIcon({
  */
 export function ConnectionStatusMonitor() {
   const { toast } = useToast();
-  const realtimeStore = useRealtimeConnectionStore();
-  const connections = Object.values(realtimeStore.connections).map((conn) => ({
-    error: conn.lastError ?? undefined,
-    id: conn.id,
-    lastActivity: conn.lastActivity,
-    status: conn.status,
-    table: NormalizeTopic(conn.id),
-  }));
-  const connectionStatus: ConnectionStatus = realtimeStore.summary();
-  const [isReconnecting, setIsReconnecting] = useState(false);
+  const {
+    connections: connectionsById,
+    isReconnecting,
+    reconnectAll,
+    summary,
+  } = useRealtimeConnectionStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      isReconnecting: state.isReconnecting,
+      reconnectAll: state.reconnectAll,
+      summary: state.summary,
+    }))
+  );
+  const connections = useMemo(
+    () =>
+      Object.values(connectionsById).map((conn) => ({
+        error: conn.lastError ?? undefined,
+        id: conn.id,
+        lastActivity: conn.lastActivity,
+        status: conn.status,
+        table: NormalizeTopic(conn.id),
+      })),
+    [connectionsById]
+  );
+  const connectionStatus: ConnectionStatus = useMemo(() => summary(), [summary]);
   const [showDetails, setShowDetails] = useState(false);
 
   const handleReconnectAll = async () => {
-    setIsReconnecting(true);
+    if (isReconnecting) {
+      return;
+    }
     try {
-      await realtimeStore.reconnectAll();
+      await reconnectAll();
 
       toast({
         description: "All real-time connections have been restored.",
@@ -108,8 +125,6 @@ export function ConnectionStatusMonitor() {
         title: "Reconnection Failed",
         variant: "destructive",
       });
-    } finally {
-      setIsReconnecting(false);
     }
   };
 

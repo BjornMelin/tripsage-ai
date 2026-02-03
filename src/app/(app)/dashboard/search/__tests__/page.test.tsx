@@ -26,9 +26,10 @@ interface MockSearch {
 }
 const mockRecentSearches = vi.hoisted(() => vi.fn((): MockSearch[] => []));
 vi.mock("@/features/search/store/search-history/index", () => ({
-  useSearchHistoryStore: () => ({
-    recentSearches: mockRecentSearches(),
-  }),
+  useSearchHistoryStore: (selector?: (state: unknown) => unknown) => {
+    const state = { recentSearches: mockRecentSearches() };
+    return typeof selector === "function" ? selector(state) : state;
+  },
 }));
 
 // Mock child components to isolate page tests

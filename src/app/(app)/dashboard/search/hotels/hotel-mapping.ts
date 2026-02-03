@@ -4,6 +4,7 @@
 
 import type { Accommodation, HotelResult } from "@schemas/search";
 import { FALLBACK_HOTEL_IMAGE } from "@/lib/constants/images";
+import { normalizeNextImageSrc } from "@/lib/images/image-proxy";
 import { categorizeAmenities } from "@/lib/utils/amenity-categorization";
 
 type AccommodationLike = Accommodation & {
@@ -129,6 +130,10 @@ export function mapAccommodationToHotelResult(
 
   const recommendation = getRecommendationScore(accommodation.rating);
 
+  const normalizedImages = (accommodation.images ?? [])
+    .map(normalizeNextImageSrc)
+    .filter((image): image is string => typeof image === "string");
+
   return {
     ai: {
       personalizedTags,
@@ -154,9 +159,9 @@ export function mapAccommodationToHotelResult(
     },
     id: accommodation.id,
     images: {
-      count: accommodation.images?.length ?? 0,
-      gallery: accommodation.images ?? [],
-      main: accommodation.images?.[0] ?? FALLBACK_HOTEL_IMAGE,
+      count: normalizedImages.length,
+      gallery: normalizedImages,
+      main: normalizedImages[0] ?? FALLBACK_HOTEL_IMAGE,
     },
     location: {
       address,

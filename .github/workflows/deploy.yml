@@ -56,7 +56,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.27.0
+          npm install -g pnpm@10.28.2
           if grep -Eq "git\\+|github:" pnpm-lock.yaml package.json; then
             echo "::error::Git dependencies detected. Configure pnpm allowBuilds/onlyBuiltDependencies for 10.26+ before deploying."
             exit 1

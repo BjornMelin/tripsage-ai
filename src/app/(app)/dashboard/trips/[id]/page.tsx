@@ -40,15 +40,16 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
   const state = await prefetchDehydratedState(async (queryClient) => {
     queryClient.setQueryData(detailKey, trip);
 
-    await queryClient.prefetchQuery({
-      queryFn: () => listItineraryItemsForTrip(supabase, { tripId }),
-      queryKey: keys.trips.itinerary(user.id, tripId),
-    });
-
-    await queryClient.prefetchQuery({
-      queryFn: () => listSavedPlacesForTrip(supabase, { tripId }),
-      queryKey: keys.trips.savedPlaces(user.id, tripId),
-    });
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryFn: () => listItineraryItemsForTrip(supabase, { tripId }),
+        queryKey: keys.trips.itinerary(user.id, tripId),
+      }),
+      queryClient.prefetchQuery({
+        queryFn: () => listSavedPlacesForTrip(supabase, { tripId }),
+        queryKey: keys.trips.savedPlaces(user.id, tripId),
+      }),
+    ]);
   });
 
   return (

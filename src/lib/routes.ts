@@ -36,6 +36,6 @@ export const ROUTES = {
   register: "/register",
 
   // Search results
-  searchFlightsResults: "/search/flights/results",
+  searchFlightsResults: "/dashboard/search/flights/results",
   terms: "/terms",
 } as const;

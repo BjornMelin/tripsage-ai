@@ -46,7 +46,7 @@ jobs:
           node-version-file: ".nvmrc"
 
       - name: Install pnpm
-        run: npm install -g pnpm@10.27.0
+        run: npm install -g pnpm@10.28.2
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

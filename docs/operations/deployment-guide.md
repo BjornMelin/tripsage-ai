@@ -4,7 +4,7 @@ This guide replaces the legacy FastAPI backend material. TripSage now runs as a 
 
 ## Prerequisites
 
-- Node.js 24+ and pnpm 9+
+- Node.js 24.x (see `.nvmrc`) and pnpm 10.x (see `package.json#packageManager`)
 - Supabase project (Postgres + GoTrue)
 - Upstash Redis + QStash accounts (HTTP/REST clients only; no TCP Redis clients)
 - Provider keys (OpenAI/Anthropic/xAI/OpenRouter or Vercel AI Gateway)

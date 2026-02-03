@@ -217,7 +217,8 @@ export async function addActivityToTrip(
   const { error: insertError } = await insertSingle(
     supabase,
     "itinerary_items",
-    insertPayload
+    insertPayload,
+    { select: "id", validate: false }
   );
 
   if (insertError) {

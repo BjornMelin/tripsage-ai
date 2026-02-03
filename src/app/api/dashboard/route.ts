@@ -12,7 +12,7 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { validateSchema } from "@/lib/api/route-helpers";
+import { requireUserId, validateSchema } from "@/lib/api/route-helpers";
 import { aggregateDashboardMetrics } from "@/lib/metrics/aggregate";
 
 /**
@@ -34,31 +34,28 @@ export const GET = withApiGuards({
   auth: true,
   rateLimit: "dashboard:metrics",
   telemetry: "dashboard.metrics",
-})(
-  async (
-    req: NextRequest,
-    { supabase: _supabase, user: _user }: { supabase: unknown; user: unknown }
-  ) => {
-    // Parse and validate query parameters
-    const searchParams = req.nextUrl.searchParams;
-    const queryObject = Object.fromEntries(searchParams.entries());
-    const validation = validateSchema(dashboardQuerySchema, queryObject);
+})(async (req: NextRequest, { user }: { user: { id: string } | null | undefined }) => {
+  // Parse and validate query parameters
+  const searchParams = req.nextUrl.searchParams;
+  const queryObject = Object.fromEntries(searchParams.entries());
+  const validation = validateSchema(dashboardQuerySchema, queryObject);
 
-    if (!validation.ok) return validation.error;
+  if (!validation.ok) return validation.error;
 
-    const { window } = validation.data;
-    const hours = windowToHours(window);
+  const { window } = validation.data;
+  const hours = windowToHours(window);
 
-    // Aggregate metrics
-    const metrics = await aggregateDashboardMetrics(hours);
+  // Aggregate metrics
+  const userIdResult = requireUserId(user);
+  if (!userIdResult.ok) return userIdResult.error;
+  const metrics = await aggregateDashboardMetrics(userIdResult.data, hours);
 
-    // Validate response shape (defense in depth)
-    const validated = dashboardMetricsSchema.parse(metrics);
+  // Validate response shape (defense in depth)
+  const validated = dashboardMetricsSchema.parse(metrics);
 
-    return NextResponse.json(validated, {
-      headers: {
-        "Cache-Control": "private, max-age=0, must-revalidate",
-      },
-    });
-  }
-);
+  return NextResponse.json(validated, {
+    headers: {
+      "Cache-Control": "private, max-age=0, must-revalidate",
+    },
+  });
+});

@@ -4,10 +4,10 @@
 
 "use client";
 
-import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Loader2Icon, MailIcon } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
+import { GitHubMarkIcon, GoogleGIcon } from "@/components/icons/oauth-provider-icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -197,7 +197,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             disabled={oauthLoading || registerPending}
             data-testid="oauth-github"
           >
-            <SiGithub aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
+            <GitHubMarkIcon aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
             GitHub
           </Button>
           <Button
@@ -207,7 +207,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             disabled={oauthLoading || registerPending}
             data-testid="oauth-google"
           >
-            <SiGoogle aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
+            <GoogleGIcon aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
             Google
           </Button>
         </div>

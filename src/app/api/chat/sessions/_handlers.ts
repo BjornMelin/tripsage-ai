@@ -46,16 +46,21 @@ export async function createSession(
   const allowEphemeral = isChatEphemeralEnabled();
   const id = secureUuid();
   const now = nowIso();
-  const { error } = await insertSingle(deps.supabase, "chat_sessions", {
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    created_at: now,
-    id,
-    metadata: title ? { title } : {},
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    updated_at: now,
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: deps.userId,
-  });
+  const { error } = await insertSingle(
+    deps.supabase,
+    "chat_sessions",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
+      created_at: now,
+      id,
+      metadata: title ? { title } : {},
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
+      updated_at: now,
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
+      user_id: deps.userId,
+    },
+    { select: "id", validate: false }
+  );
   if (error) {
     if (allowEphemeral) {
       deps.logger.warn("chat:session_create_skipped", {
@@ -167,21 +172,14 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
   const logger = deps.logger;
 
-  const { data: session, error: sessionError } = await getMaybeSingle(
+  const sessionPromise = getMaybeSingle(
     deps.supabase,
     "chat_sessions",
     (qb) => qb.eq("id", id).eq("user_id", deps.userId),
     { select: "id", validate: false }
   );
-  if (sessionError)
-    return errorResponse({
-      error: "db_error",
-      reason: "Failed to verify session",
-      status: 500,
-    });
-  if (!session) return notFoundResponse("Session");
 
-  const { data: messages, error: messageError } = await getMany(
+  const messagesPromise = getMany(
     deps.supabase,
     "chat_messages",
     (qb) => qb.eq("session_id", id).eq("user_id", deps.userId),
@@ -192,6 +190,21 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
       validate: false,
     }
   );
+
+  const [
+    { data: session, error: sessionError },
+    { data: messages, error: messageError },
+  ] = await Promise.all([sessionPromise, messagesPromise]);
+
+  if (sessionError) {
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to verify session",
+      status: 500,
+    });
+  }
+  if (!session) return notFoundResponse("Session");
+
   if (messageError)
     return errorResponse({
       error: "db_error",
@@ -360,15 +373,20 @@ export async function createMessage(
     });
   if (!session) return notFoundResponse("Session");
   const content = JSON.stringify(payload.parts ?? []);
-  const { error } = await insertSingle(deps.supabase, "chat_messages", {
-    content,
-    metadata: {},
-    role: normalizedRole as "user" | "system" | "assistant",
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    session_id: id,
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: deps.userId,
-  });
+  const { error } = await insertSingle(
+    deps.supabase,
+    "chat_messages",
+    {
+      content,
+      metadata: {},
+      role: normalizedRole as "user" | "system" | "assistant",
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
+      session_id: id,
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
+      user_id: deps.userId,
+    },
+    { select: "id", validate: false }
+  );
   if (error)
     return errorResponse({
       error: "db_error",

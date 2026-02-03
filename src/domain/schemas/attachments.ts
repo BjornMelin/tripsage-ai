@@ -161,14 +161,14 @@ export type AttachmentUploadStatus = z.infer<typeof attachmentUploadStatusSchema
 export const attachmentFileSchema = z.strictObject({
   chatId: z.uuid().nullable(),
   chatMessageId: z.number().int().nonnegative().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   id: z.uuid(),
   mimeType: z.string(),
   name: z.string(),
   originalName: z.string(),
   size: z.number().int().nonnegative(),
   tripId: z.number().int().nonnegative().nullable(),
-  updatedAt: z.string().datetime(),
+  updatedAt: z.iso.datetime(),
   uploadStatus: attachmentUploadStatusSchema,
   url: z.url(),
 });

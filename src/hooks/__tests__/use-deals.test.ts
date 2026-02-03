@@ -120,19 +120,26 @@ const CREATE_MOCK_STORE = () => {
     clearFilters: vi.fn(),
     clearRecentlyViewed: vi.fn(),
     deals,
+    featuredDealItems: [SAMPLE_DEALS[0]],
     featuredDeals: [SAMPLE_DEALS[0].id],
     filters: undefined,
     getAlertById: vi.fn((id: string) => SAMPLE_ALERTS.find((a) => a.id === id)),
     getDealById: vi.fn((id: string) => deals[id]),
     getDealsStats: vi.fn(() => ({
-      averageDiscount: 46.67,
+      avgDiscount: 46.67,
+      avgSavings: 300.33,
+      byDestination: { Barcelona: 1, Paris: 1, Rome: 1 },
       byType: {
         accommodation: 1,
+        activity: 0,
+        error_fare: 0,
+        flash_sale: 0,
         flight: 1,
         package: 1,
+        promotion: 0,
+        transportation: 0,
       },
       totalCount: 3,
-      totalSavings: 900.99,
     })),
     getFeaturedDeals: vi.fn(() => [SAMPLE_DEALS[0]]),
     getFilteredDeals: vi.fn(() => SAMPLE_DEALS),
@@ -141,12 +148,14 @@ const CREATE_MOCK_STORE = () => {
     initialize: vi.fn(),
     isInitialized: true,
     lastUpdated: MOCK_TIMESTAMP,
+    recentlyViewedDealItems: [SAMPLE_DEALS[0], SAMPLE_DEALS[2]],
     recentlyViewedDeals: [SAMPLE_DEALS[0].id, SAMPLE_DEALS[2].id],
     removeAlert: vi.fn(),
     removeDeal: vi.fn(),
     removeFromFeaturedDeals: vi.fn(),
     removeFromSavedDeals: vi.fn(),
     reset: vi.fn(),
+    savedDealItems: [SAMPLE_DEALS[0], SAMPLE_DEALS[1]],
     savedDeals: [SAMPLE_DEALS[0].id, SAMPLE_DEALS[1].id],
     setFilters: vi.fn(),
     toggleAlertActive: vi.fn(),
@@ -158,7 +167,9 @@ const CREATE_MOCK_STORE = () => {
 // Mock the deals store
 const MOCK_STORE = CREATE_MOCK_STORE();
 vi.mock("@/features/search/store/deals-store", () => ({
-  useDealsStore: vi.fn(() => MOCK_STORE),
+  useDealsStore: vi.fn((selector?: (state: unknown) => unknown) =>
+    typeof selector === "function" ? selector(MOCK_STORE) : MOCK_STORE
+  ),
 }));
 
 describe("useDeals Hook", () => {
@@ -224,8 +235,13 @@ describe("useDeals Hook", () => {
     expect(result.current.dealStats.totalCount).toBe(3);
     expect(result.current.dealStats.byType).toEqual({
       accommodation: 1,
+      activity: 0,
+      error_fare: 0,
+      flash_sale: 0,
       flight: 1,
       package: 1,
+      promotion: 0,
+      transportation: 0,
     });
   });
 

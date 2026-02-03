@@ -25,8 +25,11 @@ type Trip = UiTrip;
 
 interface RecentTripsProps {
   limit?: number;
-  showEmpty?: boolean;
 }
+
+type RecentTripsVariantProps = RecentTripsProps & {
+  showEmpty: boolean;
+};
 
 function TripCardSkeleton() {
   return (
@@ -184,7 +187,11 @@ function EmptyState() {
  * show the empty state.
  * @returns Recent trip grid with skeleton fallback.
  */
-export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
+export function RecentTrips(props: RecentTripsProps) {
+  return <RecentTripsImpl {...props} showEmpty />;
+}
+
+function RecentTripsImpl({ limit = 5, showEmpty }: RecentTripsVariantProps) {
   const { data: tripsResponse, isLoading } = useTrips();
 
   // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
@@ -266,4 +273,14 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
       )}
     </Card>
   );
+}
+
+/**
+ * Renders the recent trips widget without the interactive empty state.
+ *
+ * @param props - Component configuration including list limit.
+ * @returns Recent trips card with minimal fallback when empty.
+ */
+export function RecentTripsNoEmptyState(props: RecentTripsProps) {
+  return <RecentTripsImpl {...props} showEmpty={false} />;
 }

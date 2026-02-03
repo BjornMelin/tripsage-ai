@@ -4,10 +4,7 @@
 
 "use client";
 
-import "katex/dist/katex.min.css";
-import { code as codePlugin } from "@streamdown/code";
 import { math as mathPlugin } from "@streamdown/math";
-import { mermaid as mermaidPlugin } from "@streamdown/mermaid";
 import { type ComponentProps, memo, useMemo } from "react";
 import {
   type ControlsConfig,
@@ -58,6 +55,114 @@ const HardenOptionsSchema = z.looseObject({
 type HardenOptions = z.infer<typeof HardenOptionsSchema>;
 type UnifiedPlugin = Plugin<unknown[]>;
 type PluggableTuple = [plugin: UnifiedPlugin, ...parameters: unknown[]];
+type StreamdownPluginConfig = NonNullable<StreamdownProps["plugins"]>;
+type StreamdownCodePlugin = NonNullable<StreamdownPluginConfig["code"]>;
+type StreamdownMermaidPlugin = NonNullable<StreamdownPluginConfig["mermaid"]>;
+
+type StreamdownCodePluginModule = typeof import("@streamdown/code");
+
+let loadedCodePlugin: StreamdownCodePlugin | null = null;
+let codePluginPromise: Promise<StreamdownCodePlugin> | null = null;
+
+function LoadCodePlugin(): Promise<StreamdownCodePlugin> {
+  if (loadedCodePlugin) return Promise.resolve(loadedCodePlugin);
+  codePluginPromise ??= import("@streamdown/code")
+    .then((mod: StreamdownCodePluginModule) => mod.code)
+    .then((plugin) => {
+      loadedCodePlugin = plugin;
+      return plugin;
+    })
+    .catch((error) => {
+      codePluginPromise = null;
+      throw error;
+    });
+  return codePluginPromise;
+}
+
+const LazyCodePlugin: StreamdownCodePlugin = {
+  getSupportedLanguages() {
+    return loadedCodePlugin?.getSupportedLanguages() ?? [];
+  },
+  getThemes() {
+    return loadedCodePlugin?.getThemes() ?? DefaultShikiTheme;
+  },
+  highlight(options, callback) {
+    if (loadedCodePlugin) {
+      return loadedCodePlugin.highlight(options, callback);
+    }
+
+    LoadCodePlugin()
+      .then((plugin) => {
+        plugin.highlight(options, callback);
+      })
+      .catch(() => {
+        // If code highlighting fails to load, we fall back to unhighlighted code blocks.
+      });
+
+    return null;
+  },
+  name: "shiki",
+  supportsLanguage(language) {
+    return loadedCodePlugin?.supportsLanguage(language) ?? true;
+  },
+  type: "code-highlighter",
+};
+
+type MermaidModule = typeof import("mermaid");
+type MermaidConfig = NonNullable<MermaidOptions["config"]>;
+type MermaidInstance = ReturnType<StreamdownMermaidPlugin["getMermaid"]>;
+
+let mermaidPromise: Promise<MermaidModule> | null = null;
+
+function LoadMermaid(): Promise<MermaidModule> {
+  mermaidPromise ??= import("mermaid").catch((error) => {
+    mermaidPromise = null;
+    throw error;
+  });
+  return mermaidPromise;
+}
+
+const DefaultMermaidConfig: MermaidConfig = {
+  fontFamily: "monospace",
+  securityLevel: "strict",
+  startOnLoad: false,
+  suppressErrorRendering: true,
+  theme: "default",
+};
+
+const LazyMermaidPlugin: StreamdownMermaidPlugin = {
+  getMermaid(config) {
+    let initialized = false;
+    let resolvedConfig: MermaidConfig = { ...DefaultMermaidConfig, ...(config ?? {}) };
+
+    const instance: MermaidInstance = {
+      initialize(nextConfig) {
+        resolvedConfig = {
+          ...DefaultMermaidConfig,
+          ...resolvedConfig,
+          ...(nextConfig ?? {}),
+        };
+        initialized = false;
+      },
+      async render(id, source) {
+        const mod = await LoadMermaid();
+        const mermaid = mod.default;
+
+        if (!initialized) {
+          mermaid.initialize(resolvedConfig);
+          initialized = true;
+        }
+
+        return await mermaid.render(id, source);
+      },
+    };
+
+    return instance;
+  },
+  language: "mermaid",
+  name: "mermaid",
+  type: "diagram",
+};
 
 function IsPluggableTuple(value: Pluggable): value is PluggableTuple {
   return Array.isArray(value);
@@ -303,7 +408,7 @@ export const Markdown = memo((props: MarkdownProps) => {
       linkSafety={{ enabled: false }}
       mermaid={mermaid as MermaidOptions}
       mode={mode}
-      plugins={{ code: codePlugin, math: mathPlugin, mermaid: mermaidPlugin }}
+      plugins={{ code: LazyCodePlugin, math: mathPlugin, mermaid: LazyMermaidPlugin }}
       parseIncompleteMarkdown={mode === "streaming"}
       rehypePlugins={resolvedRehypePlugins}
       remarkPlugins={remarkPlugins}

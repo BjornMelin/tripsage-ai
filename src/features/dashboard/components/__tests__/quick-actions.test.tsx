@@ -49,8 +49,8 @@ describe("QuickActions", () => {
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
-  it("displays action descriptions when showDescription is true", () => {
-    renderWithProviders(<QuickActions showDescription={true} />);
+  it("displays action descriptions in the default variant", () => {
+    renderWithProviders(<QuickActions />);
 
     expect(
       screen.getByText("Find the best flight deals for your next trip")
@@ -58,21 +58,6 @@ describe("QuickActions", () => {
     expect(
       screen.getByText("Discover comfortable accommodations worldwide")
     ).toBeInTheDocument();
-    expect(screen.getByText("Start planning your next adventure")).toBeInTheDocument();
-    expect(
-      screen.getByText("Get personalized travel recommendations")
-    ).toBeInTheDocument();
-  });
-
-  it("hides action descriptions when showDescription is false", () => {
-    renderWithProviders(<QuickActions showDescription={false} />);
-
-    expect(
-      screen.queryByText("Find the best flight deals for your next trip")
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Discover comfortable accommodations worldwide")
-    ).not.toBeInTheDocument();
   });
 
   it("links to correct URLs", () => {
@@ -123,46 +108,6 @@ describe("QuickActions", () => {
     expect(gridContainer).toBeInTheDocument();
   });
 
-  it("renders in list layout when specified", () => {
-    renderWithProviders(<QuickActions layout="list" />);
-
-    // List layout should have space-y classes instead of grid
-    const listContainer = document.querySelector(".space-y-2");
-    expect(listContainer).toBeInTheDocument();
-  });
-
-  it("shows fewer actions when compact mode is enabled", () => {
-    renderWithProviders(<QuickActions compact={true} />);
-
-    // Should show only 6 actions in compact mode
-    const actionButtons = screen.getAllByRole("link");
-    expect(actionButtons.length).toBe(6);
-  });
-
-  it("shows all actions when compact mode is disabled", () => {
-    renderWithProviders(<QuickActions compact={false} />);
-
-    // Should show all 8 actions
-    const actionButtons = screen.getAllByRole("link");
-    expect(actionButtons.length).toBe(8);
-  });
-
-  it("hides description in compact mode even when showDescription is true", () => {
-    renderWithProviders(<QuickActions compact={true} showDescription={true} />);
-
-    expect(
-      screen.queryByText("Find the best flight deals for your next trip")
-    ).not.toBeInTheDocument();
-  });
-
-  it("adjusts title size in compact mode", () => {
-    renderWithProviders(<QuickActions compact={true} />);
-
-    // In compact mode, title should have text-lg class
-    const title = screen.getByText("Quick Actions");
-    expect(title).toHaveClass("text-lg");
-  });
-
   it("displays icons for all actions", () => {
     renderWithProviders(<QuickActions />);
 
@@ -204,6 +149,13 @@ describe("QuickActionsCompact", () => {
     expect(
       screen.queryByText("Find the best flight deals for your next trip")
     ).not.toBeInTheDocument();
+  });
+
+  it("adjusts title size", () => {
+    renderWithProviders(<QuickActionsCompact />);
+
+    const title = screen.getByText("Quick Actions");
+    expect(title).toHaveClass("text-lg");
   });
 
   it("uses grid layout", () => {
@@ -288,7 +240,7 @@ describe("QuickActions Edge Cases", () => {
   });
 
   it("handles very small limits correctly", () => {
-    renderWithProviders(<QuickActions compact={true} />);
+    renderWithProviders(<QuickActionsCompact />);
 
     // Even with compact mode, should show at least some actions
     const actionButtons = screen.getAllByRole("link");

@@ -257,7 +257,8 @@ export async function startTotpEnrollment(
           status: "pending",
           // biome-ignore lint/style/useNamingConvention: snake_case columns
           user_id: userId,
-        }
+        },
+        { select: "id", validate: false }
       );
       if (insertError) {
         span.recordException(toException(insertError));
@@ -736,15 +737,20 @@ async function logBackupCodeAudit(
   count: number,
   meta: BackupAuditMeta
 ) {
-  const { error } = await insertSingle(adminSupabase, "mfa_backup_code_audit", {
-    count,
-    event,
-    ip: meta.ip,
-    // biome-ignore lint/style/useNamingConvention: DB column naming
-    user_agent: meta.userAgent,
-    // biome-ignore lint/style/useNamingConvention: DB column naming
-    user_id: userId,
-  });
+  const { error } = await insertSingle(
+    adminSupabase,
+    "mfa_backup_code_audit",
+    {
+      count,
+      event,
+      ip: meta.ip,
+      // biome-ignore lint/style/useNamingConvention: DB column naming
+      user_agent: meta.userAgent,
+      // biome-ignore lint/style/useNamingConvention: DB column naming
+      user_id: userId,
+    },
+    { select: "id", validate: false }
+  );
   if (error) {
     auditLogger.error("mfa backup code audit insert failed", {
       error: error instanceof Error ? error.message : String(error),

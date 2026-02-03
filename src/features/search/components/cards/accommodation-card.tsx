@@ -2,12 +2,14 @@
  * @fileoverview Accommodation card component for displaying accommodation information.
  */
 
+"use client";
+
 import type { Accommodation } from "@schemas/search";
 import { MapPinIcon, StarIcon } from "lucide-react";
-import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProxiedImage } from "@/components/ui/proxied-image";
 import { formatCurrency } from "../common/format";
 import { GetAmenityIcon } from "./amenities";
 
@@ -55,16 +57,14 @@ export function AccommodationCard({
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="flex">
         <div className="relative w-1/3 h-48 bg-muted flex items-center justify-center">
-          {primaryImage ? (
-            <Image
-              src={primaryImage}
-              alt={accommodation.name}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <span className="text-muted-foreground">No image</span>
-          )}
+          <ProxiedImage
+            src={primaryImage}
+            alt={accommodation.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 33vw"
+            fallback={<span className="text-muted-foreground">No image</span>}
+          />
         </div>
         <CardContent className="flex-1 p-4">
           <div className="flex justify-between items-start mb-2">

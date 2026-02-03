@@ -31,7 +31,10 @@ vi.mock("@/hooks/supabase/use-realtime-channel", () => ({
 }));
 
 vi.mock("@/features/auth/store/auth/auth-core", () => ({
-  useAuthCore: mockUseAuthStore,
+  useAuthCore: (selector?: (state: unknown) => unknown) => {
+    const state = mockUseAuthStore();
+    return typeof selector === "function" ? selector(state) : state;
+  },
 }));
 
 const flushEffects = () => act(async () => Promise.resolve());

@@ -209,8 +209,7 @@ export type EnsureStorageOptions = {
  * Ensures the local Supabase storage container is running and wired to Kong.
  *
  * @param opts - Options describing the local Supabase project and paths.
- * @throws Error when required containers, migrations, or readiness checks fail,
- * or when the Kong proxy container fails to start.
+ * @throws Error when required containers, migrations, or readiness checks fail.
  */
 export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   const ids = getIdsFromProjectId(opts.projectId);
@@ -297,6 +296,7 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   // WSL/port-proxy fallback: expose an alternate local port for the Kong gateway.
   // This avoids cases where Docker Desktop port forwarding fails for /storage routes.
   if (!isWsl()) return;
+  const kongProxyPort = process.env.SUPABASE_KONG_PROXY_PORT?.trim() || "54331";
   try {
     sh("docker", ["rm", "-f", ids.kongProxyId]);
   } catch (error) {
@@ -312,7 +312,7 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
       "--network",
       ids.networkId,
       "-p",
-      "54331:8000",
+      `${kongProxyPort}:8000`,
       "alpine/socat",
       "-d",
       "-d",
@@ -321,6 +321,13 @@ export function ensureStorageRunning(opts: EnsureStorageOptions): void {
     ]);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to start kong proxy container: ${message}`);
+    // The kong proxy is a best-effort workaround for certain WSL/Docker Desktop setups.
+    // If it can't start (e.g. port already in use), the primary Kong binding may still
+    // work, so avoid failing the full Supabase bootstrap/reset flow.
+    process.stderr.write(
+      `WARN: failed to start Kong proxy container on port ${kongProxyPort}. ` +
+        "Continuing without WSL proxy fallback.\n" +
+        `Details: ${message}\n`
+    );
   }
 }
