@@ -5,6 +5,7 @@
 "use client";
 
 import { ArrowRightIcon, FilterIcon, PlaneIcon } from "lucide-react";
+import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,6 +29,22 @@ import { cn } from "@/lib/utils";
 const FLIGHT_RESULTS_COLORS = {
   priceDisplay: "text-success",
 } as const;
+
+const formatTime = (value: string): string => {
+  try {
+    return DateUtils.format(DateUtils.parse(value), "HH:mm");
+  } catch {
+    return value;
+  }
+};
+
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  if (remaining === 0) return `${hours}h`;
+  if (hours === 0) return `${remaining}m`;
+  return `${hours}h ${remaining}m`;
+};
 
 /**
  * Flight results client component props.
@@ -42,50 +60,52 @@ export interface FlightResultsClientProps {
  * @returns The flight results client.
  */
 export default function FlightResultsClient({ searchId }: FlightResultsClientProps) {
-  const { currentContext, searchProgress, status } = useSearchResultsStore(
-    useShallow((state) => ({
-      currentContext: state.currentContext,
-      searchProgress: state.searchProgress,
-      status: state.status,
-    }))
-  );
+  const { currentContext, results, resultsBySearch, searchProgress, status } =
+    useSearchResultsStore(
+      useShallow((state) => ({
+        currentContext: state.currentContext,
+        results: state.results,
+        resultsBySearch: state.resultsBySearch,
+        searchProgress: state.searchProgress,
+        status: state.status,
+      }))
+    );
 
-  // Mock flight results for demo
-  const mockFlights = [
-    {
-      airline: "British Airways",
-      arrival: { airport: "LHR", city: "London", time: "20:45" },
-      cabin: "Economy",
-      departure: { airport: "JFK", city: "New York", time: "08:30" },
-      duration: "7h 15m",
-      flightNumber: "BA 178",
-      id: "flight-1",
-      price: 599,
-      stops: 0,
-    },
-    {
-      airline: "Virgin Atlantic",
-      arrival: { airport: "LHR", city: "London", time: "23:20" },
-      cabin: "Economy",
-      departure: { airport: "JFK", city: "New York", time: "11:45" },
-      duration: "7h 35m",
-      flightNumber: "VS 3",
-      id: "flight-2",
-      price: 649,
-      stops: 0,
-    },
-    {
-      airline: "American Airlines",
-      arrival: { airport: "LHR", city: "London", time: "10:30+1" },
-      cabin: "Economy",
-      departure: { airport: "JFK", city: "New York", time: "22:00" },
-      duration: "7h 30m",
-      flightNumber: "AA 106",
-      id: "flight-3",
-      price: 579,
-      stops: 0,
-    },
-  ];
+  const flights = useMemo(() => {
+    if (!searchId) return [];
+    return resultsBySearch[searchId]?.flights ?? results.flights ?? [];
+  }, [results.flights, resultsBySearch, searchId]);
+
+  const priceRange = useMemo(() => {
+    if (flights.length === 0) return null;
+    const prices = flights.map((flight) => flight.price);
+    return {
+      max: Math.max(...prices),
+      min: Math.min(...prices),
+    };
+  }, [flights]);
+
+  const airlineCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    flights.forEach((flight) => {
+      counts.set(flight.airline, (counts.get(flight.airline) ?? 0) + 1);
+    });
+    return Array.from(counts.entries());
+  }, [flights]);
+
+  const stopCounts = useMemo(() => {
+    return flights.reduce(
+      (acc, flight) => {
+        if (flight.stops === 0) {
+          acc.direct += 1;
+        } else {
+          acc.withStops += 1;
+        }
+        return acc;
+      },
+      { direct: 0, withStops: 0 }
+    );
+  }, [flights]);
 
   if (!searchId) {
     return (
@@ -138,7 +158,7 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
         </Card>
 
         {/* Search Status */}
-        {status === "searching" && (
+        {status === "searching" ? (
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -147,7 +167,7 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* Results */}
         <div className="flex gap-6">
@@ -163,22 +183,39 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
               <CardContent className="space-y-4">
                 <div>
                   <h4 className="font-medium mb-2">Price Range</h4>
-                  <div className="text-sm text-muted-foreground">$579 - $649</div>
+                  <div className="text-sm text-muted-foreground">
+                    {priceRange
+                      ? `$${priceRange.min} - $${priceRange.max}`
+                      : "No results yet"}
+                  </div>
                 </div>
                 <Separator />
                 <div>
                   <h4 className="font-medium mb-2">Airlines</h4>
                   <div className="space-y-1 text-sm">
-                    <div>British Airways (1)</div>
-                    <div>Virgin Atlantic (1)</div>
-                    <div>American Airlines (1)</div>
+                    {airlineCounts.length === 0 ? (
+                      <div className="text-muted-foreground">No results yet</div>
+                    ) : (
+                      airlineCounts.map(([airline, count]) => (
+                        <div key={airline}>
+                          {airline} ({count})
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
                 <Separator />
                 <div>
                   <h4 className="font-medium mb-2">Stops</h4>
                   <div className="text-sm">
-                    <div>Direct (3)</div>
+                    {flights.length === 0 ? (
+                      <div className="text-muted-foreground">No results yet</div>
+                    ) : (
+                      <>
+                        <div>Direct ({stopCounts.direct})</div>
+                        <div>With stops ({stopCounts.withStops})</div>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -187,7 +224,18 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
 
           {/* Flight Results */}
           <div className="flex-1 space-y-4">
-            {mockFlights.map((flight) => (
+            {flights.length === 0 && status !== "searching" ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>No flights yet</CardTitle>
+                  <CardDescription>
+                    Run a search to see available flight options.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ) : null}
+
+            {flights.map((flight) => (
               <Card key={flight.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -204,19 +252,16 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
                       <div className="flex items-center gap-4">
                         <div className="text-center">
                           <div className="font-semibold text-lg">
-                            {flight.departure.time}
+                            {formatTime(flight.departureTime)}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {flight.departure.airport}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {flight.departure.city}
+                            {flight.origin}
                           </div>
                         </div>
 
                         <div className="flex flex-col items-center gap-1">
                           <div className="text-xs text-muted-foreground">
-                            {flight.duration}
+                            {formatDuration(flight.duration)}
                           </div>
                           <div className="flex items-center">
                             <div className="w-16 h-px bg-border" />
@@ -235,13 +280,10 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
 
                         <div className="text-center">
                           <div className="font-semibold text-lg">
-                            {flight.arrival.time}
+                            {formatTime(flight.arrivalTime)}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {flight.arrival.airport}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {flight.arrival.city}
+                            {flight.destination}
                           </div>
                         </div>
                       </div>

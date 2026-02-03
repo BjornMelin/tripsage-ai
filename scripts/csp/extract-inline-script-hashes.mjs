@@ -18,17 +18,8 @@ function sha256Base64(value) {
 }
 
 async function listFilesRecursive(dir) {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const nextPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await listFilesRecursive(nextPath)));
-      continue;
-    }
-    files.push(nextPath);
-  }
-  return files;
+  const entries = await fs.readdir(dir, { recursive: true });
+  return entries.map((entry) => path.join(dir, entry));
 }
 
 function extractInlineScriptContents(html) {

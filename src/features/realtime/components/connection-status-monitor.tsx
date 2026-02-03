@@ -103,7 +103,7 @@ export function ConnectionStatusMonitor() {
       })),
     [connectionsById]
   );
-  const connectionStatus: ConnectionStatus = summary();
+  const connectionStatus: ConnectionStatus = useMemo(() => summary(), [summary]);
   const [showDetails, setShowDetails] = useState(false);
 
   const handleReconnectAll = async () => {

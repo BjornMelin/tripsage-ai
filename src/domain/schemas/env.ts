@@ -260,10 +260,15 @@ const featureEnvSchema = z.object({
   ENABLE_AI_DEMO: z.coerce.boolean().default(false),
 });
 
-// Image proxy configuration (server-only)
+/**
+ * Image proxy configuration for server-side remote image handling.
+ *
+ * IMAGE_PROXY_ALLOWED_HOSTS restricts which remote hosts can be proxied.
+ * IMAGE_PROXY_MAX_BYTES limits the maximum response size to fetch.
+ */
 const imageProxyEnvSchema = z.object({
   IMAGE_PROXY_ALLOWED_HOSTS: z.string().optional(),
-  IMAGE_PROXY_MAX_BYTES: z.string().optional(),
+  IMAGE_PROXY_MAX_BYTES: z.coerce.number().int().positive().optional(),
 });
 
 // Security configuration

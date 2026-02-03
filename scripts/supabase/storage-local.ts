@@ -209,8 +209,7 @@ export type EnsureStorageOptions = {
  * Ensures the local Supabase storage container is running and wired to Kong.
  *
  * @param opts - Options describing the local Supabase project and paths.
- * @throws Error when required containers, migrations, or readiness checks fail,
- * or when the Kong proxy container fails to start.
+ * @throws Error when required containers, migrations, or readiness checks fail.
  */
 export function ensureStorageRunning(opts: EnsureStorageOptions): void {
   const ids = getIdsFromProjectId(opts.projectId);

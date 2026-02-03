@@ -9,5 +9,8 @@
 import "next/cache";
 
 declare module "next/cache" {
+  /**
+   * Registers a cache lifetime profile by name for Cache Components.
+   */
   export function cacheLife(profile: string): void;
 }

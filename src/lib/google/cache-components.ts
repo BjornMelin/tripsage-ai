@@ -29,8 +29,8 @@ type TimezoneResponse = z.output<typeof upstreamTimezoneResponseSchema>;
 type ComputeRoutesResponse = z.output<typeof upstreamRoutesResponseSchema>;
 type RouteMatrixResponse = z.output<typeof upstreamRouteMatrixResponseSchema>;
 
-type CachedOk<T> = { ok: true; data: T };
-type CachedErr = {
+export type CachedOk<T> = { ok: true; data: T };
+export type CachedErr = {
   details?: string;
   ok: false;
   error: string;
@@ -39,7 +39,7 @@ type CachedErr = {
   upstreamStatus?: number;
 };
 
-type CachedResult<T> = CachedOk<T> | CachedErr;
+export type CachedResult<T> = CachedOk<T> | CachedErr;
 
 type CacheDurations = {
   expire: number;
@@ -60,6 +60,12 @@ function tryApplyCacheDirectives(tags: string[], durations: CacheDurations): voi
  * Fetches and validates Google Time Zone API responses with Cache Components.
  *
  * Note: We intentionally cache short-lived upstream failures to reduce stampedes.
+ *
+ * @param input - Timezone lookup payload.
+ * @param input.lat - Latitude value used for the TimezoneRequest.
+ * @param input.lng - Longitude value used for the TimezoneRequest.
+ * @param input.timestamp - POSIX timestamp passed to the Google Time Zone API.
+ * @returns Promise resolving to a CachedResult containing the validated TimezoneResponse or error details.
  */
 export async function getTimezoneCached(input: {
   lat: TimezoneRequest["lat"];
@@ -171,6 +177,13 @@ export async function getTimezoneCached(input: {
  * Fetches and validates Google Routes API computeRoutes responses with Cache Components.
  *
  * Traffic-aware requests are cached briefly; traffic-unaware requests are cached longer.
+ *
+ * @param input - Routing request payload.
+ * @param input.destination - Destination passed to the Routes API.
+ * @param input.origin - Origin passed to the Routes API.
+ * @param input.routingPreference - Optional routing preference (traffic-aware vs traffic-unaware).
+ * @param input.travelMode - Optional travel mode passed to the Routes API.
+ * @returns Promise resolving to a CachedResult containing the validated ComputeRoutesResponse or error details.
  */
 export async function computeRoutesCached(input: {
   destination: ComputeRoutesRequest["destination"];
@@ -294,6 +307,12 @@ export async function computeRoutesCached(input: {
 
 /**
  * Fetches and validates Google Routes API computeRouteMatrix responses with Cache Components.
+ *
+ * @param input - Route matrix request payload.
+ * @param input.destinations - Destinations passed to the Routes API.
+ * @param input.origins - Origins passed to the Routes API.
+ * @param input.travelMode - Optional travel mode passed to the Routes API.
+ * @returns Promise resolving to a CachedResult containing the validated RouteMatrixResponse or error details.
  */
 export async function computeRouteMatrixCached(input: {
   destinations: RouteMatrixRequest["destinations"];

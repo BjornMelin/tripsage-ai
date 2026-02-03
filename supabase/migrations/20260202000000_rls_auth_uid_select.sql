@@ -50,13 +50,6 @@ CREATE POLICY trips_delete_own
   USING ((select auth.uid()) = user_id);
 
 -- flights
-DROP POLICY IF EXISTS flights_select_own ON public.flights;
-CREATE POLICY flights_select_own
-  ON public.flights
-  FOR SELECT
-  TO authenticated
-  USING (user_id = (select auth.uid()));
-
 DROP POLICY IF EXISTS flights_mutate_own ON public.flights;
 CREATE POLICY flights_mutate_own
   ON public.flights
@@ -352,4 +345,3 @@ BEGIN
     $pol$;
   END IF;
 END $do$;
-

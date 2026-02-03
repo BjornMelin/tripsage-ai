@@ -6,15 +6,10 @@
 
 import type { Activity } from "@schemas/search";
 import { ClockIcon, MapPinIcon } from "lucide-react";
-import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import {
-  buildImageProxyUrl,
-  isAbsoluteHttpUrl,
-  normalizeNextImageSrc,
-} from "@/lib/images/image-proxy";
+import { ProxiedImage } from "@/components/ui/proxied-image";
 import { formatCurrency, formatDurationHours } from "../common/format";
 import { RatingStars } from "./rating-stars";
 
@@ -32,12 +27,6 @@ export function ActivityCard({
   onCompare,
   sourceLabel,
 }: ActivityCardProps) {
-  const normalizedPrimaryImage = normalizeNextImageSrc(activity.images?.[0]);
-  const imageSrc =
-    normalizedPrimaryImage && isAbsoluteHttpUrl(normalizedPrimaryImage)
-      ? buildImageProxyUrl(normalizedPrimaryImage)
-      : normalizedPrimaryImage;
-
   const durationLabel =
     Number.isFinite(activity.duration) && activity.duration >= 0
       ? formatDurationHours(activity.duration)
@@ -46,20 +35,19 @@ export function ActivityCard({
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative">
-        {imageSrc ? (
-          <Image
-            src={imageSrc}
-            alt={activity.name}
-            width={1200}
-            height={480}
-            className="w-full h-48 object-cover"
-            sizes="(max-width: 768px) 100vw, 600px"
-          />
-        ) : (
-          <div className="w-full h-48 bg-muted flex items-center justify-center">
-            <MapPinIcon className="h-12 w-12 text-muted-foreground" />
-          </div>
-        )}
+        <ProxiedImage
+          src={activity.images?.[0]}
+          alt={activity.name}
+          width={1200}
+          height={480}
+          className="w-full h-48 object-cover"
+          sizes="(max-width: 768px) 100vw, 600px"
+          fallback={
+            <div className="w-full h-48 bg-muted flex items-center justify-center">
+              <MapPinIcon className="h-12 w-12 text-muted-foreground" />
+            </div>
+          }
+        />
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           <Badge variant="secondary" className="bg-background/90">
             {activity.type}

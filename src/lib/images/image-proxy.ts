@@ -4,6 +4,7 @@
 
 const IMAGE_PROXY_PATHNAME = "/api/images/proxy";
 
+/** Attempt to parse a URL string, returning null on invalid input. */
 function tryParseUrl(value: string): URL | null {
   try {
     return new URL(value);

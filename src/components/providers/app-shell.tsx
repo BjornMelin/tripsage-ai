@@ -20,6 +20,9 @@ interface AppShellProps {
  *
  * Does not depend on request-bound APIs (cookies/headers) to keep routes eligible
  * for static rendering.
+ *
+ * @param children - Child elements rendered within the public shell.
+ * @returns The public application shell component.
  */
 export function PublicAppShell({ children }: AppShellProps) {
   return (
@@ -46,6 +49,10 @@ interface AuthedAppShellProps extends AppShellProps {
  *
  * Accepts a CSP nonce when available so client-injected scripts (e.g. next-themes)
  * can execute under a strict nonce-based Content Security Policy.
+ *
+ * @param children - Child elements rendered within the authenticated shell.
+ * @param nonce - Optional CSP nonce for script execution.
+ * @returns The authenticated application shell component.
  */
 export function AuthedAppShell({ children, nonce }: AuthedAppShellProps) {
   return (

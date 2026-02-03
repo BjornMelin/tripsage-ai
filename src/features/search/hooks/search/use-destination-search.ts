@@ -9,15 +9,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 
-/**
- * Destination search parameters.
- * @param query - The search query.
- * @param types - The types of destinations to search for.
- * @param limit - The maximum number of results to return.
- */
+/** Parameters for destination search. */
 export interface DestinationSearchParams {
+  /** The search query text. */
   query: string;
+  /** Optional types of destinations to filter by. */
   types?: string[];
+  /** Maximum number of results to return. */
   limit?: number;
 }
 

@@ -50,13 +50,13 @@ export async function createSession(
     deps.supabase,
     "chat_sessions",
     {
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
       created_at: now,
       id,
       metadata: title ? { title } : {},
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
       updated_at: now,
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
       user_id: deps.userId,
     },
     { select: "id", validate: false }
@@ -380,9 +380,9 @@ export async function createMessage(
       content,
       metadata: {},
       role: normalizedRole as "user" | "system" | "assistant",
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
       session_id: id,
-      // biome-ignore lint/style/useNamingConvention: Database field name
+      // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
       user_id: deps.userId,
     },
     { select: "id", validate: false }

@@ -275,6 +275,12 @@ function RecentTripsImpl({ limit = 5, showEmpty }: RecentTripsVariantProps) {
   );
 }
 
+/**
+ * Renders the recent trips widget without the interactive empty state.
+ *
+ * @param props - Component configuration including list limit.
+ * @returns Recent trips card with minimal fallback when empty.
+ */
 export function RecentTripsNoEmptyState(props: RecentTripsProps) {
   return <RecentTripsImpl {...props} showEmpty={false} />;
 }

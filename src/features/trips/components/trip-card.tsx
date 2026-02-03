@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useBudgetStore } from "@/features/budget/store/budget-store";
+import { useBudgetsByTrip } from "@/features/budget/store/budget-store";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
@@ -47,7 +47,7 @@ interface TripCardProps {
  * @returns Styled card with trip details and actions.
  */
 export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
-  const budgetsByTrip = useBudgetStore((state) => state.budgetsByTrip);
+  const budgetsByTrip = useBudgetsByTrip();
   const tripBudgets = budgetsByTrip[trip.id] || [];
 
   const startDate = trip.startDate ? DateUtils.parse(trip.startDate) : null;

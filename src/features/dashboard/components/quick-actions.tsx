@@ -357,6 +357,8 @@ function QuickActionsView({ layout, showDescription, compact }: QuickActionsView
  * Main QuickActions component providing common travel planning shortcuts.
  *
  * Default variant: grid layout with descriptions.
+ *
+ * @returns The default QuickActions component with grid layout.
  */
 export function QuickActions() {
   return <QuickActionsView layout="grid" showDescription={true} compact={false} />;

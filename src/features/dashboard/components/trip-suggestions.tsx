@@ -261,9 +261,9 @@ function EmptyState() {
  */
 function TripSuggestionsImpl({
   limit = 4,
-  showEmpty = true,
+  showEmpty,
   userId,
-  showMemoryBased = true,
+  showMemoryBased,
 }: TripSuggestionsVariantProps) {
   const activeBudget = useBudgetStore((state) => state.activeBudget);
   const suggestionFetchLimit = limit + 2;
@@ -474,10 +474,22 @@ export function TripSuggestions(props: TripSuggestionsProps) {
   return <TripSuggestionsImpl {...props} showEmpty showMemoryBased />;
 }
 
+/**
+ * Renders trip suggestions without the interactive empty state.
+ *
+ * @param props - Component configuration including limit and userId.
+ * @returns Trip suggestions card with minimal fallback when empty.
+ */
 export function TripSuggestionsNoEmptyState(props: TripSuggestionsProps) {
   return <TripSuggestionsImpl {...props} showEmpty={false} showMemoryBased />;
 }
 
+/**
+ * Renders trip suggestions without memory-based personalization.
+ *
+ * @param props - Component configuration including limit and userId.
+ * @returns Trip suggestions card using only API-based recommendations.
+ */
 export function TripSuggestionsNoMemory(props: TripSuggestionsProps) {
   return <TripSuggestionsImpl {...props} showEmpty showMemoryBased={false} />;
 }

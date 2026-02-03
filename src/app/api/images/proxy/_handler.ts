@@ -54,6 +54,12 @@ async function readResponseBodyBytesWithLimit(
   return bytes;
 }
 
+/**
+ * Fetches a remote image with SSRF/size checks and returns a proxy response.
+ *
+ * @param params - Validated remote image proxy request parameters.
+ * @returns The proxied image response or a standardized error response.
+ */
 export async function handleRemoteImageProxy(params: RemoteImageProxyRequest) {
   let targetUrl: URL;
   try {
@@ -76,8 +82,25 @@ export async function handleRemoteImageProxy(params: RemoteImageProxyRequest) {
 
   let response: Response;
   try {
-    response = await fetch(targetUrl.toString(), { redirect: "follow" });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    try {
+      response = await fetch(targetUrl.toString(), {
+        redirect: "follow",
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return errorResponse({
+        err,
+        error: "external_api_timeout",
+        reason: "Remote image fetch timed out",
+        status: 504,
+      });
+    }
     return errorResponse({
       err: err instanceof Error ? err : new Error("Remote image fetch failed"),
       error: "external_api_error",

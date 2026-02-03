@@ -228,16 +228,11 @@ export async function loginWithPasswordAction(
 ): Promise<LoginActionState | never> {
   const requestHeaders = await headers();
 
-  const rateLimitResult = await enforceRateLimitForAuthAction(
-    "auth:login",
-    requestHeaders
-  );
+  const [rateLimitResult, botIdResult] = await Promise.all([
+    enforceRateLimitForAuthAction("auth:login", requestHeaders),
+    enforceBotIdForAuthAction("auth.login.action", requestHeaders),
+  ]);
   if (rateLimitResult) return rateLimitResult;
-
-  const botIdResult = await enforceBotIdForAuthAction(
-    "auth.login.action",
-    requestHeaders
-  );
   if (botIdResult) return botIdResult;
 
   const nextPath = safeNextPath(getFormString(formData, "next"));
@@ -355,16 +350,11 @@ export async function verifyMfaAction(
 ): Promise<VerifyMfaActionState | never> {
   const requestHeaders = await headers();
 
-  const rateLimitResult = await enforceRateLimitForAuthAction(
-    "auth:mfa:verify",
-    requestHeaders
-  );
+  const [rateLimitResult, botIdResult] = await Promise.all([
+    enforceRateLimitForAuthAction("auth:mfa:verify", requestHeaders),
+    enforceBotIdForAuthAction("auth.mfa.verify.action", requestHeaders),
+  ]);
   if (rateLimitResult) return rateLimitResult;
-
-  const botIdResult = await enforceBotIdForAuthAction(
-    "auth.mfa.verify.action",
-    requestHeaders
-  );
   if (botIdResult) return botIdResult;
 
   const parsed = mfaVerificationSchema.safeParse({
@@ -410,16 +400,11 @@ export async function registerWithPasswordAction(
 ): Promise<RegisterActionState | never> {
   const requestHeaders = await headers();
 
-  const rateLimitResult = await enforceRateLimitForAuthAction(
-    "auth:register",
-    requestHeaders
-  );
+  const [rateLimitResult, botIdResult] = await Promise.all([
+    enforceRateLimitForAuthAction("auth:register", requestHeaders),
+    enforceBotIdForAuthAction("auth.register.action", requestHeaders),
+  ]);
   if (rateLimitResult) return rateLimitResult;
-
-  const botIdResult = await enforceBotIdForAuthAction(
-    "auth.register.action",
-    requestHeaders
-  );
   if (botIdResult) return botIdResult;
 
   const nextParam = getFormString(formData, "next");

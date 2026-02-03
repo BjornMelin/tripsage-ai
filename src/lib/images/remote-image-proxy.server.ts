@@ -6,24 +6,15 @@ import "server-only";
 
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
-let cachedAllowedHosts: string[] | null = null;
-
-export function resetRemoteImageProxyAllowedHostsCacheForTest(): void {
-  cachedAllowedHosts = null;
-}
-
 function parseAllowedHostsFromEnv(): string[] {
-  if (cachedAllowedHosts) return cachedAllowedHosts;
   const raw = getServerEnvVarWithFallback("IMAGE_PROXY_ALLOWED_HOSTS", undefined);
   if (!raw) {
-    cachedAllowedHosts = [];
-    return cachedAllowedHosts;
+    return [];
   }
-  cachedAllowedHosts = raw
+  return raw
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => entry.length > 0);
-  return cachedAllowedHosts;
 }
 
 function normalizeHostname(hostname: string): string {
@@ -71,15 +62,25 @@ function isIpAddressHost(hostname: string): boolean {
   return false;
 }
 
+/**
+ * Returns the maximum allowed remote image payload size in bytes.
+ *
+ * @returns The byte limit used for remote image proxying.
+ */
 export function getRemoteImageProxyMaxBytes(): number {
   const fallback = 10 * 1024 * 1024;
   const raw = getServerEnvVarWithFallback("IMAGE_PROXY_MAX_BYTES", undefined);
-  if (!raw || !raw.trim()) return fallback;
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return Math.min(parsed, 25 * 1024 * 1024);
+  if (typeof raw !== "number") return fallback;
+  if (!Number.isFinite(raw) || raw <= 0) return fallback;
+  return Math.min(raw, 25 * 1024 * 1024);
 }
 
+/**
+ * Determines whether a remote image URL is allowed by the proxy allowlist.
+ *
+ * @param url - URL to validate.
+ * @returns True when the URL is allowed.
+ */
 export function isAllowedRemoteImageUrl(url: URL): boolean {
   if (url.username || url.password) return false;
   if (url.protocol !== "https:") return false;

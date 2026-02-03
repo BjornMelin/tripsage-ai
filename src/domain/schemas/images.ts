@@ -6,6 +6,7 @@ import { z } from "zod";
 
 // ===== CORE SCHEMAS =====
 
+/** Validates remote image proxy request payloads. */
 export const remoteImageProxyRequestSchema = z.strictObject({
   url: z.preprocess(
     (value) => (typeof value === "string" ? value.trim() : value),
@@ -13,6 +14,7 @@ export const remoteImageProxyRequestSchema = z.strictObject({
   ),
 });
 
+/** Input payload for remote image proxy requests. */
 export type RemoteImageProxyRequest = z.infer<typeof remoteImageProxyRequestSchema>;
 
 // ===== TOOL INPUT SCHEMAS =====

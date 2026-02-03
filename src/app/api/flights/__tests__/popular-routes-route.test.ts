@@ -1,16 +1,13 @@
 /** @vitest-environment node */
 
-import type { Redis } from "@upstash/redis";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setRateLimitFactoryForTests,
   setSupabaseFactoryForTests,
 } from "@/lib/api/factory";
 import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
-import { setRedisFactoryForTests } from "@/lib/redis";
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 import {
   RedisMockClient,
@@ -20,11 +17,6 @@ import {
 
 const { redis, ratelimit } = setupUpstashMocks();
 
-/**
- * Custom Redis mock that returns raw string values for `get` without auto-deserializing.
- * This matches the behavior expected by `getCachedJson` which stores JSON strings and
- * parses them itself.
- */
 class RawStringRedisMock extends RedisMockClient {
   constructor(private readonly rawStore: UpstashMemoryStore) {
     super(rawStore);
@@ -33,10 +25,18 @@ class RawStringRedisMock extends RedisMockClient {
   override get<T = unknown>(key: string): Promise<T | null> {
     const entry = this.rawStore.get(key);
     if (!entry) return Promise.resolve(null);
-    // Return raw string value without deserializing
     return Promise.resolve(entry.value as T);
   }
 }
+
+vi.mock("@upstash/redis", () => ({
+  ...redis,
+  Redis: class extends RawStringRedisMock {
+    constructor(_options?: { url?: string; token?: string }) {
+      super(redis.store);
+    }
+  },
+}));
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => Promise.resolve(new Map())),
@@ -48,6 +48,8 @@ import { GET as getPopularRoutes } from "../popular-routes/route";
 describe("/api/flights/popular-routes", () => {
   beforeEach(() => {
     stubRateLimitDisabled();
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.com");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
     setRateLimitFactoryForTests(async () => ({
       limit: 60,
       remaining: 59,
@@ -56,15 +58,11 @@ describe("/api/flights/popular-routes", () => {
     }));
     redis.__reset();
     ratelimit.__reset();
-    setRedisFactoryForTests(() =>
-      unsafeCast<Redis>(new RawStringRedisMock(redis.store))
-    );
     setSupabaseFactoryForTests(async () => createMockSupabaseClient({ user: null }));
   });
 
   afterEach(() => {
     setRateLimitFactoryForTests(null);
-    setRedisFactoryForTests(null);
     redis.__reset();
     ratelimit.__reset();
     setSupabaseFactoryForTests(null);

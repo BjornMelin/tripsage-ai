@@ -38,6 +38,8 @@ function shouldRetryCurrencyQuery(failureCount: number, error: AppError): boolea
 
 /**
  * Hook for accessing currency state.
+ *
+ * @returns Currency state slices used by consumers.
  */
 export function useCurrency() {
   const { baseCurrency, currencies, exchangeRates, favoriteCurrencies, lastUpdated } =
@@ -62,6 +64,8 @@ export function useCurrency() {
 
 /**
  * Hook for currency management operations.
+ *
+ * @returns Currency management action handlers.
  */
 export function useCurrencyActions() {
   const {
@@ -91,6 +95,8 @@ export function useCurrencyActions() {
 
 /**
  * Hook for exchange rate operations.
+ *
+ * @returns Exchange rate state and update actions.
  */
 export function useExchangeRates() {
   const {
@@ -120,6 +126,8 @@ export function useExchangeRates() {
 
 /**
  * Hook for currency conversion operations.
+ *
+ * @returns Conversion helpers for amounts and rates.
  */
 export function useCurrencyConverter() {
   const { convertAmount, formatAmountWithCurrency } = useCurrencyStore(
@@ -160,19 +168,17 @@ export function useCurrencyConverter() {
 
 /**
  * Hook for getting currency data like recent pairs and popular currencies.
+ *
+ * @returns Currency data helpers plus popular and recent selections.
  */
 export function useCurrencyData() {
-  const { getCurrencyByCode, getPopularCurrencies, getRecentCurrencyPairs } =
-    useCurrencyStore(
-      useShallow((state) => ({
-        getCurrencyByCode: state.getCurrencyByCode,
-        getPopularCurrencies: state.getPopularCurrencies,
-        getRecentCurrencyPairs: state.getRecentCurrencyPairs,
-      }))
-    );
-
-  const recentPairs = getRecentCurrencyPairs();
-  const popularCurrencies = getPopularCurrencies();
+  const { getCurrencyByCode, popularCurrencies, recentPairs } = useCurrencyStore(
+    useShallow((state) => ({
+      getCurrencyByCode: state.getCurrencyByCode,
+      popularCurrencies: state.getPopularCurrencies(),
+      recentPairs: state.getRecentCurrencyPairs(),
+    }))
+  );
 
   return {
     getCurrencyByCode,
@@ -183,6 +189,8 @@ export function useCurrencyData() {
 
 /**
  * Hook for fetching exchange rates from API.
+ *
+ * @returns React Query result for the exchange rates fetch.
  */
 export function useFetchExchangeRates() {
   const updateAllExchangeRates = useCurrencyStore(
@@ -229,6 +237,7 @@ export function useFetchExchangeRates() {
  * Hook for fetching a specific exchange rate.
  *
  * @param targetCurrency - Currency code to fetch rate for
+ * @returns React Query result for the requested exchange rate.
  */
 export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
   const { baseCurrency, updateExchangeRate } = useCurrencyStore(

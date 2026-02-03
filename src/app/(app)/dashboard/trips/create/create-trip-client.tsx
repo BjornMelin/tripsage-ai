@@ -53,10 +53,12 @@ import {
 } from "@/lib/trips/create-trip-flow";
 
 /**
- * Create trip client component props.
- * @param initialBudgetMax - The initial budget max.
- * @param initialSuggestionId - The initial suggestion ID.
- * @param initialSuggestionLimit - The initial suggestion limit.
+ * Props for the trip creation client component.
+ *
+ * @remarks
+ * - `initialBudgetMax` - Optional maximum budget filter for suggestion lookup.
+ * - `initialSuggestionId` - Optional suggestion ID to prefill from.
+ * - `initialSuggestionLimit` - Number of suggestions to fetch when not cached.
  */
 export interface CreateTripClientProps {
   initialBudgetMax?: number;
@@ -66,10 +68,11 @@ export interface CreateTripClientProps {
 
 /**
  * Create trip client component.
- * @param initialBudgetMax - The initial budget max.
- * @param initialSuggestionId - The initial suggestion ID.
- * @param initialSuggestionLimit - The initial suggestion limit.
- * @returns The create trip client.
+ *
+ * @param initialBudgetMax - Optional maximum budget used to prefill suggestion data.
+ * @param initialSuggestionId - Optional suggestion ID used to prefill the form.
+ * @param initialSuggestionLimit - Default number of suggestions to request.
+ * @returns A form UI for creating a new trip, optionally prefilled from a suggestion.
  */
 export default function CreateTripClient({
   initialBudgetMax,

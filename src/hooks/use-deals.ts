@@ -12,6 +12,8 @@ import { groupBy, mapToUnique } from "@/lib/collection-utils";
 
 /**
  * Hook for accessing and managing deals.
+ *
+ * @returns Deal state, selectors, and actions for managing deals.
  */
 export function useDeals() {
   const {

@@ -315,6 +315,12 @@ function UpcomingFlightsImpl({ limit = 3, showEmpty }: UpcomingFlightsVariantPro
   );
 }
 
+/**
+ * Renders the upcoming flights widget without the interactive empty state.
+ *
+ * @param props - Component configuration such as max flights to display.
+ * @returns Card containing fetched flights or a minimal fallback message.
+ */
 export function UpcomingFlightsNoEmptyState(props: UpcomingFlightsProps) {
   return <UpcomingFlightsImpl {...props} showEmpty={false} />;
 }

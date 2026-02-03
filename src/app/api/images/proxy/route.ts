@@ -10,6 +10,12 @@ import { withApiGuards } from "@/lib/api/factory";
 import { validateSchema } from "@/lib/api/route-helpers";
 import { handleRemoteImageProxy } from "./_handler";
 
+/**
+ * Proxies a remote image request after validating the query string.
+ *
+ * @param req - Incoming request containing a `url` query parameter.
+ * @returns Response with the proxied image or a standardized error payload.
+ */
 export const GET = withApiGuards({
   auth: false,
   botId: true,

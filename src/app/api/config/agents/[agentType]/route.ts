@@ -68,6 +68,11 @@ function buildConfigPayload(
   });
 }
 
+/**
+ * Returns the active agent configuration for the requested scope.
+ *
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export const GET = withApiGuards({
   auth: true,
   rateLimit: "config:agents:read",
@@ -111,6 +116,11 @@ export const GET = withApiGuards({
   }
 });
 
+/**
+ * Updates agent configuration and revalidates the config cache tag.
+ *
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export const PUT = withApiGuards({
   auth: true,
   rateLimit: "config:agents:update",

@@ -4,11 +4,11 @@
 
 import CreateTripClient from "./create-trip-client";
 
-type SearchParams = Record<string, string | string[] | undefined>;
+type PageSearchParams = Record<string, string | string[] | undefined>;
 
 const DEFAULT_SUGGESTION_LIMIT = 6;
 
-function getFirstParam(value: SearchParams[string]): string | null {
+function getFirstParam(value: PageSearchParams[string]): string | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return typeof value === "string" ? value : null;
 }
@@ -35,7 +35,7 @@ function parsePositiveNumber(value: string | null): number | null {
 export default async function CreateTripPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<PageSearchParams>;
 }) {
   const params = await searchParams;
 

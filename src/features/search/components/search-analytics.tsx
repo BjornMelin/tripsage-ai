@@ -26,6 +26,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import { clampProgress } from "@/lib/utils";
 
+const EMPTY_RECENT_SEARCHES: never[] = [];
+
 /** Props for the search analytics component */
 interface SearchAnalyticsProps {
   className?: string;
@@ -41,7 +43,7 @@ export function SearchAnalytics({ className, dateRange }: SearchAnalyticsProps) 
     useShallow((state) => ({
       getSearchAnalytics: state.getSearchAnalytics,
       getSearchTrends: state.getSearchTrends,
-      recentSearches: state.recentSearches ?? [],
+      recentSearches: state.recentSearches ?? EMPTY_RECENT_SEARCHES,
     }))
   );
 

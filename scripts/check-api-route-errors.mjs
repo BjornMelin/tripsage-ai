@@ -147,7 +147,7 @@ function scanBalancedObject(text, startIndex) {
     }
 
     if (mode === "sq" || mode === "dq") {
-      if (ch === "\\") {
+      if (ch === "\\" && next) {
         i += 2;
         continue;
       }
@@ -158,7 +158,7 @@ function scanBalancedObject(text, startIndex) {
     }
 
     if (mode === "bt") {
-      if (ch === "\\") {
+      if (ch === "\\" && next) {
         i += 2;
         continue;
       }

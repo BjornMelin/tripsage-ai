@@ -5,7 +5,7 @@
 import { submitFlightSearch } from "./actions";
 import FlightsSearchClient from "./flights-search-client";
 
-/** Flight search page that renders the client component and handles server submission. */
+/** URL search params resolved for the flight search page. */
 type SearchParams = Record<string, string | string[] | undefined>;
 
 function getFirstParam(value: SearchParams[string]): string | undefined {

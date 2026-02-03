@@ -3,7 +3,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
-import { resetRemoteImageProxyAllowedHostsCacheForTest } from "@/lib/images/remote-image-proxy.server";
 
 import { handleRemoteImageProxy } from "../_handler";
 
@@ -11,20 +10,17 @@ describe("handleRemoteImageProxy", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
   });
 
   it("returns 403 when the remote host is not allowlisted", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const response = await handleRemoteImageProxy({
       url: "https://not-example.com/image.png",
@@ -39,7 +35,6 @@ describe("handleRemoteImageProxy", () => {
   it("rejects IP-literal targets even when explicitly allowlisted", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "127.0.0.1,example.com");
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const response = await handleRemoteImageProxy({
       url: "https://127.0.0.1/image.png",
@@ -54,7 +49,6 @@ describe("handleRemoteImageProxy", () => {
   it("proxies a valid remote image response", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const bytes = new Uint8Array([0x00, 0x01, 0x02]);
     const upstream = new Response(bytes, {
@@ -76,9 +70,13 @@ describe("handleRemoteImageProxy", () => {
       url: "https://example.com/image.png",
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("https://example.com/image.png", {
-      redirect: "follow",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.com/image.png",
+      expect.objectContaining({
+        redirect: "follow",
+        signal: expect.any(AbortSignal),
+      })
+    );
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("public, max-age=86400");
     expect(response.headers.get("content-type")).toBe("image/png");
@@ -90,7 +88,6 @@ describe("handleRemoteImageProxy", () => {
   it("returns 415 when the upstream response is not an image", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const upstream = new Response("nope", {
       headers: {
@@ -122,7 +119,6 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     vi.stubEnv("IMAGE_PROXY_MAX_BYTES", "1");
     __resetServerEnvCacheForTest();
-    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const upstream = new Response(new Uint8Array([0x00, 0x01]), {
       headers: {
@@ -148,6 +144,36 @@ describe("handleRemoteImageProxy", () => {
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toEqual(
       expect.objectContaining({ error: "payload_too_large" })
+    );
+  });
+
+  it("rejects when redirect escapes the allowlist", async () => {
+    vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
+    __resetServerEnvCacheForTest();
+
+    const upstream = new Response(new Uint8Array([0x00]), {
+      headers: {
+        "content-type": "image/png",
+      },
+      status: 200,
+    });
+    Object.defineProperty(upstream, "url", {
+      configurable: true,
+      value: "https://evil.com/image.png",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => upstream)
+    );
+
+    const response = await handleRemoteImageProxy({
+      url: "https://example.com/redirect-to-evil",
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({ error: "forbidden" })
     );
   });
 });

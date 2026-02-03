@@ -4,8 +4,13 @@
 
 import { ImageResponse } from "next/og";
 
+/** Alt text for the Open Graph image. */
 export const alt = "TripSage AI";
+
+/** Dimensions for the Open Graph image (1200×630 standard). */
 export const size = { height: 630, width: 1200 };
+
+/** MIME type for the generated image. */
 export const contentType = "image/png";
 
 export default function OpenGraphImage() {

@@ -465,6 +465,16 @@
       "includes": ["src/app/globals.css"]
     },
     {
+      "includes": ["src/app/manifest.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/currency-store.ts"],
       "linter": {
         "rules": {
