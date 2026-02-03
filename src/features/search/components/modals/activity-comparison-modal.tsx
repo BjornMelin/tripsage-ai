@@ -24,6 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  buildImageProxyUrl,
+  isAbsoluteHttpUrl,
+  normalizeNextImageSrc,
+} from "@/lib/images/image-proxy";
 
 interface ActivityComparisonModalProps {
   isOpen: boolean;
@@ -95,19 +100,29 @@ export function ActivityComparisonModal({
                 {activities.map((activity) => (
                   <TableCell key={activity.id}>
                     <div className="relative h-32 w-full rounded-md overflow-hidden bg-muted">
-                      {activity.images?.[0] ? (
-                        <Image
-                          src={activity.images[0]}
-                          alt={activity.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
-                          No image
-                        </div>
-                      )}
+                      {(() => {
+                        const normalized = normalizeNextImageSrc(activity.images?.[0]);
+                        const imageSrc =
+                          normalized && isAbsoluteHttpUrl(normalized)
+                            ? buildImageProxyUrl(normalized)
+                            : normalized;
+                        if (!imageSrc) {
+                          return (
+                            <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                              No image
+                            </div>
+                          );
+                        }
+                        return (
+                          <Image
+                            src={imageSrc}
+                            alt={activity.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                          />
+                        );
+                      })()}
                     </div>
                   </TableCell>
                 ))}

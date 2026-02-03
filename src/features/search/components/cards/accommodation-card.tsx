@@ -8,6 +8,11 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  buildImageProxyUrl,
+  isAbsoluteHttpUrl,
+  normalizeNextImageSrc,
+} from "@/lib/images/image-proxy";
 import { formatCurrency } from "../common/format";
 import { GetAmenityIcon } from "./amenities";
 
@@ -35,6 +40,11 @@ export function AccommodationCard({
       }).toString()}`
     : undefined;
   const primaryImage = accommodation.images?.[0] ?? photoUrl;
+  const normalizedPrimaryImage = normalizeNextImageSrc(primaryImage);
+  const imageSrc =
+    normalizedPrimaryImage && isAbsoluteHttpUrl(normalizedPrimaryImage)
+      ? buildImageProxyUrl(normalizedPrimaryImage)
+      : normalizedPrimaryImage;
   const rawNights = Math.ceil(
     (new Date(accommodation.checkOut).getTime() -
       new Date(accommodation.checkIn).getTime()) /
@@ -55,12 +65,13 @@ export function AccommodationCard({
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="flex">
         <div className="relative w-1/3 h-48 bg-muted flex items-center justify-center">
-          {primaryImage ? (
+          {imageSrc ? (
             <Image
-              src={primaryImage}
+              src={imageSrc}
               alt={accommodation.name}
               fill
               className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
             />
           ) : (
             <span className="text-muted-foreground">No image</span>

@@ -37,9 +37,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.71.1(react@19.2.4))
-      '@icons-pack/react-simple-icons':
-        specifier: ^13.8.0
-        version: 13.8.0(react@19.2.4)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -900,11 +897,6 @@ packages:
 
   '@iconify/utils@3.1.0':
     resolution: {integrity: sha512-Zlzem1ZXhI1iHeeERabLNzBHdOa4VhQbqAcOQaMKuTuyZCpwKbC2R4Dd0Zo3g9EAc+Y4fiarO8HIHRAth7+skw==}
-
-  '@icons-pack/react-simple-icons@13.8.0':
-    resolution: {integrity: sha512-iZrhL1fSklfCCVn68IYHaAoKfcby3RakUTn2tRPyHBkhr2tkYqeQbjJWf+NizIYBzKBn2IarDJXmTdXd6CuEfw==}
-    peerDependencies:
-      react: ^16.13 || ^17 || ^18 || ^19
 
   '@img/colour@1.0.0':
     resolution: {integrity: sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw==}
@@ -6801,10 +6793,6 @@ snapshots:
       '@antfu/install-pkg': 1.1.0
       '@iconify/types': 2.0.0
       mlly: 1.8.0
-
-  '@icons-pack/react-simple-icons@13.8.0(react@19.2.4)':
-    dependencies:
-      react: 19.2.4
 
   '@img/colour@1.0.0':
     optional: true

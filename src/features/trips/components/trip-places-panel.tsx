@@ -260,6 +260,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                           src={imageSrc}
                           fill
                           className="object-cover"
+                          sizes="56px"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
@@ -392,6 +393,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                             src={imageSrc}
                             fill
                             className="object-cover"
+                            sizes="48px"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">

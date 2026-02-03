@@ -10,6 +10,11 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  buildImageProxyUrl,
+  isAbsoluteHttpUrl,
+  normalizeNextImageSrc,
+} from "@/lib/images/image-proxy";
 import { formatCurrency, formatDurationHours } from "../common/format";
 import { RatingStars } from "./rating-stars";
 
@@ -27,6 +32,12 @@ export function ActivityCard({
   onCompare,
   sourceLabel,
 }: ActivityCardProps) {
+  const normalizedPrimaryImage = normalizeNextImageSrc(activity.images?.[0]);
+  const imageSrc =
+    normalizedPrimaryImage && isAbsoluteHttpUrl(normalizedPrimaryImage)
+      ? buildImageProxyUrl(normalizedPrimaryImage)
+      : normalizedPrimaryImage;
+
   const durationLabel =
     Number.isFinite(activity.duration) && activity.duration >= 0
       ? formatDurationHours(activity.duration)
@@ -35,13 +46,14 @@ export function ActivityCard({
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative">
-        {activity.images && activity.images.length > 0 ? (
+        {imageSrc ? (
           <Image
-            src={activity.images[0]}
+            src={imageSrc}
             alt={activity.name}
             width={1200}
             height={480}
             className="w-full h-48 object-cover"
+            sizes="(max-width: 768px) 100vw, 600px"
           />
         ) : (
           <div className="w-full h-48 bg-muted flex items-center justify-center">
