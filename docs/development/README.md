@@ -44,6 +44,9 @@ pnpm biome:check && pnpm type-check && pnpm boundary:check && pnpm test
 
 # Additional guardrails (run before merge)
 pnpm ai-tools:check && pnpm check:fileoverviews && pnpm check:no-secrets && pnpm check:no-new-domain-infra-imports
+
+# Repo-contract guardrails (recommended)
+pnpm check:zod-v4:full && pnpm check:api-route-errors:full
 ```
 
 ## Architecture

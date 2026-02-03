@@ -4,7 +4,7 @@ All runtime is Next.js 16 with AI SDK v6 route handlers.
 
 ## Prerequisites
 
-- Node.js 24+, pnpm 9+
+- Node.js 24.x (see `.nvmrc`), pnpm 10.x (see `package.json#packageManager`)
 - Supabase project (URL, public key, service role key, JWT secret)
 - Upstash Redis + QStash
 - Model provider keys or Vercel AI Gateway

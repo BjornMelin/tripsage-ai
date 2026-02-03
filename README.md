@@ -65,7 +65,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 ### Prerequisites
 
-- **Node.js 24+** with pnpm 10.20.0
+- **Node.js 24.x** (see `.nvmrc`) with **pnpm 10.x** (see `package.json#packageManager`)
 - **PostgreSQL 15+** (or Supabase account)
 - **Upstash Redis** for caching (via Vercel integration)
 

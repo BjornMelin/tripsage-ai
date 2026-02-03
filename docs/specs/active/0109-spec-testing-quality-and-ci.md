@@ -50,11 +50,15 @@ Recommended stages:
   - `pnpm biome:fix`
   - `pnpm type-check`
   - `pnpm test:affected`
+  - `pnpm check:zod-v4`
+  - `pnpm check:api-route-errors`
   - `pnpm deps:audit`
 - PR CI:
   - run `pnpm biome:fix` and fail if it introduces diffs (`git diff --exit-code`)
   - run `pnpm type-check`
   - run `pnpm test:affected`
+  - run `pnpm check:zod-v4` (diff-based)
+  - run `pnpm check:api-route-errors` (diff-based)
   - run `pnpm deps:audit`
 - Main branch / merge CI:
   - run the full suite (`pnpm test:ci`) + E2E (`pnpm test:e2e` or `pnpm test:e2e:chromium`)

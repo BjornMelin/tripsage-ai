@@ -13,6 +13,7 @@ Our frontend stack targets modern Node features and Next.js 16. Standardizing on
 ## Decision
 
 - Set `engines.node` >=24 in package.json and add `.nvmrc`/`.node-version` to pin.
+- Use `.nvmrc` as the authoritative local + CI Node version pin (`actions/setup-node` reads it in CI).
 
 ## Consequences
 

@@ -44,6 +44,18 @@ If `/storage/v1/*` returns `500` from `http://127.0.0.1:54321`, use the storage 
 - Keep `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321` for REST/Auth.
 - Re-run `pnpm supabase:bootstrap`
 
+Notes:
+
+- The proxy port is configurable via `SUPABASE_KONG_PROXY_PORT` (default: `54331`).
+- On some WSL/Docker Desktop setups, Docker credential helpers may be misconfigured (e.g. `docker-credential-desktop.exe` not on PATH). If `pnpm supabase:*` fails with credential errors, run with a clean Docker config:
+
+```bash
+DOCKER_CONFIG="$(mktemp -d)" pnpm supabase:db:reset
+DOCKER_CONFIG="$(mktemp -d)" pnpm supabase:typegen
+```
+
+- The WSL proxy container is **best-effort**: if the proxy port is already in use, the Supabase scripts will continue without the fallback.
+
 ## Seed data (dev + e2e)
 
 TripSage keeps a deterministic seed script for local development and E2E testing:

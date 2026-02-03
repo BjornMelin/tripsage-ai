@@ -2,14 +2,20 @@
 
 Supabase infrastructure for TripSage.
 
-**Pre-deployment note:** the database schema is **squashed** into a single definitive migration for maximum local reproducibility. Historical split migrations are kept under `supabase/migrations/archive/` for reference only.
+**Pre-deployment note:** the database schema is primarily **squashed** into a single definitive baseline migration for maximum local reproducibility.
+
+A small number of **incremental** migrations are included for targeted fixes that are safer to apply as patch migrations (for example, Postgres/RLS performance improvements) while still keeping local resets deterministic.
+
+Historical split migrations are kept under `supabase/migrations/archive/` for reference only.
 
 ## Project Structure
 
 ```text
 supabase/
 ├── migrations/
-│   ├── 20260120000000_base_schema.sql    # Squashed schema: tables, RLS, RPCs, indexes, Storage + Realtime policies
+│   ├── 20260120000000_base_schema.sql    # Baseline schema: tables, RLS, RPCs, indexes, Storage + Realtime policies
+│   ├── 20260126000000_rls_chat_auth_uid_select.sql
+│   ├── 20260202000000_rls_auth_uid_select.sql
 │   ├── archive/                          # Archived legacy migrations (read-only)
 │   └── README.md                         # Migration documentation
 ├── config.toml                           # Supabase CLI configuration
@@ -36,4 +42,4 @@ pnpm supabase:typegen     # regenerate src/lib/supabase/database.types.ts
 
 ## Production Migration Strategy (future)
 
-When TripSage starts deploying to remote Supabase environments, switch back to incremental migrations (`supabase migration new ...`) instead of editing the squashed file.
+When TripSage starts deploying to remote Supabase environments, prefer incremental migrations (`supabase migration new ...`) for all schema changes instead of editing the baseline migration in-place.

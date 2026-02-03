@@ -79,13 +79,14 @@ export async function recordApiMetric(metric: ApiMetric): Promise<void> {
           /* biome-ignore lint/style/useNamingConvention: Supabase column */
           user_id: metric.userId ?? null,
         };
-        const insertOp = insertSingle(supabase, "api_metrics", insertPayload).then(
-          ({ error }) => {
-            if (error) {
-              span.setAttribute("supabase.error", true);
-            }
+        const insertOp = insertSingle(supabase, "api_metrics", insertPayload, {
+          select: "id",
+          validate: false,
+        }).then(({ error }) => {
+          if (error) {
+            span.setAttribute("supabase.error", true);
           }
-        );
+        });
         operations.push(insertOp);
       } catch {
         span.setAttribute("supabase.error", true);

@@ -154,23 +154,28 @@ export function createSupabaseActivitiesSearchCache(
       const results = resultsResult.data;
       const searchMetadata = searchMetadataResult.data;
 
-      const { error } = await insertSingle(supabase, "search_activities", {
-        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
-        activity_type: input.activityType,
-        destination: input.destination,
-        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
-        expires_at: input.expiresAtIso,
-        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
-        query_hash: input.queryHash,
-        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
-        query_parameters: queryParameters,
-        results,
-        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
-        search_metadata: searchMetadata,
-        source: input.source,
-        // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
-        user_id: input.userId,
-      });
+      const { error } = await insertSingle(
+        supabase,
+        "search_activities",
+        {
+          // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+          activity_type: input.activityType,
+          destination: input.destination,
+          // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+          expires_at: input.expiresAtIso,
+          // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+          query_hash: input.queryHash,
+          // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+          query_parameters: queryParameters,
+          results,
+          // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+          search_metadata: searchMetadata,
+          source: input.source,
+          // biome-ignore lint/style/useNamingConvention: Supabase columns are snake_case.
+          user_id: input.userId,
+        },
+        { select: "id", validate: false }
+      );
 
       if (error) {
         createServerLogger("activities.cache").warn("Failed to cache activity search", {

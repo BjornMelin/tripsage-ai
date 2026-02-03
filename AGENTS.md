@@ -233,6 +233,11 @@ Before finalizing any work that includes code changes (`.ts`, `.tsx`, schemas, o
 2. `pnpm type-check` — must pass with zero errors.
 3. `pnpm test:affected` — runs changed test files + tests related to changed source files; all must pass.
 
+**Contract guardrails (recommended):**
+
+- `pnpm check:zod-v4` — prevents Zod v3-style schema usage in non-test code.
+- `pnpm check:api-route-errors` — prevents inline JSON `{ error: ... }` responses in `src/app/api/**`.
+
 **Skip for:** doc-only (`.md`), comments, non-code config, questions, or analysis.
 
 Do not return final response until all gates pass for code changes.
