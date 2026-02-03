@@ -65,14 +65,13 @@ interface QuickAction {
 /**
  * Props interface for the QuickActions component.
  */
-interface QuickActionsProps {
-  /** Layout style: "grid" or "list". */
-  layout?: "grid" | "list";
-  /** Whether to show action descriptions. */
-  showDescription?: boolean;
-  /** Whether to use compact mode with fewer actions. */
-  compact?: boolean;
-}
+type QuickActionsLayout = "grid" | "list";
+
+type QuickActionsViewProps = {
+  compact: boolean;
+  layout: QuickActionsLayout;
+  showDescription: boolean;
+};
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
@@ -321,11 +320,7 @@ function ListActionButton({
  * @param compact - Whether to use compact mode with fewer actions.
  * @returns The QuickActions component.
  */
-export function QuickActions({
-  layout = "grid",
-  showDescription = true,
-  compact = false,
-}: QuickActionsProps) {
+function QuickActionsView({ layout, showDescription, compact }: QuickActionsViewProps) {
   // Show different actions based on layout and space
   const actionsToShow = compact ? QUICK_ACTIONS.slice(0, 6) : QUICK_ACTIONS;
 
@@ -359,6 +354,15 @@ export function QuickActions({
 }
 
 /**
+ * Main QuickActions component providing common travel planning shortcuts.
+ *
+ * Default variant: grid layout with descriptions.
+ */
+export function QuickActions() {
+  return <QuickActionsView layout="grid" showDescription={true} compact={false} />;
+}
+
+/**
  * Compact version of QuickActions for smaller spaces.
  *
  * Shows fewer actions in grid layout without descriptions.
@@ -366,7 +370,7 @@ export function QuickActions({
  * @returns The compact QuickActions component.
  */
 export function QuickActionsCompact() {
-  return <QuickActions layout="grid" showDescription={false} compact={true} />;
+  return <QuickActionsView layout="grid" showDescription={false} compact={true} />;
 }
 
 /**
@@ -377,5 +381,5 @@ export function QuickActionsCompact() {
  * @returns The list QuickActions component.
  */
 export function QuickActionsList() {
-  return <QuickActions layout="list" showDescription={true} compact={false} />;
+  return <QuickActionsView layout="list" showDescription={true} compact={false} />;
 }
