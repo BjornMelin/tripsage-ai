@@ -218,6 +218,12 @@ function applySecurityHeaders(headers: Headers, options: { isProd: boolean }): v
   }
 }
 
+/**
+ * Next.js middleware proxy that applies CSP headers and refreshes Supabase auth cookies.
+ *
+ * @param request - The incoming Next.js request to process.
+ * @returns The response with security headers and CSP applied.
+ */
 export async function proxy(request: NextRequest) {
   const nodeEnv = typeof process !== "undefined" ? process.env.NODE_ENV : undefined;
   const isDev = nodeEnv === "development";
@@ -304,6 +310,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+/**
+ * Next.js middleware matcher configuration excluding static assets and prefetch requests.
+ */
 export const config = {
   matcher: [
     {
