@@ -16,6 +16,7 @@ import type {
 } from "@schemas/budget";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBudgetStore } from "@/features/budget/store/budget-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
@@ -28,13 +29,22 @@ import { staleTimes } from "@/lib/query/config";
  */
 export function useBudget() {
   const {
-    budgets,
-    activeBudgetId,
     activeBudget,
+    activeBudgetId,
     budgetSummary,
+    budgets,
     recentExpenses,
     setActiveBudget,
-  } = useBudgetStore();
+  } = useBudgetStore(
+    useShallow((state) => ({
+      activeBudget: state.activeBudget,
+      activeBudgetId: state.activeBudgetId,
+      budgetSummary: state.budgetSummary,
+      budgets: state.budgets,
+      recentExpenses: state.recentExpenses,
+      setActiveBudget: state.setActiveBudget,
+    }))
+  );
 
   return {
     activeBudget,
@@ -52,12 +62,21 @@ export function useBudget() {
 export function useBudgetActions() {
   const {
     addBudget,
-    updateBudget,
-    removeBudget,
     addBudgetCategory,
-    updateBudgetCategory,
+    removeBudget,
     removeBudgetCategory,
-  } = useBudgetStore();
+    updateBudget,
+    updateBudgetCategory,
+  } = useBudgetStore(
+    useShallow((state) => ({
+      addBudget: state.addBudget,
+      addBudgetCategory: state.addBudgetCategory,
+      removeBudget: state.removeBudget,
+      removeBudgetCategory: state.removeBudgetCategory,
+      updateBudget: state.updateBudget,
+      updateBudgetCategory: state.updateBudgetCategory,
+    }))
+  );
 
   return {
     addBudget,
@@ -75,7 +94,14 @@ export function useBudgetActions() {
  * @param budgetId - Optional budget ID to filter expenses
  */
 export function useExpenses(budgetId?: string) {
-  const { expenses, addExpense, updateExpense, removeExpense } = useBudgetStore();
+  const { addExpense, expenses, removeExpense, updateExpense } = useBudgetStore(
+    useShallow((state) => ({
+      addExpense: state.addExpense,
+      expenses: state.expenses,
+      removeExpense: state.removeExpense,
+      updateExpense: state.updateExpense,
+    }))
+  );
   const budgetExpenses = budgetId ? expenses[budgetId] || [] : [];
 
   return {
@@ -92,7 +118,14 @@ export function useExpenses(budgetId?: string) {
  * @param budgetId - Optional budget ID to filter alerts
  */
 export function useAlerts(budgetId?: string) {
-  const { alerts, addAlert, markAlertAsRead, clearAlerts } = useBudgetStore();
+  const { addAlert, alerts, clearAlerts, markAlertAsRead } = useBudgetStore(
+    useShallow((state) => ({
+      addAlert: state.addAlert,
+      alerts: state.alerts,
+      clearAlerts: state.clearAlerts,
+      markAlertAsRead: state.markAlertAsRead,
+    }))
+  );
   const budgetAlerts = budgetId ? alerts[budgetId] || [] : [];
 
   return {
@@ -109,7 +142,7 @@ export function useAlerts(budgetId?: string) {
  * Hook for fetching all budgets for the current user.
  */
 export function useFetchBudgets() {
-  const { setBudgets } = useBudgetStore();
+  const setBudgets = useBudgetStore((state) => state.setBudgets);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
@@ -151,7 +184,7 @@ export function useFetchBudgets() {
  * @param id - Budget ID to fetch
  */
 export function useFetchBudget(id: string) {
-  const { addBudget } = useBudgetStore();
+  const addBudget = useBudgetStore((state) => state.addBudget);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
@@ -182,7 +215,7 @@ export function useFetchBudget(id: string) {
  * Hook for creating a new budget.
  */
 export function useCreateBudget() {
-  const { addBudget } = useBudgetStore();
+  const addBudget = useBudgetStore((state) => state.addBudget);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -222,7 +255,7 @@ export function useCreateBudget() {
  * Hook for updating a budget.
  */
 export function useUpdateBudget() {
-  const { updateBudget } = useBudgetStore();
+  const updateBudget = useBudgetStore((state) => state.updateBudget);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -266,7 +299,7 @@ export function useUpdateBudget() {
  * Hook for deleting a budget.
  */
 export function useDeleteBudget() {
-  const { removeBudget } = useBudgetStore();
+  const removeBudget = useBudgetStore((state) => state.removeBudget);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -313,7 +346,7 @@ export function useDeleteBudget() {
  * @param budgetId - Budget ID to fetch expenses for
  */
 export function useFetchExpenses(budgetId: string) {
-  const { setExpenses } = useBudgetStore();
+  const setExpenses = useBudgetStore((state) => state.setExpenses);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
@@ -346,7 +379,7 @@ export function useFetchExpenses(budgetId: string) {
  * Hook for adding an expense.
  */
 export function useAddExpense() {
-  const { addExpense } = useBudgetStore();
+  const addExpense = useBudgetStore((state) => state.addExpense);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -388,7 +421,7 @@ export function useAddExpense() {
  * Hook for updating an expense.
  */
 export function useUpdateExpense() {
-  const { updateExpense } = useBudgetStore();
+  const updateExpense = useBudgetStore((state) => state.updateExpense);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -430,7 +463,7 @@ export function useUpdateExpense() {
  * Hook for deleting an expense.
  */
 export function useDeleteExpense() {
-  const { removeExpense } = useBudgetStore();
+  const removeExpense = useBudgetStore((state) => state.removeExpense);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -480,7 +513,7 @@ export function useDeleteExpense() {
  * @param budgetId - Budget ID to fetch alerts for
  */
 export function useFetchAlerts(budgetId: string) {
-  const { setAlerts } = useBudgetStore();
+  const setAlerts = useBudgetStore((state) => state.setAlerts);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
@@ -513,7 +546,7 @@ export function useFetchAlerts(budgetId: string) {
  * Hook for creating a budget alert.
  */
 export function useCreateAlert() {
-  const { addAlert } = useBudgetStore();
+  const addAlert = useBudgetStore((state) => state.addAlert);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -555,7 +588,7 @@ export function useCreateAlert() {
  * Hook for marking an alert as read.
  */
 export function useMarkAlertAsRead() {
-  const { markAlertAsRead } = useBudgetStore();
+  const markAlertAsRead = useBudgetStore((state) => state.markAlertAsRead);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
@@ -605,7 +638,7 @@ export function useMarkAlertAsRead() {
  * Hook for fetching currency exchange rates.
  */
 export function useFetchCurrencyRates() {
-  const { setCurrencies } = useBudgetStore();
+  const setCurrencies = useBudgetStore((state) => state.setCurrencies);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   const query = useQuery<{ rates: Record<string, number> }, AppError>({

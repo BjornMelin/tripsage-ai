@@ -6,6 +6,7 @@
 
 import type { Deal, DealFilters, DealState, DealType } from "@schemas/deals";
 import { useCallback, useEffect, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useDealsStore } from "@/features/search/store/deals-store";
 import { groupBy, mapToUnique } from "@/lib/collection-utils";
 
@@ -13,64 +14,115 @@ import { groupBy, mapToUnique } from "@/lib/collection-utils";
  * Hook for accessing and managing deals.
  */
 export function useDeals() {
-  const dealsStore = useDealsStore();
+  const {
+    addAlert,
+    addDeal,
+    addToFeaturedDeals,
+    addToRecentlyViewed,
+    addToSavedDeals,
+    alerts,
+    clearFilters,
+    clearRecentlyViewed,
+    deals,
+    featuredDealItems,
+    featuredDeals: featuredDealIds,
+    filters,
+    getAlertById,
+    getDealById,
+    getDealsStats,
+    getFilteredDeals,
+    initialize,
+    isInitialized,
+    lastUpdated,
+    recentlyViewedDealItems,
+    removeAlert,
+    removeDeal,
+    removeFromFeaturedDeals,
+    removeFromSavedDeals,
+    reset,
+    savedDealItems,
+    savedDeals: savedDealIds,
+    setFilters: setFiltersInternal,
+    toggleAlertActive,
+    updateAlert,
+    updateDeal,
+  } = useDealsStore(
+    useShallow((state) => ({
+      addAlert: state.addAlert,
+      addDeal: state.addDeal,
+      addToFeaturedDeals: state.addToFeaturedDeals,
+      addToRecentlyViewed: state.addToRecentlyViewed,
+      addToSavedDeals: state.addToSavedDeals,
+      alerts: state.alerts,
+      clearFilters: state.clearFilters,
+      clearRecentlyViewed: state.clearRecentlyViewed,
+      deals: state.deals,
+      featuredDealItems: state.featuredDealItems,
+      featuredDeals: state.featuredDeals,
+      filters: state.filters,
+      getAlertById: state.getAlertById,
+      getDealById: state.getDealById,
+      getDealsStats: state.getDealsStats,
+      getFilteredDeals: state.getFilteredDeals,
+      initialize: state.initialize,
+      isInitialized: state.isInitialized,
+      lastUpdated: state.lastUpdated,
+      recentlyViewedDealItems: state.recentlyViewedDealItems,
+      removeAlert: state.removeAlert,
+      removeDeal: state.removeDeal,
+      removeFromFeaturedDeals: state.removeFromFeaturedDeals,
+      removeFromSavedDeals: state.removeFromSavedDeals,
+      reset: state.reset,
+      savedDealItems: state.savedDealItems,
+      savedDeals: state.savedDeals,
+      setFilters: state.setFilters,
+      toggleAlertActive: state.toggleAlertActive,
+      updateAlert: state.updateAlert,
+      updateDeal: state.updateDeal,
+    }))
+  );
 
   // Initialize the store if not already initialized
   useEffect(() => {
-    if (!dealsStore.isInitialized) {
-      dealsStore.initialize();
+    if (!isInitialized) {
+      initialize();
     }
-  }, [dealsStore.isInitialized, dealsStore.initialize]);
+  }, [initialize, isInitialized]);
 
   // Get all deals as array
-  const allDeals = useMemo(() => Object.values(dealsStore.deals), [dealsStore.deals]);
+  const allDeals = useMemo(() => Object.values(deals), [deals]);
 
   // Get filtered deals based on current filters
-  const filteredDeals = useMemo(
-    () => dealsStore.getFilteredDeals(),
-    [dealsStore.getFilteredDeals]
-  );
+  const filteredDeals = getFilteredDeals();
 
   // Get featured deals
-  const featuredDeals = useMemo(
-    () => dealsStore.getFeaturedDeals(),
-    [dealsStore.getFeaturedDeals]
-  );
+  const featuredDeals = featuredDealItems;
 
   // Get saved deals
-  const savedDeals = useMemo(
-    () => dealsStore.getSavedDeals(),
-    [dealsStore.getSavedDeals]
-  );
+  const savedDeals = savedDealItems;
 
   // Get recently viewed deals
-  const recentlyViewedDeals = useMemo(
-    () => dealsStore.getRecentlyViewedDeals(),
-    [dealsStore.getRecentlyViewedDeals]
-  );
+  const recentlyViewedDeals = recentlyViewedDealItems;
 
   // Get deal statistics
-  const dealStats = useMemo(
-    () => dealsStore.getDealsStats(),
-    [dealsStore.getDealsStats]
-  );
+  const dealStats = getDealsStats();
 
   // Utility to check if a deal is saved
   const isDealSaved = useCallback(
-    (dealId: string) => dealsStore.savedDeals.includes(dealId),
-    [dealsStore.savedDeals]
+    (dealId: string) => savedDealIds.includes(dealId),
+    [savedDealIds]
   );
 
   // Utility to check if a deal is featured
   const isDealFeatured = useCallback(
-    (dealId: string) => dealsStore.featuredDeals.includes(dealId),
-    [dealsStore.featuredDeals]
+    (dealId: string) => featuredDealIds.includes(dealId),
+    [featuredDealIds]
   );
 
   // Filter by deal type
   const filterByType = useCallback(
     (type: DealType) => {
-      const currentFilters = (dealsStore.filters || {}) as DealFilters;
+      const currentFilters: DealFilters = filters ?? {};
       const types: DealType[] = currentFilters.types || [];
 
       // Toggle the type
@@ -81,18 +133,18 @@ export function useDeals() {
         newTypes = [...types, type];
       }
 
-      dealsStore.setFilters({
+      setFiltersInternal({
         ...currentFilters,
         types: newTypes.length > 0 ? newTypes : undefined,
       });
     },
-    [dealsStore.filters, dealsStore.setFilters]
+    [filters, setFiltersInternal]
   );
 
   // Filter by destination
   const filterByDestination = useCallback(
     (destination: string) => {
-      const currentFilters = (dealsStore.filters || {}) as DealFilters;
+      const currentFilters: DealFilters = filters ?? {};
       const destinations: string[] = currentFilters.destinations || [];
 
       // Toggle the destination
@@ -103,20 +155,20 @@ export function useDeals() {
         newDestinations = [...destinations, destination];
       }
 
-      dealsStore.setFilters({
+      setFiltersInternal({
         ...currentFilters,
         destinations: newDestinations.length > 0 ? newDestinations : undefined,
       });
     },
-    [dealsStore.filters, dealsStore.setFilters]
+    [filters, setFiltersInternal]
   );
 
   // Set multiple filters at once
   const setFilters = useCallback(
     (filters: DealState["filters"]) => {
-      dealsStore.setFilters(filters);
+      setFiltersInternal(filters);
     },
-    [dealsStore.setFilters]
+    [setFiltersInternal]
   );
 
   // Sort deals by various criteria
@@ -178,25 +230,25 @@ export function useDeals() {
   }, [allDeals]);
 
   return {
-    addAlert: dealsStore.addAlert,
+    addAlert,
 
     // Actions
-    addDeal: dealsStore.addDeal,
+    addDeal,
 
-    addToFeaturedDeals: dealsStore.addToFeaturedDeals,
+    addToFeaturedDeals,
 
-    addToRecentlyViewed: dealsStore.addToRecentlyViewed,
+    addToRecentlyViewed,
 
-    addToSavedDeals: dealsStore.addToSavedDeals,
-    alerts: dealsStore.alerts,
+    addToSavedDeals,
+    alerts,
     allDeals,
-    clearFilters: dealsStore.clearFilters,
-    clearRecentlyViewed: dealsStore.clearRecentlyViewed,
+    clearFilters,
+    clearRecentlyViewed,
 
     // Computed
     dealStats,
     // State
-    deals: dealsStore.deals,
+    deals,
     dealsByDestination,
     dealsByType,
     featuredDeals,
@@ -205,32 +257,32 @@ export function useDeals() {
     // Filtering & Sorting
     filterByType,
     filteredDeals,
-    filters: dealsStore.filters,
-    getAlertById: dealsStore.getAlertById,
+    filters,
+    getAlertById,
 
     // Utilities
-    getDealById: dealsStore.getDealById,
+    getDealById,
     isDealFeatured,
 
     // Checks
     isDealSaved,
-    lastUpdated: dealsStore.lastUpdated,
+    lastUpdated,
     recentlyViewedDeals,
-    removeAlert: dealsStore.removeAlert,
-    removeDeal: dealsStore.removeDeal,
-    removeFromFeaturedDeals: dealsStore.removeFromFeaturedDeals,
-    removeFromSavedDeals: dealsStore.removeFromSavedDeals,
+    removeAlert,
+    removeDeal,
+    removeFromFeaturedDeals,
+    removeFromSavedDeals,
 
     // Reset
-    reset: dealsStore.reset,
+    reset,
     savedDeals,
     setFilters,
     sortDeals,
-    toggleAlertActive: dealsStore.toggleAlertActive,
+    toggleAlertActive,
     uniqueDestinations,
     uniqueProviders,
-    updateAlert: dealsStore.updateAlert,
-    updateDeal: dealsStore.updateDeal,
+    updateAlert,
+    updateDeal,
   };
 }
 
