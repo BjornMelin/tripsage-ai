@@ -166,7 +166,7 @@ export async function handleMemorySyncJob(
           // biome-ignore lint/style/useNamingConvention: Database field name
           user_id: payload.userId,
         },
-        { schema: "memories" }
+        { schema: "memories", select: "id", validate: false }
       );
 
       if (createError) {

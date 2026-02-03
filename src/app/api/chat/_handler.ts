@@ -316,16 +316,21 @@ async function ensureChatSession(options: {
 
   const id = secureUuid();
   const now = nowIso();
-  const { error } = await insertSingle(supabase, "chat_sessions", {
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    created_at: now,
-    id,
-    metadata: {},
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    updated_at: now,
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: userId,
-  });
+  const { error } = await insertSingle(
+    supabase,
+    "chat_sessions",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      created_at: now,
+      id,
+      metadata: {},
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      updated_at: now,
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      user_id: userId,
+    },
+    { select: "id", validate: false }
+  );
 
   if (error) {
     if (allowEphemeralSession) {
@@ -1248,7 +1253,8 @@ export async function handleChat(
               const { error } = await insertSingle(
                 deps.supabase,
                 "chat_tool_calls",
-                toolRow
+                toolRow,
+                { select: "id", validate: false }
               );
               if (error) {
                 const persistErrorMessage =

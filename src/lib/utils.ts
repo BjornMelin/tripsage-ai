@@ -54,14 +54,18 @@ export function isValidUrl(url: string): boolean {
  *
  * @param str Source string.
  * @param length Maximum length before truncation.
- * @returns Original string or truncated with `...`.
+ * @returns Original string or truncated with `…` (ellipsis), not exceeding `length`.
  */
 export function truncate(str: string, length: number): string {
+  if (length <= 0) return "";
   if (str.length <= length) {
     return str;
   }
 
-  return `${str.slice(0, length)}...`;
+  if (length === 1) return "…";
+
+  // Keep total output length <= `length` by reserving one character for the ellipsis.
+  return `${str.slice(0, length - 1)}…`;
 }
 
 /**

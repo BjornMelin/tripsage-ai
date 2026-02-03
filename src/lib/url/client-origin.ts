@@ -5,7 +5,6 @@
 import { getClientEnvVarWithFallback } from "@/lib/env/client";
 
 const DEFAULT_LOCALHOST_ORIGIN = "http://localhost:3000";
-const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * Resolves the application origin for client-side contexts.
@@ -32,7 +31,7 @@ export function getClientOrigin(): string {
     return appUrl;
   }
 
-  if (!isProduction && typeof window !== "undefined") {
+  if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     // Dev-only nudge to configure site/base URL; avoids server-side console usage
     console.warn(
       "[client-origin] No NEXT_PUBLIC_SITE_URL or NEXT_PUBLIC_BASE_URL configured. Falling back to http://localhost:3000"

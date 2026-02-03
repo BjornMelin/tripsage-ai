@@ -24,9 +24,13 @@ vi.mock("ai", () => ({
   streamText: vi.fn(),
 }));
 
-// Mock the openai provider
-vi.mock("@ai-sdk/openai", () => ({
-  openai: vi.fn(() => "openai/gpt-4o"),
+// Mock provider resolution (registry + gateway/BYOK)
+vi.mock("@ai/models/registry", () => ({
+  resolveProvider: vi.fn(async () => ({
+    model: "openai/gpt-4o",
+    modelId: "openai/gpt-4o",
+    provider: "openai",
+  })),
 }));
 
 vi.mock("botid/server", async () => {
@@ -46,6 +50,7 @@ vi.mock("@/lib/tokens/budget", async (importOriginal) => {
   };
 });
 
+import { resolveProvider } from "@ai/models/registry";
 // Import after mocks are set up
 import { simulateReadableStream, streamText } from "ai";
 import { POST } from "@/app/api/ai/stream/route";
@@ -53,6 +58,7 @@ import { createMockNextRequest } from "@/test/helpers/route";
 
 const MOCK_STREAM_TEXT = vi.mocked(streamText);
 const _MOCK_SIMULATE_READABLE_STREAM = vi.mocked(simulateReadableStream);
+const MOCK_RESOLVE_PROVIDER = vi.mocked(resolveProvider);
 
 /** Mock stream result that satisfies StreamTextResult interface */
 const createMockStreamResult = (
@@ -105,6 +111,7 @@ const createMockStreamResult = (
 describe("ai stream route", () => {
   beforeEach(() => {
     MOCK_STREAM_TEXT.mockClear();
+    MOCK_RESOLVE_PROVIDER.mockClear();
     vi.stubEnv("ENABLE_AI_DEMO", "true");
     __resetServerEnvCacheForTest();
     setRateLimitFactoryForTests(async () => ({
@@ -188,6 +195,23 @@ describe("ai stream route", () => {
     expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
   });
 
+  it("returns 503 when no provider is available", async () => {
+    MOCK_RESOLVE_PROVIDER.mockRejectedValueOnce(new Error("no_keys"));
+
+    const request = createMockNextRequest({
+      body: { prompt: "Hello world" },
+      method: "POST",
+      url: "http://localhost",
+    });
+
+    const response = await POST(request, createRouteParamsContext());
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.error).toBe("provider_unavailable");
+    expect(MOCK_STREAM_TEXT).not.toHaveBeenCalled();
+  });
+
   it("returns an SSE response on successful request", async () => {
     // Mock successful streamText response
     const mockResponse = new Response('data: {"type":"finish"}\n\n', {
@@ -210,10 +234,16 @@ describe("ai stream route", () => {
     expect(response).toBeInstanceOf(Response);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/text\/event-stream/i);
+    expect(MOCK_RESOLVE_PROVIDER).toHaveBeenCalledWith(TEST_USER_ID, undefined);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
+        messages: [
+          {
+            content: "Hello world",
+            role: "user",
+          },
+        ],
         model: "openai/gpt-4o",
-        prompt: "Hello world",
       })
     );
     expect(mockToUiMessageStreamResponse).toHaveBeenCalled();
@@ -240,8 +270,13 @@ describe("ai stream route", () => {
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
+        messages: [
+          {
+            content: "Hello from AI SDK v6",
+            role: "user",
+          },
+        ],
         model: "openai/gpt-4o",
-        prompt: "Hello from AI SDK v6",
       })
     );
   });
@@ -267,8 +302,13 @@ describe("ai stream route", () => {
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
+        messages: [
+          {
+            content: "Hello from AI SDK v6",
+            role: "user",
+          },
+        ],
         model: "openai/gpt-4o",
-        prompt: "Hello from AI SDK v6",
       })
     );
   });
@@ -353,8 +393,13 @@ describe("ai stream route", () => {
     // Verify the route uses the expected model and configuration
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
+        messages: [
+          {
+            content: "test",
+            role: "user",
+          },
+        ],
         model: "openai/gpt-4o",
-        prompt: "test",
       })
     );
   });
@@ -437,8 +482,13 @@ describe("ai stream route", () => {
     expect(response.status).toBe(200);
     expect(MOCK_STREAM_TEXT).toHaveBeenCalledWith(
       expect.objectContaining({
+        messages: [
+          {
+            content: longPrompt,
+            role: "user",
+          },
+        ],
         model: "openai/gpt-4o",
-        prompt: longPrompt,
       })
     );
   });

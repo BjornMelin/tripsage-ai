@@ -46,16 +46,21 @@ export async function createSession(
   const allowEphemeral = isChatEphemeralEnabled();
   const id = secureUuid();
   const now = nowIso();
-  const { error } = await insertSingle(deps.supabase, "chat_sessions", {
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    created_at: now,
-    id,
-    metadata: title ? { title } : {},
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    updated_at: now,
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: deps.userId,
-  });
+  const { error } = await insertSingle(
+    deps.supabase,
+    "chat_sessions",
+    {
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      created_at: now,
+      id,
+      metadata: title ? { title } : {},
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      updated_at: now,
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      user_id: deps.userId,
+    },
+    { select: "id", validate: false }
+  );
   if (error) {
     if (allowEphemeral) {
       deps.logger.warn("chat:session_create_skipped", {
@@ -360,15 +365,20 @@ export async function createMessage(
     });
   if (!session) return notFoundResponse("Session");
   const content = JSON.stringify(payload.parts ?? []);
-  const { error } = await insertSingle(deps.supabase, "chat_messages", {
-    content,
-    metadata: {},
-    role: normalizedRole as "user" | "system" | "assistant",
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    session_id: id,
-    // biome-ignore lint/style/useNamingConvention: Database field name
-    user_id: deps.userId,
-  });
+  const { error } = await insertSingle(
+    deps.supabase,
+    "chat_messages",
+    {
+      content,
+      metadata: {},
+      role: normalizedRole as "user" | "system" | "assistant",
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      session_id: id,
+      // biome-ignore lint/style/useNamingConvention: Database field name
+      user_id: deps.userId,
+    },
+    { select: "id", validate: false }
+  );
   if (error)
     return errorResponse({
       error: "db_error",

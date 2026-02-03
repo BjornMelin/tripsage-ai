@@ -196,7 +196,8 @@ describe("Activity actions - addActivityToTrip", () => {
         title: "Beach Tour",
         trip_id: 123,
         user_id: TEST_USER_ID,
-      })
+      }),
+      expect.objectContaining({ select: "id", validate: false })
     );
   });
 
@@ -213,7 +214,8 @@ describe("Activity actions - addActivityToTrip", () => {
       "itinerary_items",
       expect.objectContaining({
         trip_id: 1,
-      })
+      }),
+      expect.objectContaining({ select: "id", validate: false })
     );
   });
 
@@ -260,7 +262,8 @@ describe("Activity actions - addActivityToTrip", () => {
         price: 50,
         start_time: "2023-06-01T10:00:00Z",
         title: "Tour",
-      })
+      }),
+      expect.objectContaining({ select: "id", validate: false })
     );
   });
 

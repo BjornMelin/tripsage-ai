@@ -12,6 +12,7 @@ import {
 import { type NextRequest, NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
+import { formatUpstreamErrorReason } from "@/lib/api/upstream-errors";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { postComputeRoutes } from "@/lib/google/client";
 
@@ -51,11 +52,17 @@ export const POST = withApiGuards({
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    return NextResponse.json(
-      { details: errorText, error: `Routes API error: ${response.status}` },
-      { status: response.status }
-    );
+    const status = response.status;
+    const errorText = status < 500 ? await response.text() : null;
+    return errorResponse({
+      error: "upstream_error",
+      reason: formatUpstreamErrorReason({
+        details: errorText,
+        service: "Routes API",
+        status,
+      }),
+      status: status >= 400 && status < 500 ? status : 502,
+    });
   }
 
   const rawData = await response.json();

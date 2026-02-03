@@ -1,6 +1,9 @@
 /**
  * @fileoverview Upstash Redis REST client helper with an optional test factory override.
  */
+
+import "server-only";
+
 import { Redis } from "@upstash/redis";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
@@ -69,9 +72,16 @@ export async function incrCounter(
 ): Promise<number | null> {
   const redis = getRedis();
   if (!redis) return null;
-  const value = await redis.incr(key);
+  // Pipeline to reduce round trips on Redis REST (INCR + optional EXPIRE).
   if (ttlSeconds && ttlSeconds > 0) {
-    await redis.expire(key, ttlSeconds);
+    const [value] = await redis
+      .pipeline()
+      .incr(key)
+      .expire(key, ttlSeconds)
+      .exec<[number, number]>();
+    return value ?? null;
   }
-  return value;
+
+  const [value] = await redis.pipeline().incr(key).exec<[number]>();
+  return value ?? null;
 }
