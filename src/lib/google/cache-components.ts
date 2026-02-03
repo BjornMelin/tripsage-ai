@@ -1,8 +1,5 @@
 /**
  * @fileoverview Cache Components wrappers for Google Maps API requests.
- *
- * These helpers let POST Route Handlers share cached upstream results (where safe)
- * without leaking secrets into cache keys. API keys are resolved inside cached scopes.
  */
 
 import "server-only";
