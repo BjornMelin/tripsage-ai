@@ -33,6 +33,7 @@ async function listFilesRecursive(dir) {
 
 function extractInlineScriptContents(html) {
   const results = [];
+  // Use a DOM parser instead of regex to handle odd script end tags like </script >.
   const dom = new JSDOM(html);
   const scripts = dom.window.document.querySelectorAll("script");
   for (const script of scripts) {

@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __resetServerEnvCacheForTest } from "@/lib/env/server";
+import { resetRemoteImageProxyAllowedHostsCacheForTest } from "@/lib/images/remote-image-proxy.server";
 
 import { handleRemoteImageProxy } from "../_handler";
 
@@ -10,17 +11,20 @@ describe("handleRemoteImageProxy", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
   });
 
   it("returns 403 when the remote host is not allowlisted", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const response = await handleRemoteImageProxy({
       url: "https://not-example.com/image.png",
@@ -35,6 +39,7 @@ describe("handleRemoteImageProxy", () => {
   it("rejects IP-literal targets even when explicitly allowlisted", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "127.0.0.1,example.com");
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const response = await handleRemoteImageProxy({
       url: "https://127.0.0.1/image.png",
@@ -49,6 +54,7 @@ describe("handleRemoteImageProxy", () => {
   it("proxies a valid remote image response", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const bytes = new Uint8Array([0x00, 0x01, 0x02]);
     const upstream = new Response(bytes, {
@@ -84,6 +90,7 @@ describe("handleRemoteImageProxy", () => {
   it("returns 415 when the upstream response is not an image", async () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const upstream = new Response("nope", {
       headers: {
@@ -115,6 +122,7 @@ describe("handleRemoteImageProxy", () => {
     vi.stubEnv("IMAGE_PROXY_ALLOWED_HOSTS", "example.com");
     vi.stubEnv("IMAGE_PROXY_MAX_BYTES", "1");
     __resetServerEnvCacheForTest();
+    resetRemoteImageProxyAllowedHostsCacheForTest();
 
     const upstream = new Response(new Uint8Array([0x00, 0x01]), {
       headers: {

@@ -52,12 +52,11 @@ vi.mock("@/lib/tokens/budget", async (importOriginal) => {
 
 import { resolveProvider } from "@ai/models/registry";
 // Import after mocks are set up
-import { simulateReadableStream, streamText } from "ai";
+import { streamText } from "ai";
 import { POST } from "@/app/api/ai/stream/route";
 import { createMockNextRequest } from "@/test/helpers/route";
 
 const MOCK_STREAM_TEXT = vi.mocked(streamText);
-const _MOCK_SIMULATE_READABLE_STREAM = vi.mocked(simulateReadableStream);
 const MOCK_RESOLVE_PROVIDER = vi.mocked(resolveProvider);
 
 /** Mock stream result that satisfies StreamTextResult interface */

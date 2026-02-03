@@ -135,15 +135,6 @@ export async function handleRemoteImageProxy(params: RemoteImageProxyRequest) {
     });
   }
 
-  const headers: Record<string, string> = {
-    "Cache-Control": "public, max-age=86400",
-    "Content-Type": contentType,
-  };
-
-  if (hasContentLength) {
-    headers["Content-Length"] = String(contentLength);
-  }
-
   if (!response.body) {
     return errorResponse({
       error: "external_api_error",
@@ -152,12 +143,13 @@ export async function handleRemoteImageProxy(params: RemoteImageProxyRequest) {
     });
   }
 
-  if (hasContentLength) {
-    return new NextResponse(response.body, { headers });
-  }
-
   try {
     const bytes = await readResponseBodyBytesWithLimit(response, maxBytes);
+    const headers: Record<string, string> = {
+      "Cache-Control": "public, max-age=86400",
+      "Content-Length": String(bytes.byteLength),
+      "Content-Type": contentType,
+    };
     return new NextResponse(bytes.buffer as ArrayBuffer, { headers });
   } catch (error) {
     if (error instanceof Error && error.message === "payload_too_large") {

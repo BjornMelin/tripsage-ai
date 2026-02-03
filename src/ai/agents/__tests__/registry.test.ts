@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import { createMockModel } from "@/test/ai-sdk/mock-model";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Mock server-only module before imports
@@ -92,7 +93,6 @@ vi.mock("@/prompts/agents", () => ({
   buildItineraryPrompt: () => "Itinerary prompt",
 }));
 
-import { MockLanguageModelV3 } from "ai/test";
 import {
   agentRegistry,
   createAgentForWorkflow,
@@ -103,41 +103,12 @@ import {
 import type { AgentDependencies } from "../types";
 
 /**
- * Creates a mock LanguageModel for testing.
- */
-function createMockModel() {
-  // Use unsafeCast for test mock - third-party types are complex to model exactly
-  const result = {
-    content: [{ text: "Mock response", type: "text" }],
-    finishReason: "stop",
-    usage: {
-      inputTokens: {
-        cacheRead: undefined,
-        cacheWrite: undefined,
-        noCache: undefined,
-        total: 10,
-      },
-      outputTokens: {
-        reasoning: undefined,
-        text: 20,
-        total: 20,
-      },
-    },
-    warnings: [],
-  };
-
-  return new MockLanguageModelV3({
-    doGenerate: unsafeCast(result),
-  });
-}
-
-/**
  * Creates test dependencies.
  */
 function createTestDeps(): AgentDependencies {
   return {
     identifier: "test-user-123",
-    model: createMockModel(),
+    model: createMockModel({ text: "Mock response" }),
     modelId: "gpt-4",
     sessionId: "test-session-456",
     userId: "test-user-123",

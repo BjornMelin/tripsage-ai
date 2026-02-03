@@ -8,6 +8,10 @@ import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 let cachedAllowedHosts: string[] | null = null;
 
+export function resetRemoteImageProxyAllowedHostsCacheForTest(): void {
+  cachedAllowedHosts = null;
+}
+
 function parseAllowedHostsFromEnv(): string[] {
   if (cachedAllowedHosts) return cachedAllowedHosts;
   const raw = getServerEnvVarWithFallback("IMAGE_PROXY_ALLOWED_HOSTS", undefined);
