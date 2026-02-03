@@ -5,6 +5,7 @@
 "use client";
 
 import { ArrowRightIcon, FilterIcon, PlaneIcon } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { SearchLayout } from "@/components/layouts/search-layout";
@@ -155,7 +156,7 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline">
-              <a href="/dashboard/search/flights">Start New Search</a>
+              <Link href="/dashboard/search/flights">Start New Search</Link>
             </Button>
           </CardContent>
         </Card>

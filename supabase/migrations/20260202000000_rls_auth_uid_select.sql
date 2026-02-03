@@ -284,7 +284,7 @@ CREATE POLICY "Users can delete trip images"
     bucket_id = 'trip-images'
     AND (
       coalesce(owner_id::text, owner::text) = (select auth.uid())::text
-      OR public.user_has_trip_access((select auth.uid()), public.extract_trip_id_from_path(name))
+      OR public.user_has_trip_edit_access((select auth.uid()), public.extract_trip_id_from_path(name))
     )
   );
 

@@ -12,6 +12,18 @@ const SKIP_LINK_CLASSNAME =
   "sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:text-foreground focus-visible:shadow";
 
 /**
+ * Skip link for keyboard navigation to the main content area.
+ * @returns The skip link anchor element.
+ */
+function SkipToMainContent() {
+  return (
+    <a href={`#${MAIN_CONTENT_ID}`} className={SKIP_LINK_CLASSNAME}>
+      Skip to main content
+    </a>
+  );
+}
+
+/**
  * Props for public and authenticated application shell components.
  *
  * @remarks
@@ -38,9 +50,7 @@ export function PublicAppShell({ children }: AppShellProps) {
       disableTransitionOnChange
       enableSystem
     >
-      <a href={`#${MAIN_CONTENT_ID}`} className={SKIP_LINK_CLASSNAME}>
-        Skip to main content
-      </a>
+      <SkipToMainContent />
       <div className="flex min-h-screen flex-col">{children}</div>
     </ThemeProvider>
   );
@@ -76,9 +86,7 @@ export function AuthedAppShell({ children, nonce }: AuthedAppShellProps) {
       nonce={nonce}
     >
       <RealtimeAuthProvider />
-      <a href={`#${MAIN_CONTENT_ID}`} className={SKIP_LINK_CLASSNAME}>
-        Skip to main content
-      </a>
+      <SkipToMainContent />
       <div className="flex min-h-screen flex-col">{children}</div>
       <Toaster />
     </ThemeProvider>
