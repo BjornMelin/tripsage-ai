@@ -172,21 +172,14 @@ export async function deleteSession(deps: SessionsDeps, id: string): Promise<Res
 export async function listMessages(deps: SessionsDeps, id: string): Promise<Response> {
   const logger = deps.logger;
 
-  const { data: session, error: sessionError } = await getMaybeSingle(
+  const sessionPromise = getMaybeSingle(
     deps.supabase,
     "chat_sessions",
     (qb) => qb.eq("id", id).eq("user_id", deps.userId),
     { select: "id", validate: false }
   );
-  if (sessionError)
-    return errorResponse({
-      error: "db_error",
-      reason: "Failed to verify session",
-      status: 500,
-    });
-  if (!session) return notFoundResponse("Session");
 
-  const { data: messages, error: messageError } = await getMany(
+  const messagesPromise = getMany(
     deps.supabase,
     "chat_messages",
     (qb) => qb.eq("session_id", id).eq("user_id", deps.userId),
@@ -197,6 +190,21 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
       validate: false,
     }
   );
+
+  const [
+    { data: session, error: sessionError },
+    { data: messages, error: messageError },
+  ] = await Promise.all([sessionPromise, messagesPromise]);
+
+  if (sessionError) {
+    return errorResponse({
+      error: "db_error",
+      reason: "Failed to verify session",
+      status: 500,
+    });
+  }
+  if (!session) return notFoundResponse("Session");
+
   if (messageError)
     return errorResponse({
       error: "db_error",
