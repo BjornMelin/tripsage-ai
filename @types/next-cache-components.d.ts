@@ -6,7 +6,8 @@
  * re-declare it here for consistent type-checking.
  */
 
+import "next/cache";
+
 declare module "next/cache" {
   export function cacheLife(profile: string): void;
 }
-
