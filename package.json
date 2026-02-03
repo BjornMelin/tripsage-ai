@@ -1,6 +1,6 @@
 {
   "name": "tripsage-ai-frontend",
-  "version": "1.31.0",
+  "version": "1.32.0",
   "private": true,
   "packageManager": "pnpm@10.28.2",
   "scripts": {
@@ -231,6 +231,9 @@
       "undici": "7.20.0",
       "brace-expansion": ">=2.0.2"
     },
-    "ignoredBuiltDependencies": ["esbuild", "msw"]
+    "ignoredBuiltDependencies": [
+      "esbuild",
+      "msw"
+    ]
   }
 }

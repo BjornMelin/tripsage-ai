@@ -1,3 +1,41 @@
+## [1.32.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.31.0...v1.32.0) (2026-02-03)
+
+### Features
+
+* add configuration options for remote image proxy in .env.example, including allowed hosts and max byte limit ([4e4ec19](https://github.com/BjornMelin/tripsage-ai/commit/4e4ec196aa0cf1485e9039a3dcd3c2dc382934cb))
+* add documentation for Cache Components in Next.js 16, detailing usage guidelines and recommended practices ([bfe1301](https://github.com/BjornMelin/tripsage-ai/commit/bfe13014458398d8b4a4f3a5dfb406e558fea0af))
+* add global error pages and metadata routes for 401, 403, 404 responses, and web app manifest ([6282b56](https://github.com/BjornMelin/tripsage-ai/commit/6282b56525293a2e0bea127d735ab8b27b0f4ba6))
+* add server-side utilities for remote image proxying, including host validation and configuration parsing ([78d65a2](https://github.com/BjornMelin/tripsage-ai/commit/78d65a263e8b0567ff468a5693a3469bc2647605))
+* **agents:** cache config with tags and revalidation ([9cb66f1](https://github.com/BjornMelin/tripsage-ai/commit/9cb66f1f76dc7c5d93c371d76886be7526a92fdf))
+* **biome:** add linter rule for manifest.ts and update naming conventions in manifest fields ([21a2aa3](https://github.com/BjornMelin/tripsage-ai/commit/21a2aa306d01b26acab2b797e2b28314430bfaaf))
+* enhance chat and AI stream functionality with improved error handling, session management, and data validation; update attachment schema to use ISO datetime format ([068e15e](https://github.com/BjornMelin/tripsage-ai/commit/068e15e32e70eee9b2e1c91c1a4fa9b450aae034))
+* implement remote image proxying with validation and SSRF protections; add Open Graph image generation; update OAuth icons in login and register forms ([1046544](https://github.com/BjornMelin/tripsage-ai/commit/1046544b1e09a76e678e5c63cfb946ff86756c42))
+* refactor budget, currency, and deals hooks to utilize shallow state selection for improved performance and maintainability ([285bf1f](https://github.com/BjornMelin/tripsage-ai/commit/285bf1fffde79568868447e72e1a010b3a041cf1))
+* refactor dashboard search components to support server-side rendering and improve URL parameter handling; add flight results client and trip creation flow ([7630df3](https://github.com/BjornMelin/tripsage-ai/commit/7630df3fbf9953a90338e47e5b79c744f6af8438))
+* **security:** split CSP policy for public vs authed routes ([377f02b](https://github.com/BjornMelin/tripsage-ai/commit/377f02b4249fc75d7f8baff787dd1a648176da3c))
+* update flight search route and add image proxying functionality with rate limits ([bbee070](https://github.com/BjornMelin/tripsage-ai/commit/bbee070baf28d8a1460b414d18f6810fa05394d5))
+
+### Bug Fixes
+
+* **api:** correct escape character handling in balanced object scanning ([e484f92](https://github.com/BjornMelin/tripsage-ai/commit/e484f923bc51276ea7889be7b0814296b1e67392))
+* **pr-676:** address follow-up review ([d39d48a](https://github.com/BjornMelin/tripsage-ai/commit/d39d48a8b4f29a0af1913df8c981984a6e286b08))
+* **pr-676:** address review comments ([9cf59f1](https://github.com/BjornMelin/tripsage-ai/commit/9cf59f16c28972fb28b1ac38d734becb80ab90ea))
+* **pr-676:** address review feedback ([9651351](https://github.com/BjornMelin/tripsage-ai/commit/96513515ce5e7d700239fe3d0e9c874e10d09c8f))
+* **proxy:** add required JSDoc ([4992f6d](https://github.com/BjornMelin/tripsage-ai/commit/4992f6d7307270ea7e357ace285d133781168ac7))
+* **rls:** tighten trip image access ([96e7226](https://github.com/BjornMelin/tripsage-ai/commit/96e7226678fc52026964a91fc632453157aec207))
+
+### Performance Improvements
+
+* **ai-tools:** set plan TTL with redis ex ([a53f98d](https://github.com/BjornMelin/tripsage-ai/commit/a53f98d6fcc7243ea2daad3972a0f0ad98607d14))
+* **auth:** memoize server supabase and user lookup ([ba976b5](https://github.com/BjornMelin/tripsage-ai/commit/ba976b5f0dcf532f5c3e5560c9cc2984a343f512))
+* **auth:** reuse request headers for checks ([27b5f6c](https://github.com/BjornMelin/tripsage-ai/commit/27b5f6cace23bfabb9adec6323f27ba4703c4eae))
+* **google:** cache Maps API calls with Cache Components ([4881942](https://github.com/BjornMelin/tripsage-ai/commit/488194242c4678f8c1ea271ac1c174602683712c))
+* **markdown:** lazy-load code and mermaid plugins ([da210eb](https://github.com/BjornMelin/tripsage-ai/commit/da210ebd9512d3090067c017f46289ab19fb8472))
+* **marketing:** set cache lifetime for static pages ([7187607](https://github.com/BjornMelin/tripsage-ai/commit/718760761b119dcd6387b728485916fd0c721b88))
+* **metrics:** scope dashboard cache by user ([9a53609](https://github.com/BjornMelin/tripsage-ai/commit/9a53609b563bb393ca87e0fabf5494f7168d8e7d))
+* parallelize async operations ([ef76123](https://github.com/BjornMelin/tripsage-ai/commit/ef761239c69866ef11b82c3c304880b5c1bb9e06))
+* **zustand:** use shallow selectors for stores ([60af503](https://github.com/BjornMelin/tripsage-ai/commit/60af5033d17a659d03edb6d91c95032a215b7840))
+
 ## [1.31.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.30.1...v1.31.0) (2026-02-02)
 
 ### Features
