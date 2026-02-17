@@ -1,7 +1,7 @@
 # ADR-0009: Consolidate CI to two workflows and remove custom composites
 
-**Version**: 1.0.0
-**Status**: Proposed
+**Version**: 1.1.0
+**Status**: Partially Implemented
 **Date**: 2025-10-18
 **Category**: ops
 **Domain**: CI (GitHub Actions)
@@ -55,13 +55,15 @@ Partial simplification with some utility steps. Rejected: still adds maintenance
 - GitHub Docs: secret_scanning.yml paths-ignore (UNVERIFIED)
 - Internal CI analysis and security scanning review (this PR)
 
-## Implementation status (2025-12-22)
+## Implementation status (last updated: 2026-02-17)
 
 Parts of this ADR have been implemented via `ci.yml` hardening rather than a separate `security.yml` workflow:
 
 - CI now runs a production build gate (`pnpm build`) on build-affecting changes.
 - Secret scanning is enforced via `scripts/check-no-secrets.mjs` (diff-based by default, `--full` for full tracked scan) and a hard gate against committing tracked `.env*` files (except `.env.example|.sample|.template`).
+- OpenTelemetry dependency convergence is enforced as a CI hardening gate via `pnpm check:otel-convergence` to prevent mixed OTEL/runtime lockfile versions.
 
 ## Changelog
 
+- 1.1.0 (2026-02-17) — OpenTelemetry dependency convergence is enforced as a CI hardening gate via `pnpm check:otel-convergence`.
 - 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.

@@ -11,6 +11,7 @@ Use custom spans/events from `@/lib/telemetry/*` for application-level operation
 Notes:
 
 - Some Node instrumentations rely on `import-in-the-middle`/`require-in-the-middle`. We keep these dependencies directly resolvable from the server runtime and validate this with `src/lib/telemetry/__tests__/import-in-the-middle-resolve.test.ts`.
+- OTEL package convergence is enforced with `pnpm check:otel-convergence` (run in CI) to prevent mixed lockfile patch lines.
 
 ## Approved Telemetry & Logging Entrypoints
 
@@ -219,6 +220,7 @@ Client-side OpenTelemetry is minimal and focused on distributed tracing and erro
 - **Endpoint normalization:** `NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT` is normalized to ensure the exporter URL ends with `/v1/traces` (trailing slashes removed).
 - **Self-instrumentation prevention:** Exporter traffic is excluded via `FetchInstrumentation.ignoreUrls` to avoid span loops/noise.
 - **Context propagation:** `traceparent` is propagated only to same-origin fetches to correlate browser → server traces without leaking trace headers to third parties.
+- **HTTP semantic conventions:** Fetch spans emit stable HTTP semantic conventions (`semconvStabilityOptIn: "http"`). Legacy HTTP keys are not dual-emitted.
 - **Async context robustness:** Uses `ZoneContextManager` (via `zone.js`) to improve context propagation for async browser flows. `zone.js` is only loaded when browser tracing is enabled.
 - **Error recording:** `recordClientErrorOnActiveSpan()` from `@/lib/telemetry/client-errors` records client-side errors on active spans, linking errors to traces.
 

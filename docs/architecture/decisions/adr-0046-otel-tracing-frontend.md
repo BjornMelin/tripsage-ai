@@ -1,8 +1,9 @@
 # ADR-0046: OTEL Tracing for Next.js 16 Route Handlers
 
-**Version**: 1.1.0  
+**Version**: 1.3.0  
 **Status**: Accepted  
 **Date**: 2026-01-21  
+**Last Updated**: 2026-02-17  
 **Category**: Observability  
 **Domain**: Tracing / Telemetry  
 **Related ADRs**: ADR-0031, ADR-0032, ADR-0040, ADR-0041  
@@ -26,6 +27,8 @@ We adopt a Vercel-first server setup + a minimal, standards-based browser setup:
   - `withTelemetrySpan()` / `withTelemetrySpanSync()` (`src/lib/telemetry/span.ts`)
   - `recordTelemetryEvent()` and error helpers
   - `createServerLogger()` (`src/lib/telemetry/logger.ts`)
+- Span helpers now rely on the standard OTEL `Span` contract (legacy no-op fallback shims removed).
+- Dependency convergence is guarded in CI with `pnpm check:otel-convergence` to prevent mixed OTEL patch lines.
 
 ### Client (Browser)
 
@@ -35,7 +38,7 @@ We adopt a Vercel-first server setup + a minimal, standards-based browser setup:
 - Prevent self-instrumentation by adding the exporter URL to `FetchInstrumentation.ignoreUrls`.
 - Propagate `traceparent` only for same-origin requests to enable browser → server trace correlation.
 - Use `ZoneContextManager` (via `zone.js`) to improve async context propagation in the browser.
-- Use `semconvStabilityOptIn: "http/dup"` for safer HTTP semantic convention migration (emit stable + legacy attributes).
+- Use `semconvStabilityOptIn: "http"` to emit stable HTTP semantic conventions only (no dual-emission of legacy keys).
 
 ## Consequences
 

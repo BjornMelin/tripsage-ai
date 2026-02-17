@@ -111,6 +111,9 @@ jobs:
       - name: Enforce Zod v4 style (changed files)
         run: pnpm check:zod-v4
 
+      - name: Enforce OTEL dependency convergence
+        run: pnpm check:otel-convergence
+
       - name: Enforce API route error helpers (changed files)
         run: pnpm check:api-route-errors
 

@@ -30,49 +30,6 @@ export type TelemetryLogOptions = {
   level?: "info" | "warning" | "error";
 };
 
-/**
- * Ensures span has all expected methods by wrapping with no-op fallbacks.
- *
- * This proxy handles cases where span implementations (e.g., mock spans in tests
- * or partial OTEL implementations) may not provide all standard Span methods.
- * Rather than throwing on missing methods, we return chainable no-ops.
- */
-function ensureSpanCapabilities(span: Span): Span {
-  // Use Proxy to avoid mutating the original span object
-  return new Proxy(span, {
-    get(target, prop, receiver) {
-      if (prop === "addEvent" && typeof target.addEvent !== "function") {
-        // No-op fallback for spans without addEvent capability
-        return () => receiver;
-      }
-      if (prop === "setAttribute" && typeof target.setAttribute !== "function") {
-        // No-op fallback for spans without setAttribute capability
-        return () => receiver;
-      }
-      if (
-        prop === "recordException" &&
-        typeof (target as Partial<Span>).recordException !== "function"
-      ) {
-        // No-op fallback for spans without exception recording capability
-        return () => undefined;
-      }
-      if (
-        prop === "setStatus" &&
-        typeof (target as Partial<Span>).setStatus !== "function"
-      ) {
-        // No-op fallback for spans without status capability
-        return () => undefined;
-      }
-      if (prop === "end" && typeof (target as Partial<Span>).end !== "function") {
-        // No-op fallback for spans without end capability
-        return () => undefined;
-      }
-      // Delegate all other properties/methods to the original span
-      return Reflect.get(target, prop, receiver);
-    },
-  }) as Span;
-}
-
 // Lazy tracer to allow tests to inject mocks before first span creation.
 let tracerRef: Tracer | null = null;
 
@@ -86,10 +43,10 @@ function getTracer(): Tracer {
 /**
  * Common span execution logic for both sync and async operations.
  *
- * Uses a second proxy (separate from ensureSpanCapabilities) to intercept
- * recordException calls. This tracking ensures we don't set span status to OK
- * after the execute callback has already recorded an exception. Without this,
- * non-throwing error paths that call recordException would be overwritten.
+ * Uses a proxy to intercept `recordException` calls. This tracking ensures we
+ * don't set span status to OK after the execute callback has already recorded
+ * an exception. Without this, non-throwing error paths that call
+ * `recordException` would be overwritten.
  *
  * @internal
  */
@@ -172,8 +129,7 @@ export function withTelemetrySpanSync<T>(
   const tracer = getTracer();
   const spanAttributes =
     sanitizeAttributes(options.attributes, options.redactKeys) ?? {};
-  const runner = (span: Span): T =>
-    executeSpan(ensureSpanCapabilities(span), execute, false) as T;
+  const runner = (span: Span): T => executeSpan(span, execute, false) as T;
 
   return tracer.startActiveSpan(name, { attributes: spanAttributes }, runner);
 }
@@ -196,7 +152,7 @@ export function withTelemetrySpan<T>(
   const spanAttributes =
     sanitizeAttributes(options.attributes, options.redactKeys) ?? {};
   const runner = async (span: Span): Promise<T> =>
-    executeSpan(ensureSpanCapabilities(span), execute, true) as Promise<T>;
+    executeSpan(span, execute, true) as Promise<T>;
 
   return tracer.startActiveSpan(name, { attributes: spanAttributes }, runner);
 }
@@ -242,19 +198,19 @@ export function recordTelemetryEvent(
 
   const tracer = getTracer();
   tracer.startActiveSpan(`event.${eventName}`, (span) => {
-    span?.setAttribute?.("event.level", level);
-    span?.setAttribute?.("event.name", eventName);
+    span.setAttribute("event.level", level);
+    span.setAttribute("event.name", eventName);
 
     if (sanitizedAttributes) {
       Object.entries(sanitizedAttributes).forEach(([key, value]) => {
-        span?.setAttribute?.(`event.${key}`, value);
+        span.setAttribute(`event.${key}`, value);
       });
     }
 
     // Add event to span without console logging
-    span?.addEvent?.(eventName, sanitizedAttributes);
+    span.addEvent(eventName, sanitizedAttributes);
 
-    span?.end?.();
+    span.end();
   });
 }
 

@@ -257,6 +257,9 @@ scan-results/
 # Project specific files
 .agent/
 supabase/.temp/
+docs/development/frontend/audits/
+scripts/audits/
+next-audit.config.json
 
 # Generated review artifacts
 docs/implementation/

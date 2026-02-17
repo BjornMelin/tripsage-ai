@@ -197,6 +197,7 @@ describe("initTelemetry", () => {
     const fetchConfig = fetchCalls[0]?.[0];
     const ignoreUrls = unsafeCast<unknown[]>(fetchConfig?.ignoreUrls);
     expect(ignoreUrls).toEqual(expect.arrayContaining([expect.any(RegExp)]));
+    expect(fetchConfig?.semconvStabilityOptIn).toBe("http");
   });
 
   it("should normalize /v1/traces/ (trailing slash) to /v1/traces", async () => {
