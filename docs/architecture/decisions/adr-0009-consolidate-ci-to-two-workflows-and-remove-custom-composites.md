@@ -61,9 +61,9 @@ Parts of this ADR have been implemented via `ci.yml` hardening rather than a sep
 
 - CI now runs a production build gate (`pnpm build`) on build-affecting changes.
 - Secret scanning is enforced via `scripts/check-no-secrets.mjs` (diff-based by default, `--full` for full tracked scan) and a hard gate against committing tracked `.env*` files (except `.env.example|.sample|.template`).
-- OpenTelemetry dependency convergence is enforced via `pnpm check:otel-convergence` to prevent mixed OTEL/runtime lockfile versions.
+- OpenTelemetry dependency convergence is enforced as a CI hardening gate via `pnpm check:otel-convergence` to prevent mixed OTEL/runtime lockfile versions.
 
 ## Changelog
 
-- 1.1.0 (2026-02-17) — Documented `pnpm check:otel-convergence` as an accepted CI hardening gate in `ci.yml`.
+- 1.1.0 (2026-02-17) — OpenTelemetry dependency convergence is enforced as a CI hardening gate via `pnpm check:otel-convergence`.
 - 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
