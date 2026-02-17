@@ -1,7 +1,7 @@
 # ADR-0009: Consolidate CI to two workflows and remove custom composites
 
 **Version**: 1.1.0
-**Status**: Proposed
+**Status**: Partially Implemented
 **Date**: 2025-10-18
 **Category**: ops
 **Domain**: CI (GitHub Actions)
@@ -55,7 +55,7 @@ Partial simplification with some utility steps. Rejected: still adds maintenance
 - GitHub Docs: secret_scanning.yml paths-ignore (UNVERIFIED)
 - Internal CI analysis and security scanning review (this PR)
 
-## Implementation status (2025-12-22)
+## Implementation status (last updated: 2026-02-17)
 
 Parts of this ADR have been implemented via `ci.yml` hardening rather than a separate `security.yml` workflow:
 
