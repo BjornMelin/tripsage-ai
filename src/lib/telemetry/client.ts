@@ -176,8 +176,8 @@ async function startClientTelemetry(): Promise<void> {
         propagateTraceHeaderCorsUrls: [
           new RegExp(`^${escapeRegExp(window.location.origin)}(?:/|$)`),
         ],
-        // Emit both stable and legacy HTTP attributes for safer backend/dashboard migration.
-        semconvStabilityOptIn: "http/dup",
+        // Emit stable HTTP semantic conventions.
+        semconvStabilityOptIn: "http",
       }),
     ],
   });
