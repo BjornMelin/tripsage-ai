@@ -17,6 +17,7 @@ const startActiveSpanMock = vi.hoisted(() =>
         throw new TypeError("callback is not a function");
       }
       const mockSpan = {
+        addEvent: vi.fn(),
         end: vi.fn(),
         recordException: vi.fn(),
         setAttribute: vi.fn(),

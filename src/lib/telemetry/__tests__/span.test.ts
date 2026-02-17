@@ -75,21 +75,18 @@ describe("withTelemetrySpan", () => {
     expect(END_SPAN).toHaveBeenCalledTimes(1);
   });
 
-  it("does not crash when recordException is missing on span", async () => {
-    START_ACTIVE_SPAN.mockImplementationOnce((...args: unknown[]) => {
-      const callback = args.at(-1) as (span: unknown) => unknown;
-      return callback({
-        end: END_SPAN,
-        setStatus: SET_STATUS,
-      } as never);
-    });
-
+  it("does not overwrite error status when execute records exception", async () => {
     await expect(
-      withTelemetrySpan("test", {}, () => {
-        throw new Error("boom");
+      withTelemetrySpan("test", {}, (span) => {
+        const err = new Error("soft-failure");
+        span.recordException(err);
+        span.setStatus({ code: 2, message: err.message });
+        return "handled";
       })
-    ).rejects.toThrow("boom");
-    expect(SET_STATUS).toHaveBeenCalledWith({ code: 2, message: "boom" });
+    ).resolves.toBe("handled");
+    expect(RECORD_EXCEPTION).toHaveBeenCalledTimes(1);
+    expect(SET_STATUS).toHaveBeenCalledWith({ code: 2, message: "soft-failure" });
+    expect(SET_STATUS).not.toHaveBeenCalledWith({ code: 1 });
     expect(END_SPAN).toHaveBeenCalledTimes(1);
   });
 
