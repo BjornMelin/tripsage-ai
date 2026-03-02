@@ -186,7 +186,7 @@ jobs:
 
       - name: Upload benchmark results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: benchmark-summary.json
@@ -258,7 +258,7 @@ jobs:
           --shard=${{ matrix.shard }}/${{ matrix.total }}
 
       - name: Upload shard artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-reports-${{ matrix.shard }}
           path: |
@@ -296,7 +296,7 @@ jobs:
           pnpm vitest run --merge-reports
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-merged
           path: coverage
