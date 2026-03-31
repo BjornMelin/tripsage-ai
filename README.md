@@ -120,6 +120,8 @@ make supa.link PROJECT_REF=...
 make supa.db.push
 ```
 
+If `pnpm` is not already on your `PATH`, use `corepack pnpm ...` instead of `npx pnpm ...`. The repo root `.npmrc` intentionally contains pnpm-only config, and `npx` will make npm parse it and print warnings.
+
 ### Observability (OpenTelemetry)
 
 Server-side tracing is registered via `src/instrumentation.ts` using `@vercel/otel`. Client-side tracing is initialized via `TelemetryProvider` (mounted from `src/app/layout.tsx`) and exports browser spans with OTLP/HTTP.
