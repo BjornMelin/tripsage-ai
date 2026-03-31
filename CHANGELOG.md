@@ -1,3 +1,9 @@
+## [1.32.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.0...v1.32.1) (2026-03-31)
+
+### Bug Fixes
+
+* **biome:** resolve 2.4.10 diagnostics ([5f85f92](https://github.com/BjornMelin/tripsage-ai/commit/5f85f92a8d6c82cd8e86c83d99f71512875d1b97))
+
 ## [1.32.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.31.0...v1.32.0) (2026-02-03)
 
 ### Features
