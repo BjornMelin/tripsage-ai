@@ -241,8 +241,8 @@ export function FilterPresets({ className }: FilterPresetsProps) {
                   )}
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {preset.filters.length} filter
-                    {preset.filters.length !== 1 ? "s" : ""} • Used {preset.usageCount}{" "}
-                    time{preset.usageCount !== 1 ? "s" : ""}
+                    {preset.filters.length === 1 ? "" : "s"} • Used {preset.usageCount}{" "}
+                    time{preset.usageCount === 1 ? "" : "s"}
                   </p>
                 </button>
 

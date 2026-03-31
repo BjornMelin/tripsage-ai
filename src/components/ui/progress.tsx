@@ -37,9 +37,9 @@ export const Progress = React.forwardRef<
     props["aria-valuetext"] ??
     (isIndeterminate
       ? "Loading"
-      : percent !== undefined
-        ? `${percent} percent`
-        : undefined);
+      : percent === undefined
+        ? undefined
+        : `${percent} percent`);
 
   return (
     <ProgressPrimitive.Root

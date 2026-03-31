@@ -301,12 +301,12 @@ export default function RealtimeDemoPage() {
                   updates
                 </p>
               </div>
-              {demoTripId !== undefined ? (
-                <OptimisticTripUpdates tripId={demoTripId} />
-              ) : (
+              {demoTripId === undefined ? (
                 <p className="text-sm text-muted-foreground text-center">
                   Create a trip first to see real-time editing.
                 </p>
+              ) : (
+                <OptimisticTripUpdates tripId={demoTripId} />
               )}
             </TabsContent>
 
@@ -318,9 +318,7 @@ export default function RealtimeDemoPage() {
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {demoTripId !== undefined ? (
-                  <CollaborationIndicator tripId={demoTripId} />
-                ) : (
+                {demoTripId === undefined ? (
                   <Card aria-label="No active demo trip">
                     <CardHeader>
                       <CardTitle className="text-base">No active demo trip</CardTitle>
@@ -329,6 +327,8 @@ export default function RealtimeDemoPage() {
                       Create a trip to see collaboration indicators.
                     </CardContent>
                   </Card>
+                ) : (
+                  <CollaborationIndicator tripId={demoTripId} />
                 )}
                 <Card>
                   <CardHeader>

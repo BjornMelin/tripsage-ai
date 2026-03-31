@@ -46,7 +46,7 @@ export function itineraryDraftFromItem(item: ItineraryItem): ItineraryDraft {
     itemType: item.itemType,
     location: item.location ?? "",
     payload: coercePayloadToStringRecord(item.payload),
-    price: item.price !== undefined ? String(item.price) : "",
+    price: item.price === undefined ? "" : String(item.price),
     startAtLocal: toDateTimeLocalValue(item.startAt),
     title: item.title,
   };

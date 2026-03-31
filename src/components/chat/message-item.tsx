@@ -225,6 +225,59 @@ export interface ChatMessageItemProps {
   isStreaming?: boolean;
 }
 
+function HashKey(value: string): string {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+function SerializeKeyPart(value: unknown): string {
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function PartKey(messageId: string, part: unknown): string {
+  const record = AsRecord(part);
+  if (!record) {
+    return `${messageId}-raw-${HashKey(String(part))}`;
+  }
+
+  const partType = typeof record.type === "string" ? record.type : "unknown";
+
+  if (partType === "text") {
+    return `${messageId}-text-${HashKey(String(record.text ?? ""))}`;
+  }
+  if (partType === "reasoning") {
+    return `${messageId}-reasoning-${HashKey(String(record.text ?? ""))}`;
+  }
+  if (partType === "step-start") {
+    return `${messageId}-step-${String(record.step ?? "unknown")}`;
+  }
+  if (partType === "source-url") {
+    return `${messageId}-source-url-${HashKey(String(record.url ?? ""))}`;
+  }
+  if (partType === "file") {
+    return `${messageId}-file-${HashKey(
+      `${String(record.url ?? "")}|${String(record.data ?? "")}|${String(record.name ?? record.filename ?? "")}`
+    )}`;
+  }
+
+  const toolName =
+    record.name ??
+    record.toolName ??
+    record.tool ??
+    (partType.startsWith("tool-") ? partType.slice(5) : "");
+  return `${messageId}-${partType}-${HashKey(
+    `${SerializeKeyPart(toolName)}|${SerializeKeyPart(record.args ?? record.input ?? record.parameters)}|${SerializeKeyPart(record.result ?? record.output ?? record.data ?? record.error ?? record.errorText)}`
+  )}`;
+}
+
 /**
  * Render a chat message item that displays message parts (text, schema cards,
  * reasoning, tool outputs, files, and sources) with safe sanitization and UI-specific handling.
@@ -257,6 +310,7 @@ export function ChatMessageItem({
       <MessageContent>
         {parts.length > 0 ? (
           parts.map((part, idx) => {
+            const renderedPartKey = PartKey(message.id, part);
             const partType = part?.type;
 
             if (partType === "text") {
@@ -268,7 +322,7 @@ export function ChatMessageItem({
                   case "flight":
                     return (
                       <FlightOfferCard
-                        key={`${message.id}-flight-${idx}`}
+                        key={renderedPartKey}
                         result={
                           schemaCard.data as Parameters<
                             typeof FlightOfferCard
@@ -279,7 +333,7 @@ export function ChatMessageItem({
                   case "stay":
                     return (
                       <StayCard
-                        key={`${message.id}-stay-${idx}`}
+                        key={renderedPartKey}
                         result={
                           schemaCard.data as Parameters<typeof StayCard>[0]["result"]
                         }
@@ -288,7 +342,7 @@ export function ChatMessageItem({
                   case "budget":
                     return (
                       <BudgetChart
-                        key={`${message.id}-budget-${idx}`}
+                        key={renderedPartKey}
                         result={
                           schemaCard.data as Parameters<typeof BudgetChart>[0]["result"]
                         }
@@ -297,7 +351,7 @@ export function ChatMessageItem({
                   case "destination":
                     return (
                       <DestinationCard
-                        key={`${message.id}-dest-${idx}`}
+                        key={renderedPartKey}
                         result={
                           schemaCard.data as Parameters<
                             typeof DestinationCard
@@ -308,7 +362,7 @@ export function ChatMessageItem({
                   case "itinerary":
                     return (
                       <ItineraryTimeline
-                        key={`${message.id}-itin-${idx}`}
+                        key={renderedPartKey}
                         result={
                           schemaCard.data as Parameters<
                             typeof ItineraryTimeline
@@ -326,7 +380,7 @@ export function ChatMessageItem({
                 idx === lastTextPartIndex;
 
               return (
-                <Response key={`${message.id}-t-${idx}`} isAnimating={shouldAnimate}>
+                <Response key={renderedPartKey} isAnimating={shouldAnimate}>
                   {text}
                 </Response>
               );
@@ -343,10 +397,7 @@ export function ChatMessageItem({
 
             if (partType === "reasoning") {
               return (
-                <Reasoning
-                  key={`${message.id}-r-${idx}`}
-                  text={part.text ?? String(part)}
-                />
+                <Reasoning key={renderedPartKey} text={part.text ?? String(part)} />
               );
             }
 
@@ -355,11 +406,11 @@ export function ChatMessageItem({
 
               return (
                 <div
-                  key={`${message.id}-step-${idx}`}
+                  key={renderedPartKey}
                   className="my-3 flex items-center gap-2 text-xs text-muted-foreground"
                 >
                   <div className="h-px flex-1 bg-border" />
-                  <span>{step !== undefined ? `Step ${step}` : "Step"}</span>
+                  <span>{step === undefined ? "Step" : `Step ${step}`}</span>
                   <div className="h-px flex-1 bg-border" />
                 </div>
               );
@@ -404,7 +455,7 @@ export function ChatMessageItem({
                 const sources = result.results;
                 return (
                   <div
-                    key={`${message.id}-tool-${idx}`}
+                    key={renderedPartKey}
                     className="my-2 rounded-md border bg-muted/30 p-3 text-sm"
                   >
                     <div className="mb-2 flex items-center justify-between">
@@ -417,9 +468,9 @@ export function ChatMessageItem({
                       </div>
                     </div>
                     <div className="grid gap-2">
-                      {sources.map((s, i) => (
+                      {sources.map((s) => (
                         <div
-                          key={`${message.id}-ws-${i}`}
+                          key={`${message.id}-ws-${HashKey(`${s.url}|${s.title ?? ""}|${s.publishedAt ?? ""}`)}`}
                           className="rounded border bg-background p-2"
                         >
                           {(() => {
@@ -466,8 +517,11 @@ export function ChatMessageItem({
                           <SourcesTrigger count={sources.length} />
                           <SourcesContent>
                             <div className="space-y-1">
-                              {sources.map((s, i) => (
-                                <Source key={`${message.id}-src-${i}`} href={s.url}>
+                              {sources.map((s) => (
+                                <Source
+                                  key={`${message.id}-src-${HashKey(`${s.url}|${s.title ?? ""}`)}`}
+                                  href={s.url}
+                                >
                                   {s.title ?? s.url}
                                 </Source>
                               ))}
@@ -489,17 +543,17 @@ export function ChatMessageItem({
                 (typeof p?.errorText === "string" ? p.errorText : undefined);
               const rawProviderMetadata = p?.callProviderMetadata;
               const inputSanitized =
-                rawInput !== undefined ? sanitizeToolOutput(rawInput) : undefined;
+                rawInput === undefined ? undefined : sanitizeToolOutput(rawInput);
               const outputSanitized =
-                rawOutput !== undefined ? sanitizeToolOutput(rawOutput) : undefined;
+                rawOutput === undefined ? undefined : sanitizeToolOutput(rawOutput);
               const providerMetadataSanitized =
-                rawProviderMetadata !== undefined
-                  ? sanitizeToolOutput(rawProviderMetadata)
-                  : undefined;
+                rawProviderMetadata === undefined
+                  ? undefined
+                  : sanitizeToolOutput(rawProviderMetadata);
 
               return (
                 <Tool
-                  key={`${message.id}-tool-${idx}`}
+                  key={renderedPartKey}
                   input={inputSanitized}
                   name={toolName ?? "Tool"}
                   output={outputSanitized}
@@ -547,7 +601,7 @@ export function ChatMessageItem({
                 const aspectRatio = `${resolvedWidth} / ${resolvedHeight}`;
 
                 return (
-                  <div key={`${message.id}-img-${idx}`} className="my-2">
+                  <div key={renderedPartKey} className="my-2">
                     <div
                       className="max-h-64 max-w-full overflow-hidden rounded-md border bg-muted/30"
                       style={{ aspectRatio }}
@@ -572,7 +626,7 @@ export function ChatMessageItem({
               // Render other files as attachment
               return (
                 <div
-                  key={`${message.id}-file-${idx}`}
+                  key={renderedPartKey}
                   className="my-2 inline-flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2"
                 >
                   <FileIcon
@@ -597,7 +651,7 @@ export function ChatMessageItem({
               }
             }
             return (
-              <pre key={`${message.id}-u-${idx}`} className="text-xs opacity-70">
+              <pre key={renderedPartKey} className="text-xs opacity-70">
                 {fallback}
               </pre>
             );
@@ -612,11 +666,14 @@ export function ChatMessageItem({
               <SourcesTrigger count={sourceParts.length} />
               <SourcesContent>
                 <div className="space-y-1">
-                  {sourceParts.map((p, i) => {
+                  {sourceParts.map((p) => {
                     const href = p.url;
                     const title = p.title ?? href;
                     return (
-                      <Source key={`${message.id}-src-${i}`} href={href}>
+                      <Source
+                        key={`${message.id}-src-${HashKey(`${href}|${title}`)}`}
+                        href={href}
+                      >
                         {title}
                       </Source>
                     );

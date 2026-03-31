@@ -107,11 +107,11 @@ export const POST = withApiGuards({
   }
 
   const rawMessagesArray: unknown[] =
-    rawMessage !== undefined
-      ? [rawMessage]
-      : Array.isArray(rawMessages)
+    rawMessage === undefined
+      ? Array.isArray(rawMessages)
         ? rawMessages
-        : [];
+        : []
+      : [rawMessage];
   const safeMessagesResult =
     rawMessagesArray.length === 0
       ? { data: [], success: true as const }

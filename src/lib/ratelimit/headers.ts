@@ -43,7 +43,7 @@ export function createRateLimitHeaders(
 ): Record<string, string> {
   const headers: Record<string, string> = {};
   const resetMs =
-    meta.reset !== undefined ? normalizeRateLimitResetToMs(meta.reset) : undefined;
+    meta.reset === undefined ? undefined : normalizeRateLimitResetToMs(meta.reset);
 
   if (meta.limit !== undefined) headers["X-RateLimit-Limit"] = String(meta.limit);
   if (meta.remaining !== undefined)

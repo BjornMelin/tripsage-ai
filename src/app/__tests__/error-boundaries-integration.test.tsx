@@ -27,8 +27,8 @@ const { createErrorReportMock, reportErrorMock } = vi.hoisted(() => {
       },
       timestamp: new Date("2025-01-01T00:00:00.000Z").toISOString(),
       url:
-        typeof window !== "undefined" ? window.location.href : "http://localhost/test",
-      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Vitest",
+        typeof window === "undefined" ? "http://localhost/test" : window.location.href,
+      userAgent: typeof navigator === "undefined" ? "Vitest" : navigator.userAgent,
       ...additionalInfo,
     })
   );

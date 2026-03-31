@@ -973,7 +973,7 @@ export function getMany<
       if (options?.limit !== undefined || options?.offset !== undefined) {
         const start = options?.offset ?? 0;
         const end =
-          options?.limit !== undefined ? start + options.limit - 1 : undefined;
+          options?.limit === undefined ? undefined : start + options.limit - 1;
         if (end !== undefined && typeof qb.range === "function") {
           qb = qb.range(start, end);
         } else {

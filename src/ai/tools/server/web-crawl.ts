@@ -214,10 +214,10 @@ function buildScrapeBody(
   if (scrapeOptions) {
     const so = scrapeOptions;
     body.formats = so.formats ?? ["markdown"];
-    if (so.parsers !== undefined) {
-      body.parsers = so.parsers;
-    } else {
+    if (so.parsers === undefined) {
       body.parsers = []; // Cost-safe: avoid PDF parsing unless explicit
+    } else {
+      body.parsers = so.parsers;
     }
     body.proxy = so.proxy ?? "basic"; // Cost-safe: avoid stealth unless needed
     if (so.onlyMainContent !== undefined) {

@@ -52,12 +52,15 @@ export function BudgetChart({ result, ...props }: BudgetChartProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {allocations.map((allocation: BudgetAllocation, index: number) => {
+          {allocations.map((allocation: BudgetAllocation) => {
             const percentage = clampProgress(
               total > 0 ? Math.round((allocation.amount / total) * 100) : 0
             );
             return (
-              <div key={`${allocation.category}-${index}`} className="space-y-1">
+              <div
+                key={`${allocation.category}-${allocation.amount}-${allocation.rationale ?? ""}`}
+                className="space-y-1"
+              >
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{allocation.category}</span>
                   <span className="font-semibold">

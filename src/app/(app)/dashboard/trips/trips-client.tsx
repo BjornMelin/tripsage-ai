@@ -364,7 +364,7 @@ export default function TripsClient({ userId }: { userId: string }) {
         <div>
           <h1 className="text-3xl font-bold">My Trips</h1>
           <p className="text-muted-foreground">
-            {tripsArray.length} trip{tripsArray.length !== 1 ? "s" : ""} in your
+            {tripsArray.length} trip{tripsArray.length === 1 ? "" : "s"} in your
             collection
           </p>
         </div>

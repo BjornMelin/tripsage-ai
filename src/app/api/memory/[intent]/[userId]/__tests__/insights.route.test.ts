@@ -32,7 +32,7 @@ const cacheStore = vi.hoisted(() => new Map<string, unknown>());
 
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: async (key: string) =>
-    cacheStore.get(key) !== undefined ? (cacheStore.get(key) as unknown) : null,
+    cacheStore.get(key) === undefined ? null : (cacheStore.get(key) as unknown),
   setCachedJson: (key: string, value: unknown) => {
     cacheStore.set(key, value);
     return Promise.resolve();

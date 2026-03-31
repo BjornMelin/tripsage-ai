@@ -30,7 +30,7 @@ const logger = createServerLogger("url.server-origin");
  * Blocks userinfo segments (@), control characters, and other injection vectors.
  */
 function isValidHost(host: string): boolean {
-  if (!host || !host.trim()) return false;
+  if (!host?.trim()) return false;
 
   // Block userinfo segments (evil.com@trusted.com), control chars, spaces
   if (/[@\s\t\r\n]/.test(host)) {
@@ -76,7 +76,7 @@ function resolveConfiguredOrigin(): string | null {
       | "NEXT_PUBLIC_APP_URL"
   ): string | null => {
     const value = getServerEnvVarWithFallback(key, "");
-    if (value && value.trim().length > 0) {
+    if (value?.trim().length) {
       return normalizeOrigin(value, key);
     }
     return null;

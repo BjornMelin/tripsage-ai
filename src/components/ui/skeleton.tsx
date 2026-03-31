@@ -85,6 +85,14 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     }
 
     // Multi-line skeleton
+    const lineDescriptors = Array.from({ length: lines }, (_, index) => ({
+      key:
+        index === lines - 1
+          ? `skeleton-line-short-${lines}`
+          : `skeleton-line-full-${index}`,
+      width: index === lines - 1 ? "75%" : "100%",
+    }));
+
     return (
       <div
         ref={ref}
@@ -93,20 +101,17 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         aria-label="Loading content…"
         {...props}
       >
-        {Array.from({ length: lines }).map((_, index) => {
-          // Vary the width of lines to look more natural
-          const lineWidth = index === lines - 1 ? "75%" : "100%";
-
+        {lineDescriptors.map((descriptor) => {
           return (
             <div
-              key={`skeleton-line-${index}-${lines}`}
+              key={descriptor.key}
               className={cn(
                 SkeletonVariants({ animation: finalAnimation, variant }),
                 "skeleton"
               )}
               style={{
                 height: inlineStyles.height || "1rem",
-                width: lineWidth,
+                width: descriptor.width,
               }}
             />
           );
@@ -117,4 +122,5 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 );
 
 Skeleton.displayName = "Skeleton";
+
 export { SkeletonVariants };

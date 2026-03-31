@@ -22,5 +22,5 @@ const AgentStatusDashboard = dynamic(
   }
 );
 
-export { AgentStatusDashboard };
 export type { AgentStatusDashboardProps } from "./agent-status-dashboard";
+export { AgentStatusDashboard };

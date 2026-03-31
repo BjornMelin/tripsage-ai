@@ -185,9 +185,7 @@ export async function invalidateDashboardCache(
   const redis = getRedis();
   if (!redis) return;
 
-  if (windowHours !== undefined) {
-    await redis.del(`dashboard:metrics:${userId}:${windowHours}h`);
-  } else {
+  if (windowHours === undefined) {
     // Invalidate all common windows
     await Promise.all([
       redis.del(`dashboard:metrics:${userId}:24h`),
@@ -195,5 +193,7 @@ export async function invalidateDashboardCache(
       redis.del(`dashboard:metrics:${userId}:720h`),
       redis.del(`dashboard:metrics:${userId}:0h`),
     ]);
+  } else {
+    await redis.del(`dashboard:metrics:${userId}:${windowHours}h`);
   }
 }

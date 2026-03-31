@@ -20,9 +20,9 @@ repos:
   # Frontend formatting
   - repo: local
     hooks:
-      - id: biome-format
-        name: biome-format
-        entry: bash -c 'pnpm format:biome'
+      - id: biome-fix
+        name: biome-fix
+        entry: bash -c 'pnpm biome:fix'
         language: system
         files: ^(src|e2e|scripts)/.*\.(ts|tsx|js|jsx|json)$
         stages: [commit]

@@ -45,7 +45,7 @@ export function SourcesTrigger({
         {...props}
       >
         {children ?? (
-          <span>{count != null ? `Using ${count} sources` : "Sources"}</span>
+          <span>{count == null ? "Sources" : `Using ${count} sources`}</span>
         )}
       </button>
     </PopoverTrigger>
