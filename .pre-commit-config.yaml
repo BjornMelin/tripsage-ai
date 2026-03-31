@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: biome-format
         name: biome-format
-        entry: bash -c 'pnpm format:biome'
+        entry: bash -c 'pnpm biome:fix'
         language: system
         files: ^(src|e2e|scripts)/.*\.(ts|tsx|js|jsx|json)$
         stages: [commit]
