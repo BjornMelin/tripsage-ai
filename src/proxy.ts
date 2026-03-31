@@ -139,7 +139,7 @@ function buildCsp(options: { isDev: boolean; mode: CspMode; nonce?: string }): s
     return cspHeader.replace(/\s{2,}/g, " ").trim();
   } else {
     const reportUri =
-      typeof process !== "undefined" ? process.env.CSP_REPORT_URI : undefined;
+      typeof process === "undefined" ? undefined : process.env.CSP_REPORT_URI;
     const reportDirective = reportUri ? `report-uri ${reportUri};` : "";
 
     const connectSrc = "'self' https: wss:";
@@ -225,7 +225,7 @@ function applySecurityHeaders(headers: Headers, options: { isProd: boolean }): v
  * @returns The response with security headers and CSP applied.
  */
 export async function proxy(request: NextRequest) {
-  const nodeEnv = typeof process !== "undefined" ? process.env.NODE_ENV : undefined;
+  const nodeEnv = typeof process === "undefined" ? undefined : process.env.NODE_ENV;
   const isDev = nodeEnv === "development";
   const isProd = nodeEnv === "production";
 

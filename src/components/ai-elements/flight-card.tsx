@@ -57,12 +57,12 @@ export function FlightOfferCard({ result, ...props }: FlightOfferCardProps) {
                 </div>
               </div>
               <div className="mt-1 text-xs opacity-80">
-                {itinerary.segments.map((segment: FlightSegment, index: number) => (
-                  <span key={`${itinerary.id}-seg-${index}`}>
-                    {segment.origin}→{segment.destination}
-                    {index < itinerary.segments.length - 1 ? " · " : ""}
-                  </span>
-                ))}
+                {itinerary.segments
+                  .map(
+                    (segment: FlightSegment) =>
+                      `${segment.origin}→${segment.destination}`
+                  )
+                  .join(" · ")}
               </div>
               {itinerary.bookingUrl ? (
                 <div className="mt-2 text-xs">

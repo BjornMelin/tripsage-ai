@@ -463,14 +463,7 @@ async function ensureUser(input: {
 }): Promise<string> {
   const existingId = await getUserIdByEmail(input.email);
   if (existingId) {
-    if (existingId !== input.id) {
-      const deleted = await supabase.auth.admin.deleteUser(existingId);
-      if (deleted.error) {
-        throw new Error(
-          `auth.admin.deleteUser failed for ${input.email}: ${deleted.error.message}`
-        );
-      }
-    } else {
+    if (existingId === input.id) {
       const update = await supabase.auth.admin.updateUserById(existingId, {
         email_confirm: true,
         password: input.password,
@@ -482,6 +475,13 @@ async function ensureUser(input: {
         );
       }
       return existingId;
+    } else {
+      const deleted = await supabase.auth.admin.deleteUser(existingId);
+      if (deleted.error) {
+        throw new Error(
+          `auth.admin.deleteUser failed for ${input.email}: ${deleted.error.message}`
+        );
+      }
     }
   }
 

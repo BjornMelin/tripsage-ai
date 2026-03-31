@@ -156,7 +156,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
         {tripBudgets.length > 0 && (
           <div className="text-xs text-muted-foreground">
-            {tripBudgets.length} budget{tripBudgets.length !== 1 ? "s" : ""} tracked
+            {tripBudgets.length} budget{tripBudgets.length === 1 ? "" : "s"} tracked
           </div>
         )}
       </CardContent>

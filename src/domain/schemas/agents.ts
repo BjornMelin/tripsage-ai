@@ -144,9 +144,9 @@ export type ItineraryPlanRequest = z.infer<typeof itineraryPlanRequestSchema>;
 /** TypeScript type for itinerary planning results. */
 export type ItineraryPlanResult = z.infer<typeof itineraryPlanResultSchema>;
 
+export type { FlightSearchRequest, FlightSearchResult };
 // Flight search (delegated to domain/schemas/flights)
 export { flightSearchRequestSchema, flightSearchResultSchema };
-export type { FlightSearchRequest, FlightSearchResult };
 
 // Accommodation search
 const stayOptionSchema = z.object({

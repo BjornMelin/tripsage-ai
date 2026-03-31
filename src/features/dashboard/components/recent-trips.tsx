@@ -85,7 +85,7 @@ function TripCard({ trip }: { trip: Trip }) {
     const start = DateUtils.parse(trip.startDate);
     const end = DateUtils.parse(trip.endDate);
     const diffDays = Math.max(1, Math.abs(DateUtils.difference(end, start, "days")));
-    return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+    return `${diffDays} day${diffDays === 1 ? "" : "s"}`;
   };
 
   /**

@@ -109,13 +109,13 @@ async function runWebSearch(
     const apiKey = resolveFirecrawlApiKey();
     const startedAt = Date.now();
     const scrapeOptions =
-      params.scrapeOptions !== null
-        ? {
+      params.scrapeOptions === null
+        ? undefined
+        : {
             formats: params.scrapeOptions?.formats ?? undefined,
             parsers: params.scrapeOptions?.parsers ?? undefined,
             proxy: params.scrapeOptions?.proxy ?? undefined,
-          }
-        : undefined;
+          };
     const requestParams = {
       categories: params.categories ?? undefined,
       freshness: params.freshness ?? undefined,

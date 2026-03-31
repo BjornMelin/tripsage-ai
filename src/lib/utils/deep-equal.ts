@@ -31,7 +31,7 @@ export interface DeepEqualJsonLikeOptions {
 }
 
 const defaultNowMs = (): number =>
-  typeof performance !== "undefined" ? performance.now() : Date.now();
+  typeof performance === "undefined" ? Date.now() : performance.now();
 
 const sizeOf = (value: unknown): number => {
   if (Array.isArray(value)) return value.length;
@@ -179,7 +179,7 @@ export const deepEqualJsonLike = (
   if (context.hitMaxDepth) {
     logger?.warn("deepEqualJsonLike maxDepth exceeded", {
       maxDepth,
-      ...(context.maxDepthHitDepth !== null ? { depth: context.maxDepthHitDepth } : {}),
+      ...(context.maxDepthHitDepth === null ? {} : { depth: context.maxDepthHitDepth }),
     });
   }
 

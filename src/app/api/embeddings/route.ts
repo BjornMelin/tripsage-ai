@@ -139,7 +139,7 @@ export const POST = withApiGuards({
     (body.property
       ? `${body.property.name ?? ""}. Description: ${body.property.description ?? ""}. Amenities: ${Array.isArray(body.property.amenities) ? body.property.amenities.join(", ") : (body.property.amenities ?? "")}`
       : "");
-  if (!text || !text.trim()) {
+  if (!text?.trim()) {
     return errorResponse({
       error: "invalid_request",
       reason: "Missing text or property",

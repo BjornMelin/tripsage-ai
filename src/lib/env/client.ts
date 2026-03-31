@@ -134,7 +134,7 @@ export function getClientEnvVarWithFallback<T extends keyof ClientEnv>(
   fallback: ClientEnv[T]
 ): ClientEnv[T] {
   const value = publicEnvValue[key];
-  return value !== undefined ? value : fallback;
+  return value === undefined ? fallback : value;
 }
 
 // Google Maps Platform helpers (client-safe)

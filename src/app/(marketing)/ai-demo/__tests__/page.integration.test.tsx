@@ -17,96 +17,92 @@ describe("AI Demo Page", () => {
     expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
   });
 
-  it(
-    "submits prompt and streams response successfully",
-    { timeout: 10000 },
-    async () => {
-      // Override handler with successful streaming response
-      server.use(
-        http.post("/api/ai/stream", () => {
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            start(controller) {
-              controller.enqueue(
-                encoder.encode(
-                  'data: {"type":"text-delta","id":"demo","delta":"Hello "}\n\n'
-                )
-              );
-              controller.enqueue(
-                encoder.encode(
-                  'data: {"type":"text-delta","id":"demo","delta":"world"}\n\n'
-                )
-              );
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
-            },
-          });
-          return new HttpResponse(stream, {
-            headers: { "Content-Type": "text/event-stream" },
-            status: 200,
-          });
-        })
-      );
+  it("submits prompt and streams response successfully", {
+    timeout: 10000,
+  }, async () => {
+    // Override handler with successful streaming response
+    server.use(
+      http.post("/api/ai/stream", () => {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                'data: {"type":"text-delta","id":"demo","delta":"Hello "}\n\n'
+              )
+            );
+            controller.enqueue(
+              encoder.encode(
+                'data: {"type":"text-delta","id":"demo","delta":"world"}\n\n'
+              )
+            );
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          },
+        });
+        return new HttpResponse(stream, {
+          headers: { "Content-Type": "text/event-stream" },
+          status: 200,
+        });
+      })
+    );
 
-      render(<Page />);
-      const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
-      const submit = screen.getByRole("button", { name: /submit/i });
+    render(<Page />);
+    const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
+    const submit = screen.getByRole("button", { name: /submit/i });
 
-      act(() => {
-        fireEvent.change(textarea, { target: { value: "Test input" } });
-        fireEvent.click(submit);
-      });
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "Test input" } });
+      fireEvent.click(submit);
+    });
 
-      await waitFor(
-        () => {
-          expect(screen.getByText(/Hello world/)).toBeInTheDocument();
-        },
-        { timeout: 2000 }
-      );
-    }
-  );
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Hello world/)).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
+  });
 
-  it(
-    "continues streaming when the DONE marker is missing",
-    { timeout: 10000 },
-    async () => {
-      server.use(
-        http.post("/api/ai/stream", () => {
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            start(controller) {
-              controller.enqueue(
-                encoder.encode(
-                  'data: {"type":"text-delta","id":"demo","delta":"Hello"}\n\n'
-                )
-              );
-              controller.close();
-            },
-          });
-          return new HttpResponse(stream, {
-            headers: { "Content-Type": "text/event-stream" },
-            status: 200,
-          });
-        })
-      );
+  it("continues streaming when the DONE marker is missing", {
+    timeout: 10000,
+  }, async () => {
+    server.use(
+      http.post("/api/ai/stream", () => {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                'data: {"type":"text-delta","id":"demo","delta":"Hello"}\n\n'
+              )
+            );
+            controller.close();
+          },
+        });
+        return new HttpResponse(stream, {
+          headers: { "Content-Type": "text/event-stream" },
+          status: 200,
+        });
+      })
+    );
 
-      render(<Page />);
-      const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
-      const submit = screen.getByRole("button", { name: /submit/i });
+    render(<Page />);
+    const textarea = screen.getByPlaceholderText(/say hello to ai sdk v6/i);
+    const submit = screen.getByRole("button", { name: /submit/i });
 
-      act(() => {
-        fireEvent.change(textarea, { target: { value: "Test input" } });
-        fireEvent.click(submit);
-      });
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "Test input" } });
+      fireEvent.click(submit);
+    });
 
-      await waitFor(
-        () => {
-          expect(screen.getByText(/Hello/)).toBeInTheDocument();
-        },
-        { timeout: 2000 }
-      );
-    }
-  );
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Hello/)).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
+  });
 
   it("handles fetch errors gracefully", { timeout: 10000 }, async () => {
     // Override handler to simulate network error

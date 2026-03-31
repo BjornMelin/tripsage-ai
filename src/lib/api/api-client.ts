@@ -77,7 +77,7 @@ export class ApiClient {
   constructor(config: Partial<ApiClientConfig> = {}) {
     const publicApiUrl = getClientEnvVarWithFallback("NEXT_PUBLIC_API_URL", undefined);
     const nodeEnv =
-      typeof process !== "undefined" ? process.env.NODE_ENV : "development";
+      typeof process === "undefined" ? "development" : process.env.NODE_ENV;
     const origin = getClientOrigin();
 
     const { baseUrl: baseUrlOverride, ...restConfig } = config;

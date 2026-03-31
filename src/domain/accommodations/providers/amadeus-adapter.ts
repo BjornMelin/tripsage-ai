@@ -254,9 +254,9 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     const familyName =
       travelerName.slice(1).join(" ") || travelerName[0] || params.guestName;
     const amountValue =
-      options?.totalCents !== undefined
-        ? (options.totalCents / 100).toFixed(2)
-        : undefined;
+      options?.totalCents === undefined
+        ? undefined
+        : (options.totalCents / 100).toFixed(2);
 
     const payments =
       options?.paymentIntentId && options?.currency && amountValue

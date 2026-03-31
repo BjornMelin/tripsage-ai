@@ -11,7 +11,7 @@ import { server } from "@/test/msw/server";
 // In jsdom, window.location.origin is typically "http://localhost"
 // apiClient constructs URLs based on window.location.origin
 const API_BASE =
-  typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  typeof window === "undefined" ? "http://localhost:3000" : window.location.origin;
 
 describe("useAuthenticatedApi", () => {
   beforeEach(() => {

@@ -39,8 +39,11 @@ export function StayCard({ result, ...props }: StayCardProps) {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {stays.map((stay: Stay, index: number) => (
-            <div key={`${stay.name}-${index}`} className="rounded border p-3">
+          {stays.map((stay: Stay) => (
+            <div
+              key={`${stay.name}-${stay.address ?? ""}-${stay.url ?? ""}`}
+              className="rounded border p-3"
+            >
               <div className="flex items-center justify-between text-sm">
                 <div className="font-medium">{stay.name}</div>
                 {typeof stay.nightlyRate === "number" && stay.currency ? (

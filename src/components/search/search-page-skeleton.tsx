@@ -11,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function SearchPageSkeleton() {
   return (
-    // biome-ignore lint/a11y/useSemanticElements: Loading skeleton uses role="status" live region; no semantic element fits this container.
     <div role="status" className="space-y-6 p-6">
       <span className="sr-only">Loading search results</span>
       <Skeleton aria-hidden="true" className="h-10 w-64" />

@@ -177,7 +177,7 @@ export function CalendarEventList({
         </CardTitle>
         <CardDescription>
           {events.length > 0
-            ? `${events.length} event${events.length !== 1 ? "s" : ""} found`
+            ? `${events.length} event${events.length === 1 ? "" : "s"} found`
             : "No upcoming events"}
         </CardDescription>
       </CardHeader>

@@ -256,12 +256,14 @@ export function DestinationComparisonModal({
                 <TableCell className="font-medium">Popularity</TableCell>
                 {destinations.map((destination) => {
                   const clampedPopularity =
-                    destination.popularityScore != null
-                      ? clampPopularity(destination.popularityScore)
-                      : null;
+                    destination.popularityScore == null
+                      ? null
+                      : clampPopularity(destination.popularityScore);
                   return (
                     <TableCell key={destination.id}>
-                      {clampedPopularity != null ? (
+                      {clampedPopularity == null ? (
+                        <span className="text-muted-foreground">N/A</span>
+                      ) : (
                         <div className="flex items-center gap-2">
                           <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden max-w-24">
                             <div
@@ -275,8 +277,6 @@ export function DestinationComparisonModal({
                             {clampedPopularity}/100
                           </span>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">N/A</span>
                       )}
                     </TableCell>
                   );

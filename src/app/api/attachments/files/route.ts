@@ -40,11 +40,11 @@ const logger = createServerLogger("attachments.files");
 function buildCacheKey(userId: string, params: AttachmentListQuery): string {
   const normalized =
     `limit=${params.limit}&offset=${params.offset}` +
-    (params.chatId !== undefined ? `&chatId=${params.chatId}` : "") +
-    (params.tripId !== undefined ? `&tripId=${params.tripId}` : "") +
-    (params.chatMessageId !== undefined
-      ? `&chatMessageId=${params.chatMessageId}`
-      : "");
+    (params.chatId === undefined ? "" : `&chatId=${params.chatId}`) +
+    (params.tripId === undefined ? "" : `&tripId=${params.tripId}`) +
+    (params.chatMessageId === undefined
+      ? ""
+      : `&chatMessageId=${params.chatMessageId}`);
   return `attachments:files:${userId}:${normalized}`;
 }
 

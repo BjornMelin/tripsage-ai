@@ -113,6 +113,9 @@ export function ResultsLoadingSkeleton({
 }: ResultsLoadingSkeletonProps) {
   const SkeletonComponent = SKELETON_MAP[variant];
   const isGridLayout = variant === "activity";
+  const skeletonKeys = Array.from({ length: count }, (_, index) => ({
+    key: `${variant}-skeleton-${index}`,
+  }));
 
   return (
     <div
@@ -124,8 +127,8 @@ export function ResultsLoadingSkeleton({
       )}
       data-testid={testId}
     >
-      {Array.from({ length: count }, (_, i) => (
-        <SkeletonComponent key={`${variant}-skeleton-${i + 1}`} />
+      {skeletonKeys.map((entry) => (
+        <SkeletonComponent key={entry.key} />
       ))}
     </div>
   );

@@ -231,7 +231,7 @@ async function recordBookingEvent(
 
     // Fallback to fetch (works in Node.js and browsers without sendBeacon).
     // Use client-safe origin resolution so this module remains client-bundle-safe.
-    const baseUrl = typeof window !== "undefined" ? "" : getClientOrigin();
+    const baseUrl = typeof window === "undefined" ? getClientOrigin() : "";
     await fetch(`${baseUrl}/api/telemetry/activities`, {
       body: payload,
       headers: { "Content-Type": "application/json" },

@@ -291,7 +291,7 @@ export const distanceMatrix = createAiTool({
           const durationValue =
             isSuccess && entry.duration ? formatDuration(entry.duration) : null;
           const distanceValue =
-            distanceMeters !== null ? formatDistance(distanceMeters, units) : null;
+            distanceMeters === null ? null : formatDistance(distanceMeters, units);
 
           return {
             destinationIndex: entry.destinationIndex,

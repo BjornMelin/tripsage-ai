@@ -56,9 +56,9 @@ function buildAttachmentStoragePath(options: {
 }): string {
   const { attachmentId, chatId, fileName, tripId, userId } = options;
   if (tripId !== undefined) {
-    return chatId !== undefined
-      ? `${userId}/${tripId}/${chatId}/${attachmentId}/${fileName}`
-      : `${userId}/${tripId}/${attachmentId}/${fileName}`;
+    return chatId === undefined
+      ? `${userId}/${tripId}/${attachmentId}/${fileName}`
+      : `${userId}/${tripId}/${chatId}/${attachmentId}/${fileName}`;
   }
 
   if (chatId !== undefined) {

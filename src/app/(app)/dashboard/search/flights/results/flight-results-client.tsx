@@ -77,7 +77,7 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
   const locale = useMemo(
     () =>
       preferredLanguage ??
-      (typeof navigator !== "undefined" ? navigator.language : "en"),
+      (typeof navigator === "undefined" ? "en" : navigator.language),
     [preferredLanguage]
   );
   const timeFormatter = useMemo(
