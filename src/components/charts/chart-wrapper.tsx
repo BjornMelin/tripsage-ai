@@ -14,18 +14,16 @@ import {
   useEffect,
   useState,
 } from "react";
-import type {
-  AreaProps as RechartsAreaProps,
-  LineProps as RechartsLineProps,
-  ResponsiveContainerProps as RechartsResponsiveContainerProps,
-  TooltipProps as RechartsTooltipProps,
-  XAxisProps as RechartsXAxisProps,
-  YAxisProps as RechartsYAxisProps,
-} from "recharts";
+import type { ResponsiveContainerProps as RechartsResponsiveContainerProps } from "recharts";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type RechartsModule = typeof import("recharts");
+type RechartsAreaProps = ComponentProps<RechartsModule["Area"]>;
+type RechartsLineProps = ComponentProps<RechartsModule["Line"]>;
+type RechartsTooltipProps = ComponentProps<RechartsModule["Tooltip"]>;
+type RechartsXAxisProps = ComponentProps<RechartsModule["XAxis"]>;
+type RechartsYAxisProps = ComponentProps<RechartsModule["YAxis"]>;
 
 let rechartsPromise: Promise<RechartsModule> | null = null;
 
@@ -214,9 +212,9 @@ export const YAxis = CreateDynamicComponent<RechartsYAxisProps>(() =>
  *
  * @returns The Tooltip component.
  */
-export const Tooltip = CreateDynamicComponent<
-  RechartsTooltipProps<string | number, string | number>
->(() => LoadRecharts().then((mod) => mod.Tooltip));
+export const Tooltip = CreateDynamicComponent<RechartsTooltipProps>(() =>
+  LoadRecharts().then((mod) => mod.Tooltip)
+);
 
 /** Export types for better TypeScript support */
 export type ResponsiveContainerProps = ComponentProps<typeof ResponsiveContainer>;

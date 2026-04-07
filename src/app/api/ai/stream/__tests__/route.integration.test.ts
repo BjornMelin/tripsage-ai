@@ -101,7 +101,6 @@ const createMockStreamResult = (
     steps: Promise.resolve([]),
     text: Promise.resolve(""),
     timestamp: Date.now(),
-    toDataStreamResponse: () => new Response(),
     toolCalls: Promise.resolve([]),
     toolInvocations: Promise.resolve([]),
     toString: () => "",

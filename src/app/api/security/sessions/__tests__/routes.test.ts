@@ -61,33 +61,33 @@ const adminMock = () => {
 
 let adminInstance: ReturnType<typeof adminMock> = adminMock();
 
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() => getMockCookiesForTest({ "sb-access-token": "token" })),
+}));
+
+vi.mock("@/lib/redis", () => ({
+  getRedis: vi.fn(() => ({})),
+}));
+
+vi.mock("@/lib/api/route-helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
+    "@/lib/api/route-helpers"
+  );
+  return {
+    ...actual,
+    withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
+  };
+});
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabase: vi.fn(async () => supabaseMock),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminSupabase: vi.fn(() => adminInstance),
+}));
+
 describe("/api/security/sessions routes", () => {
-  vi.mock("next/headers", () => ({
-    cookies: vi.fn(() => getMockCookiesForTest({ "sb-access-token": "token" })),
-  }));
-
-  vi.mock("@/lib/redis", () => ({
-    getRedis: vi.fn(() => ({})),
-  }));
-
-  vi.mock("@/lib/api/route-helpers", async () => {
-    const actual = await vi.importActual<typeof import("@/lib/api/route-helpers")>(
-      "@/lib/api/route-helpers"
-    );
-    return {
-      ...actual,
-      withRequestSpan: vi.fn((_name, _attrs, fn) => fn()),
-    };
-  });
-
-  vi.mock("@/lib/supabase/server", () => ({
-    createServerSupabase: vi.fn(async () => supabaseMock),
-  }));
-
-  vi.mock("@/lib/supabase/admin", () => ({
-    createAdminSupabase: vi.fn(() => adminInstance),
-  }));
-
   beforeEach(() => {
     vi.clearAllMocks();
     supabaseMock.auth.getSession.mockReset();

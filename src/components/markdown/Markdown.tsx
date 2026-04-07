@@ -5,6 +5,7 @@
 "use client";
 
 import { math as mathPlugin } from "@streamdown/math";
+import { mermaid as mermaidPlugin } from "@streamdown/mermaid";
 import { type ComponentProps, memo, useMemo } from "react";
 import {
   type ControlsConfig,
@@ -57,7 +58,6 @@ type UnifiedPlugin = Plugin<unknown[]>;
 type PluggableTuple = [plugin: UnifiedPlugin, ...parameters: unknown[]];
 type StreamdownPluginConfig = NonNullable<StreamdownProps["plugins"]>;
 type StreamdownCodePlugin = NonNullable<StreamdownPluginConfig["code"]>;
-type StreamdownMermaidPlugin = NonNullable<StreamdownPluginConfig["mermaid"]>;
 
 type StreamdownCodePluginModule = typeof import("@streamdown/code");
 
@@ -106,62 +106,6 @@ const LazyCodePlugin: StreamdownCodePlugin = {
     return loadedCodePlugin?.supportsLanguage(language) ?? true;
   },
   type: "code-highlighter",
-};
-
-type MermaidModule = typeof import("mermaid");
-type MermaidConfig = NonNullable<MermaidOptions["config"]>;
-type MermaidInstance = ReturnType<StreamdownMermaidPlugin["getMermaid"]>;
-
-let mermaidPromise: Promise<MermaidModule> | null = null;
-
-function LoadMermaid(): Promise<MermaidModule> {
-  mermaidPromise ??= import("mermaid").catch((error) => {
-    mermaidPromise = null;
-    throw error;
-  });
-  return mermaidPromise;
-}
-
-const DefaultMermaidConfig: MermaidConfig = {
-  fontFamily: "monospace",
-  securityLevel: "strict",
-  startOnLoad: false,
-  suppressErrorRendering: true,
-  theme: "default",
-};
-
-const LazyMermaidPlugin: StreamdownMermaidPlugin = {
-  getMermaid(config) {
-    let initialized = false;
-    let resolvedConfig: MermaidConfig = { ...DefaultMermaidConfig, ...(config ?? {}) };
-
-    const instance: MermaidInstance = {
-      initialize(nextConfig) {
-        resolvedConfig = {
-          ...DefaultMermaidConfig,
-          ...resolvedConfig,
-          ...(nextConfig ?? {}),
-        };
-        initialized = false;
-      },
-      async render(id, source) {
-        const mod = await LoadMermaid();
-        const mermaid = mod.default;
-
-        if (!initialized) {
-          mermaid.initialize(resolvedConfig);
-          initialized = true;
-        }
-
-        return await mermaid.render(id, source);
-      },
-    };
-
-    return instance;
-  },
-  language: "mermaid",
-  name: "mermaid",
-  type: "diagram",
 };
 
 function IsPluggableTuple(value: Pluggable): value is PluggableTuple {
@@ -408,7 +352,7 @@ export const Markdown = memo((props: MarkdownProps) => {
       linkSafety={{ enabled: false }}
       mermaid={mermaid as MermaidOptions}
       mode={mode}
-      plugins={{ code: LazyCodePlugin, math: mathPlugin, mermaid: LazyMermaidPlugin }}
+      plugins={{ code: LazyCodePlugin, math: mathPlugin, mermaid: mermaidPlugin }}
       parseIncompleteMarkdown={mode === "streaming"}
       rehypePlugins={resolvedRehypePlugins}
       remarkPlugins={remarkPlugins}

@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import { useQuery } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/error-types";
@@ -11,19 +12,8 @@ import {
 } from "@/test/test-utils";
 import { QueryErrorBoundary } from "../query-error-boundary";
 
-const RESET_SPY = vi.hoisted(() => vi.fn());
 const TELEMETRY_SPY = vi.hoisted(() => vi.fn());
-
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-
-  return {
-    ...actual,
-    useQueryErrorResetBoundary: () => ({ reset: RESET_SPY }),
-  };
-});
+let retryAttempts = 0;
 
 vi.mock("@/lib/telemetry/client-errors", () => ({
   recordClientErrorOnActiveSpan: TELEMETRY_SPY,
@@ -33,10 +23,28 @@ const ThrowingComponent = ({ error }: { error: Error }) => {
   throw error;
 };
 
+const RecoveringQueryComponent = () => {
+  const { data } = useQuery<string>({
+    queryFn: () => {
+      retryAttempts += 1;
+      if (retryAttempts === 1) {
+        throw new ApiError({ message: "server", status: 500 });
+      }
+
+      return "Recovered";
+    },
+    queryKey: ["query-error-boundary-retry"],
+    retry: false,
+    throwOnError: true,
+  });
+
+  return <div>{data}</div>;
+};
+
 describe("QueryErrorBoundary", () => {
   afterEach(() => {
-    RESET_SPY.mockClear();
     TELEMETRY_SPY.mockClear();
+    retryAttempts = 0;
     resetTestQueryClient();
   });
 
@@ -125,12 +133,12 @@ describe("QueryErrorBoundary", () => {
     expect(retryButton).toBeDisabled();
   });
 
-  it("resets the boundary when retry is invoked", async () => {
+  it("allows retry interaction when the error is retryable", async () => {
     const user = userEvent.setup();
 
     renderWithProviders(
       <QueryErrorBoundary>
-        <ThrowingComponent error={new ApiError({ message: "server", status: 500 })} />
+        <RecoveringQueryComponent />
       </QueryErrorBoundary>
     );
 
@@ -138,7 +146,6 @@ describe("QueryErrorBoundary", () => {
     expect(retryButton).not.toBeDisabled();
 
     await user.click(retryButton);
-
-    await waitFor(() => expect(RESET_SPY).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Recovered")).toBeInTheDocument();
   });
 });

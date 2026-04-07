@@ -13,6 +13,17 @@ const WEBHOOK_SECRET = "whsec_test_webhook_secret";
 const stripe = new Stripe("sk_test_123", { typescript: true });
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 
+function makeStripeSignatureHeader(payload: string, secret = WEBHOOK_SECRET) {
+  return stripe.webhooks.generateTestHeaderString({
+    cryptoProvider: Stripe.createNodeCryptoProvider(),
+    payload,
+    scheme: "v1",
+    secret,
+    signature: "",
+    timestamp: Math.floor(Date.now() / 1000),
+  });
+}
+
 type ReserveKeyOptions = {
   degradedMode?: "fail_closed" | "fail_open";
   failOpen?: boolean;
@@ -157,10 +168,7 @@ describe("POST /api/hooks/stripe", () => {
 
   it("returns 401 when signature verification fails", async () => {
     const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
-    const badHeader = stripe.webhooks.generateTestHeaderString({
-      payload,
-      secret: "whsec_wrong_secret",
-    });
+    const badHeader = makeStripeSignatureHeader(payload, "whsec_wrong_secret");
 
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(payload, { "stripe-signature": badHeader }));
@@ -176,10 +184,7 @@ describe("POST /api/hooks/stripe", () => {
     });
 
     const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
-    const header = stripe.webhooks.generateTestHeaderString({
-      payload,
-      secret: WEBHOOK_SECRET,
-    });
+    const header = makeStripeSignatureHeader(payload);
 
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(payload, { "stripe-signature": header }));
@@ -195,10 +200,7 @@ describe("POST /api/hooks/stripe", () => {
     const largeEvent = { ...event, padding };
     const payload = JSON.stringify(largeEvent);
 
-    const header = stripe.webhooks.generateTestHeaderString({
-      payload,
-      secret: WEBHOOK_SECRET,
-    });
+    const header = makeStripeSignatureHeader(payload);
 
     const { POST } = await loadRoute();
     const res = await POST(
@@ -214,10 +216,7 @@ describe("POST /api/hooks/stripe", () => {
 
   it("returns 200 and acknowledges valid events", async () => {
     const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
-    const header = stripe.webhooks.generateTestHeaderString({
-      payload,
-      secret: WEBHOOK_SECRET,
-    });
+    const header = makeStripeSignatureHeader(payload);
 
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(payload, { "stripe-signature": header }));
@@ -232,10 +231,7 @@ describe("POST /api/hooks/stripe", () => {
     tryReserveKeyMock.mockResolvedValue(false);
 
     const payload = JSON.stringify(makeEventPayload("payment_intent.succeeded"));
-    const header = stripe.webhooks.generateTestHeaderString({
-      payload,
-      secret: WEBHOOK_SECRET,
-    });
+    const header = makeStripeSignatureHeader(payload);
 
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(payload, { "stripe-signature": header }));
@@ -247,10 +243,7 @@ describe("POST /api/hooks/stripe", () => {
 
   it("acknowledges v2.* event notification types safely", async () => {
     const payload = JSON.stringify(makeEventPayload("v2.core.account.updated"));
-    const header = stripe.webhooks.generateTestHeaderString({
-      payload,
-      secret: WEBHOOK_SECRET,
-    });
+    const header = makeStripeSignatureHeader(payload);
 
     const { POST } = await loadRoute();
     const res = await POST(makeRequest(payload, { "stripe-signature": header }));
