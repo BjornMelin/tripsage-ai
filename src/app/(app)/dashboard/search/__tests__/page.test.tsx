@@ -4,9 +4,9 @@ import { render, screen } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock Lucide icons
+// Mock Lucide icons.
 vi.mock("lucide-react", () => {
-  return {
+  const knownIcons = {
     ClockIcon: () => <span data-testid="clock-icon" />,
     HistoryIcon: () => <span data-testid="history-icon" />,
     HotelIcon: () => <span data-testid="hotel-icon" />,
@@ -16,6 +16,20 @@ vi.mock("lucide-react", () => {
     SearchIcon: () => <span data-testid="search-icon" />,
     SparklesIcon: () => <span data-testid="sparkles-icon" />,
   };
+
+  return new Proxy(knownIcons, {
+    get(target, property, receiver) {
+      if (Reflect.has(target, property)) {
+        return Reflect.get(target, property, receiver);
+      }
+
+      if (typeof property === "string" && property.endsWith("Icon")) {
+        return () => <span data-testid={property} />;
+      }
+
+      return Reflect.get(target, property, receiver);
+    },
+  });
 });
 
 // Mock search history store

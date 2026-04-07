@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import { useQuery } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/error-types";
@@ -12,6 +13,7 @@ import {
 import { QueryErrorBoundary } from "../query-error-boundary";
 
 const TELEMETRY_SPY = vi.hoisted(() => vi.fn());
+let retryAttempts = 0;
 
 vi.mock("@/lib/telemetry/client-errors", () => ({
   recordClientErrorOnActiveSpan: TELEMETRY_SPY,
@@ -19,6 +21,24 @@ vi.mock("@/lib/telemetry/client-errors", () => ({
 
 const ThrowingComponent = ({ error }: { error: Error }) => {
   throw error;
+};
+
+const RecoveringQueryComponent = () => {
+  const { data } = useQuery<string>({
+    queryFn: () => {
+      retryAttempts += 1;
+      if (retryAttempts === 1) {
+        throw new ApiError({ message: "server", status: 500 });
+      }
+
+      return "Recovered";
+    },
+    queryKey: ["query-error-boundary-retry"],
+    retry: false,
+    throwOnError: true,
+  });
+
+  return <div>{data}</div>;
 };
 
 describe("QueryErrorBoundary", () => {
@@ -114,10 +134,11 @@ describe("QueryErrorBoundary", () => {
 
   it("allows retry interaction when the error is retryable", async () => {
     const user = userEvent.setup();
+    retryAttempts = 0;
 
     renderWithProviders(
       <QueryErrorBoundary>
-        <ThrowingComponent error={new ApiError({ message: "server", status: 500 })} />
+        <RecoveringQueryComponent />
       </QueryErrorBoundary>
     );
 
@@ -125,5 +146,6 @@ describe("QueryErrorBoundary", () => {
     expect(retryButton).not.toBeDisabled();
 
     await user.click(retryButton);
+    expect(await screen.findByText("Recovered")).toBeInTheDocument();
   });
 });

@@ -98,7 +98,8 @@ describe("Supabase Server Client", () => {
           name: string;
           value: string;
           options?: Record<string, unknown>;
-        }>
+        }>,
+        _headers: Record<string, string>
       ) => void;
     };
     const mockCookieStore: MockCookieStore = {
@@ -133,7 +134,7 @@ describe("Supabase Server Client", () => {
       { name: "new1", options: { httpOnly: true }, value: "val1" },
       { name: "new2", options: { secure: true }, value: "val2" },
     ];
-    handlersForTest.setAll(cookiesToSet);
+    handlersForTest.setAll(cookiesToSet, {});
 
     expect(mockCookieStore.set).toHaveBeenCalledTimes(2);
     expect(mockCookieStore.set).toHaveBeenCalledWith("new1", "val1", {
