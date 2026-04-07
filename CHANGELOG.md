@@ -1,3 +1,10 @@
+## [1.32.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.2...v1.32.3) (2026-04-07)
+
+### Bug Fixes
+
+* **deps:** refresh vulnerable package resolutions ([bddaaf1](https://github.com/BjornMelin/tripsage-ai/commit/bddaaf1eb2e913337ce7e97aeb3484021ce8d8a2))
+* **test:** align IntersectionObserver.scrollMargin mock default ([c3fc732](https://github.com/BjornMelin/tripsage-ai/commit/c3fc73235a9d38dcc12bc36e85375f34e0730400))
+
 ## [1.32.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.1...v1.32.2) (2026-04-07)
 
 ### Bug Fixes
