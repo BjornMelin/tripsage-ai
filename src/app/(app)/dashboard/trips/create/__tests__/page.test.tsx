@@ -44,14 +44,12 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("lucide-react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("lucide-react")>();
+vi.mock("lucide-react", () => {
   const Icon = ({ className }: { className?: string }) => (
     <span data-testid="icon" className={className} />
   );
 
   return {
-    ...actual,
     ArrowLeftIcon: Icon,
     CalendarIcon: Icon,
     CheckIcon: Icon,

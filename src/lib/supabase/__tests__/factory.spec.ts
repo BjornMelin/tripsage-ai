@@ -232,7 +232,10 @@ describe("Supabase Factory", () => {
           );
 
           expect(() =>
-            options.cookies.setAll?.([{ name: "cookie", options: {}, value: "value" }])
+            options.cookies.setAll?.(
+              [{ name: "cookie", options: {}, value: "value" }],
+              {}
+            )
           ).toThrow("Cookie adapter required for server client creation");
 
           return unsafeCast<ServerSupabaseClient>({
@@ -560,7 +563,7 @@ describe("Supabase Factory", () => {
         { name: "cookie2", value: "value2" },
       ]);
 
-      adapter.setAll?.([{ name: "new-cookie", options: {}, value: "new-value" }]);
+      adapter.setAll?.([{ name: "new-cookie", options: {}, value: "new-value" }], {});
 
       expect(mockCookieStore.set).toHaveBeenCalledWith("new-cookie", "new-value", {});
     });
@@ -576,7 +579,7 @@ describe("Supabase Factory", () => {
       const adapter = createCookieAdapter(mockCookieStore);
 
       expect(() =>
-        adapter.setAll?.([{ name: "cookie", options: {}, value: "value" }])
+        adapter.setAll?.([{ name: "cookie", options: {}, value: "value" }], {})
       ).not.toThrow();
     });
   });

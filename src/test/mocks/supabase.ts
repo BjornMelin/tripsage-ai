@@ -727,26 +727,6 @@ export function createMockSupabaseFactory(
 }
 
 /**
- * Sets up Supabase client mocks for a test file using vi.mock().
- * Call this at the top level of test files that use Supabase.
- *
- * @example
- * ```ts
- * import { setupSupabaseMocks } from "@/test/mocks/supabase";
- * setupSupabaseMocks();
- * ```
- */
-export function setupSupabaseMocks(): void {
-  const MOCK_SUPABASE = createMockSupabaseClient();
-
-  vi.mock("@/lib/supabase", () => ({
-    createClient: () => MOCK_SUPABASE,
-    getBrowserClient: () => MOCK_SUPABASE,
-    useSupabase: () => MOCK_SUPABASE,
-  }));
-}
-
-/**
  * Creates a Supabase browser client instance for test suites.
  * Use this utility to set up client-side Supabase operations in test environments.
  */

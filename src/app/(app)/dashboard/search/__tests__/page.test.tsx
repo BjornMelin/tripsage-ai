@@ -5,14 +5,15 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Lucide icons
-vi.mock("lucide-react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("lucide-react")>();
+vi.mock("lucide-react", () => {
   return {
-    ...actual,
+    ClockIcon: () => <span data-testid="clock-icon" />,
     HistoryIcon: () => <span data-testid="history-icon" />,
     HotelIcon: () => <span data-testid="hotel-icon" />,
     MapPinIcon: () => <span data-testid="map-pin-icon" />,
     PlaneIcon: () => <span data-testid="plane-icon" />,
+    RefreshCwIcon: () => <span data-testid="refresh-icon" />,
+    SearchIcon: () => <span data-testid="search-icon" />,
     SparklesIcon: () => <span data-testid="sparkles-icon" />,
   };
 });

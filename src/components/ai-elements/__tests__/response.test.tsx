@@ -31,7 +31,9 @@ describe("ai-elements/response", () => {
 
     expect(container.querySelector("script")).toBeNull();
     expect(container.innerHTML).not.toContain("<script");
-    expect(container.textContent).toContain("Hello alert('xss') world");
+    expect(container.textContent).toContain(
+      "Hello <script>alert('xss')</script> world"
+    );
   });
 
   it("blocks javascript: links", () => {

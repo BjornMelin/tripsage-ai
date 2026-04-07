@@ -16,10 +16,17 @@ import {
 import { ApiError, type AppError } from "@/lib/api/error-types";
 
 // Mock Lucide icons
-vi.mock("lucide-react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("lucide-react")>();
+vi.mock("lucide-react", () => {
   return {
-    ...actual,
+    CheckIcon: ({ className }: { className?: string }) => (
+      <span data-testid="check-icon" className={className} />
+    ),
+    ChevronDownIcon: ({ className }: { className?: string }) => (
+      <span data-testid="chevron-down-icon" className={className} />
+    ),
+    ChevronUpIcon: ({ className }: { className?: string }) => (
+      <span data-testid="chevron-up-icon" className={className} />
+    ),
     FilterIcon: () => <span data-testid="filter-icon" />,
     GridIcon: () => <span data-testid="grid-icon" />,
     ListIcon: () => <span data-testid="list-icon" />,

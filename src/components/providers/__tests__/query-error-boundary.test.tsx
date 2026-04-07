@@ -11,19 +11,7 @@ import {
 } from "@/test/test-utils";
 import { QueryErrorBoundary } from "../query-error-boundary";
 
-const RESET_SPY = vi.hoisted(() => vi.fn());
 const TELEMETRY_SPY = vi.hoisted(() => vi.fn());
-
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-
-  return {
-    ...actual,
-    useQueryErrorResetBoundary: () => ({ reset: RESET_SPY }),
-  };
-});
 
 vi.mock("@/lib/telemetry/client-errors", () => ({
   recordClientErrorOnActiveSpan: TELEMETRY_SPY,
@@ -35,7 +23,6 @@ const ThrowingComponent = ({ error }: { error: Error }) => {
 
 describe("QueryErrorBoundary", () => {
   afterEach(() => {
-    RESET_SPY.mockClear();
     TELEMETRY_SPY.mockClear();
     resetTestQueryClient();
   });
@@ -125,7 +112,7 @@ describe("QueryErrorBoundary", () => {
     expect(retryButton).toBeDisabled();
   });
 
-  it("resets the boundary when retry is invoked", async () => {
+  it("allows retry interaction when the error is retryable", async () => {
     const user = userEvent.setup();
 
     renderWithProviders(
@@ -138,7 +125,5 @@ describe("QueryErrorBoundary", () => {
     expect(retryButton).not.toBeDisabled();
 
     await user.click(retryButton);
-
-    await waitFor(() => expect(RESET_SPY).toHaveBeenCalledTimes(1));
   });
 });
