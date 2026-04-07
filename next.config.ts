@@ -49,9 +49,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Package import optimization by allowlist
     optimizePackageImports: [
-      "lucide-react",
       "@radix-ui/react-icons",
-      "recharts",
       "@supabase/supabase-js",
       "zod",
       "ai",
@@ -63,7 +61,6 @@ const nextConfig: NextConfig = {
       "@tanstack/react-query",
       "react-hook-form",
       "@hookform/resolvers",
-      "date-fns",
       "@opentelemetry/api",
       "motion",
       "@hello-pangea/dnd",
@@ -72,9 +69,6 @@ const nextConfig: NextConfig = {
       "@streamdown/math",
       "@streamdown/mermaid",
     ],
-    // Enable Turbopack file system caching for faster dev builds
-    // Note: turbopackFileSystemCacheForBuild requires canary version
-    turbopackFileSystemCacheForDev: true,
   },
 
   // Headers for security and performance

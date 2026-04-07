@@ -308,7 +308,7 @@ export function createCookieAdapter(
         return [];
       }
     },
-    setAll: (cookiesToSet: CookieSetAllArgs) => {
+    setAll: (cookiesToSet: CookieSetAllArgs, _headers: Record<string, string>) => {
       try {
         cookiesToSet.forEach(({ name, value, options }) => {
           cookieStore.set(name, value, options);
@@ -333,9 +333,9 @@ function createCookieMethods(adapter?: CookieMethodsServer): CookieMethodsServer
         }
       },
       setAll: adapter.setAll
-        ? (cookiesToSet: CookieSetAllArgs) => {
+        ? (cookiesToSet: CookieSetAllArgs, headers: Record<string, string>) => {
             try {
-              return adapter.setAll?.(cookiesToSet);
+              return adapter.setAll?.(cookiesToSet, headers);
             } catch (error) {
               // Ignore cookie set errors (e.g., locked headers).
               warnCookieAdapterFailureOnce("setAll", error);
