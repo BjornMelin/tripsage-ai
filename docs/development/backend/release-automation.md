@@ -7,7 +7,7 @@ This repository uses semantic-release to automate versioning, changelog updates,
 - Trigger: push to `main`.
 - Action: `.github/workflows/release.yml`.
 - Steps: checkout (full history) → set up Node from `.nvmrc` → install pnpm and dependencies → run `npx semantic-release --extends release.config.mjs`.
-- Env: `GITHUB_TOKEN` and `NPM_TOKEN` (required for `@semantic-release/npm` verify step even though we do not publish).
+- Env: `GITHUB_TOKEN`.
 - Permissions: `contents`, `issues`, and `pull-requests` (write) to create tags and release notes.
 
 ## Configuration
@@ -19,8 +19,7 @@ File: `release.config.mjs` (root).
   - `@semantic-release/commit-analyzer` with temporary rule `{ breaking: true, release: 'minor' }`.
   - `@semantic-release/release-notes-generator` (conventional commits preset).
   - `@semantic-release/changelog` updates `CHANGELOG.md` (repo root).
-  - `@semantic-release/npm` bumps `package.json` with `npmPublish: false` (version only, no npm publish).
-  - `@semantic-release/git` commits `CHANGELOG.md` + `package.json` with `chore(release): <version> [skip ci]`.
+  - `@semantic-release/git` commits `CHANGELOG.md` with `chore(release): <version> [skip ci]`.
   - `@semantic-release/github` creates the GitHub Release.
 
 ## Temporary major suppression
@@ -53,13 +52,13 @@ When ready to ship the first stable major (e.g., `v2.0.0`):
 If a release is incorrect:
 
 1. Delete the Git tag and GitHub Release for that version.
-2. Revert the auto-commit that updated `CHANGELOG.md` and the `@semantic-release/npm` version bump in `package.json` (if present).
+2. Revert the auto-commit that updated `CHANGELOG.md` (if present).
 3. Fix the offending change or config, then rerun the workflow by pushing to `main`.
 
 ## Troubleshooting
 
 - **No release produced**: ensure the commit history since the last tag contains a `feat` or `fix` (or `breaking` with the temporary rule). Non-releasing prefixes are ignored.
 - **Permissions error**: confirm workflow permissions include `contents: write`.
-- **Branch protection blocks release commit**: allow GitHub Actions (`GITHUB_TOKEN`) to push to `main`, or add a bypass rule for the release job so `@semantic-release/git` can commit `chore(release): …` and update `CHANGELOG.md`/`package.json`.
+- **Branch protection blocks release commit**: allow GitHub Actions (`GITHUB_TOKEN`) to push to `main`, or add a bypass rule for the release job so `@semantic-release/git` can commit `chore(release): …` and update `CHANGELOG.md`.
 - **Unexpected major**: verify the `releaseRules` still map `breaking` to `minor`.
 - **Changelog not updating**: check that `@semantic-release/changelog` and `@semantic-release/git` are installed and present in the config.
