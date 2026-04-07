@@ -135,6 +135,7 @@ if (typeof window !== "undefined") {
   class MockIntersectionObserver implements IntersectionObserver {
     readonly root: Element | Document | null = null;
     readonly rootMargin = "";
+    readonly scrollMargin = "";
     readonly thresholds: number[] = [];
 
     observe(): void {
