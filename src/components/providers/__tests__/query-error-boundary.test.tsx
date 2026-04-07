@@ -44,6 +44,7 @@ const RecoveringQueryComponent = () => {
 describe("QueryErrorBoundary", () => {
   afterEach(() => {
     TELEMETRY_SPY.mockClear();
+    retryAttempts = 0;
     resetTestQueryClient();
   });
 
@@ -134,7 +135,6 @@ describe("QueryErrorBoundary", () => {
 
   it("allows retry interaction when the error is retryable", async () => {
     const user = userEvent.setup();
-    retryAttempts = 0;
 
     renderWithProviders(
       <QueryErrorBoundary>
