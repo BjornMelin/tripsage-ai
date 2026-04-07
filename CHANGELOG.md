@@ -1,3 +1,10 @@
+## [1.32.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.1...v1.32.2) (2026-04-07)
+
+### Bug Fixes
+
+* **review:** address PR 714 feedback ([05326dc](https://github.com/BjornMelin/tripsage-ai/commit/05326dc04228b5ae81a5bee1871cad8dfe5ed7dd))
+* **test:** reset retry attempts in afterEach ([05e6269](https://github.com/BjornMelin/tripsage-ai/commit/05e62690070b2463b48fc0a1be1b892ace42c449))
+
 ## [1.32.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.0...v1.32.1) (2026-03-31)
 
 ### Bug Fixes
