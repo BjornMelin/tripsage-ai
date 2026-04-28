@@ -352,7 +352,7 @@ importers:
         version: 2.13.0(@types/node@24.12.2)(typescript@6.0.2)
       postcss:
         specifier: ^8.5.8
-        version: 8.5.8
+        version: 8.5.10
       semantic-release:
         specifier: ^25.0.3
         version: 25.0.3(typescript@6.0.2)
@@ -2939,10 +2939,9 @@ packages:
   '@vue/shared@3.5.26':
     resolution: {integrity: sha512-7Z6/y3uFI5PRoKeorTOSXKcDj0MSasfNNltcslbFrPpcw6aXRUALq4IfJlaTRspiWIUOEZbrpM+iQGmCOiWe4A==}
 
-  '@xmldom/xmldom@0.8.12':
-    resolution: {integrity: sha512-9k/gHF6n/pAi/9tqr3m3aqkuiNosYTurLLUtc7xQ9sxB/wm7WPygCv8GYa6mS0fLJEHhqMC1ATYhz++U/lRHqg==}
+  '@xmldom/xmldom@0.8.13':
+    resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
-    deprecated: this version has critical issues, please update to the latest version
 
   acorn-import-attributes@1.9.5:
     resolution: {integrity: sha512-n02Vykv5uA3eHGM/Z2dQrcD56kL8TyDb2p1+0P83PClMnC/nc+anbQRhIOWnSq4Ke/KvDPrY3C9hDtC/A3eHnQ==}
@@ -5213,8 +5212,8 @@ packages:
     resolution: {integrity: sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postcss@8.5.8:
-    resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
+  postcss@8.5.10:
+    resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
     engines: {node: ^10 || ^12 || >=14}
 
   precinct@12.2.0:
@@ -8288,7 +8287,7 @@ snapshots:
       '@alloc/quick-lru': 5.2.0
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
-      postcss: 8.5.8
+      postcss: 8.5.10
       tailwindcss: 4.2.2
 
   '@tanstack/query-core@5.96.2': {}
@@ -8709,7 +8708,7 @@ snapshots:
       '@vue/shared': 3.5.26
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.8
+      postcss: 8.5.10
       source-map-js: 1.2.1
 
   '@vue/compiler-ssr@3.5.26':
@@ -8719,7 +8718,7 @@ snapshots:
 
   '@vue/shared@3.5.26': {}
 
-  '@xmldom/xmldom@0.8.12': {}
+  '@xmldom/xmldom@0.8.13': {}
 
   acorn-import-attributes@1.9.5(acorn@8.16.0):
     dependencies:
@@ -9322,11 +9321,11 @@ snapshots:
     dependencies:
       node-source-walk: 7.0.1
 
-  detective-postcss@7.0.1(postcss@8.5.8):
+  detective-postcss@7.0.1(postcss@8.5.10):
     dependencies:
       is-url: 1.2.4
-      postcss: 8.5.8
-      postcss-values-parser: 6.0.2(postcss@8.5.8)
+      postcss: 8.5.10
+      postcss-values-parser: 6.0.2(postcss@8.5.10)
 
   detective-sass@6.0.1:
     dependencies:
@@ -10372,7 +10371,7 @@ snapshots:
 
   mammoth@1.12.0:
     dependencies:
-      '@xmldom/xmldom': 0.8.12
+      '@xmldom/xmldom': 0.8.13
       argparse: 1.0.10
       base64-js: 1.5.1
       bluebird: 3.4.7
@@ -11247,11 +11246,11 @@ snapshots:
 
   postal-mime@2.7.4: {}
 
-  postcss-values-parser@6.0.2(postcss@8.5.8):
+  postcss-values-parser@6.0.2(postcss@8.5.10):
     dependencies:
       color-name: 1.1.4
       is-url-superb: 4.0.0
-      postcss: 8.5.8
+      postcss: 8.5.10
       quote-unquote: 1.0.0
 
   postcss@8.4.31:
@@ -11260,7 +11259,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postcss@8.5.8:
+  postcss@8.5.10:
     dependencies:
       nanoid: 3.3.11
       picocolors: 1.1.1
@@ -11273,7 +11272,7 @@ snapshots:
       detective-amd: 6.0.1
       detective-cjs: 6.0.1
       detective-es6: 5.0.1
-      detective-postcss: 7.0.1(postcss@8.5.8)
+      detective-postcss: 7.0.1(postcss@8.5.10)
       detective-sass: 6.0.1
       detective-scss: 5.0.1
       detective-stylus: 5.0.1
@@ -11281,7 +11280,7 @@ snapshots:
       detective-vue2: 2.2.0(typescript@5.9.3)
       module-definition: 6.0.1
       node-source-walk: 7.0.1
-      postcss: 8.5.8
+      postcss: 8.5.10
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -12287,7 +12286,7 @@ snapshots:
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
-      postcss: 8.5.8
+      postcss: 8.5.10
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       tinyglobby: 0.2.15
     optionalDependencies:
