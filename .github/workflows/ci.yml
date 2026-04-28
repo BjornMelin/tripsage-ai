@@ -78,7 +78,7 @@ jobs:
         run: git fetch --no-tags origin main
 
       - name: Set up Node
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@v6.4.0
         with:
           node-version-file: '.nvmrc'
 
@@ -237,7 +237,7 @@ jobs:
       - uses: actions/checkout@v6.0.2
 
       - name: Set up Node
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@v6.4.0
         with:
           node-version-file: '.nvmrc'
 
@@ -275,7 +275,7 @@ jobs:
       - uses: actions/checkout@v6.0.2
 
       - name: Set up Node
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@v6.4.0
         with:
           node-version-file: '.nvmrc'
 
