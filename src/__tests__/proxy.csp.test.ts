@@ -101,7 +101,7 @@ describe("src/proxy.ts CSP nonce", () => {
     }
   });
 
-  it("does not inject CSP nonce for public routes (production)", async () => {
+  it("keeps public static routes compatible without request nonce propagation (production)", async () => {
     const { proxy } = await import("@/proxy");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -116,6 +116,7 @@ describe("src/proxy.ts CSP nonce", () => {
       const cspHeader = response.headers.get("Content-Security-Policy");
 
       expect(cspHeader).toBeTypeOf("string");
+      expect(cspHeader).toContain("script-src 'self' 'unsafe-inline'");
       expect(cspHeader).not.toContain("'nonce-");
       expect(response.headers.get("x-middleware-request-x-nonce")).toBeNull();
       expect(

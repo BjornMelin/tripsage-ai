@@ -82,6 +82,9 @@ const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
 
 const POPULAR_DESTINATION_SKELETON_KEYS = ["one", "two", "three", "four"] as const;
 
+const DateInputValue = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
 interface FlightSearchFormProps {
   onSearch: (params: FlightSearchParams) => Promise<void>;
   suggestions?: SearchSuggestion[];
@@ -457,7 +460,12 @@ export function FlightSearchForm({
                               aria-hidden="true"
                               className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
                             />
-                            <Input type="date" className="pl-10" {...field} />
+                            <Input
+                              type="date"
+                              className="pl-10"
+                              {...field}
+                              value={DateInputValue(field.value)}
+                            />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -478,7 +486,12 @@ export function FlightSearchForm({
                                 aria-hidden="true"
                                 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
                               />
-                              <Input type="date" className="pl-10" {...field} />
+                              <Input
+                                type="date"
+                                className="pl-10"
+                                {...field}
+                                value={DateInputValue(field.value)}
+                              />
                             </div>
                           </FormControl>
                           <FormMessage />

@@ -35,6 +35,9 @@ import { useSearchForm } from "../common/use-search-form";
 
 type ActivitySearchFormValues = z.input<typeof activitySearchFormSchema>;
 
+const DateInputValue = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => Promise<void>;
   initialValues?: Partial<ActivitySearchFormValues>;
@@ -199,7 +202,11 @@ export function ActivitySearchForm({
                       <FormItem>
                         <FormLabel>Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={DateInputValue(field.value)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -213,7 +220,11 @@ export function ActivitySearchForm({
                       <FormItem>
                         <FormLabel>Start Date (Range)</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={DateInputValue(field.value)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -227,7 +238,11 @@ export function ActivitySearchForm({
                       <FormItem>
                         <FormLabel>End Date (Range)</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={DateInputValue(field.value)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -21,6 +21,10 @@ export class RequestBodyAlreadyReadError extends Error {
   }
 }
 
+interface ReadRequestBodyOptions {
+  cancelOnOverflow?: boolean;
+}
+
 function parseContentLength(headers: Headers): number | null {
   const raw = headers.get("content-length")?.trim();
   if (!raw) return null;
@@ -31,8 +35,11 @@ function parseContentLength(headers: Headers): number | null {
 
 export async function readRequestBodyBytesWithLimit(
   req: Request,
-  maxBytes: number
+  maxBytes: number,
+  options: ReadRequestBodyOptions = {}
 ): Promise<Uint8Array> {
+  const { cancelOnOverflow = true } = options;
+
   if (req.bodyUsed) {
     throw new RequestBodyAlreadyReadError();
   }
@@ -56,10 +63,12 @@ export async function readRequestBodyBytesWithLimit(
 
       const nextTotal = total + value.byteLength;
       if (nextTotal > maxBytes) {
-        // Best-effort cancel; do not await (can hang depending on stream impl).
-        reader.cancel("payload_too_large").catch(() => {
-          // ignore cancel errors
-        });
+        if (cancelOnOverflow) {
+          // Do not await: cancellation can hang for cloned string bodies.
+          reader.cancel("payload_too_large").catch(() => {
+            // ignore cancel errors
+          });
+        }
         throw new PayloadTooLargeError(maxBytes);
       }
 
@@ -85,7 +94,11 @@ export async function parseFormDataWithLimit(
   req: Request,
   maxBytes: number
 ): Promise<FormData> {
-  const bytes = await readRequestBodyBytesWithLimit(req, maxBytes);
+  const bytes = await readRequestBodyBytesWithLimit(req, maxBytes, {
+    // Undici-backed multipart streams can emit a late ERR_INVALID_STATE after
+    // cancellation while the route has already rejected the oversized request.
+    cancelOnOverflow: false,
+  });
   if (bytes.byteLength === 0) return new FormData();
 
   // Avoid `new Headers(req.headers)` due to cross-implementation incompatibilities
