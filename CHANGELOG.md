@@ -1,3 +1,10 @@
+## [1.32.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.3...v1.32.4) (2026-05-09)
+
+### Bug Fixes
+
+* **runtime:** address review compatibility findings ([081ca49](https://github.com/BjornMelin/tripsage-ai/commit/081ca49d297d409691a992da055ba30edd176afe))
+* **runtime:** align upgraded build contracts ([9f8b9db](https://github.com/BjornMelin/tripsage-ai/commit/9f8b9db99eba8d9182dbc45e68e26f479648c69a))
+
 ## [1.32.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.2...v1.32.3) (2026-04-07)
 
 ### Bug Fixes
