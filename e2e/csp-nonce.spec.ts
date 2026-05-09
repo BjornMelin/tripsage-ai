@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 function getCspDirectiveValue(cspHeader: string, directive: string): string | null {
@@ -31,20 +32,18 @@ function sha256Base64(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("base64");
 }
 
-function extractInlineScriptHashes(html: string): string[] {
-  const hashes = new Set<string>();
-  const scriptPattern = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+async function extractInlineScriptHashes(page: Page): Promise<string[]> {
+  const inlineScriptContents = await page
+    .locator("script:not([src]):not([nonce])")
+    .evaluateAll((scripts) =>
+      scripts
+        .map((script) => script.textContent ?? "")
+        .filter((content) => content.trim().length > 0)
+    );
 
-  for (const match of html.matchAll(scriptPattern)) {
-    const attributes = match[1] ?? "";
-    if (/\bsrc\s*=/.test(attributes) || /\bnonce\s*=/.test(attributes)) continue;
-
-    const content = match[2] ?? "";
-    if (!content.trim()) continue;
-    hashes.add(`'sha256-${sha256Base64(content)}'`);
-  }
-
-  return Array.from(hashes);
+  return Array.from(
+    new Set(inlineScriptContents.map((content) => `'sha256-${sha256Base64(content)}'`))
+  );
 }
 
 test("CSP allows production scripts via nonce, hashes, or public inline compatibility", async ({
@@ -82,8 +81,7 @@ test("CSP allows production scripts via nonce, hashes, or public inline compatib
     const html = await response.text();
     expect(html).toMatch(new RegExp(`nonce=("|')${escapeRegExp(nonce)}\\1`));
   } else if (requiresNonce) {
-    const html = await response.text();
-    const inlineScriptHashes = extractInlineScriptHashes(html);
+    const inlineScriptHashes = await extractInlineScriptHashes(page);
 
     expect(inlineScriptHashes.length).toBeGreaterThan(0);
     for (const hash of inlineScriptHashes) {
