@@ -33,6 +33,16 @@ function parseContentLength(headers: Headers): number | null {
   return parsed;
 }
 
+/**
+ * Reads a request body into bytes while enforcing a maximum payload size.
+ *
+ * @param req - Request whose body stream should be consumed.
+ * @param maxBytes - Maximum allowed request body size in bytes.
+ * @param options - Optional stream overflow handling controls.
+ * @returns Request body bytes when the payload is within the configured limit.
+ * @throws PayloadTooLargeError when the body exceeds `maxBytes`.
+ * @throws RequestBodyAlreadyReadError when the request body has already been read.
+ */
 export async function readRequestBodyBytesWithLimit(
   req: Request,
   maxBytes: number,

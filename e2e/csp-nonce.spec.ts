@@ -24,10 +24,6 @@ function extractNonceFromCsp(cspHeader: string): string {
   return match[1];
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function sha256Base64(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("base64");
 }
@@ -79,7 +75,9 @@ test("CSP allows production scripts via nonce, hashes, or public inline compatib
 
     // Nonces can be hidden/stripped from DOM APIs in some browsers; assert against raw HTML.
     const html = await response.text();
-    expect(html).toMatch(new RegExp(`nonce=("|')${escapeRegExp(nonce)}\\1`));
+    expect(html.includes(`nonce="${nonce}"`) || html.includes(`nonce='${nonce}'`)).toBe(
+      true
+    );
   } else if (requiresNonce) {
     const inlineScriptHashes = await extractInlineScriptHashes(page);
 
