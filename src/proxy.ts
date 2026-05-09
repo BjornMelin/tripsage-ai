@@ -243,9 +243,11 @@ export async function proxy(request: NextRequest) {
   let response: NextResponse;
   let requestHeaders: Headers | null = null;
 
-  if (mode === "authed" && nonce) {
+  if (mode === "authed") {
     requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-nonce", nonce);
+    if (nonce) {
+      requestHeaders.set("x-nonce", nonce);
+    }
     requestHeaders.set("Content-Security-Policy", contentSecurityPolicyHeaderValue);
 
     response = NextResponse.next({

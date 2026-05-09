@@ -24,13 +24,13 @@ import { TelemetryProvider } from "./telemetry-provider";
 describe("TelemetryProvider", () => {
   afterAll(() => {
     if (PREV_ENV.enabled === undefined) {
-      delete process.env.NEXT_PUBLIC_OTEL_CLIENT_ENABLED;
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_OTEL_CLIENT_ENABLED");
     } else {
       process.env.NEXT_PUBLIC_OTEL_CLIENT_ENABLED = PREV_ENV.enabled;
     }
 
     if (PREV_ENV.endpoint === undefined) {
-      delete process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT;
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT");
     } else {
       process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT = PREV_ENV.endpoint;
     }

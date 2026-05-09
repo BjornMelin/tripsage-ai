@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
+import { dateInputValue } from "./common/date-input-value";
 
 type FlightSearchFormValues = z.input<typeof flightSearchFormSchema>;
 
@@ -81,9 +82,6 @@ const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
 ];
 
 const POPULAR_DESTINATION_SKELETON_KEYS = ["one", "two", "three", "four"] as const;
-
-const DateInputValue = (value: unknown): string =>
-  typeof value === "string" ? value : "";
 
 interface FlightSearchFormProps {
   onSearch: (params: FlightSearchParams) => Promise<void>;
@@ -464,7 +462,7 @@ export function FlightSearchForm({
                               type="date"
                               className="pl-10"
                               {...field}
-                              value={DateInputValue(field.value)}
+                              value={dateInputValue(field.value)}
                             />
                           </div>
                         </FormControl>
@@ -490,7 +488,7 @@ export function FlightSearchForm({
                                 type="date"
                                 className="pl-10"
                                 {...field}
-                                value={DateInputValue(field.value)}
+                                value={dateInputValue(field.value)}
                               />
                             </div>
                           </FormControl>

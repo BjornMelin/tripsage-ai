@@ -32,11 +32,9 @@ import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
+import { dateInputValue } from "./common/date-input-value";
 
 type ActivitySearchFormValues = z.input<typeof activitySearchFormSchema>;
-
-const DateInputValue = (value: unknown): string =>
-  typeof value === "string" ? value : "";
 
 interface ActivitySearchFormProps {
   onSearch?: (data: ActivitySearchParams) => Promise<void>;
@@ -205,7 +203,7 @@ export function ActivitySearchForm({
                           <Input
                             type="date"
                             {...field}
-                            value={DateInputValue(field.value)}
+                            value={dateInputValue(field.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -223,7 +221,7 @@ export function ActivitySearchForm({
                           <Input
                             type="date"
                             {...field}
-                            value={DateInputValue(field.value)}
+                            value={dateInputValue(field.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -241,7 +239,7 @@ export function ActivitySearchForm({
                           <Input
                             type="date"
                             {...field}
-                            value={DateInputValue(field.value)}
+                            value={dateInputValue(field.value)}
                           />
                         </FormControl>
                         <FormMessage />
