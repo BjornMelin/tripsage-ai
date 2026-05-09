@@ -32,6 +32,7 @@ import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
+import { dateInputValue } from "./common/date-input-value";
 
 type ActivitySearchFormValues = z.input<typeof activitySearchFormSchema>;
 
@@ -199,7 +200,11 @@ export function ActivitySearchForm({
                       <FormItem>
                         <FormLabel>Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={dateInputValue(field.value)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -213,7 +218,11 @@ export function ActivitySearchForm({
                       <FormItem>
                         <FormLabel>Start Date (Range)</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={dateInputValue(field.value)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -227,7 +236,11 @@ export function ActivitySearchForm({
                       <FormItem>
                         <FormLabel>End Date (Range)</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={dateInputValue(field.value)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

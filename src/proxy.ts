@@ -37,79 +37,80 @@ function getCspModeFromPathname(pathname: string): CspMode {
   return "public";
 }
 
-// Next.js emits inline scripts that do not carry per-request nonces for static and
-// partially prerendered HTML. For public routes we keep `script-src` locked down
-// by allowing only known hashes (no `unsafe-inline`).
+// Next.js emits inline bootstrap and flight scripts. Authenticated routes stay
+// locked down with a per-request nonce plus known static hashes.
 //
 // Re-generate on Next.js upgrades or when public HTML changes:
 // - `pnpm build`
 // - `node scripts/csp/extract-inline-script-hashes.mjs`
 const NEXT_BOOTSTRAP_HASHES = [
-  "sha256-0LDbNUDsF1kfcl9a0wfp5EqiiBeALPMQap93898pLO8=",
-  "sha256-0PkU+1vARBslNzTnPNq/5xqHzJSVlHE0GGzjyOBWynI=",
-  "sha256-1744nfkbVox6VZrFfe2jV7z9lhYOtT6NcjHAbb+65+Y=",
-  "sha256-1OfGpn3bjfL2Xe/sVq6CI7aAbnvVoE9cdKE/u56UTmo=",
-  "sha256-1y71/m6NdvzwigANwZUD9QA5nu1lyI+YwvA9bL23o+M=",
-  "sha256-2d9AfoQyBzIZrZ5N0mxkHWwWLe3/l/KOM68x/rV2yS0=",
-  "sha256-38WkgeFWZZQBOL76P+f3OE/IcV1nL0Nyf3WPPKIpGE4=",
-  "sha256-3lyzGbunjcIo+Q/DMumc7WwN5UK95xJYvrLn4HJUUjQ=",
-  "sha256-4O6l6Ro1jHwTnB/Bz9kdtxOUlR3mCSK21XniWr2UycQ=",
-  "sha256-4ftQo3qr4V9imG0d7sezGnpLIG1SS5wavWSM21CUew4=",
-  "sha256-5FANhbL/xJpjGPh7G4XRgiGXJ8jWfylAW5T5AFGQtyE=",
+  "sha256-+DemX5JlsbV0IMlg/3jzjLlpujVlrRDmF2IdaWY5izo=",
+  "sha256-+O717fN7wZGQE1R6cvAEanBowUFscCGtbFcCoss2xgE=",
+  "sha256-3WK0gOFombc1uxqjP4N3etfgOdq9OTeUCq8E0Kgitxk=",
+  "sha256-4IHY74vYM6RkDaLPF7D/LVzn/iidJxoaZS3zyiHT5gc=",
+  "sha256-4X34L88Kkojo2pgT7IPLqjcMGOhF1mTVYtRI0UXm7K4=",
+  "sha256-7kC+RQPDtofk5xHPBtxvH15YeNZR+u7r3OkcYvZbwHA=",
   "sha256-7mu4H06fwDCjmnxxr/xNHyuQC6pLTHr4M2E4jXw5WZs=",
-  "sha256-9bTHnwaOa7/MePzJA7SbiheSziR0IJVjgZBnzHZzuVk=",
+  "sha256-BNV3rSHeAfMgCjqXMs46BSKkv2pcy9WvXTZKHnlNhpU=",
+  "sha256-bsG2hf4IGVfHInNQp+NXhaYb98rylARxIOSgJNNlHVk=",
+  "sha256-c/qCfeHPE0y6ZrCLQNF23GBxf1hLziP6n7O9CMP5q14=",
   "sha256-CgPZs6rK5cyOBbJv79qlGNiZ1433ORjmiADhgORukaQ=",
-  "sha256-CzryjbKF95C9nWwOp17vJaDMMbhk1aT91lBajf8tnIY=",
-  "sha256-DYymSCR0VfYoDwFFhTe8L7OhxECPJDHo58KWkqlq+eM=",
-  "sha256-ET9ecDPpioQZAn00v/IUODFB65vxjfAt9PATC18ztMI=",
-  "sha256-FIUpw6MZrObfeYwtTcPJRE10ilqNRuhdPfcUGaJbIWQ=",
-  "sha256-FwJBk7qSSwTV06xXQaUjHA/xK5ScXuhzD6wWFfCUoEo=",
-  "sha256-GiSGNb5T4MPUb8LrSxyRjp3Qms39KL0JsvuYIg4apFA=",
-  "sha256-ImwG+fwHT6k6+Si4PXOSIpVcNaM2NTgYkadp3lHq1/M=",
-  "sha256-IvdXx6AeqyRYM0cl2GTNNzNsyIdfhWOfwJZD9sKkQnU=",
-  "sha256-LKLImlDiGgcr7dhJUA/h0r1Q07/PCrky9mPUUQid3Kc=",
-  "sha256-LswaGg6fhdA0/kxZuPrcSrpbgRKqhBQsqhGBh0LwMpI=",
-  "sha256-MLqHpVnnRA7fl/vLfMfoGVCaSJM4CrTr3uis3MNteUw=",
-  "sha256-Nwq6HJSY2vONMgU4XfZNefG9/BmCLMZTgHoU8zHde9s=",
-  "sha256-OBTN3RiyCV4Bq7dFqZ5a2pAXjnCcCYeTJMO2I/LYKeo=",
-  "sha256-P0a2FzJOUTlqrJKUQpdflmOK0kfCrrg1Y2EH+mYFpPs=",
-  "sha256-P4OouSDHCQSVN57dNsQKkdOlA968/o92u6+IVkbeXpQ=",
-  "sha256-QAlSewaQLi/NPCznjAZSyvQ72heD0VdxmNDDkZeCxgc=",
-  "sha256-R5+EVbYAXjRqm4w82h/88XKCNO7sTrH/jklPjJuaf/0=",
-  "sha256-S84PVcrQhArWFZ8DsiNP9uV3R52KWlknVrnTIJGR6U0=",
-  "sha256-URTdtxj9uArUkmRR1dyj9eHz4b262QXi1cj1lvSuP6o=",
-  "sha256-X7kYCBgrtfN2fgDOA4BZWhxIiE4aGEVFEACX6bLV0pE=",
-  "sha256-XB/MzvlEIdPxuY5XPZ9md5Pay0CM6c8JiLhmo3r/teM=",
-  "sha256-Y8ahDrTPRGYKgzmBy0PclsYUbdD4uBxrS+muTkNdtDw=",
-  "sha256-Y9tao9CYXHbualGOZIAcSUvaRi63IOk1elu1APdkR/I=",
-  "sha256-YrwSh9UFxRJ2PbBHuvKN2rkbxHncx6bULjFMKPtkEPE=",
-  "sha256-ZIEQxs4OBAJaGpuLY8L/uXXBPFTJzwCf+WFh3JuuinU=",
-  "sha256-ai/xAr2UhBexlTGHnHddkEzz6t7vaMzRQS5uRR1mib8=",
-  "sha256-apM3f3cK7u41DSZhu50y8H3XILQKaVoxrM9UNYJ6S7s=",
-  "sha256-eS3Qo4NqKfi/kpli2KLhZ/jHSEqAR5folJqWJOr4r1o=",
-  "sha256-fJbyfZ/CHdHBYj0j+bjHaYKLuOkBmbwgHijWT2+fQeg=",
-  "sha256-gE6XPz8m59M4oNOnniv/OJMmgRbziElzJ+Np50sBSmQ=",
-  "sha256-jG2tYm/hv9UmeJGkcu4YOXqED02HvHOR5YzinR6xZj4=",
-  "sha256-kLKOOCxgQO+7VQVxvIKnkKYf6/SqrpTGXpc9ye7iKXw=",
-  "sha256-kwFCRRUxdaXgmvHAJ3VgXZdAHtWt/WYoeiIcfBOryeo=",
-  "sha256-lT1/Wj8nF6cvR+vdXDbv6oZHYl8P12yiMzk+GzDOXaM=",
-  "sha256-mE2VD50hCMXxn32wTdNR68Tm6GesFvefVq4bDXMwlc4=",
-  "sha256-maFXkpItPcq7HmTQC8Db13b9UoTC2YOayiIZOHdeFhM=",
-  "sha256-mn3SfUaa33bo5vu78NoFnRY8xq6xprpbMkPXD2Ge2ZE=",
+  "sha256-CK/7EV++/pd6c8ag6gB93MRHrdfoouxt+zzPK262m3o=",
+  "sha256-DSjFC0JrPQ4YF/EuvX3sD+rpIJQw6XvUewQv+xPMpis=",
+  "sha256-eIox9Mf+TbuQhEKOyFxx3b92O5x2Vyhle0//Lhbb6WI=",
+  "sha256-EPW1JCh0x/D/68An0VnZB/sb9L2DDxjikLv69GoEklk=",
+  "sha256-fBVjGJRZP4/Dj+SZH11zMp4z8kJGLXrMRtoQEf6SkVY=",
+  "sha256-gi0rwFWnYB6iJ/vuKWObtTNlqcoMHKVJKgIkwjKJ2GE=",
+  "sha256-hsv4OT8zpnUigF2ZY0r4R9zLe/BqB+tZV0+ep+CExr0=",
+  "sha256-htHgK01uJUE3v+dbub8OxG1dbL/w4A9Wc4YhF65kkpM=",
+  "sha256-hXi5LStyJHvvMSCO3SssU77eFK16uA/qhoWV8sF4yCA=",
+  "sha256-I/Xp3lq/QrklLRC+sPgaQrzM5NKs0Z8+QKLIcYS8gQU=",
+  "sha256-iAxn6O3IdwBkUQIMX4MQnwq3AehHWa6mIOt6pMqWCTM=",
+  "sha256-ieiuVjjqMchxJ5yVTmZMfr52YF5XksPAN+q1fvxAtAo=",
+  "sha256-if9n/ixLrX5/DDVtqP3+4L02OahJyILye4+2YErgCBU=",
+  "sha256-IP/AMfg8tIKDPAU4luFZ/70B1+6gZ1GSKHP2EStYY4w=",
+  "sha256-iYR2Pqngmn+cdPap2H5em9YZOGyRagYXOa5k1KLtAE4=",
+  "sha256-JDHVZS2nztTyXLXSnlnrv3DcsnF6194JqBOsebEAb/Y=",
+  "sha256-jDyPtQxOQrzR5xgZzKAht25ZLFgX3nLHQQ12JdT3iNk=",
+  "sha256-JETYzpVVpvcf3YtIGU2sQmL0KGwki1Tz5yxnRJP5qdA=",
+  "sha256-JfVSQWIhItthM3cM3NNe+Pq+DwJpcfa6ajWvyuEdIIo=",
+  "sha256-l1YQxr0vro2R0CxfmX7+9Du64MhusHsIRWdcZeO0ONI=",
+  "sha256-liV7w401bAYYqb6ZINFtlCnx61JPAlufkeGNyAVJAVw=",
+  "sha256-m6IBo6hkBs6op1C29Sze/gfg/a9WtvJ/102BHohBPmI=",
+  "sha256-Matv/PSX1//jRTKMJHvJLItNEvKcoyC3CumepzcnW94=",
+  "sha256-MyNgV+cLwdHUhJ4JGQZWukBJw0Rg87OGSlhaLeGznWA=",
+  "sha256-mZlKL4aDTUKa+Qh0mK4SoZjjKHz92K/f9EamJbjWI5g=",
   "sha256-n46vPwSWuMC0W703pBofImv82Z26xo4LXymv0E9caPk=",
-  "sha256-nWe8J5pQanEnDaFmarzzHDcBrnF33jg6M4xAy6gfLaA=",
-  "sha256-nc1OZOGLeNUfOXPrsqaV0Ggt+1c14QaWvjClb9f5M50=",
+  "sha256-nzwxCUAA3shb9IBBq/hkQt1aAuGMNOdUdUUgVMj6D1o=",
+  "sha256-o+Gg+GgAhFcwbci++CaCknFXE8AJYYEuCSNAZEkV6Sc=",
+  "sha256-OBTN3RiyCV4Bq7dFqZ5a2pAXjnCcCYeTJMO2I/LYKeo=",
+  "sha256-oJ8i+d3Lz5TVO7Q67AySfkWHabwSuct9E490VaGtC+Q=",
+  "sha256-oz5YyvRCORA/R1VIWZUUiVyMNzAGwakzlO5Ob8VlRMI=",
   "sha256-p7GE78bbMHDrE4IWzpiMSttAsTpUu7wwi5/wvnH54Os=",
-  "sha256-q/3MLLYQlF22es7NyM01xmJh6gXT0ePC9/V0MSuqghU=",
-  "sha256-qtGJMfgguXYrZF28ua9+0mKHZXNcsIxH8vTaANzwjKQ=",
-  "sha256-sjL5PjUzFSc2e9XSACe5fFtpCkAOfP5TZK/Idggh2ZE=",
-  "sha256-so8vceBGWxg+sjZwJez3u/gOMJ+tW8o6/OU8AW9ZDEI=",
-  "sha256-uL7u8INGN6LLu2zW0EBrxhlT5bUJ27IlI3UZf3N+Y5s=",
-  "sha256-wpfaMctYaY7WdMZxeuNW4eiSbiglikZwQNYIYXLJW+M=",
-  "sha256-x10s7aMgn4Kedk+Du1tUYVJVRqQqzS0KRb20wlL6Znw=",
-  "sha256-xwYzKswfQmGorMideXJEf7er2Bwt7BMMWr3C10zc4vw=",
-  "sha256-zaF93UfXXgkckCVe0kZkW9vlhJNDGlTAZw3eXZr7QrQ=",
-  "sha256-zqlB3fkKex4v4hrHPOzC8Vh3PcAiK/QYmNiZh2hDK0E=",
+  "sha256-pCaLnO4X/4dUZYuMw0RVHOmVB5Ssab17jOcErYl2w3Q=",
+  "sha256-PI844N/49CU7hTIwsNmuDajKN4/hrUs1RXjZryDc1wI=",
+  "sha256-pXT8wJHd3+C8yNDE/3Ftz6HiaspXCxtxWbQq/4W7Y4c=",
+  "sha256-QAlSewaQLi/NPCznjAZSyvQ72heD0VdxmNDDkZeCxgc=",
+  "sha256-qE6aeiWxBc+wJhrUgOpgqDtAjWD9sB7wQPu2PnrdFq4=",
+  "sha256-qjAlqy2cqAq6Nec6rOxqXciDHCoRCzqnOpT+BvFjrpA=",
+  "sha256-qjP1vfvA2v0F3GtIPg39u+fyp/aluP3EF4nOglREOA8=",
+  "sha256-Qrn6fJuu5PKaviG36JddvFicgkjrgaZ6dK1ac1tfqww=",
+  "sha256-R/akwlmSE+xpaWMH9qFaxyohM5VUDm2JeZ+jnTjSXCM=",
+  "sha256-RkcVCE6veF20xS8u6j9M4r2hascZpFKdBtXuVECP7f4=",
+  "sha256-RyefFNsbE2KHqLjuai/sIYG/0VZKreCFQrE1zTRbVyk=",
+  "sha256-sAiMI/4o5h5PHvNfs6Qt3QQjTd1W4eAXCiGBBHOLke4=",
+  "sha256-t1rpsjQFJvBcWm/zLRIR5Z9HrSjTFzwvy1vUf5uK32k=",
+  "sha256-TEBs8dCUqIipOJ+sEbmjCrLE0sIv81B0mB5FugwYYLM=",
+  "sha256-tLNtbzxq1mmARcU3XnTVMxsmnDCy+F3hasKew4bPe6s=",
+  "sha256-tmuOSq88RAMLglFTr8alf236Et2tJsyU5b9/pmpNBao=",
+  "sha256-tSznwTPNFqNwR5e840VWfhwGzXE3wD/YBR5mqnUiruM=",
+  "sha256-vjsGr6iFR0nUBRIRbDTzXQlVy8vlNJgJUmgKqT7Tzu0=",
+  "sha256-w83nFxRFqtMjKDWi6Sby8R6jtT+35+P49VO2Ez29WUs=",
+  "sha256-wwGGJYEH0hY5/PBLiiE3Oq8w7+fXcVXB2WMbn2lHeoY=",
+  "sha256-ylT70f1kDUmB2CjFKk+6mId4vkm7NkpMaiOB36IHSO0=",
+  "sha256-zixtbB78RC6JpYxj6Ff102C3+aJnWUd3TIflWzaElmY=",
+  "sha256-ZO/gOAe3OHg57hlNV7Hoxd2SQb26Gbo6rp6CHUXJV0s=",
+  "sha256-ZZ7KHscOVL7lM4V1jUmkIiD/PCtC8RnorrdUY8PD1k0=",
 ] as const;
 
 function buildCsp(options: { isDev: boolean; mode: CspMode; nonce?: string }): string {
@@ -146,12 +147,13 @@ function buildCsp(options: { isDev: boolean; mode: CspMode; nonce?: string }): s
     const upgradeInsecureRequests = "upgrade-insecure-requests";
 
     if (mode === "public") {
-      // Public routes are intended to remain statically renderable, so avoid per-request
-      // nonces. Allow required inline scripts via hashes only.
-      const scriptSrc = ["'self'", ...NEXT_BOOTSTRAP_HASHES.map((hash) => `'${hash}'`)];
+      // Public pages are statically renderable, so they cannot receive a per-request nonce.
+      // Next.js 16.2 also emits live inline flight payloads that are not fully represented
+      // by build-time hash extraction. Keep strict nonce enforcement on authenticated routes
+      // and use the framework-compatible public policy here.
+      const scriptSrc = ["'self'", "'unsafe-inline'"];
 
       // Public pages frequently rely on inline styles emitted by the framework and UI libs.
-      // Keep scripts locked down via hashes, but allow inline styles for compatibility.
       const styleSrc = "'unsafe-inline'";
 
       const cspHeader = `
@@ -235,7 +237,7 @@ export async function proxy(request: NextRequest) {
 
   const mode = getCspModeFromPathname(pathname);
 
-  const nonce = mode === "authed" ? createNonce() : undefined;
+  const nonce = !isDev && mode === "authed" ? createNonce() : undefined;
   const contentSecurityPolicyHeaderValue = buildCsp({ isDev, mode, nonce });
 
   let response: NextResponse;
@@ -243,7 +245,9 @@ export async function proxy(request: NextRequest) {
 
   if (mode === "authed") {
     requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-nonce", nonce ?? "");
+    if (nonce) {
+      requestHeaders.set("x-nonce", nonce);
+    }
     requestHeaders.set("Content-Security-Policy", contentSecurityPolicyHeaderValue);
 
     response = NextResponse.next({

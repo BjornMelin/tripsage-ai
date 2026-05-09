@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { buildRecentQuickSelectItems } from "../common/recent-items";
 import { type QuickSelectItem, SearchFormShell } from "../common/search-form-shell";
 import { useSearchForm } from "../common/use-search-form";
+import { dateInputValue } from "./common/date-input-value";
 
 type FlightSearchFormValues = z.input<typeof flightSearchFormSchema>;
 
@@ -457,7 +458,12 @@ export function FlightSearchForm({
                               aria-hidden="true"
                               className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
                             />
-                            <Input type="date" className="pl-10" {...field} />
+                            <Input
+                              type="date"
+                              className="pl-10"
+                              {...field}
+                              value={dateInputValue(field.value)}
+                            />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -478,7 +484,12 @@ export function FlightSearchForm({
                                 aria-hidden="true"
                                 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
                               />
-                              <Input type="date" className="pl-10" {...field} />
+                              <Input
+                                type="date"
+                                className="pl-10"
+                                {...field}
+                                value={dateInputValue(field.value)}
+                              />
                             </div>
                           </FormControl>
                           <FormMessage />

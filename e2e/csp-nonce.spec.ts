@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 function getCspDirectiveValue(cspHeader: string, directive: string): string | null {
@@ -22,11 +24,27 @@ function extractNonceFromCsp(cspHeader: string): string {
   return match[1];
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function sha256Base64(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("base64");
 }
 
-test("CSP nonce is present and applied to scripts", async ({ page }) => {
+async function extractInlineScriptHashes(page: Page): Promise<string[]> {
+  const inlineScriptContents = await page
+    .locator("script:not([src]):not([nonce])")
+    .evaluateAll((scripts) =>
+      scripts
+        .map((script) => script.textContent ?? "")
+        .filter((content) => content.trim().length > 0)
+    );
+
+  return Array.from(
+    new Set(inlineScriptContents.map((content) => `'sha256-${sha256Base64(content)}'`))
+  );
+}
+
+test("CSP allows production scripts via nonce, hashes, or public inline compatibility", async ({
+  page,
+}) => {
   const consoleMessages: string[] = [];
 
   page.on("console", (message) => {
@@ -48,18 +66,28 @@ test("CSP nonce is present and applied to scripts", async ({ page }) => {
   }
 
   const scriptSrc = getCspDirectiveValue(cspHeader, "script-src") ?? "";
+  const hasNonce = scriptSrc.includes("'nonce-");
   const requiresNonce =
     scriptSrc.includes("'strict-dynamic'") || !scriptSrc.includes("'unsafe-inline'");
 
-  if (requiresNonce) {
+  if (requiresNonce && hasNonce) {
     const nonce = extractNonceFromCsp(cspHeader);
 
     // Nonces can be hidden/stripped from DOM APIs in some browsers; assert against raw HTML.
     const html = await response.text();
-    expect(html).toMatch(new RegExp(`nonce=("|')${escapeRegExp(nonce)}\\1`));
+    expect(html.includes(`nonce="${nonce}"`) || html.includes(`nonce='${nonce}'`)).toBe(
+      true
+    );
+  } else if (requiresNonce) {
+    const inlineScriptHashes = await extractInlineScriptHashes(page);
+
+    expect(inlineScriptHashes.length).toBeGreaterThan(0);
+    for (const hash of inlineScriptHashes) {
+      expect(scriptSrc).toContain(hash);
+    }
   } else {
-    // Development/HMR commonly relies on inline scripts. In this mode we relax CSP,
-    // so scripts may not be explicitly nonced.
+    // Public static routes cannot receive per-request nonces. In this mode we relax
+    // script CSP for framework inline payload compatibility.
     expect(scriptSrc).toContain("'unsafe-inline'");
   }
 

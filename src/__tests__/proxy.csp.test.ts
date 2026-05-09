@@ -101,7 +101,7 @@ describe("src/proxy.ts CSP nonce", () => {
     }
   });
 
-  it("does not inject CSP nonce for public routes (production)", async () => {
+  it("keeps public static routes compatible without request nonce propagation (production)", async () => {
     const { proxy } = await import("@/proxy");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -116,6 +116,7 @@ describe("src/proxy.ts CSP nonce", () => {
       const cspHeader = response.headers.get("Content-Security-Policy");
 
       expect(cspHeader).toBeTypeOf("string");
+      expect(cspHeader).toContain("script-src 'self' 'unsafe-inline'");
       expect(cspHeader).not.toContain("'nonce-");
       expect(response.headers.get("x-middleware-request-x-nonce")).toBeNull();
       expect(
@@ -171,6 +172,31 @@ describe("src/proxy.ts CSP nonce", () => {
 
       expect(requestCookieHeader).toContain("sb-access-token=refreshed-access");
       expect(requestCookieHeader).toContain("sb-refresh-token=refreshed-refresh");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("keeps Supabase cookie refresh active for authenticated routes in development", async () => {
+    const { proxy } = await import("@/proxy");
+    vi.stubEnv("NODE_ENV", "development");
+
+    try {
+      const request = unsafeCast<NextRequest>({
+        cookies: createMockRequestCookies({
+          "sb-access-token": "stale-access",
+          "sb-refresh-token": "stale-refresh",
+        }),
+        headers: new Headers(),
+        url: "https://example.com/dashboard",
+      });
+
+      const response = await proxy(request);
+      const requestCookieHeader = response.headers.get("x-middleware-request-cookie");
+
+      expect(requestCookieHeader).toContain("sb-access-token=refreshed-access");
+      expect(requestCookieHeader).toContain("sb-refresh-token=refreshed-refresh");
+      expect(response.headers.get("x-middleware-request-x-nonce")).toBeNull();
     } finally {
       vi.unstubAllEnvs();
     }

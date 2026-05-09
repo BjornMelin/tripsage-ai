@@ -8,7 +8,6 @@
   "ignoreDependencies": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/github",
-    "@semantic-release/npm",
     "@semantic-release/release-notes-generator",
     "conventional-changelog-conventionalcommits",
     "shiki"
