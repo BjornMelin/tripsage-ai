@@ -1,7 +1,10 @@
 /**
- * @fileoverview Bounded request body readers to enforce hard size limits before parsing.
+ * Bounded request body readers to enforce hard size limits before parsing.
  */
 
+/**
+ * Error thrown when an incoming request body exceeds the configured byte limit.
+ */
 export class PayloadTooLargeError extends Error {
   readonly maxBytes: number;
 
@@ -13,6 +16,9 @@ export class PayloadTooLargeError extends Error {
   }
 }
 
+/**
+ * Error thrown when request body parsing is attempted after the body was consumed.
+ */
 export class RequestBodyAlreadyReadError extends Error {
   constructor() {
     super("request_body_already_read");
@@ -100,6 +106,15 @@ export async function readRequestBodyBytesWithLimit(
   return bytes;
 }
 
+/**
+ * Parses request form data while enforcing a maximum payload size.
+ *
+ * @param req - Request whose multipart or URL-encoded body should be parsed.
+ * @param maxBytes - Maximum allowed request body size in bytes.
+ * @returns Parsed form data when the payload is within the configured limit.
+ * @throws PayloadTooLargeError when the body exceeds `maxBytes`.
+ * @throws RequestBodyAlreadyReadError when the request body has already been read.
+ */
 export async function parseFormDataWithLimit(
   req: Request,
   maxBytes: number
