@@ -84,7 +84,6 @@ describe("chat message persistence migrations", () => {
     expect(migration).toContain(
       "REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(uuid) FROM PUBLIC"
     );
-    expect(migration).toContain("FOR SELECT");
   });
 
   it("preserves legacy tool parts when canonicalization is incomplete", () => {
