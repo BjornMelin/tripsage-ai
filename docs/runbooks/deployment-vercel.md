@@ -31,11 +31,11 @@ Vercel project production environment:
 - Origin:
   - A valid HTTPS origin in one of `APP_BASE_URL`, `NEXT_PUBLIC_SITE_URL`,
     `NEXT_PUBLIC_BASE_URL`, or `NEXT_PUBLIC_APP_URL`
-  - `NEXT_PUBLIC_SITE_URL` as a valid HTTPS origin while QStash enqueue code
-    uses it for callback URL construction
+  - `APP_BASE_URL` is preferred for server-side callbacks, including QStash
+    enqueue URL construction
 - Supabase:
   - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` preferred, or
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` canonical, or
     `NEXT_PUBLIC_SUPABASE_ANON_KEY` as legacy fallback
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `SUPABASE_JWT_SECRET`
@@ -52,6 +52,14 @@ Vercel project production environment:
   - If `ENABLE_AI_DEMO=true`, at least one of `AI_GATEWAY_API_KEY`,
     `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, or
     `XAI_API_KEY`
+  - If `ENABLE_AI_DEMO=true`, also set `TELEMETRY_AI_DEMO_KEY`
+- Feature-aware optional groups:
+  - If any Stripe variable is configured, set `STRIPE_SECRET_KEY`,
+    `STRIPE_WEBHOOK_SECRET`, and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+  - If any Resend variable is configured, set `RESEND_API_KEY`,
+    `RESEND_FROM_EMAIL`, and `RESEND_FROM_NAME`
+  - If any Amadeus variable is configured, set `AMADEUS_CLIENT_ID`,
+    `AMADEUS_CLIENT_SECRET`, and `AMADEUS_ENV`
 
 Use Vercel project environment variables for app secrets. Do not mirror app
 provider secrets into GitHub unless a separate GitHub-hosted task explicitly

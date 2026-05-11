@@ -33,7 +33,7 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
 - Required environment variables:
   - Supabase:
     - NEXT_PUBLIC_SUPABASE_URL
-    - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (preferred) or NEXT_PUBLIC_SUPABASE_ANON_KEY (legacy)
+    - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (canonical) or NEXT_PUBLIC_SUPABASE_ANON_KEY (legacy fallback)
     - SUPABASE_SERVICE_ROLE_KEY
   - Upstash:
     - UPSTASH_REDIS_REST_URL

@@ -202,12 +202,13 @@ kubectl get pods -l app=tripsage-ai
 | Variable | Description | Required |
 | :--- | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`NEXT_PUBLIC_SUPABASE_ANON_KEY` remains a legacy fallback) | ✅ |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
-| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key | ✅ |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key (required only when AI demo/provider routes are enabled) | ⚠️ |
 | `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ⚠️ |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ⚠️ |
+| `APP_BASE_URL` | Server origin for callbacks and absolute URLs | ✅ |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ✅ |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ✅ |
 | `NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES` | Extra link prefix allowlist for markdown hardening (comma-separated) | ⚠️ |
 | `NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES` | Image prefix allowlist for markdown hardening (comma-separated) | ⚠️ |
 
@@ -250,7 +251,7 @@ GET  /api/memory/context          # Get user context
 
 ```ts
 import { createClient } from '@supabase/supabase-js'
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!)
 // authorize realtime with access token via RealtimeAuthProvider in app
 const channel = supabase.channel(`user:${userId}`, { config: { private: true } })
 channel.on('broadcast', { event: 'chat:message' }, ({ payload }) => console.log(payload))

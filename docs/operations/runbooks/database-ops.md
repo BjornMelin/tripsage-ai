@@ -47,7 +47,7 @@ Local sign-up confirmation:
 
 ### Required Environment Variables
 
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL` (team fallback)
 - Optional user-provided BYOK keys via Vault
