@@ -131,7 +131,10 @@ export interface WebhookHandlerConfig<T extends WebhookHandlerResult> {
  *   tableFilter: "trip_collaborators",
  *   async handle(payload, eventKey, span, req) {
  *     // Custom processing logic
- *     const result = await enqueueJob("notify", { eventKey, payload }, "/api/jobs/notify");
+ *     const result = await enqueueJob("notify", { eventKey, payload }, "/api/jobs/notify", {
+ *       deduplicationId: `notify:${eventKey}`,
+ *       label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+ *     });
  *     return { enqueued: !!result };
  *   },
  * });

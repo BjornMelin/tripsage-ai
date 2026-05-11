@@ -8,7 +8,7 @@ import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getRequiredServerOrigin } from "@/lib/url/server-origin";
-import { QSTASH_RETRY_CONFIG } from "./config";
+import { QSTASH_JOB_LABELS, QSTASH_RETRY_CONFIG, type QStashJobLabel } from "./config";
 
 // ===== TYPES =====
 
@@ -149,12 +149,12 @@ function toQstashCallbackUrl(path: string, origin: string): string {
  * Options for enqueuing a job.
  */
 export interface EnqueueJobOptions {
-  /** Deduplication ID to prevent duplicate jobs (optional) */
-  deduplicationId?: string;
+  /** Deterministic deduplication ID derived from the business operation */
+  deduplicationId: string;
+  /** Canonical label for log filtering and DLQ queries */
+  label: QStashJobLabel;
   /** Enable content-based deduplication at publish time (optional) */
   contentBasedDeduplication?: boolean;
-  /** Label for log filtering and DLQ queries */
-  label?: string;
   /** Flow control options for rate limiting by key */
   flowControl?: FlowControlOptions;
   /** URL invoked when all retries are exhausted */
@@ -169,6 +169,18 @@ export interface EnqueueJobOptions {
   retryDelay?: string;
   /** Additional headers to pass to QStash publish */
   headers?: Record<string, string>;
+}
+
+function assertPublishContract(options: EnqueueJobOptions): void {
+  if (!options.deduplicationId.trim()) {
+    throw new Error("QStash job publish requires a deterministic deduplicationId");
+  }
+  if (
+    !options.label.trim() ||
+    !Object.values(QSTASH_JOB_LABELS).includes(options.label)
+  ) {
+    throw new Error("QStash job publish requires a canonical label");
+  }
 }
 
 /**
@@ -191,7 +203,7 @@ export interface EnqueueJobResult {
  * @param jobType - Type identifier for the job (used in telemetry)
  * @param payload - Job payload to deliver
  * @param path - Worker endpoint path (e.g., "/api/jobs/notify-collaborators")
- * @param options - Optional enqueue configuration
+ * @param options - Required publish contract plus optional enqueue configuration
  * @returns EnqueueJobResult with messageId, or null if QStash unavailable
  *
  * @example
@@ -199,7 +211,11 @@ export interface EnqueueJobResult {
  * const result = await enqueueJob(
  *   "notify-collaborators",
  *   { eventKey, payload },
- *   "/api/jobs/notify-collaborators"
+ *   "/api/jobs/notify-collaborators",
+ *   {
+ *     deduplicationId: `notify:${eventKey}`,
+ *     label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+ *   }
  * );
  * if (result) {
  *   console.log("Enqueued:", result.messageId);
@@ -210,7 +226,7 @@ export async function enqueueJob(
   jobType: string,
   payload: unknown,
   path: string,
-  options: EnqueueJobOptions = {}
+  options: EnqueueJobOptions
 ): Promise<EnqueueJobResult | null> {
   return await withTelemetrySpan(
     "qstash.enqueue",
@@ -222,6 +238,8 @@ export async function enqueueJob(
       },
     },
     async (span) => {
+      assertPublishContract(options);
+
       const client = getQstashClient();
       if (!client) {
         span.setAttribute("qstash.unavailable", true);
@@ -252,21 +270,14 @@ export async function enqueueJob(
       }
       span.setAttribute("qstash.url", url);
 
-      // Deduplication is caller-controlled; random IDs defeat dedup purpose
       const deduplicationId = options.deduplicationId;
-      if (deduplicationId) {
-        span.setAttribute("qstash.dedup_id", deduplicationId);
-      } else {
-        span.setAttribute("qstash.dedup_id_missing", true);
-      }
+      span.setAttribute("qstash.dedup_id", deduplicationId);
 
       if (options.contentBasedDeduplication) {
         span.setAttribute("qstash.content_based_dedup", true);
       }
 
-      if (options.label) {
-        span.setAttribute("qstash.label", options.label);
-      }
+      span.setAttribute("qstash.label", options.label);
 
       if (options.flowControl?.key) {
         span.setAttribute("qstash.flow_control_key", options.flowControl.key);
@@ -328,14 +339,14 @@ export async function enqueueJob(
  * @param jobType - Type identifier for the job
  * @param payload - Job payload to deliver
  * @param path - Worker endpoint path
- * @param options - Optional enqueue configuration
+ * @param options - Required publish contract plus optional enqueue configuration
  * @returns Object with success status and optional error/messageId
  */
 export async function tryEnqueueJob(
   jobType: string,
   payload: unknown,
   path: string,
-  options: EnqueueJobOptions = {}
+  options: EnqueueJobOptions
 ): Promise<
   | { success: true; messageId: string; deduplicated?: boolean }
   | { success: false; error: Error | null }

@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import type { WebhookPayload } from "@/lib/webhooks/payload";
 import { createMockNextRequest, getMockCookiesForTest } from "@/test/helpers/route";
@@ -205,6 +205,10 @@ describe("POST /api/hooks/trips", () => {
     supabaseFactory = () => createSupabaseStub();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   const loadRoute = async (): Promise<TripsRouteModule> => {
     return await import("../route");
   };
@@ -314,6 +318,33 @@ describe("POST /api/hooks/trips", () => {
       expect.objectContaining({ table: "trip_collaborators" }),
       "event-key-1"
     );
+  });
+
+  it("fails closed in production when QStash enqueue fails", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    tryEnqueueJobMock.mockResolvedValue({ error: null, success: false });
+    parseAndVerifyMock.mockResolvedValue({
+      ok: true,
+      payload: {
+        oldRecord: null,
+        record: { id: "1", trip_id: 77 },
+        table: "trip_collaborators",
+        type: "INSERT",
+      },
+    });
+    tryReserveKeyMock.mockResolvedValue(true);
+
+    const { POST } = await loadRoute();
+    const res = await POST(makeRequest({}));
+    const json = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(json).toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+      error: "internal_error",
+    });
+    expect(afterCallbacks).toHaveLength(0);
+    expect(sendCollaboratorNotificationsMock).not.toHaveBeenCalled();
   });
 
   afterAll(() => {
