@@ -4,13 +4,13 @@ on:
   workflow_call:
     inputs:
       environment:
-        description: 'Deployment environment'
+        description: Deployment environment
         required: true
         type: string
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment environment'
+        description: Deployment environment
         required: true
         type: choice
         options:
@@ -22,105 +22,277 @@ permissions:
   contents: read
   deployments: write
 
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  PNPM_VERSION: "10.28.2"
+  VERCEL_CLI_VERSION: "53.3.2"
+
 jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    timeout-minutes: 30
-    
+    timeout-minutes: 45
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Verify webhook secret matches primary database setting
+      - name: Select Vercel environment
+        id: vercel_env
+        shell: bash
         env:
-          HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
-          PRIMARY_DATABASE_URL: ${{ secrets.PRIMARY_DATABASE_URL }}
-          FALLBACK_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REQUESTED_ENVIRONMENT: ${{ inputs.environment }}
         run: |
-          export DATABASE_URL="${PRIMARY_DATABASE_URL:-$FALLBACK_DATABASE_URL}"
-          if [ -z "${DATABASE_URL:-}" ]; then
-            echo "::error::Set PRIMARY_DATABASE_URL (preferred) or DATABASE_URL GitHub secret with the writable Supabase connection string."
+          set -euo pipefail
+          case "$REQUESTED_ENVIRONMENT" in
+            production)
+              echo "deploy_environment=production" >> "$GITHUB_OUTPUT"
+              echo "name=production" >> "$GITHUB_OUTPUT"
+              echo "prod_flag=--prod" >> "$GITHUB_OUTPUT"
+              echo "skip_domain_flag=--skip-domain" >> "$GITHUB_OUTPUT"
+              echo "promote_after_smoke=true" >> "$GITHUB_OUTPUT"
+              ;;
+            staging|development)
+              echo "deploy_environment=$REQUESTED_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+              echo "name=preview" >> "$GITHUB_OUTPUT"
+              echo "prod_flag=" >> "$GITHUB_OUTPUT"
+              echo "skip_domain_flag=" >> "$GITHUB_OUTPUT"
+              echo "promote_after_smoke=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unsupported deployment environment. Must be development, staging, or production."
+              exit 1
+              ;;
+          esac
+
+      - name: Validate required GitHub secrets
+        shell: bash
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Missing required GitHub secret(s): %s\n' "${missing[*]}"
             exit 1
           fi
-          scripts/operators/verify_webhook_secret.sh
 
       - name: Set up Node
         uses: actions/setup-node@v6.4.0
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: ".nvmrc"
 
-      - name: Install deps
+      - name: Install package managers and Vercel CLI
+        shell: bash
+        run: npm install -g "pnpm@${PNPM_VERSION}" "vercel@${VERCEL_CLI_VERSION}"
+
+      - name: Install dependencies
+        shell: bash
         run: |
-          npm install -g pnpm@10.28.2
-          if grep -Eq "git\\+|github:" pnpm-lock.yaml package.json; then
+          set -euo pipefail
+          if grep -Eq "git\+|github:" pnpm-lock.yaml package.json; then
             echo "::error::Git dependencies detected. Configure pnpm allowBuilds/onlyBuiltDependencies for 10.26+ before deploying."
             exit 1
           fi
           pnpm install --frozen-lockfile
 
-      - name: Validate infrastructure (optional)
-        continue-on-error: true
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-        run: |
-          has_supabase="${NEXT_PUBLIC_SUPABASE_URL:+1}"
-          has_upstash=""
-          if [ -n "$UPSTASH_REDIS_REST_URL" ] && [ -n "$UPSTASH_REDIS_REST_TOKEN" ]; then
-            has_upstash=1
-          fi
-
-          if [ -n "$has_supabase" ] || [ -n "$has_upstash" ]; then
-            echo "Running infrastructure validation..."
-            pnpm ops check all || echo "::warning::Infrastructure check failed (non-blocking)"
-          else
-            echo "Skipping infra check - credentials not configured"
-          fi
-
-      - name: Create deployment
+      - name: Create GitHub deployment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: deployment
+        env:
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
         with:
           script: |
+            const environment = process.env.DEPLOY_ENVIRONMENT;
             const deployment = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.sha,
-              environment: '${{ inputs.environment }}',
+              environment,
               required_contexts: [],
-              auto_merge: false
+              auto_merge: false,
+              production_environment: environment === "production",
+              transient_environment: environment !== "production",
             });
-            
-            core.setOutput('deployment_id', deployment.data.id);
-            return deployment.data.id;
 
-      - name: Deploy Backend
-        run: |
-          echo "Deploying backend to ${{ inputs.environment }}..."
-          # Add your backend deployment commands here
-
-      - name: Deploy Frontend
-        run: |
-          echo "Deploying frontend to ${{ inputs.environment }}..."
-          # Add your frontend deployment commands here
-
-      - name: Update deployment status
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        if: always()
-        with:
-          script: |
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: ${{ steps.deployment.outputs.deployment_id }},
-              state: '${{ job.status }}',
-              environment_url: 'https://${{ inputs.environment }}.tripsage.ai',
-              description: 'Deployment ${{ job.status }}'
+              deployment_id: deployment.data.id,
+              state: "in_progress",
+              description: `Vercel ${environment} deployment started`,
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+            core.setOutput("deployment_id", String(deployment.data.id));
+
+      - name: Pull Vercel project configuration
+        shell: bash
+        env:
+          VERCEL_ENVIRONMENT: ${{ steps.vercel_env.outputs.name }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          vercel pull --yes --environment="$VERCEL_ENVIRONMENT" --token="$VERCEL_TOKEN"
+
+      - name: Verify production environment contract
+        shell: bash
+        env:
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
+          VERCEL_ENVIRONMENT: ${{ steps.vercel_env.outputs.name }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          vercel env run -e "$VERCEL_ENVIRONMENT" -- pnpm deploy:check-env -- --environment "$DEPLOY_ENVIRONMENT"
+
+      - name: Verify live infrastructure
+        if: steps.vercel_env.outputs.deploy_environment == 'production'
+        shell: bash
+        env:
+          VERCEL_ENVIRONMENT: ${{ steps.vercel_env.outputs.name }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          vercel env run -e "$VERCEL_ENVIRONMENT" -- pnpm ops infra check supabase
+          vercel env run -e "$VERCEL_ENVIRONMENT" -- pnpm ops infra check upstash
+
+      - name: Build Vercel output
+        shell: bash
+        env:
+          PROD_FLAG: ${{ steps.vercel_env.outputs.prod_flag }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          build_args=(--token="$VERCEL_TOKEN")
+          if [[ -n "$PROD_FLAG" ]]; then
+            build_args=("$PROD_FLAG" "${build_args[@]}")
+          fi
+          vercel build "${build_args[@]}"
+
+      - name: Deploy prebuilt output
+        id: deploy
+        shell: bash
+        env:
+          PROD_FLAG: ${{ steps.vercel_env.outputs.prod_flag }}
+          SKIP_DOMAIN_FLAG: ${{ steps.vercel_env.outputs.skip_domain_flag }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          deploy_args=(--prebuilt --archive=tgz --yes --token="$VERCEL_TOKEN")
+          if [[ -n "$PROD_FLAG" ]]; then
+            deploy_args+=("$PROD_FLAG")
+          fi
+          if [[ -n "$SKIP_DOMAIN_FLAG" ]]; then
+            deploy_args+=("$SKIP_DOMAIN_FLAG")
+          fi
+          deploy_output="$(vercel deploy "${deploy_args[@]}")"
+          printf '%s\n' "$deploy_output"
+          deployment_url="$(printf '%s\n' "$deploy_output" | grep -Eo 'https://[^[:space:]]+' | tail -n 1)"
+          if [[ -z "$deployment_url" ]]; then
+            echo "::error::Vercel CLI did not emit a deployment URL."
+            exit 1
+          fi
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Run deployment smoke checks
+        shell: bash
+        env:
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: pnpm deploy:smoke -- --url "$DEPLOYMENT_URL" --environment "$DEPLOY_ENVIRONMENT"
+
+      - name: Promote production deployment
+        if: steps.vercel_env.outputs.promote_after_smoke == 'true'
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel promote "$DEPLOYMENT_URL" --yes --timeout=5m --token="$VERCEL_TOKEN"
+
+      - name: Write machine-readable deployment summary
+        shell: bash
+        env:
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          PROMOTED: ${{ steps.vercel_env.outputs.promote_after_smoke }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg environment "$DEPLOY_ENVIRONMENT" \
+            --arg promoted "$PROMOTED" \
+            --arg sha "$GITHUB_SHA" \
+            --arg url "$DEPLOYMENT_URL" \
+            '{environment: $environment, promoted: ($promoted == "true"), sha: $sha, smoke: {status: "passed"}, status: "verified", url: $url}' \
+            > deployment-summary.json
+
+      - name: Write deployment summary
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          VERCEL_ENVIRONMENT: ${{ steps.vercel_env.outputs.name }}
+          WORKFLOW_RESULT: ${{ job.status }}
+        run: |
+          deployment_url="${DEPLOYMENT_URL:-not created}"
+          {
+            echo "## Vercel deployment"
+            echo ""
+            echo "- Environment: \`${DEPLOY_ENVIRONMENT:-unknown}\`"
+            echo "- Vercel environment: \`${VERCEL_ENVIRONMENT:-unknown}\`"
+            echo "- Deployment URL: $deployment_url"
+            echo "- Workflow result: \`$WORKFLOW_RESULT\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload deployment summary
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: deployment-summary-${{ steps.vercel_env.outputs.deploy_environment }}
+          path: deployment-summary.json
+          if-no-files-found: ignore
+
+      - name: Update GitHub deployment status
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        if: always() && steps.deployment.outputs.deployment_id != ''
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const jobStatus = process.env.JOB_STATUS;
+            const deploymentUrl = process.env.DEPLOYMENT_URL;
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: Number(process.env.DEPLOYMENT_ID),
+              state: jobStatus === "success" ? "success" : "failure",
+              environment_url: deploymentUrl || undefined,
+              description: `Vercel deployment ${jobStatus}`,
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              auto_inactive: jobStatus === "success",
             });
