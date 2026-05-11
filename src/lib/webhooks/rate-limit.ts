@@ -22,7 +22,7 @@ const REDIS_FEATURE = "webhooks.rate_limit";
 export interface RateLimitResult {
   /** Whether the request is allowed */
   success: boolean;
-  /** Why the check failed (only set when success === false) */
+  /** Why the check failed, or why fail-open degraded mode allowed the request */
   reason?: "limiter_unavailable" | "rate_limited";
   /** Unix timestamp (ms) when the rate limit window resets */
   reset?: number;
