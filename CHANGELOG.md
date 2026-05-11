@@ -1,3 +1,9 @@
+## [1.33.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.3...v1.33.4) (2026-05-11)
+
+### Bug Fixes
+
+* **api:** standardize degraded response contracts ([7b83f19](https://github.com/BjornMelin/tripsage-ai/commit/7b83f197b50bc57d98b58ebb374e57f133538d7b)), closes [#740](https://github.com/BjornMelin/tripsage-ai/issues/740)
+
 ## [1.33.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.2...v1.33.3) (2026-05-11)
 
 ### Bug Fixes
