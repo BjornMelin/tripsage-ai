@@ -146,20 +146,24 @@ describe("/api/security/sessions routes", () => {
       error: null,
     });
 
-    const deleteChain = {
-      eq: vi.fn(() => ({
-        eq: vi.fn(async () => ({ error: null })),
-      })),
-    };
+    const deleteChain = Object.assign(Promise.resolve({ count: 1, error: null }), {
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+    });
+    const query = Object.assign(
+      Promise.resolve({ count: 1, data: [{ id: "sess-1" }], error: null }),
+      {
+        delete: vi.fn(() => deleteChain),
+        eq: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn(async () => ({ data: mockSessionRow, error: null })),
+        select: vi.fn().mockReturnThis(),
+      }
+    );
 
     adminInstance = unsafeCast<ReturnType<typeof adminMock>>({
       schema: vi.fn(() => ({
-        from: vi.fn(() => ({
-          delete: vi.fn(() => deleteChain),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn(async () => ({ data: mockSessionRow, error: null })),
-          select: vi.fn().mockReturnThis(),
-        })),
+        from: vi.fn(() => query),
       })),
     });
 
