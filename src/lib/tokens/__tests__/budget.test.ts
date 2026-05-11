@@ -116,34 +116,22 @@ describe("clampMaxTokens", () => {
     expect(getModelContextLimit("grok-4.3")).toBe(1_000_000);
   });
 
-  it("does not retain stale GPT-5 or Claude 4 model aliases", () => {
-    const oldGptBase = ["gpt", "5"].join("-");
-    const oldClaudeSonnetBase = ["claude", "sonnet", "4"].join("-");
-    const oldClaudeOpusBase = ["claude", "opus", "4"].join("-");
-    const staleModels = [
-      oldGptBase,
-      [oldGptBase, "mini"].join("-"),
-      oldClaudeSonnetBase,
-      oldClaudeOpusBase,
-      `anthropic/${oldClaudeSonnetBase}-20250514`,
-    ];
-
-    for (const model of staleModels) {
-      expect(getModelContextLimit(model)).toBe(DEFAULT_CONTEXT_LIMIT);
-    }
-    const stalePrefixes = [
-      oldGptBase,
-      [oldGptBase, "mini"].join("-"),
-      oldClaudeSonnetBase,
-      oldClaudeOpusBase,
-    ];
-    const hasStaleAliasKey = Object.keys(MODEL_LIMITS).some((key) =>
-      stalePrefixes.some(
-        (prefix) =>
-          key === prefix || key.startsWith(`${prefix}-`) || key.includes(`/${prefix}`)
-      )
+  it("keeps model limits restricted to the current canonical model set", () => {
+    expect(Object.keys(MODEL_LIMITS).sort()).toEqual(
+      [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+        "gemini-3.1-flash-lite",
+        "glm-5.1",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5.5",
+        "grok-4.3",
+        "kimi-k2.6",
+        "mimo-v2.5",
+        "mimo-v2.5-pro",
+      ].sort()
     );
-    expect(hasStaleAliasKey).toBe(false);
   });
 
   it("coerces invalid desiredMax to 1 with reason", () => {
