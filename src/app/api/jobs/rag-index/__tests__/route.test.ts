@@ -167,10 +167,10 @@ describe("POST /api/jobs/rag-index", () => {
     indexDocumentsMock.mockResolvedValue({
       chunksCreated: 1,
       failed: [{ error: "boom", index: 0 }],
-      indexed: 0,
+      indexed: 1,
       namespace: "user_content",
       success: false,
-      total: 1,
+      total: 2,
     });
 
     const { POST } = await loadRoute();
@@ -186,6 +186,17 @@ describe("POST /api/jobs/rag-index", () => {
     expect(json.error).toBe("internal");
     expect(json.reason).toBe("RAG index job failed");
     expect(res.headers.get("Upstash-NonRetryable-Error")).toBeNull();
+    expect(recordTelemetryEventMock).toHaveBeenCalledWith(
+      "jobs.rag_index.failed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          failedCount: 1,
+          indexedCount: 1,
+          retryOutcome: "retryable",
+        }),
+        level: "error",
+      })
+    );
   });
 
   it("returns 489 when all indexer failures are non-retryable RAG budget failures", async () => {
@@ -218,6 +229,7 @@ describe("POST /api/jobs/rag-index", () => {
           chunksCreated: 0,
           documentCount: 1,
           failedCount: 1,
+          indexedCount: 0,
           namespace: "user_content",
           retryOutcome: "non_retryable",
         }),

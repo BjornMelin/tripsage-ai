@@ -50,6 +50,7 @@ export async function POST(req: Request): Promise<Response> {
                 chunksCreated: result.chunksCreated,
                 documentCount: payload.documents.length,
                 failedCount: result.failed.length,
+                indexedCount: result.indexed,
                 namespace: result.namespace,
                 retryOutcome,
               },
