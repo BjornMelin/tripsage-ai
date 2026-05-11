@@ -16,6 +16,7 @@ CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authent
 DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;
 CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (
   user_id = (select auth.uid())
+  AND role = 'user'
   AND session_id IN (
     SELECT id FROM public.chat_sessions
     WHERE user_id = (select auth.uid())
@@ -26,6 +27,10 @@ CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authent
     )
   )
 );
+
+DROP POLICY IF EXISTS "chat_messages_service_insert" ON public.chat_messages;
+DROP POLICY IF EXISTS chat_messages_service_insert ON public.chat_messages;
+CREATE POLICY chat_messages_service_insert ON public.chat_messages FOR INSERT TO service_role WITH CHECK (true);
 
 DROP POLICY IF EXISTS "chat_tool_calls_select" ON public.chat_tool_calls;
 CREATE POLICY chat_tool_calls_select ON public.chat_tool_calls FOR SELECT TO authenticated USING (
@@ -43,11 +48,7 @@ CREATE POLICY chat_tool_calls_select ON public.chat_tool_calls FOR SELECT TO aut
 );
 
 DROP POLICY IF EXISTS "chat_tool_calls_insert" ON public.chat_tool_calls;
-CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO authenticated WITH CHECK (
-  message_id IN (
-    SELECT id FROM public.chat_messages WHERE user_id = (select auth.uid())
-  )
-);
+CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO service_role WITH CHECK (true);
 
 -- Indexes aligned with current query patterns and RLS access paths.
 CREATE INDEX IF NOT EXISTS trips_user_status_created_idx

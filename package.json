@@ -17,6 +17,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage.enabled --coverage.provider=v8 && node scripts/check-coverage-critical.mjs",
     "test:benchmark": "node scripts/run-benchmark.mjs",
+    "test:ai-model-smoke": "node scripts/ai-model-smoke.mjs",
     "test:quick": "vitest run --reporter=dot",
     "test:ci": "vitest run --reporter=dot --reporter=github-actions",
     "test:unit": "vitest run --project=unit",

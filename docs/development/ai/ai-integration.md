@@ -6,19 +6,30 @@ Patterns and options for configuring providers via the Vercel AI Gateway and dir
 
 Use `providerOptions.gateway` in `streamText`/`generateText` calls when the resolved model is a Gateway model (user or team scoped). Keep routing logic in route handlers, not in the registry.
 
-### Round-robin across two providers
+## Model Policy
+
+Model defaults are centralized in `src/ai/models/defaults.ts`.
+
+- `standard`: `openai/gpt-5.4-mini` via Gateway, `gpt-5.4-mini` for direct OpenAI.
+- `planning`: `openai/gpt-5.5` via Gateway, `gpt-5.5` for direct OpenAI.
+- `utility`: `openai/gpt-5.4-nano` via Gateway, `gpt-5.4-nano` for direct OpenAI.
+- Anthropic has no implicit app-owned default. Use `anthropic/claude-sonnet-4.6` only when a user/admin explicitly selects it.
+
+User OpenAI BYOK uses direct OpenAI Responses API models so user-owned keys fail closed instead of falling back to team credentials. App-owned traffic uses Vercel AI Gateway when the user has opted into team fallback.
+
+### Prefer OpenAI Gateway endpoints
 
 ```ts
 const result = await streamText({
   model,
   messages,
   providerOptions: {
-    gateway: { order: ["openai", "anthropic"] },
+    gateway: { only: ["openai"] },
   },
 });
 ```
 
-### Prefer Anthropic, then OpenAI, with budget guard
+### Cost-conscious standard routing
 
 ```ts
 const result = await streamText({
@@ -26,14 +37,14 @@ const result = await streamText({
   messages,
   providerOptions: {
     gateway: {
-      order: ["anthropic", "openai"],
-      budgetTokens: 200_000,
+      models: ["openai/gpt-5.4-mini"],
+      tags: ["profile:standard"],
     },
   },
 });
 ```
 
-### Route thinking models to Anthropic only
+### Escalate complex planning explicitly
 
 ```ts
 const result = await streamText({
@@ -41,9 +52,8 @@ const result = await streamText({
   messages,
   providerOptions: {
     gateway: {
-      order: /think|reason/i.test(JSON.stringify(messages))
-        ? ["anthropic"]
-        : ["openai", "anthropic"],
+      models: ["openai/gpt-5.5"],
+      tags: ["profile:planning"],
     },
   },
 });
@@ -55,8 +65,9 @@ const result = await streamText({
 - Pair routing with per-request token budgets and chat limits.
 - Use AI SDK timeout configuration (`timeout: { totalMs, stepMs }`) to cap total and per-step
   latency for streaming and tool loops.
-- Prefer Gateway API keys (`AI_GATEWAY_API_KEY`) for multi-provider routing; fall back to BYOK keys when users supply them.
+- Prefer Gateway API keys (`AI_GATEWAY_API_KEY`) for app-owned routing. User BYOK keys stay direct and fail closed when provider validation fails.
 - Tests: use `MockLanguageModelV3` and assert `providerOptions` on recorded calls.
+- Before changing defaults, run `pnpm test:ai-model-smoke -- --models=openai/gpt-5.4-mini,openai/gpt-5.4-nano,openai/gpt-5.5 --json` with a non-production `AI_GATEWAY_API_KEY`.
 
 ## AI SDK v6 Canonical Patterns
 

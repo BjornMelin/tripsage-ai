@@ -4,7 +4,7 @@ Status: Accepted
 
 Context
 
-- Responses that feed UI or downstream services benefit from schema validation. AI SDK v6 provides structured output (`streamObject`/`object` helpers) and AI SDK UI object support.
+- Responses that feed UI or downstream services benefit from schema validation. AI SDK v6 provides structured output through `generateText` or `streamText` with `Output.object({ schema })`, plus AI SDK UI object support when streaming object UI is needed.
 
 Decision
 
@@ -27,4 +27,5 @@ Consequences
 References
 
 - Generating Structured Data: <https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data>
+- AI SDK `Output.object`: <https://ai-sdk.dev/docs/reference/ai-sdk-core/output>
 - AI SDK UI Object Generation: <https://ai-sdk.dev/docs/ai-sdk-ui/object-generation>

@@ -197,6 +197,7 @@ const authEnvSchema = z.object({});
 
 // AI Service API Keys
 const aiServiceEnvSchema = z.object({
+  AI_GATEWAY_ALLOWED_HOSTS: z.string().optional(),
   AI_GATEWAY_API_KEY: apiKeySchema("AI_GATEWAY_API_KEY"),
   AI_GATEWAY_URL: z.url().optional(),
   ANTHROPIC_API_KEY: anthropicApiKeySchema,

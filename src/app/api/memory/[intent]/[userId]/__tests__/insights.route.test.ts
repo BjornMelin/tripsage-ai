@@ -175,7 +175,7 @@ describe("/api/memory/insights/[userId] route", () => {
     });
     mockResolveProvider.mockResolvedValue({
       model: { id: "model-stub" },
-      modelId: "gpt-4o-mini",
+      modelId: "gpt-5.5",
       provider: "openai",
     });
     mockHandleMemoryIntent.mockResolvedValue({
@@ -274,7 +274,7 @@ describe("/api/memory/insights/[userId] route", () => {
     expect(body.success).toBe(true);
     expect(body.metadata.analysisDate).toBe("2025-01-01T00:00:00.000Z");
     expect(body.metadata.dataCoverageMonths).toBe(1);
-    expect(mockResolveProvider).toHaveBeenCalledWith(userId, "gpt-4o-mini");
+    expect(mockResolveProvider).toHaveBeenCalledWith(userId);
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({
         output: expect.anything(),

@@ -16,7 +16,7 @@ All endpoints enforce `ensureAdmin(user)` and run on the Node runtime.
 
 ```http
 GET  /api/config/agents                 # list agent types + scopes
-GET  /api/config/agents/:agentType      # fetch active config (supports ?scope=global|env)
+GET  /api/config/agents/:agentType      # fetch active config (supports ?scope=global|environment|agentSpecific|userOverride)
 PUT  /api/config/agents/:agentType      # update config (Zod-validated)
 GET  /api/config/agents/:agentType/versions
 POST /api/config/agents/:agentType/rollback/:versionId
@@ -52,17 +52,17 @@ GET /api/dashboard?window=24h|7d|30d|all
 2) **Update agent config**
 
     ```bash
-    curl -X PUT https://<app>/api/config/agents/budget \
+    curl -X PUT "https://<app>/api/config/agents/budgetAgent?scope=global" \
       -b "sb-access-token=<access-token>" \
       -b "sb-refresh-token=<refresh-token>" \
       -H "Content-Type: application/json" \
-      -d '{"modelId":"gpt-4o-mini","temperature":0.3,"scope":"global"}'
+      -d '{"model":"gpt-5.5","temperature":0.3}'
     ```
 
 3) **Rollback**
 
     ```bash
-    curl -X POST https://<app>/api/config/agents/budget/rollback/<versionId> \
+    curl -X POST "https://<app>/api/config/agents/budgetAgent/rollback/<versionId>" \
       -b "sb-access-token=<access-token>" \
       -b "sb-refresh-token=<refresh-token>"
     ```

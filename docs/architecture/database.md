@@ -77,7 +77,7 @@ export const GET = withApiGuards({
 - **Trips & Content**: `trips`, `flights`, `accommodations`, `transportation`, `itinerary_items`, `trip_collaborators`, `bookings`.
 - **Chat & Memory**: `chat_sessions`, `chat_messages`, `chat_tool_calls`, `accommodation_embeddings`; `memories` schema tables (`memories.sessions`, `memories.turns`, `memories.turn_embeddings`).
 - **RAG**: `rag_documents` (chunked documents + `vector(1536)` embeddings) and RPCs for hybrid/vector search.
-- **Auth & Keys**: Vault-backed `api_keys`, `user_gateway_configs`, `user_settings`; SECURITY DEFINER RPCs gate all BYOK operations.
+- **Auth & Keys**: Vault-backed `api_keys`, `api_gateway_configs`, `user_settings`; SECURITY DEFINER RPCs gate all BYOK operations.
 - **MFA & Recovery**: `mfa_enrollments` tracks TOTP enrollment lifecycle (pending/consumed/expired) with RLS; `auth_backup_codes` stores hashed backup codes (peppered) and is replaced atomically via the `replace_backup_codes` RPC; `mfa_backup_code_audit` logs regeneration/consumption metadata (user_id, event, count, ip, user_agent) for forensics.
 - **Telemetry & Webhooks**: `webhook_configs`, `webhook_logs`, `webhook_events`, `system_metrics`; helper RPCs for realtime topics.
 - **Search Cache**: `search_*` tables for cached destination/activity/flight/hotel lookups.
@@ -118,28 +118,10 @@ export const GET = withApiGuards({
 
 ### Provider Resolution (BYOK)
 
-Four-tier resolution strategy in `@ai/models/registry`:
-
-1. **User Gateway key** (highest priority)
-   - User's own Vercel AI Gateway API key stored in Vault
-   - `getUserApiKey(userId, "gateway")` + `getUserGatewayBaseUrl(userId)`
-   - `createGateway({ apiKey, baseURL })`
-
-2. **User BYOK provider keys**
-   - Provider-specific keys (OpenAI, OpenRouter, Anthropic, xAI) stored in Vault
-   - Resolved concurrently via `getUserApiKey(userId, provider)`
-   - Provider preference order: openai → openrouter → anthropic → xai
-
-3. **Server-side fallback keys**
-   - Environment variables: `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`
-   - Same preference order as BYOK; used when user has no keys
-
-4. **Team Gateway fallback** (lowest priority)
-   - Environment `AI_GATEWAY_API_KEY` + `AI_GATEWAY_URL`
-   - Requires user consent via `allowGatewayFallback` setting (default true)
-   - Error thrown if user disabled fallback and no keys found
-
-Keys are never exposed client-side; all resolution occurs server-side via `"server-only"` imports.
+Provider resolution order is owned by
+`docs/operations/runbooks/byok-gateway-operator.md`. This document only owns the
+schema/storage facts for Vault-backed keys, Gateway base URLs, and user fallback
+consent.
 
 ## Extensions
 
@@ -169,7 +151,7 @@ Keys are never exposed client-side; all resolution occurs server-side via `"serv
 ## Data Models (Highlights)
 
 - **Trips**: Trip metadata plus related flights/accommodations/transportation; constraints enforce valid dates, traveler counts, and status enums.
-- **Chat**: `chat_sessions` (UUID PK) with `chat_messages` constrained to `user|assistant|system` roles; tool calls tracked in `chat_tool_calls`.
+- **Chat**: `chat_sessions` (UUID PK) with `chat_messages` constrained to `user|assistant|system` roles. Authenticated browser clients may insert only `user` messages; assistant/system rows are server-authored through service-role paths. Tool calls are tracked in `chat_tool_calls`.
 - **Memory**: `memories` and `session_memories` store text + `vector(1536)` embeddings with HNSW indexes for cosine search.
 - **Files**: `file_attachments` record bucket, MIME, size, owner, and virus-scan status; access via signed URLs only.
 - **Webhooks**: `webhook_configs/logs/events` capture DB → Vercel integrations and retries; signatures validated with HMAC.

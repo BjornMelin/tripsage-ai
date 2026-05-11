@@ -16,11 +16,23 @@ export const providerIdSchema = z.enum(["openai", "openrouter", "anthropic", "xa
 /** TypeScript type for provider identifiers. */
 export type ProviderId = z.infer<typeof providerIdSchema>;
 
+/** Source of the credential used to resolve a runtime model. */
+export const providerCredentialSourceSchema = z.enum([
+  "server-provider",
+  "team-gateway",
+  "user-gateway",
+  "user-provider",
+]);
+
+/** TypeScript type for provider credential source. */
+export type ProviderCredentialSource = z.infer<typeof providerCredentialSourceSchema>;
+
 /**
  * Zod schema for provider resolution result (serializable fields only).
  * The `model` field is excluded as LanguageModel is not serializable.
  */
 export const providerResolutionSchema = z.object({
+  credentialSource: providerCredentialSourceSchema,
   maxOutputTokens: z.number().int().positive().optional(),
   modelId: z.string().min(1),
   provider: providerIdSchema,

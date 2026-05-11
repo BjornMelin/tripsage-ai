@@ -109,10 +109,9 @@ CREATE POLICY accommodations_mutate_own
 DROP POLICY IF EXISTS api_gateway_configs_owner ON public.api_gateway_configs;
 CREATE POLICY api_gateway_configs_owner
   ON public.api_gateway_configs
-  FOR ALL
+  FOR SELECT
   TO authenticated
-  USING ((select auth.uid()) = user_id)
-  WITH CHECK ((select auth.uid()) = user_id);
+  USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS user_settings_owner ON public.user_settings;
 CREATE POLICY user_settings_owner

@@ -1,5 +1,12 @@
 /** @vitest-environment node */
 
+import {
+  ANTHROPIC_VALIDATION_MODEL_ID,
+  DEFAULT_GATEWAY_MODEL_ID,
+  DEFAULT_OPENAI_MODEL_ID,
+  DEFAULT_OPENROUTER_MODEL_ID,
+  DEFAULT_XAI_MODEL_ID,
+} from "@ai/models/defaults";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const makeModel = (label: string) => {
@@ -27,10 +34,16 @@ vi.mock("@/lib/supabase/rpc", () => ({
 
 // Mock provider factories to return simple tagged model ids for assertions.
 vi.mock("@ai-sdk/openai", () => ({
-  createOpenAI: (opts: { apiKey?: string; baseURL?: string }) => (id: string) =>
-    makeModel(
-      `openai(${opts.baseURL ?? "api.openai.com"})::${opts.apiKey ? "key" : "no-key"}::${id}`
-    ),
+  createOpenAI: (opts: { apiKey?: string; baseURL?: string }) => ({
+    chat: (id: string) =>
+      makeModel(
+        `openai-chat(${opts.baseURL ?? "api.openai.com"})::${opts.apiKey ? "key" : "no-key"}::${id}`
+      ),
+    responses: (id: string) =>
+      makeModel(
+        `openai-responses(${opts.baseURL ?? "api.openai.com"})::${opts.apiKey ? "key" : "no-key"}::${id}`
+      ),
+  }),
 }));
 
 vi.mock("@ai-sdk/anthropic", () => ({
@@ -74,10 +87,10 @@ describe("resolveProvider", () => {
       svc === "openai" ? "sk-openai" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-1", "gpt-4o-mini");
+    const result = await resolveProvider("user-1");
     expect(result.provider).toBe("openai");
-    expect(String(result.model)).toContain("openai(");
-    expect(result.modelId).toBe("gpt-4o-mini");
+    expect(String(result.model)).toContain("openai-responses(");
+    expect(result.modelId).toBe(DEFAULT_OPENAI_MODEL_ID);
   });
 
   it("uses per-user Gateway when gateway key exists", async () => {
@@ -86,10 +99,10 @@ describe("resolveProvider", () => {
       svc === "gateway" ? "gw-user-key" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-gw", "openai/gpt-4o-mini");
+    const result = await resolveProvider("user-gw", DEFAULT_GATEWAY_MODEL_ID);
     expect(result.provider).toBe("openai");
     expect(String(result.model)).toContain(
-      "gateway(https://ai-gateway.vercel.sh/v3/ai)::key::openai/gpt-4o-mini"
+      `gateway(https://ai-gateway.vercel.sh/v3/ai)::key::${DEFAULT_GATEWAY_MODEL_ID}`
     );
   });
 
@@ -99,11 +112,35 @@ describe("resolveProvider", () => {
       svc === "gateway" ? "gw-user-key" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-gw2", "gpt-4o-mini");
+    const result = await resolveProvider("user-gw2", DEFAULT_OPENAI_MODEL_ID);
     expect(result.provider).toBe("openai");
-    expect(result.modelId).toBe("openai/gpt-4o-mini");
+    expect(result.modelId).toBe(DEFAULT_GATEWAY_MODEL_ID);
     expect(String(result.model)).toContain(
-      "gateway(https://ai-gateway.vercel.sh/v3/ai)::key::openai/gpt-4o-mini"
+      `gateway(https://ai-gateway.vercel.sh/v3/ai)::key::${DEFAULT_GATEWAY_MODEL_ID}`
+    );
+  });
+
+  it("fails closed when a configured user Gateway base URL is invalid", async () => {
+    const { getUserApiKey, getUserGatewayBaseUrl } = await import("@/lib/supabase/rpc");
+    vi.mocked(getUserApiKey).mockImplementation((_uid: string, svc: string) => {
+      if (svc === "gateway") return Promise.resolve("gw-user-key");
+      if (svc === "openai") return Promise.resolve("sk-openai");
+      return Promise.resolve(null);
+    });
+    vi.mocked(getUserGatewayBaseUrl).mockResolvedValue(
+      "https://unexpected.example.com/v1"
+    );
+
+    const { resolveProvider } = await import("@ai/models/registry");
+    await expect(resolveProvider("user-stale-gw")).rejects.toThrow(
+      /Gateway base URL rejected: host_not_allowed/
+    );
+    expect(LOGGER_WARN).toHaveBeenCalledWith(
+      "gateway_base_url_rejected",
+      expect.objectContaining({
+        reason: "host_not_allowed",
+        source: "user",
+      })
     );
   });
 
@@ -113,16 +150,13 @@ describe("resolveProvider", () => {
       svc === "openrouter" ? "sk-or" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider(
-      "user-2",
-      "anthropic/claude-3.7-sonnet:thinking"
-    );
+    const result = await resolveProvider("user-2", "anthropic/claude-sonnet-4.6");
     expect(result.provider).toBe("openrouter");
     // The OpenRouter path uses OpenAI provider with baseURL set to openrouter.
     expect(String(result.model)).toContain(
-      "openai(https://openrouter.ai/api/v1)::key::anthropic/claude-3.7-sonnet:thinking"
+      "openai-chat(https://openrouter.ai/api/v1)::key::anthropic/claude-sonnet-4.6"
     );
-    expect(result.modelId).toBe("anthropic/claude-3.7-sonnet:thinking");
+    expect(result.modelId).toBe("anthropic/claude-sonnet-4.6");
   });
 
   it("falls back to OpenRouter when envs unset", async () => {
@@ -142,26 +176,56 @@ describe("resolveProvider", () => {
       svc === "openrouter" ? "sk-or" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-6", "openai/gpt-4o-mini");
+    const result = await resolveProvider("user-6");
     expect(result.provider).toBe("openrouter");
     expect(String(result.model)).toContain(
-      "openai(https://openrouter.ai/api/v1)::key::openai/gpt-4o-mini"
+      `openai-chat(https://openrouter.ai/api/v1)::key::${DEFAULT_OPENROUTER_MODEL_ID}`
     );
+    expect(result.modelId).toBe(DEFAULT_OPENROUTER_MODEL_ID);
     // restore env for other tests
     process.env = env;
   });
 
-  it("uses Anthropic when only anthropic key exists", async () => {
+  it("requires an explicit model when only anthropic key exists", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
       svc === "anthropic" ? "sk-ant" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-3", "claude-3-5-sonnet-20241022");
+
+    await expect(resolveProvider("user-3")).rejects.toThrow(
+      /model must be selected explicitly for anthropic/
+    );
+  });
+
+  it("uses Anthropic with an explicit current model", async () => {
+    const { getUserApiKey } = await import("@/lib/supabase/rpc");
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "anthropic" ? "sk-ant" : null
+    );
+    const { resolveProvider } = await import("@ai/models/registry");
+    const result = await resolveProvider(
+      "user-3",
+      `anthropic/${ANTHROPIC_VALIDATION_MODEL_ID}`
+    );
+
     expect(result.provider).toBe("anthropic");
     expect(String(result.model)).toContain(
-      "anthropic::key::claude-3-5-sonnet-20241022"
+      `anthropic::key::${ANTHROPIC_VALIDATION_MODEL_ID}`
     );
+    expect(result.modelId).toBe(ANTHROPIC_VALIDATION_MODEL_ID);
+  });
+
+  it("rejects foreign provider-qualified hints for direct BYOK providers", async () => {
+    const { getUserApiKey } = await import("@/lib/supabase/rpc");
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "anthropic" ? "sk-ant" : null
+    );
+    const { resolveProvider } = await import("@ai/models/registry");
+
+    await expect(
+      resolveProvider("user-foreign-hint", "openai/gpt-5.5")
+    ).rejects.toThrow(/targets a different provider/);
   });
 
   it("uses xAI when only xai key exists", async () => {
@@ -170,9 +234,10 @@ describe("resolveProvider", () => {
       svc === "xai" ? "sk-xai" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-4", "grok-3");
+    const result = await resolveProvider("user-4");
     expect(result.provider).toBe("xai");
-    expect(String(result.model)).toContain("xai::key::grok-3");
+    expect(String(result.model)).toContain(`xai::key::${DEFAULT_XAI_MODEL_ID}`);
+    expect(result.modelId).toBe(DEFAULT_XAI_MODEL_ID);
   });
 
   it("throws when user has no provider keys", async () => {
@@ -211,7 +276,7 @@ describe("resolveProvider", () => {
     try {
       const { getUserApiKey } = await import("@/lib/supabase/rpc");
       vi.mocked(getUserApiKey).mockImplementation((_uid: string, svc: string) => {
-        if (svc === "gateway" || svc === "openai") {
+        if (svc === "openai") {
           return Promise.reject(new Error("secret leaked"));
         }
         return Promise.resolve(null);
@@ -219,13 +284,9 @@ describe("resolveProvider", () => {
       const { resolveProvider } = await import("@ai/models/registry");
 
       await expect(resolveProvider("user-log")).rejects.toThrow(
-        /No provider key found/
+        /OpenAI BYOK lookup failed/
       );
 
-      expect(LOGGER_WARN).toHaveBeenCalledWith(
-        "gateway_lookup_failed",
-        expect.not.objectContaining({ errorMessage: expect.anything() })
-      );
       expect(LOGGER_WARN).toHaveBeenCalledWith(
         "byok_lookup_failed",
         expect.objectContaining({
@@ -234,6 +295,41 @@ describe("resolveProvider", () => {
         })
       );
       expect(JSON.stringify(LOGGER_WARN.mock.calls)).not.toContain("secret leaked");
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  it("does not use team Gateway when OpenAI BYOK lookup fails", async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+      ANTHROPIC_API_KEY: undefined,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: undefined,
+    };
+
+    try {
+      const { getUserAllowGatewayFallback, getUserApiKey } = await import(
+        "@/lib/supabase/rpc"
+      );
+      const { resolveProvider } = await import("@ai/models/registry");
+
+      vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(true);
+      vi.mocked(getUserApiKey).mockImplementation((_uid: string, svc: string) => {
+        if (svc === "openai") {
+          return Promise.reject(new Error("secret leaked"));
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(resolveProvider("user-openai-fail")).rejects.toThrow(
+        /OpenAI BYOK lookup failed/
+      );
     } finally {
       process.env = originalEnv;
     }
@@ -262,19 +358,52 @@ describe("resolveProvider", () => {
       vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(true);
       vi.mocked(getUserApiKey).mockResolvedValue(null);
 
-      const result = await resolveProvider("user-bypass", "gpt-4o-mini");
+      const result = await resolveProvider("user-bypass");
 
       expect(vi.mocked(getUserApiKey)).toHaveBeenCalled();
       expect(vi.mocked(getUserAllowGatewayFallback)).toHaveBeenCalled();
       expect(result.provider).toBe("openai");
       expect(String(result.model)).toContain("gateway(");
-      expect(result.modelId).toBe("openai/gpt-4o-mini");
+      expect(result.modelId).toBe(DEFAULT_GATEWAY_MODEL_ID);
     } finally {
       process.env = originalEnv;
     }
   });
 
-  it("throws when user disables Gateway fallback", async () => {
+  it("uses server provider keys when user disables team Gateway fallback", async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+      ANTHROPIC_API_KEY: undefined,
+      // Minimal required vars so server env parsing doesn't fail.
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+    };
+
+    try {
+      const { getUserAllowGatewayFallback, getUserApiKey } = await import(
+        "@/lib/supabase/rpc"
+      );
+      const { resolveProvider } = await import("@ai/models/registry");
+
+      vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(false);
+      vi.mocked(getUserApiKey).mockResolvedValue(null);
+
+      const result = await resolveProvider("user-server-provider");
+
+      expect(result.provider).toBe("xai");
+      expect(result.credentialSource).toBe("server-provider");
+      expect(String(result.model)).toContain(`xai::key::${DEFAULT_XAI_MODEL_ID}`);
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  it("reports no eligible provider when user disables Gateway fallback and no server keys exist", async () => {
     const originalEnv = process.env;
     process.env = {
       ...process.env,
@@ -297,8 +426,8 @@ describe("resolveProvider", () => {
       vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(false);
       vi.mocked(getUserApiKey).mockResolvedValue(null);
 
-      await expect(resolveProvider("user-no-fallback", "gpt-4o-mini")).rejects.toThrow(
-        /disabled Gateway fallback/
+      await expect(resolveProvider("user-no-fallback")).rejects.toThrow(
+        /Team Gateway fallback was skipped because disabled/
       );
     } finally {
       process.env = originalEnv;

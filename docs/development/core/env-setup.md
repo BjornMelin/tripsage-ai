@@ -39,6 +39,7 @@ Notes:
 - Vercel AI Gateway:
   - `AI_GATEWAY_API_KEY`
   - `AI_GATEWAY_URL` (optional `baseURL` override for AI SDK Gateway; leave unset to use the SDK default)
+  - `AI_GATEWAY_ALLOWED_HOSTS` (optional comma-separated allowlist for custom Gateway hosts; required when `AI_GATEWAY_URL` is not the default Vercel Gateway host)
   - Dashboard: <https://vercel.com/ai-gateway>
 - Direct providers:
   - `OPENAI_API_KEY` — <https://platform.openai.com/api-keys>

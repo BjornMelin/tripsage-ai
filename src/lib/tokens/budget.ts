@@ -4,10 +4,8 @@
 
 import type { ClampResult, TokenChatMessage } from "@schemas/tokens";
 import { Tiktoken } from "js-tiktoken/lite";
-import cl100kBase from "js-tiktoken/ranks/cl100k_base";
 // Prefer lite ranks to avoid bundling all encodings.
-// o200k_base matches modern OpenAI models (e.g., gpt-4o, gpt-5 families).
-// cl100k_base covers older OpenAI models; retained as a fallback.
+// o200k_base matches the current OpenAI GPT-5.4/5.5 profiles.
 import o200kBase from "js-tiktoken/ranks/o200k_base";
 import { getModelContextLimit } from "./limits";
 
@@ -26,7 +24,7 @@ export type ChatMessage = TokenChatMessage;
 export const CHARS_PER_TOKEN_HEURISTIC = 4;
 
 /** Cache for tokenizer instances to avoid repeated WASM instantiation. */
-let cachedKey: "o200k" | "cl100k" | null = null;
+let cachedKey: "o200k" | null = null;
 let cachedTokenizer: Tiktoken | null = null;
 
 /**
@@ -38,18 +36,14 @@ const TOKENIZE_MAX_CHARS = 50_000;
 /**
  * Select a tokenizer encoding based on model hint.
  *
- * @param modelHint Optional model identifier (e.g., "gpt-4o").
+ * @param modelHint Optional model identifier (e.g., "gpt-5.5").
  * @returns Tiktoken instance or null if we should fallback to heuristic.
  */
 function selectTokenizer(modelHint?: string): Tiktoken | null {
   const hint = (modelHint || "").toLowerCase();
   try {
     const key: typeof cachedKey =
-      hint.includes("gpt-4o") || hint.includes("gpt-5")
-        ? "o200k"
-        : hint.includes("gpt-3.5") || hint.includes("gpt-4")
-          ? "cl100k"
-          : null;
+      hint.includes("gpt-5.4") || hint.includes("gpt-5.5") ? "o200k" : null;
     if (!key) return null;
 
     if (cachedTokenizer && cachedKey === key) return cachedTokenizer;
@@ -59,7 +53,7 @@ function selectTokenizer(modelHint?: string): Tiktoken | null {
       (cachedTokenizer as Tiktoken & { free?: () => void }).free?.();
     }
 
-    cachedTokenizer = new Tiktoken(key === "o200k" ? o200kBase : cl100kBase);
+    cachedTokenizer = new Tiktoken(o200kBase);
     cachedKey = key;
     return cachedTokenizer;
   } catch {

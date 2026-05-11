@@ -49,7 +49,9 @@ Local sign-up confirmation:
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
-- `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL` (team fallback)
+- `AI_GATEWAY_API_KEY` (team fallback; requires user consent)
+- `AI_GATEWAY_URL` (optional Gateway endpoint override)
+- `AI_GATEWAY_ALLOWED_HOSTS` (comma-separated allowlist for non-default Gateway hosts)
 - Optional user-provided BYOK keys via Vault
 - Server-side fallback provider keys (optional): `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`
 - Webhooks/QStash/Resend: `HMAC_SECRET`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`
@@ -96,19 +98,19 @@ Expect RLS isolation: users only see their own keys via app paths.
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/insert_user_api_key \
   -H "Authorization: Bearer <anon-key>" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test","p_service":"openai","p_api_key":"deny"}'
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_service":"openai","p_api_key":"deny"}'
 
 # Positive: service role
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/insert_user_api_key \
-  -H "Authorization: Bearer '$SUPABASE_SERVICE_ROLE_KEY'" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test","p_service":"openai","p_api_key":"sk-test"}'
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_service":"openai","p_api_key":"sk-test"}'
 
 # Gateway config
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/upsert_user_gateway_config \
-  -H "Authorization: Bearer '$SUPABASE_SERVICE_ROLE_KEY'" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test","p_base_url":"https://my-gateway.vercel.sh/v1"}'
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_base_url":"https://my-gateway.vercel.sh/v3/ai"}'
 ```
 
 ### Complete BYOK Lifecycle Test
@@ -118,25 +120,25 @@ curl -X POST https://<project>.supabase.co/rest/v1/rpc/upsert_user_gateway_confi
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/insert_user_api_key \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id": "test-user", "p_service": "openai", "p_api_key": "sk-test-key"}'
+  -d '{"p_user_id": "00000000-0000-0000-0000-000000000001", "p_service": "openai", "p_api_key": "sk-test-key"}'
 
 # 2. Retrieve API key
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/get_user_api_key \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id": "test-user", "p_service": "openai"}'
+  -d '{"p_user_id": "00000000-0000-0000-0000-000000000001", "p_service": "openai"}'
 
 # 3. Update last_used timestamp
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/touch_user_api_key \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id": "test-user", "p_service": "openai"}'
+  -d '{"p_user_id": "00000000-0000-0000-0000-000000000001", "p_service": "openai"}'
 
 # 4. Delete API key
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/delete_user_api_key \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id": "test-user", "p_service": "openai"}'
+  -d '{"p_user_id": "00000000-0000-0000-0000-000000000001", "p_service": "openai"}'
 ```
 
 ### Integration Testing
@@ -147,12 +149,14 @@ curl -X POST https://<project>.supabase.co/rest/v1/rpc/delete_user_api_key \
 import { resolveProvider } from "@ai/models/registry";
 
 // Should use BYOK key if available
-const provider = await resolveProvider(userId, "gpt-4o-mini");
+const provider = await resolveProvider(userId, "gpt-5.5");
 expect(provider.provider).toBe("openai");
-expect(provider.modelId).toBe("gpt-4o-mini");
+expect(provider.modelId).toBe("gpt-5.5");
 
-// Should fallback to team Gateway (remove BYOK keys first)
-const fallbackProvider = await resolveProvider(userId, "gpt-4o-mini");
+// Provider resolution order is owned by docs/operations/runbooks/byok-gateway-operator.md.
+// To prove fallback, remove the user's BYOK key, configure AI_GATEWAY_API_KEY,
+// and set allowGatewayFallback=true first.
+const fallbackProvider = await resolveProvider(userId, "gpt-5.5");
 expect(fallbackProvider.provider).toBe("openai");
 ```
 
@@ -445,7 +449,7 @@ The BYOK system integrates with OpenTelemetry:
 ```sql
 DELETE FROM vault.secrets WHERE name LIKE '%_api_key_%';
 DELETE FROM public.api_keys;
-UPDATE public.user_settings SET allow_gateway_fallback = true;
+UPDATE public.user_settings SET allow_gateway_fallback = false;
 DELETE FROM public.api_gateway_configs;
 ```
 

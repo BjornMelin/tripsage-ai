@@ -40,6 +40,11 @@
 
 * Attachment ingest and RAG indexing jobs now emit redacted duration/cost counters, enforce QStash payload and RAG chunk budgets, and map RAG budget failures to non-retryable DLQ responses.
 
+### Changed
+
+* AI chat persistence now canonicalizes stored UI message content by removing legacy tool-shaped parts, rehydrates tool state from `chat_tool_calls`, and centralizes current Gateway/OpenAI model profiles while requiring explicit Anthropic model selection.
+* Added a non-user-data AI Gateway model smoke test for schema validity, tool argument validity, latency, and usage evidence before changing model defaults.
+
 ## [1.32.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.4...v1.32.5) (2026-05-11)
 
 ### Bug Fixes
@@ -1018,7 +1023,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Chat message JSON parsing: `ChatMessageItem` detects and validates `flight.v1` and `stay.v1` schema JSON in text parts, rendering cards instead of raw text.
 * Agent routing in chat transport: `DefaultChatTransport.prepareSendMessagesRequest` routes messages with `metadata.agent` to `/api/agents/flights` or `/api/agents/accommodations`; falls back to `/api/chat/stream` for general chat.
 * Quick Actions metadata: Flight and accommodation quick actions send Zod-shaped requests via message metadata (`metadata.agent` and `metadata.request`).
-* Gateway fallback in provider registry: `resolveProvider` falls back to Vercel AI Gateway when no BYOK keys found; BYOK checked first, Gateway used as default for non-BYOK users.
+* Provider registry added Gateway fallback support. Current provider-resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 * Web search batch tool (multi‑query): `frontend/src/lib/tools/web-search-batch.ts` with bounded concurrency, per‑item results, and optional top‑level RL.
 * OpenTelemetry spans for web search tools using `withTelemetrySpan`:
   * `tool.web_search` (attributes: categoriesCount, sourcesCount, hasLocation, hasTbs, fresh, limit)
@@ -1060,8 +1065,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `frontend/src/lib/providers/types.ts`
   * Temporary shim that re-exported the registry has been removed; use `frontend/src/ai/models/registry.ts` directly
 * OpenRouter provider: switch to `@ai-sdk/openai` with `baseURL: https://openrouter.ai/api/v1` (remove `@openrouter/ai-sdk-provider`); attribution headers remain removed
-* Vitest unit tests for registry precedence and attribution
-  * `frontend/src/lib/providers/__tests__/registry.test.ts`
+* Vitest unit tests for provider resolution and OpenRouter mapping
+  * `src/ai/models/__tests__/registry.test.ts`
 * Architecture docs: ADR and Spec for provider order, attribution, and SSR boundaries
   * `docs/adrs/2025-11-01-provider-registry.md`, `docs/specs/provider-registry.md`
 * Dependency: `@ai-sdk/anthropic@3.0.0-beta.47`
@@ -1136,7 +1141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Agent routes for budget, destination, itinerary, memory, and router flows now call `errorResponse`, `enforceRouteRateLimit`, and `withRequestSpan` before invoking their orchestrators to keep throttling and telemetry consistent.
 * Budget/destination/itinerary orchestrators now build every tool via `buildGuardedTool` with concrete Zod schemas (web search batch, POI lookup, planning combine/save, travel advisory, weather, crawl) instead of bespoke `runWithGuardrails` blocks using `z.any`.
 * Chat page routing: Messages with agent metadata route to specialized endpoints; JSON parsing extracts structured results from markdown code blocks or plain text.
-* Provider registry resolution: Checks BYOK keys first (direct provider access), then falls back to Gateway (default path for non-BYOK users).
+* Provider registry resolution and Gateway fallback path added. Current provider-resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 * Web search tool (`frontend/src/lib/tools/web-search.ts`):
   * Uses `fetchWithRetry` with bounded timeouts; direct Firecrawl v2 `/search` POST.
   * Adds input guards (query ≤256, location ≤120), accepts custom category strings.
@@ -1257,7 +1262,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Building Upstash rate limiters lazily (no module‑scope side effects)
   * Guarding JSDOM‑specific globals in `frontend/src/test-setup.ts`
   * Using `vi.resetModules()` and env stubs before importing route modules
-* Centralized BYOK provider selection; preference order: openai → openrouter → anthropic → xai
+* Centralized BYOK provider selection; current provider-resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 * OpenRouter and xAI wired via OpenAI-compatible client with per-user BYOK and required base URLs
 * Registry is SSR-only (`server-only`), never returns or logs secret material
 * Session message listing and creation stay scoped to the authenticated user (`frontend/src/app/api/chat/sessions/_handlers.ts`).

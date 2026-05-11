@@ -309,11 +309,9 @@ Environment variables are managed through `src/lib/env/`:
 - **MFA backup codes**: Provide `MFA_BACKUP_CODE_PEPPER` (>=16 chars). If
   omitted, the app falls back to `SUPABASE_JWT_SECRET`, which must also be at
   least 16 characters to enable backup-code hashing.
-- **AI/tools**: Configure provider keys as needed. Provider resolution
-  follows this order: 1) User BYOK keys (from Supabase Vault), 2)
-  Server-side fallback keys (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
-  `ANTHROPIC_API_KEY`, `XAI_API_KEY`), 3) Vercel AI Gateway
-  (`AI_GATEWAY_API_KEY`). All provider keys are server-only.
+- **AI/tools**: Configure provider keys as needed. Provider resolution order is
+  owned by `docs/operations/runbooks/byok-gateway-operator.md`; all provider keys
+  are server-only.
 
 ### Usage Patterns
 
@@ -369,13 +367,8 @@ All HTTP requests use a single, Zod-enabled client at
 
 ### BYOK + Gateway
 
-Resolution order per user:
-
-1. Per-user Gateway key (service `gateway`) via `createGateway` from `ai`.
-2. Per-provider BYOK: OpenAI, OpenRouter (via `createOpenAI` +
-   baseURL=<https://openrouter.ai/api/v1>), Anthropic, xAI (via
-   `@ai-sdk/xai`).
-3. Team Gateway fallback (if configured) — consent-controlled.
+Provider resolution order is owned by
+`docs/operations/runbooks/byok-gateway-operator.md`.
 
 Consent API:
 
@@ -398,10 +391,10 @@ export async function POST(req: NextRequest) {
     model,
     messages: convertToModelMessages(messages),
     providerOptions: {
-      gateway: {
-        order: ["anthropic", "openai"],
-        budgetTokens: 200_000,
-      },
+	      gateway: {
+	        order: ["anthropic", "openai"],
+	        tags: ["tripsage:chat"],
+	      },
     },
   });
   return result.toUIMessageStreamResponse();
@@ -411,4 +404,4 @@ export async function POST(req: NextRequest) {
 - **Tracing**: OpenTelemetry spans track request flow across routes, providers, and tools (configured in `src/instrumentation.ts`).
 - **Metrics**: Real-time tracking of token usage (`js-tiktoken`), latency, and error rates via `fireAndForgetMetric`.
 - **Logs**: Structured JSON logging with PII redaction and secret masking (`redactErrorForLogging`).
-- **Distributed tracing**: Spans `providers.resolve` include attributes `{ strategy: user-vault|server-fallback|gateway, provider, model }`.
+- **Distributed tracing**: Current provider-resolution tracing details live in `docs/development/ai/ai-integration.md`.

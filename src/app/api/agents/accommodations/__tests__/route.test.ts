@@ -14,7 +14,7 @@ import {
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
-  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-5.5" } })),
 }));
 
 const mockLimitFn = vi.hoisted(() => vi.fn());
@@ -39,7 +39,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 // Mock provider registry
 vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-4o" })),
+  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-5.5" })),
 }));
 
 // Mock accommodation agent
@@ -48,7 +48,7 @@ vi.mock("@ai/agents", () => ({
     agent: {},
     agentType: "accommodationSearch",
     defaultMessages: [{ content: "schema", role: "user" }],
-    modelId: "gpt-4o",
+    modelId: "gpt-5.5",
   })),
 }));
 

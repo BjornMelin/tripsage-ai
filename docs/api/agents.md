@@ -400,7 +400,7 @@ Generic AI streaming endpoint for testing and demo purposes. Disabled by default
 | ----- | ---- | -------- | ----------- |
 | `prompt` | string | No | Prompt to send when `messages` is omitted (max 4000 chars) |
 | `messages` | array | No | Message array (max 16) with `{ role: one of system, user, assistant; content: string (max 2000 chars) }` |
-| `model` | string | No | One of `gpt-4o` or `gpt-4o-mini` (default: `gpt-4o`) |
+| `model` | string | No | Compact provider model identifier such as `gpt-5.5` or `openai/gpt-5.5` (defaults are owned by `@ai/models/defaults`) |
 | `desiredMaxTokens` | number | No | Desired output token budget (1–4096, default: 512) |
 
 ### Response
@@ -424,7 +424,7 @@ curl -N -X POST "http://localhost:3000/api/ai/stream" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Hello from AI demo",
-    "model": "gpt-4o-mini",
+    "model": "gpt-5.5",
     "desiredMaxTokens": 256
   }'
 ```

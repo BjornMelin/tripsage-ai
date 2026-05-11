@@ -22,7 +22,7 @@ This document defines what TripSage is allowed to emit into telemetry spans, spa
 
 - Low-cardinality metadata:
   - Route/method names (prefer stable route keys/templates; avoid raw request paths that include IDs), feature flags, boolean switches, error codes, retry counts.
-  - Provider model IDs (e.g., `gpt-4o`) and tool names.
+  - Provider model IDs (e.g., direct BYOK/fallback `gpt-5.5`, Gateway `openai/gpt-5.5`) and tool names.
 - Aggregations and sizes:
   - Token counts, character counts, byte sizes, durations (ms), item counts.
 - Hashed identifiers (pseudonyms):

@@ -4,11 +4,17 @@
 
 import "server-only";
 
+import {
+  DEFAULT_OPENAI_MODEL_ID,
+  DEFAULT_OPENROUTER_MODEL_ID,
+  DEFAULT_XAI_MODEL_ID,
+} from "@ai/models/defaults";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import type { ModelMapper, ProviderId, ProviderResolution } from "@schemas/providers";
 import { createGateway } from "ai";
+import { validateGatewayBaseUrl } from "@/lib/ai/gateway-url";
 import {
   getUserAllowGatewayFallback,
   getUserApiKey,
@@ -26,133 +32,44 @@ const providerRegistryLogger = createServerLogger("ai.providers");
  */
 const PROVIDER_PREFERENCE: ProviderId[] = ["openai", "openrouter", "anthropic", "xai"];
 
-/**
- * Extracts the host from a URL string.
- *
- * @param url - The URL string to parse.
- * @returns The host portion of the URL, or undefined if parsing fails.
- */
-function extractHost(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  try {
-    return new URL(url).host;
-  } catch {
-    // ignore parse errors for malformed URLs
-    return undefined;
+class RejectedGatewayBaseUrlError extends Error {
+  constructor(readonly reason: string) {
+    super(`Gateway base URL rejected: ${reason}`);
+    this.name = "RejectedGatewayBaseUrlError";
   }
 }
 
-type GatewayBaseUrlSource = "default" | "invalid_user_fallback" | "user";
-
-function isPrivateGatewayHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-
-  if (host === "localhost") return true;
-  if (host.endsWith(".local")) return true;
-
-  const ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(host);
-  if (ipv4Match) {
-    const octets = [
-      Number(ipv4Match[1]),
-      Number(ipv4Match[2]),
-      Number(ipv4Match[3]),
-      Number(ipv4Match[4]),
-    ];
-    if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
-      return true;
-    }
-    const [a, b] = octets;
-    if (a === 0 || a === 10 || a === 127) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    return false;
-  }
-
-  const trimmed = host.replace(/^\[|\]$/gu, "");
-  const ipv6 = trimmed.toLowerCase();
-
-  // IPv6 loopback (::1 and fully unabbreviated 0:0:0:0:0:0:0:1 variants)
-  if (ipv6 === "::1") return true;
-  if (/^(0{1,4}:){7}0*1$/iu.test(ipv6)) return true;
-
-  // Unique local addresses: fc00::/7 (fc00–fdff in the first hextet), case-insensitive
-  const firstHextetMatch = /^([0-9a-f]{1,4}):/iu.exec(ipv6);
-  if (firstHextetMatch) {
-    const firstHextet = Number.parseInt(firstHextetMatch[1], 16);
-    if (firstHextet >= 0xfc00 && firstHextet <= 0xfdff) {
-      return true;
-    }
-  }
-
-  // Link-local addresses (fe80::/10) – conservative prefix check on normalized string
-  if (ipv6.startsWith("fe80")) return true;
-
-  // IPv4-mapped / embedded IPv4 in IPv6, e.g. ::ffff:10.0.0.1
-  if (ipv6.includes(".")) {
-    const lastSegment = ipv6.split(":").pop() ?? "";
-    const embeddedIpv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u.exec(
-      lastSegment
+class MissingExplicitProviderModelError extends Error {
+  constructor(provider: ProviderId) {
+    super(
+      `A model must be selected explicitly for ${provider}; no app-owned default is configured for this provider.`
     );
-    if (embeddedIpv4Match) {
-      const a = Number(embeddedIpv4Match[1]);
-      const b = Number(embeddedIpv4Match[2]);
-
-      if (
-        a === 10 || // 10.0.0.0/8
-        (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0 – 172.31.255.255
-        (a === 192 && b === 168) || // 192.168.0.0/16
-        a === 127 || // 127.0.0.0/8 (loopback)
-        (a === 169 && b === 254) // 169.254.0.0/16 (link-local)
-      ) {
-        return true;
-      }
-    }
+    this.name = "MissingExplicitProviderModelError";
   }
-
-  return false;
 }
 
-function resolveGatewayBaseUrl(rawBaseUrl: string | undefined): {
-  baseUrl?: string;
-  source: GatewayBaseUrlSource;
-} {
-  if (!rawBaseUrl) {
-    return { baseUrl: undefined, source: "default" };
+class ForeignProviderModelHintError extends Error {
+  constructor(provider: ProviderId, modelId: string) {
+    super(
+      `Model hint ${modelId} targets a different provider; expected ${provider} or an unqualified provider-native model id.`
+    );
+    this.name = "ForeignProviderModelHintError";
   }
+}
 
-  let parsed: URL;
-  try {
-    parsed = new URL(rawBaseUrl);
-  } catch {
+function resolveGatewayBaseUrl(
+  rawBaseUrl: string | null | undefined,
+  source: "team" | "user"
+): { baseUrl?: string; host: string; source: "default" | "team" | "user" } {
+  const validation = validateGatewayBaseUrl(rawBaseUrl, { source });
+  if (!validation.ok) {
     providerRegistryLogger.warn("gateway_base_url_rejected", {
-      reason: "invalid_url",
+      reason: validation.reason,
+      source,
     });
-    return { baseUrl: undefined, source: "invalid_user_fallback" };
+    throw new RejectedGatewayBaseUrlError(validation.reason);
   }
-
-  if (parsed.protocol !== "https:") {
-    providerRegistryLogger.warn("gateway_base_url_rejected", {
-      reason: "non_https",
-    });
-    return { baseUrl: undefined, source: "invalid_user_fallback" };
-  }
-
-  if (parsed.username || parsed.password) {
-    providerRegistryLogger.warn("gateway_base_url_rejected", {
-      reason: "credentials",
-    });
-    return { baseUrl: undefined, source: "invalid_user_fallback" };
-  }
-
-  if (isPrivateGatewayHost(parsed.hostname)) {
-    providerRegistryLogger.warn("gateway_base_url_rejected", {
-      reason: "private_host",
-    });
-    return { baseUrl: undefined, source: "invalid_user_fallback" };
-  }
-
-  return { baseUrl: parsed.toString(), source: "user" };
+  return validation;
 }
 
 function normalizeGatewayModelId(provider: ProviderId, modelId: string): string {
@@ -161,11 +78,25 @@ function normalizeGatewayModelId(provider: ProviderId, modelId: string): string 
     return `${provider}/${DEFAULT_MODEL_MAPPER(provider)}`;
   }
 
-  // If the caller already provided a provider-qualified id (e.g., "openai/gpt-4o-mini"),
+  // If the caller already provided a provider-qualified id (e.g., "openai/gpt-5.5"),
   // keep it as-is to support direct gateway ids and OpenRouter-style hints.
   if (trimmed.includes("/")) return trimmed;
 
   return `${provider}/${trimmed}`;
+}
+
+function stripProviderPrefix(provider: ProviderId, modelId: string): string {
+  const trimmed = modelId.trim();
+  if (provider === "openrouter") return trimmed;
+
+  const prefix = `${provider}/`;
+  if (trimmed.startsWith(prefix)) {
+    return trimmed.slice(prefix.length);
+  }
+  if (trimmed.includes("/")) {
+    throw new ForeignProviderModelHintError(provider, trimmed);
+  }
+  return trimmed;
 }
 
 /**
@@ -179,27 +110,28 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
   provider: ProviderId,
   modelHint?: string
 ): string => {
-  if (!modelHint || modelHint.trim().length === 0) {
+  const trimmedHint = modelHint?.trim();
+  if (!trimmedHint) {
     // Sensible defaults per provider
     switch (provider) {
       case "openai":
-        return "gpt-5-mini";
+        return DEFAULT_OPENAI_MODEL_ID;
       case "openrouter":
-        return "openai/gpt-4o-mini";
+        return DEFAULT_OPENROUTER_MODEL_ID;
       case "anthropic":
-        return "claude-haiku-4-5";
+        throw new MissingExplicitProviderModelError(provider);
       case "xai":
-        return "grok-4-fast";
+        return DEFAULT_XAI_MODEL_ID;
       default:
-        return "grok-4-fast";
+        return DEFAULT_XAI_MODEL_ID;
     }
   }
   // For OpenRouter, accept fully-qualified ids like "provider/model"
   if (provider === "openrouter") {
-    return modelHint;
+    return trimmedHint;
   }
   // For others, return hint as-is; callers supply proper ids.
-  return modelHint;
+  return stripProviderPrefix(provider, trimmedHint);
 };
 
 /**
@@ -224,29 +156,24 @@ function toLanguageModel(
   return model as import("ai").LanguageModel;
 }
 
-/**
- * Creates a BYOK client for the specified provider.
- */
-function createByokClient(
+function createByokLanguageModel(
   provider: ProviderId,
-  apiKey: string
-):
-  | ReturnType<typeof createOpenAI>
-  | ReturnType<typeof createAnthropic>
-  | ReturnType<typeof createXai> {
+  apiKey: string,
+  modelId: string
+): import("ai").LanguageModel {
   switch (provider) {
     case "openai":
-      return createOpenAI({ apiKey });
+      return createOpenAI({ apiKey }).responses(modelId);
     case "openrouter":
       return createOpenAI({
         apiKey,
         // biome-ignore lint/style/useNamingConvention: provider option name
         baseURL: "https://openrouter.ai/api/v1",
-      });
+      }).chat(modelId);
     case "anthropic":
-      return createAnthropic({ apiKey });
+      return createAnthropic({ apiKey })(modelId);
     case "xai":
-      return createXai({ apiKey });
+      return createXai({ apiKey })(modelId);
     default: {
       const _exhaustiveCheck: never = provider;
       throw new Error(`Unsupported provider: ${provider}`);
@@ -267,8 +194,6 @@ async function resolveByokProvider(
   modelId: string,
   userId: string
 ): Promise<ProviderResolution> {
-  const client = createByokClient(provider, apiKey);
-
   // Fire-and-forget: update last used timestamp (ignore errors)
   touchUserApiKey(userId, provider).catch((error) => {
     providerRegistryLogger.warn("touch_user_api_key_failed", {
@@ -281,7 +206,12 @@ async function resolveByokProvider(
     "providers.resolve",
     { attributes: { modelId, path: "user-provider", provider } },
     async () => ({
-      model: toLanguageModel(client(modelId), provider, modelId),
+      credentialSource: "user-provider",
+      model: toLanguageModel(
+        createByokLanguageModel(provider, apiKey, modelId),
+        provider,
+        modelId
+      ),
       modelId,
       provider,
     })
@@ -291,56 +221,64 @@ async function resolveByokProvider(
 /**
  * Resolve user's preferred provider and return a ready AI SDK model.
  *
- * @param userId Supabase auth user id; used to fetch BYOK keys server-side.
- * @param modelHint Optional generic model hint (e.g., "gpt-4o-mini").
+ * @param userId - Supabase auth user id; used to fetch BYOK keys server-side.
+ * @param modelHint - Optional generic model hint (e.g., "gpt-5.5").
  * @returns ProviderResolution including provider id, model id, and model instance.
- * @throws Error if no provider key is found for the user.
+ * @throws {RejectedGatewayBaseUrlError} - If a selected user or team Gateway base URL fails validation.
+ * @throws {MissingExplicitProviderModelError} - If the resolved provider requires explicit model selection.
+ * @throws {ForeignProviderModelHintError} - If a direct BYOK/server provider receives a model hint for another provider.
+ * @throws {Error} - If a required provider lookup fails, no eligible credential source exists, or provider SDK initialization fails.
  */
 export async function resolveProvider(
   userId: string,
   modelHint?: string
 ): Promise<ProviderResolution> {
   // 0) Per-user Gateway key (if present): highest precedence
+  let userGatewayKey: string | null;
   try {
-    const userGatewayKey = await getUserApiKey(userId, "gateway");
-    if (userGatewayKey) {
-      const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
-      const { baseUrl, source } = resolveGatewayBaseUrl(rawBaseUrl);
-
-      const client = createGateway({
-        apiKey: userGatewayKey,
-        ...(baseUrl
-          ? {
-              // biome-ignore lint/style/useNamingConvention: provider option name
-              baseURL: baseUrl,
-            }
-          : {}),
-      });
-
-      const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-      const modelId = normalizeGatewayModelId("openai", resolvedModelId);
-      return await withTelemetrySpan(
-        "providers.resolve",
-        {
-          attributes: {
-            baseUrlHost: extractHost(baseUrl) ?? "ai-gateway.vercel.sh",
-            baseUrlSource: source,
-            modelId,
-            path: "user-gateway",
-            provider: "gateway",
-          },
-        },
-        async () => ({
-          model: toLanguageModel(client(modelId), "openai", modelId),
-          modelId,
-          provider: "openai",
-        })
-      );
-    }
+    userGatewayKey = await getUserApiKey(userId, "gateway");
   } catch (error) {
     providerRegistryLogger.warn("gateway_lookup_failed", {
       errorName: getSafeErrorName(error),
     });
+    throw new Error("Gateway key lookup failed; refusing fallback.");
+  }
+
+  if (userGatewayKey) {
+    const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
+    const gatewayBaseUrl = resolveGatewayBaseUrl(rawBaseUrl, "user");
+
+    const client = createGateway({
+      apiKey: userGatewayKey,
+      ...(gatewayBaseUrl.baseUrl
+        ? {
+            // biome-ignore lint/style/useNamingConvention: provider option name
+            baseURL: gatewayBaseUrl.baseUrl,
+          }
+        : {}),
+    });
+
+    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
+    return await withTelemetrySpan(
+      "providers.resolve",
+      {
+        attributes: {
+          baseUrlHost: gatewayBaseUrl.host,
+          baseUrlSource: gatewayBaseUrl.source,
+          credentialSource: "user-gateway",
+          modelId,
+          path: "user-gateway",
+          provider: "gateway",
+        },
+      },
+      async () => ({
+        credentialSource: "user-gateway",
+        model: toLanguageModel(client(modelId), "openai", modelId),
+        modelId,
+        provider: "openai",
+      })
+    );
   }
 
   // 1) Check for BYOK keys in preference order (OpenAI, OpenRouter, Anthropic, xAI)
@@ -353,60 +291,28 @@ export async function resolveProvider(
         return await resolveByokProvider(provider, apiKey, modelId, userId);
       }
     } catch (error) {
+      if (error instanceof MissingExplicitProviderModelError) {
+        throw error;
+      }
+      if (error instanceof ForeignProviderModelHintError) {
+        throw error;
+      }
       providerRegistryLogger.warn("byok_lookup_failed", {
         errorName: getSafeErrorName(error),
         provider,
       });
+      if (provider === "openai") {
+        throw new Error("OpenAI BYOK lookup failed; refusing Gateway fallback.");
+      }
     }
   }
 
-  // Fallback to server-side API keys when BYOK is not available
-  // Check in preference order for server-side keys
   const { getServerEnvVarWithFallback } = await import("@/lib/env/server");
-  for (const provider of PROVIDER_PREFERENCE) {
-    let serverApiKey: string | undefined;
-    const modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
 
-    if (provider === "openai") {
-      serverApiKey = getServerEnvVarWithFallback("OPENAI_API_KEY", undefined);
-      if (serverApiKey) {
-        const openai = createOpenAI({ apiKey: serverApiKey });
-        return { model: openai(modelId), modelId, provider };
-      }
-    }
-
-    if (provider === "openrouter") {
-      serverApiKey = getServerEnvVarWithFallback("OPENROUTER_API_KEY", undefined);
-      if (serverApiKey) {
-        const openrouter = createOpenAI({
-          apiKey: serverApiKey,
-          // biome-ignore lint/style/useNamingConvention: provider option name
-          baseURL: "https://openrouter.ai/api/v1",
-        });
-        return { model: openrouter(modelId), modelId, provider };
-      }
-    }
-
-    if (provider === "anthropic") {
-      serverApiKey = getServerEnvVarWithFallback("ANTHROPIC_API_KEY", undefined);
-      if (serverApiKey) {
-        const a = createAnthropic({ apiKey: serverApiKey });
-        return { model: a(modelId), modelId, provider };
-      }
-    }
-
-    if (provider === "xai") {
-      serverApiKey = getServerEnvVarWithFallback("XAI_API_KEY", undefined);
-      if (serverApiKey) {
-        const xai = createXai({ apiKey: serverApiKey });
-        return { model: xai(modelId), modelId, provider };
-      }
-    }
-  }
-
-  // Final fallback: Vercel AI Gateway (if configured)
-  // Gateway provides unified routing, budgets, retries, and observability
+  // App-owned fallback: Vercel AI Gateway (if configured and allowed).
+  // Gateway provides unified routing, budgets, retries, and observability.
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
+  let teamGatewaySkippedReason: "disabled" | "preference_lookup_failed" | undefined;
   if (gatewayApiKey) {
     let allowFallback: boolean | null = null;
     try {
@@ -419,46 +325,100 @@ export async function resolveProvider(
     }
 
     const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);
-    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
+    if (allowFallback === true) {
+      const gatewayBaseUrl = resolveGatewayBaseUrl(gatewayUrl, "team");
+      const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+      const modelId = normalizeGatewayModelId("openai", resolvedModelId);
 
-    const gateway = createGateway({
-      apiKey: gatewayApiKey,
-      ...(gatewayUrl?.trim()
-        ? {
-            // biome-ignore lint/style/useNamingConvention: provider option name
-            baseURL: gatewayUrl.trim(),
-          }
-        : {}),
-    });
-    if (allowFallback === false) {
-      throw new Error(
-        "User has disabled Gateway fallback; no per-user BYOK keys found."
-      );
-    }
-    return await withTelemetrySpan(
-      "providers.resolve",
-      {
-        attributes: {
-          baseUrlHost: extractHost(gatewayUrl) ?? "ai-gateway.vercel.sh",
-          baseUrlSource: "team",
-          modelId,
-          path: "team-gateway",
-          provider: "gateway",
+      const gateway = createGateway({
+        apiKey: gatewayApiKey,
+        ...(gatewayBaseUrl.baseUrl
+          ? {
+              // biome-ignore lint/style/useNamingConvention: provider option name
+              baseURL: gatewayBaseUrl.baseUrl,
+            }
+          : {}),
+      });
+      return await withTelemetrySpan(
+        "providers.resolve",
+        {
+          attributes: {
+            baseUrlHost: gatewayBaseUrl.host,
+            baseUrlSource: gatewayBaseUrl.source,
+            credentialSource: "team-gateway",
+            modelId,
+            path: "team-gateway",
+            provider: "gateway",
+          },
         },
-      },
-      async () => ({
-        model: toLanguageModel(gateway(modelId), "openai", modelId),
-        modelId,
-        provider: "openai",
-      })
-    );
+        async () => ({
+          credentialSource: "team-gateway",
+          model: toLanguageModel(gateway(modelId), "openai", modelId),
+          modelId,
+          provider: "openai",
+        })
+      );
+    } else {
+      teamGatewaySkippedReason =
+        allowFallback === null ? "preference_lookup_failed" : "disabled";
+    }
   }
 
+  // Break-glass fallback: direct server-side provider keys. This is intentionally
+  // after team Gateway so app-owned traffic keeps Gateway reporting/fallbacks.
+  for (const provider of PROVIDER_PREFERENCE) {
+    let serverApiKey: string | undefined;
+    let modelId: string;
+    try {
+      modelId = DEFAULT_MODEL_MAPPER(provider, modelHint);
+    } catch (error) {
+      if (error instanceof MissingExplicitProviderModelError) {
+        continue;
+      }
+      if (error instanceof ForeignProviderModelHintError) {
+        throw error;
+      }
+      throw error;
+    }
+
+    if (provider === "openai") {
+      serverApiKey = getServerEnvVarWithFallback("OPENAI_API_KEY", undefined);
+    } else if (provider === "openrouter") {
+      serverApiKey = getServerEnvVarWithFallback("OPENROUTER_API_KEY", undefined);
+    } else if (provider === "anthropic") {
+      serverApiKey = getServerEnvVarWithFallback("ANTHROPIC_API_KEY", undefined);
+    } else if (provider === "xai") {
+      serverApiKey = getServerEnvVarWithFallback("XAI_API_KEY", undefined);
+    }
+
+    if (serverApiKey) {
+      return await withTelemetrySpan(
+        "providers.resolve",
+        {
+          attributes: {
+            credentialSource: "server-provider",
+            modelId,
+            path: "server-provider",
+            provider,
+          },
+        },
+        async () => ({
+          credentialSource: "server-provider",
+          model: createByokLanguageModel(provider, serverApiKey, modelId),
+          modelId,
+          provider,
+        })
+      );
+    }
+  }
+
+  const teamGatewayDetail = teamGatewaySkippedReason
+    ? ` Team Gateway fallback was skipped because ${teamGatewaySkippedReason}.`
+    : "";
   throw new Error(
     "No provider key found for user and no server-side fallback keys configured; " +
       "please add a provider API key (BYOK) for one of: openai, openrouter, anthropic, xai, " +
       "or configure server-side fallback keys: OPENAI_API_KEY, OPENROUTER_API_KEY, " +
-      "ANTHROPIC_API_KEY, XAI_API_KEY, or AI_GATEWAY_API_KEY."
+      `ANTHROPIC_API_KEY, XAI_API_KEY, or AI_GATEWAY_API_KEY.${teamGatewayDetail}`
   );
 }

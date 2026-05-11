@@ -18,9 +18,14 @@ vi.mock("botid/server", async () => {
   };
 });
 
+const getAdminSupabaseMock = vi.hoisted(() => vi.fn(() => ({})));
 const handleChatMock = vi.hoisted(() =>
   vi.fn(async () => new Response("ok", { status: 200 }))
 );
+
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminSupabase: getAdminSupabaseMock,
+}));
 
 vi.mock("../_handler", () => ({
   createMemorySummaryCache: vi.fn(() => ({

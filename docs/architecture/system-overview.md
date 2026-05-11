@@ -40,7 +40,7 @@ graph TD
 
 - Streaming chat and tool calling via AI SDK v6 using shared Zod schemas in `src/schemas`.
 - Agent routes for flights, accommodations, destinations, itineraries, budget, and memory (`/api/agents/*`) with domain-specific tool sets.
-- BYOK + Vercel AI Gateway routing with explicit precedence: user gateway → user provider (OpenAI/Anthropic/xAI/OpenRouter) → team gateway fallback (opt-in).
+- BYOK + Vercel AI Gateway routing; provider resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 - Memory pipeline backed by Supabase Postgres + pgvector; QStash jobs cap inserts to 50 messages per batch and enforce idempotency.
 - Realtime collaboration (presence/broadcast) via Supabase Realtime; AI token streaming stays on AI SDK SSE.
 - Attachments stored in Supabase Storage (`attachments` bucket) with Postgres metadata rows (owner, size, MIME, path) and signed URL access.
@@ -61,7 +61,7 @@ graph TD
 - Supabase Auth uses `src/lib/supabase/server.ts` for SSR client creation and server-side session access; `src/proxy.ts` forwards requests and propagates/refreshes auth cookies between browser and server (no duplicated SSR client logic). Browser client is only for Realtime/subscriptions.
 - Vault stores BYOK keys; provider resolution happens server-side through `src/ai/models/registry.ts`. BYOK routes import `"server-only"`.
 - Randomness/timestamps come from `@/lib/security/random`; no `Math.random` or `crypto.randomUUID`.
-- Key precedence (highest → lowest): user gateway key, user provider key (OpenAI/Anthropic/xAI/OpenRouter), team gateway key fallback (requires user consent flag).
+- Provider resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 - Auth-bound routes stay dynamic; do not add `'use cache'` or static revalidation to BYOK/user-scoped handlers.
   Routes accessing `cookies()` or `headers()` (required for Supabase SSR auth) cannot use cache directives per Next.js Cache Components restrictions.
   See [Spec: BYOK Routes and Security (Next.js + Supabase Vault)](../specs/archive/0011-spec-byok-routes-and-security.md).

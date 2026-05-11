@@ -22,7 +22,6 @@ import {
 const SUGGESTIONS_CACHE_TTL_SECONDS = 900;
 const MAX_BUDGET_LIMIT = 10_000_000;
 const DEFAULT_SUGGESTION_LIMIT = 4;
-const DEFAULT_MODEL_HINT = "gpt-4o-mini";
 
 /**
  * Function type for resolving AI provider configurations.
@@ -154,7 +153,7 @@ async function generateSuggestionsWithCache(
 
   // Generate via AI
   const prompt = buildSuggestionPrompt(params);
-  const modelHint = deps.config?.modelHint ?? DEFAULT_MODEL_HINT;
+  const modelHint = deps.config?.modelHint;
   const { model, modelId } = await deps.resolveProvider(userId, modelHint);
   const timeoutMs = deps.config?.timeoutMs ?? 30_000;
   const timeoutConfig = buildTimeoutConfig(timeoutMs);

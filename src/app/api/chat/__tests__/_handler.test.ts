@@ -44,7 +44,7 @@ const toUIMessageStreamMock = vi.hoisted(() =>
 );
 
 const streamTextMock = vi.hoisted(() =>
-  vi.fn(() => ({
+  vi.fn((_options: unknown) => ({
     toUIMessageStream: toUIMessageStreamMock,
   }))
 );
@@ -120,6 +120,9 @@ describe("handleChat", () => {
       },
       user: { id: userId },
     });
+    const serverSupabase = createMockSupabaseClient({
+      user: { id: userId },
+    });
 
     getMaybeSingleMock.mockResolvedValue({ data: { id: sessionId }, error: null });
     getManyMock.mockResolvedValue({ count: null, data: [], error: null });
@@ -137,10 +140,15 @@ describe("handleChat", () => {
     await handleChat(
       {
         resolveProvider: async () => ({
+          credentialSource: "user-provider",
           model: createMockModel(),
-          modelId: "gpt-4o",
+          modelId: "gpt-5.5",
           provider: "openai",
         }),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(
+            serverSupabase
+          ),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },
@@ -158,6 +166,18 @@ describe("handleChat", () => {
     );
 
     expect(createUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+    expect(insertSingleMock).toHaveBeenNthCalledWith(
+      1,
+      supabase,
+      "chat_messages",
+      expect.objectContaining({ role: "user" })
+    );
+    expect(insertSingleMock).toHaveBeenNthCalledWith(
+      2,
+      serverSupabase,
+      "chat_messages",
+      expect.objectContaining({ role: "assistant" })
+    );
     const responseOpts = captured.responseOptions as {
       consumeSseStream?: unknown;
     };
@@ -210,6 +230,7 @@ describe("handleChat", () => {
     });
 
     expect(updateSingleMock).toHaveBeenCalledTimes(1);
+    expect(updateSingleMock.mock.calls[0]?.[0]).toBe(serverSupabase);
     const update = updateSingleMock.mock.calls[0]?.[2] as {
       content?: unknown;
       metadata?: unknown;
@@ -241,6 +262,8 @@ describe("handleChat", () => {
       {
         resolveProvider: async () =>
           await Promise.reject(new Error("No provider keys configured.")),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },
@@ -266,7 +289,7 @@ describe("handleChat", () => {
     );
   });
 
-  it("does not 500 when history contains legacy model tool-call parts", async () => {
+  it("loads canonicalized history and rehydrates tool rows for model context", async () => {
     const { handleChat } = await import("../_handler");
 
     const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -277,14 +300,15 @@ describe("handleChat", () => {
         chat_messages: {
           data: [
             {
-              content: JSON.stringify([
-                {
-                  args: { query: "london" },
-                  toolCallId: "call-legacy-1",
-                  toolName: "webSearch",
-                  type: "tool-call",
-                },
-              ]),
+              content: JSON.stringify([{ text: "ignore me", type: "text" }]),
+              id: 99,
+              metadata: {},
+              role: "system",
+              session_id: sessionId,
+              user_id: userId,
+            },
+            {
+              content: JSON.stringify([{ text: "", type: "text" }]),
               id: 1,
               metadata: {},
               role: "assistant",
@@ -305,6 +329,7 @@ describe("handleChat", () => {
               error_message: null,
               id: 1,
               message_id: 1,
+              provider_executed: true,
               result: { fromCache: false, results: [], tookMs: 1 },
               status: "completed",
               tool_id: "call-legacy-1",
@@ -331,10 +356,13 @@ describe("handleChat", () => {
     const res = await handleChat(
       {
         resolveProvider: async () => ({
+          credentialSource: "user-provider",
           model: createMockModel(),
-          modelId: "gpt-4o",
+          modelId: "gpt-5.5",
           provider: "openai",
         }),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },
@@ -353,5 +381,134 @@ describe("handleChat", () => {
 
     expect(res.status).toBe(200);
     expect(createUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+    const streamOpts = captured.streamOptions as {
+      originalMessages?: Array<{ role: string }>;
+    };
+    expect(
+      streamOpts.originalMessages?.some((message) => message.role === "system")
+    ).toBe(false);
+  });
+
+  it("persists pending tool calls and updates them when results arrive", async () => {
+    const { handleChat } = await import("../_handler");
+
+    const userId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    const sessionId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+
+    const supabase = createMockSupabaseClient({
+      selectResults: {
+        chat_sessions: {
+          data: { id: sessionId, user_id: userId },
+          error: null,
+        },
+      },
+      user: { id: userId },
+    });
+    const serverSupabase = createMockSupabaseClient({
+      user: { id: userId },
+    });
+
+    let messageInsertId = 200;
+    insertSingleMock.mockImplementation((_client, table: string) => {
+      if (table === "chat_messages") {
+        messageInsertId += 1;
+        return { data: { id: messageInsertId }, error: null };
+      }
+      if (table === "chat_tool_calls") {
+        return { data: { id: 301 }, error: null };
+      }
+      return { data: null, error: null };
+    });
+    updateSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const res = await handleChat(
+      {
+        resolveProvider: async () => ({
+          credentialSource: "user-provider",
+          model: createMockModel(),
+          modelId: "gpt-5.5",
+          provider: "openai",
+        }),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(
+            serverSupabase
+          ),
+        supabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
+      },
+      {
+        messages: [
+          {
+            id: "msg-1",
+            parts: [{ text: "Search the web", type: "text" }],
+            role: "user",
+          },
+        ],
+        sessionId,
+        userId,
+      }
+    );
+
+    expect(res.status).toBe(200);
+    const streamOptions = streamTextMock.mock.calls[0]?.[0] as {
+      onStepFinish?: (event: {
+        toolCalls?: unknown[];
+        toolResults?: unknown[];
+      }) => Promise<void> | void;
+    };
+    expect(typeof streamOptions.onStepFinish).toBe("function");
+
+    await streamOptions.onStepFinish?.({
+      toolCalls: [
+        {
+          input: { query: "london" },
+          toolCallId: "tool-call-1",
+          toolName: "webSearch",
+        },
+      ],
+      toolResults: [],
+    });
+
+    const toolInsertCall = insertSingleMock.mock.calls.find(
+      (call) => call[1] === "chat_tool_calls"
+    );
+    expect(toolInsertCall?.[0]).toBe(serverSupabase);
+    expect(toolInsertCall?.[2]).toEqual(
+      expect.objectContaining({
+        completed_at: null,
+        error_message: null,
+        message_id: 202,
+        provider_executed: false,
+        result: null,
+        status: "pending",
+        tool_id: "tool-call-1",
+        tool_name: "webSearch",
+      })
+    );
+
+    await streamOptions.onStepFinish?.({
+      toolCalls: [],
+      toolResults: [
+        {
+          result: { ok: true },
+          toolCallId: "tool-call-1",
+          toolName: "webSearch",
+        },
+      ],
+    });
+
+    const toolUpdateCall = updateSingleMock.mock.calls.find(
+      (call) => call[1] === "chat_tool_calls"
+    );
+    expect(toolUpdateCall?.[0]).toBe(serverSupabase);
+    expect(toolUpdateCall?.[2]).toEqual(
+      expect.objectContaining({
+        completed_at: expect.any(String),
+        error_message: null,
+        provider_executed: true,
+        result: { ok: true },
+        status: "completed",
+      })
+    );
   });
 });

@@ -39,21 +39,35 @@ export const configurationScopeSchema = z.enum([
 /** TypeScript type for configuration scopes. */
 export type ConfigurationScope = z.infer<typeof configurationScopeSchema>;
 
+const modelIdentifierPattern =
+  /^[a-z0-9](?:[a-z0-9._:-]*[a-z0-9])?(?:\/[a-z0-9](?:[a-z0-9._:-]*[a-z0-9])?)*$/iu;
+
+function isOpenAiReasoningFamilyModel(model: string): boolean {
+  return /(?:^|\/)gpt-[45](?:[./-]|$)/iu.test(model);
+}
+
 /**
- * Zod schema for supported AI model names.
- * Defines available AI models for agent configuration.
+ * Zod schema for provider model identifiers.
+ *
+ * The model catalog is provider-owned and changes faster than this codebase.
+ * Accept compact provider ids such as `gpt-5.5`, `openai/gpt-5.5`, and
+ * OpenRouter ids with suffixes, while rejecting URLs, whitespace, and oversized
+ * values that should not be stored as agent configuration.
  */
-export const modelNameSchema = z.enum([
-  "gpt-4",
-  "gpt-4-turbo",
-  "gpt-4o",
-  "gpt-4o-mini",
-  "gpt-5",
-  "gpt-5-mini",
-  "gpt-5-nano",
-  "claude-4.5-sonnet",
-  "claude-4.5-haiku",
-] as const);
+export const modelNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(modelIdentifierPattern, {
+    error: "Model must be a compact provider model identifier",
+  })
+  .refine((value) => !value.includes("://"), {
+    error: "Model must be a provider model identifier, not a URL",
+  })
+  .refine((value) => !value.includes("//"), {
+    error: "Model must not contain empty provider/model segments",
+  });
 
 /** TypeScript type for model names. */
 export type ModelName = z.infer<typeof modelNameSchema>;
@@ -89,10 +103,7 @@ export const agentConfigRequestSchema = z
   .refine(
     (data) => {
       if (data.model && data.temperature !== undefined) {
-        if (
-          (data.model.startsWith("gpt-4") || data.model.startsWith("gpt-5")) &&
-          data.temperature > 1.5
-        ) {
+        if (isOpenAiReasoningFamilyModel(data.model) && data.temperature > 1.5) {
           return false;
         }
       }

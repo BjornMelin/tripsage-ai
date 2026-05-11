@@ -4,6 +4,42 @@ import { agentConfigRequestSchema } from "@schemas/configuration";
 import { describe, expect, it } from "vitest";
 
 describe("agentConfigRequestSchema", () => {
+  it("accepts current provider-owned model identifiers", () => {
+    expect(agentConfigRequestSchema.safeParse({ model: "gpt-5.5" }).success).toBe(true);
+    expect(
+      agentConfigRequestSchema.safeParse({ model: "openai/gpt-5.5" }).success
+    ).toBe(true);
+    expect(
+      agentConfigRequestSchema.safeParse({
+        model: "anthropic/claude-sonnet-4.6",
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects URLs and whitespace in model identifiers", () => {
+    expect(
+      agentConfigRequestSchema.safeParse({ model: "https://example.com/model" }).success
+    ).toBe(false);
+    expect(agentConfigRequestSchema.safeParse({ model: "gpt 5.5" }).success).toBe(
+      false
+    );
+    expect(agentConfigRequestSchema.safeParse({ model: "openai/" }).success).toBe(
+      false
+    );
+    expect(
+      agentConfigRequestSchema.safeParse({ model: "openai//gpt-5.5" }).success
+    ).toBe(false);
+  });
+
+  it("applies OpenAI temperature limits to provider-qualified GPT models", () => {
+    const result = agentConfigRequestSchema.safeParse({
+      model: "openai/gpt-5.5",
+      temperature: 1.75,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("accepts step timeout when total timeout is present", () => {
     const result = agentConfigRequestSchema.safeParse({
       stepTimeoutSeconds: 10,

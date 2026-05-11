@@ -42,6 +42,7 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const mockCreateOpenAI = vi.hoisted(() => vi.fn());
 const mockCreateAnthropic = vi.hoisted(() => vi.fn());
+const mockCreateGateway = vi.hoisted(() => vi.fn());
 const MOCK_SPAN = vi.hoisted(() => ({
   addEvent: vi.fn(),
   end: vi.fn(),
@@ -101,6 +102,10 @@ vi.mock("@ai-sdk/anthropic", () => ({
   createAnthropic: mockCreateAnthropic,
 }));
 
+vi.mock("ai", () => ({
+  createGateway: mockCreateGateway,
+}));
+
 vi.mock("@/lib/telemetry/span", () => ({
   recordErrorOnActiveSpan: vi.fn(),
   recordErrorOnSpan: vi.fn(),
@@ -158,6 +163,7 @@ describe("/api/keys/validate route", () => {
     MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValue("127.0.0.1");
     mockCreateOpenAI.mockReset();
     mockCreateAnthropic.mockReset();
+    mockCreateGateway.mockReset();
     CREATE_SUPABASE.mockReset();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
     RATE_LIMIT_FACTORY.mockReset();
@@ -193,6 +199,7 @@ describe("/api/keys/validate route", () => {
   afterEach(() => {
     setSupabaseFactoryForTests(null);
     setRateLimitFactoryForTests(null);
+    vi.unstubAllGlobals();
   });
 
   afterAll(() => {
@@ -434,6 +441,92 @@ describe("/api/keys/validate route", () => {
 
     expect(body).toEqual({ isValid: false, reason: "NETWORK_ERROR" });
     expect(res.status).toBe(200);
+  });
+
+  it("passes timeout-aware fetch to Gateway credits validation", async () => {
+    const fetchMock = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+    let gatewayFetch: typeof fetch | undefined;
+    const getCredits = vi.fn(async () => ({ balance: "1", totalUsed: "0" }));
+    mockCreateGateway.mockImplementation((options: { fetch?: typeof fetch }) => {
+      gatewayFetch = options.fetch;
+      return { getCredits };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "gw-test", service: "gateway" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(mockCreateGateway).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: "gw-test",
+        fetch: expect.any(Function),
+      })
+    );
+    expect(getCredits).toHaveBeenCalled();
+    expect(body).toEqual({ isValid: true });
+    expect(res.status).toBe(200);
+    expect(gatewayFetch).toEqual(expect.any(Function));
+
+    await gatewayFetch?.("https://gateway.test/credits");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://gateway.test/credits",
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      })
+    );
+  });
+
+  it("returns REQUEST_TIMEOUT when Gateway credits validation times out", async () => {
+    mockCreateGateway.mockReturnValue({
+      getCredits: vi.fn(() =>
+        Promise.reject(new DOMException("Timeout", "TimeoutError"))
+      ),
+    });
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "gw-test", service: "gateway" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "REQUEST_TIMEOUT" });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns INVALID_KEY when Gateway credits validation rejects credentials", async () => {
+    mockCreateGateway.mockReturnValue({
+      getCredits: vi.fn(() => Promise.reject({ status: 401 })),
+    });
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "gw-test", service: "gateway" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "INVALID_KEY" });
+    expect(res.status).toBe(200);
+    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith(
+      "keys.validation.reason",
+      "INVALID_KEY"
+    );
   });
 
   it("throttles per user id and returns headers", async () => {

@@ -27,10 +27,10 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 ### AI & Intelligence
 
-- **Multi-Provider AI Routing**: Vercel AI Gateway with automatic fallback across OpenAI, Anthropic, xAI, and OpenRouter—BYOK support with encrypted key storage
+- **AI Gateway + BYOK Routing**: Vercel AI Gateway for app-owned OpenAI profiles, direct user BYOK for OpenAI/OpenRouter/Anthropic/xAI, and encrypted key storage
 - **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v6 with Zod validation—flights (Duffel), accommodations, weather, maps, planning, and memory
 - **Hybrid RAG Pipeline**: Vector similarity search with Supabase pgvector + keyword fusion, Cohere Rerank v3.5 for optimal retrieval accuracy
-- **Structured Outputs**: Schema-first LLM responses with `generateObject` for deterministic parsing and type-safe validation
+- **Structured Outputs**: Schema-first LLM responses with `generateText` + `Output.object` for deterministic parsing and type-safe validation
 - **Streaming Intelligence**: Real-time SSE streaming with interleaved tool calls and generative UI components
 
 ### Data & Infrastructure
@@ -96,7 +96,7 @@ open http://localhost:3000
 Single-runtime, server-first stack optimized for edge deployment:
 
 - **Backend & UI**: Next.js 16 App Router (React 19) with Vercel AI SDK v6 RSC/actions and React Compiler
-- **AI Routing**: Vercel AI Gateway for multi-provider orchestration with automatic fallback, BYOK support via Supabase Vault
+- **AI Routing**: Vercel AI Gateway for app-owned OpenAI profiles with opt-in team fallback, plus BYOK support via Supabase Vault
 - **Database & Auth**: Supabase PostgreSQL with pgvector (HNSW indexes), SSR clients (`@supabase/ssr`), Realtime channels, Storage buckets
 - **Cache & Rate Limiting**: Upstash Redis (HTTP) for serverless caching and Upstash Ratelimit for sliding-window throttling
 - **Background Jobs**: Upstash QStash for webhook-driven async tasks with idempotency guarantees
@@ -166,7 +166,7 @@ tripsage-ai/
 
 ## Conventions
 
-- Server-first: Route handlers and Server Actions own data fetching and AI calls. Use `createAI`/`streamText` with Zod v4 validation.
+- Server-first: Route handlers and Server Actions own data fetching and AI calls. Use `convertToModelMessages`, `streamText`, `toUIMessageStreamResponse`, and Zod v4 validation.
 - Auth/DB: `@supabase/ssr` only; no auth-helpers.
 - Cache/jobs: Upstash HTTP clients only (`Redis.fromEnv`, QStash SDK).
 - Logging: OTEL exporters; no `console.log` in server code.

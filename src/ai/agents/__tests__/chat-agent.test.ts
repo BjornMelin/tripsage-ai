@@ -132,7 +132,7 @@ function createTestDeps(): AgentDependencies {
   return {
     identifier: "test-user-123",
     model: createMockModel(),
-    modelId: "gpt-4o",
+    modelId: "gpt-5.4-mini",
     sessionId: "test-session-456",
     userId: "test-user-123",
   };
@@ -177,7 +177,7 @@ describe("createChatAgent", () => {
 
   it("should use provided model ID", () => {
     const deps = createTestDeps();
-    deps.modelId = "claude-3-opus";
+    deps.modelId = "claude-sonnet-4.6";
     const messages = createTestMessages();
 
     const result = createChatAgent(deps, messages, {
@@ -185,7 +185,7 @@ describe("createChatAgent", () => {
       stepLimit: 10,
     });
 
-    expect(result.modelId).toBe("claude-3-opus");
+    expect(result.modelId).toBe("claude-sonnet-4.6");
   });
 
   it("should include memory summary in instructions when provided", () => {

@@ -14,7 +14,7 @@ import {
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
-  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-5.5" } })),
 }));
 
 // Mock next/headers cookies() before any imports that use it
@@ -47,7 +47,7 @@ vi.mock("@ai/agents", () => ({
     agent: {},
     agentType: "budgetPlanning",
     defaultMessages: [{ content: "schema", role: "user" }],
-    modelId: "gpt-4o",
+    modelId: "gpt-5.5",
   })),
 }));
 

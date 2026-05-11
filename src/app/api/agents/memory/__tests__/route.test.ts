@@ -13,7 +13,7 @@ import {
 } from "@/test/helpers/route";
 
 vi.mock("@/lib/agents/config-resolver", () => ({
-  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-4o-mini" } })),
+  resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-5.5" } })),
 }));
 
 // Mock next/headers cookies() before any imports that use it

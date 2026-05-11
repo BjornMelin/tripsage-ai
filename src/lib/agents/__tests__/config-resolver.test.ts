@@ -76,7 +76,7 @@ const baseConfig: AgentConfig = {
   agentType: "budgetAgent",
   createdAt: new Date().toISOString(),
   id: "v1732250000_deadbeef",
-  model: "gpt-4o",
+  model: "gpt-5.5",
   parameters: { temperature: 0.4 },
   scope: "global",
   updatedAt: new Date().toISOString(),
@@ -102,7 +102,7 @@ describe("resolveAgentConfig", () => {
 
     const result = await resolveAgentConfig("budgetAgent");
 
-    expect(result.config.model).toBe("gpt-4o");
+    expect(result.config.model).toBe("gpt-5.5");
     expect(mockSetCachedJson).not.toHaveBeenCalled();
     expect(supabaseSelect).not.toHaveBeenCalled();
   });
@@ -135,7 +135,10 @@ describe("resolveAgentConfig", () => {
       eq: () => ({ eq: () => ({ maybeSingle: supabaseMaybeSingle }) }),
     });
     supabaseMaybeSingle.mockResolvedValue({
-      data: { config: { ...baseConfig, model: "invalid-model" }, version_id: "bad" },
+      data: {
+        config: { ...baseConfig, model: "https://models.test/gpt" },
+        version_id: "bad",
+      },
       error: null,
     });
 

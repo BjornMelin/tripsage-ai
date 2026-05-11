@@ -4,6 +4,7 @@
 
 "use client";
 
+import { DEFAULT_AGENT_MODEL_ID } from "@ai/models/defaults";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import {
   AlertTriangleIcon,
@@ -361,7 +362,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   id="model"
                   value={currentParams.model ?? ""}
                   onChange={(e) => onParamChange("model", e.target.value)}
-                  placeholder="gpt-4o"
+                  placeholder={DEFAULT_AGENT_MODEL_ID}
                 />
               </div>
 

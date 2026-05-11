@@ -99,8 +99,9 @@ We will:
      - Parses input via the appropriate Zod schema from `agentSchemas`.
      - Resolves provider via `resolveProvider`.
      - Invokes a dedicated agent function (e.g., `runDestinationAgent`) that uses
-       AI SDK v6 `streamText`/`streamObject` and returns
-       `result.toUIMessageStreamResponse({ onError })`.
+       AI SDK v6 `streamText` for streaming chat/tool workflows or `generateText`
+       with `Output.object({ schema })` for structured JSON workflows, then returns
+       `result.toUIMessageStreamResponse({ onError })` for UI streams.
 
 4. **Centralize rate limiting and reuse configuration**
 

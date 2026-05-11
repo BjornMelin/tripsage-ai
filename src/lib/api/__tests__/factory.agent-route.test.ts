@@ -97,7 +97,7 @@ describe("createAgentRoute", () => {
         agentType: "memoryAgent",
         createdAt: "2024-01-01T00:00:00.000Z",
         id: "v1700000000_deadbeef",
-        model: "gpt-4o",
+        model: "gpt-5.5",
         parameters: { stepTimeoutSeconds: 10, timeoutSeconds: 42 },
         scope: "global",
         updatedAt: "2024-01-01T00:00:00.000Z",
@@ -107,7 +107,7 @@ describe("createAgentRoute", () => {
 
     resolveProviderMock.mockResolvedValue({
       model: unsafeCast({}),
-      modelId: "gpt-4o",
+      modelId: "gpt-5.5",
       provider: "openai",
     });
 
@@ -152,7 +152,7 @@ describe("createAgentRoute", () => {
     };
     expect(startMetadata).toMatchObject({
       agentType: "memoryAgent",
-      modelId: "gpt-4o",
+      modelId: "gpt-5.5",
       versionId: "v1700000000_deadbeef",
     });
     expect(typeof startMetadata?.requestId).toBe("string");
@@ -170,7 +170,7 @@ describe("createAgentRoute", () => {
     expect(finishMetadata).toMatchObject({
       agentType: "memoryAgent",
       finishReason: "stop",
-      modelId: "gpt-4o",
+      modelId: "gpt-5.5",
       totalUsage: usage,
       versionId: "v1700000000_deadbeef",
     });

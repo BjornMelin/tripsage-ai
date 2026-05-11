@@ -77,7 +77,7 @@ describe("classifyUserMessage", () => {
 
   it("does not include identifier in provider telemetry metadata", async () => {
     await classifyUserMessage(
-      { identifier: "user-123", model: mockModel, modelId: "gpt-4o" },
+      { identifier: "user-123", model: mockModel, modelId: "gpt-5.4-mini" },
       "Find flights"
     );
 
@@ -87,7 +87,7 @@ describe("classifyUserMessage", () => {
           functionId: "router.classifyUserMessage",
           isEnabled: true,
           metadata: expect.objectContaining({
-            modelId: "gpt-4o",
+            modelId: "gpt-5.4-mini",
           }),
         }),
       })

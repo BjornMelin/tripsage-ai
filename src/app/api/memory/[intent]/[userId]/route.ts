@@ -324,7 +324,7 @@ const getInsights = withApiGuards({
     const prompt = buildInsightsPrompt(contextSummary, limitedContext.length);
 
     try {
-      const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
+      const { model, modelId } = await resolveProvider(userId);
 
       const result = await generateText({
         abortSignal: req.signal,
