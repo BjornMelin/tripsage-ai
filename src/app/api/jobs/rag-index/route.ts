@@ -4,13 +4,12 @@
 
 import "server-only";
 
+import { MAX_RAG_INDEX_JOB_BODY_BYTES } from "@schemas/rag";
 import { ragIndexJobSchema } from "@schemas/webhooks";
 import { runQstashJob } from "@/lib/qstash/job-route";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { handleRagIndexJob } from "./_handler";
-
-const MAX_RAG_JOB_BODY_BYTES = 512 * 1024;
 
 class NonRetryableRagIndexError extends Error {
   public readonly errorCode: string;
@@ -40,10 +39,23 @@ export async function POST(req: Request): Promise<Response> {
             const uniqueErrors = Array.from(
               new Set(result.failed.map((doc) => doc.error))
             );
-            if (
+            const hasOnlyNonRetryableFailures =
               uniqueErrors.length > 0 &&
-              uniqueErrors.every(isNonRetryableRagIndexFailure)
-            ) {
+              uniqueErrors.every(isNonRetryableRagIndexFailure);
+            const retryOutcome = hasOnlyNonRetryableFailures
+              ? "non_retryable"
+              : "retryable";
+            recordTelemetryEvent("jobs.rag_index.failed", {
+              attributes: {
+                chunksCreated: result.chunksCreated,
+                documentCount: payload.documents.length,
+                failedCount: result.failed.length,
+                namespace: result.namespace,
+                retryOutcome,
+              },
+              level: "error",
+            });
+            if (hasOnlyNonRetryableFailures) {
               throw new NonRetryableRagIndexError(
                 "rag_index_limit",
                 `Non-retryable RAG indexing failures: ${uniqueErrors
@@ -56,6 +68,17 @@ export async function POST(req: Request): Promise<Response> {
             // conservative to avoid silently dropping documents.
             throw new Error(`rag_index_failed:${result.failed.length}`);
           }
+
+          recordTelemetryEvent("jobs.rag_index.completed", {
+            attributes: {
+              chunksCreated: result.chunksCreated,
+              documentCount: payload.documents.length,
+              failedCount: 0,
+              indexedCount: result.indexed,
+              namespace: result.namespace,
+              retryOutcome: "not_applicable",
+            },
+          });
 
           return result;
         },
@@ -76,7 +99,7 @@ export async function POST(req: Request): Promise<Response> {
         req,
         schema: ragIndexJobSchema,
         span,
-        verifyMaxBytes: MAX_RAG_JOB_BODY_BYTES,
+        verifyMaxBytes: MAX_RAG_INDEX_JOB_BODY_BYTES,
       })
   );
 }

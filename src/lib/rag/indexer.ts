@@ -11,7 +11,11 @@ import type {
   RagIndexResponse,
   RagNamespace,
 } from "@schemas/rag";
-import { indexerConfigSchema } from "@schemas/rag";
+import {
+  indexerConfigSchema,
+  MAX_RAG_EMBED_CHUNKS_PER_BATCH,
+  RAG_CHARS_PER_TOKEN,
+} from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
 import {
@@ -22,18 +26,13 @@ import { secureUuid } from "@/lib/security/random";
 import type { Database } from "@/lib/supabase/database.types";
 import { deleteMany, upsertMany } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { RagLimitError } from "./errors";
 import { toPgvector } from "./pgvector";
 
 const logger = createServerLogger("rag.indexer");
 const EMBED_TIMEOUT_BASE_MS = 30_000;
 const EMBED_TIMEOUT_PER_CHUNK_MS = 100;
-
-/** Token to character ratio approximation (conservative). */
-const CHARS_PER_TOKEN = 4;
-/** Max chunks per embedding batch to prevent runaway costs and respect API limits. */
-const MAX_CHUNKS_PER_EMBED_BATCH = 1200;
 
 /**
  * Computes a dynamic timeout for embedding requests based on chunk count and parallelism.
@@ -46,6 +45,16 @@ function getEmbedTimeoutMs(chunkCount: number, maxParallelCalls: number): number
   const parallelCalls = Math.max(1, maxParallelCalls);
   const rounds = Math.ceil(chunkCount / parallelCalls);
   return Math.max(EMBED_TIMEOUT_BASE_MS, rounds * EMBED_TIMEOUT_PER_CHUNK_MS);
+}
+
+function roundDurationMs(durationMs: number): number {
+  return Math.round(durationMs * 100) / 100;
+}
+
+function getFailureCode(error: unknown): string {
+  if (error instanceof RagLimitError) return error.code;
+  if (error instanceof Error) return error.message;
+  return "batch_failed";
 }
 
 /**
@@ -63,19 +72,19 @@ interface ChunkLimitContext {
  *
  * @param count - Actual number of chunks to be processed.
  * @param context - Metadata for logging and error reporting.
- * @throws {RagLimitError} If the chunk count exceeds MAX_CHUNKS_PER_EMBED_BATCH.
+ * @throws {RagLimitError} If the chunk count exceeds MAX_RAG_EMBED_CHUNKS_PER_BATCH.
  */
 function enforceChunkLimit(count: number, context: ChunkLimitContext): void {
-  if (count <= MAX_CHUNKS_PER_EMBED_BATCH) return;
+  if (count <= MAX_RAG_EMBED_CHUNKS_PER_BATCH) return;
   logger.warn("chunk_limit_exceeded", {
     ...context,
     chunkCount: count,
-    limit: MAX_CHUNKS_PER_EMBED_BATCH,
+    limit: MAX_RAG_EMBED_CHUNKS_PER_BATCH,
   });
   // Hard limit to avoid runaway embedding costs; callers should split batches.
   throw new RagLimitError("too_many_chunks", {
     chunkCount: count,
-    limit: MAX_CHUNKS_PER_EMBED_BATCH,
+    limit: MAX_RAG_EMBED_CHUNKS_PER_BATCH,
   });
 }
 
@@ -119,8 +128,8 @@ export function chunkText(
   chunkSize: number = 512,
   chunkOverlap: number = 100
 ): string[] {
-  const chunkChars = chunkSize * CHARS_PER_TOKEN;
-  const overlapChars = chunkOverlap * CHARS_PER_TOKEN;
+  const chunkChars = chunkSize * RAG_CHARS_PER_TOKEN;
+  const overlapChars = chunkOverlap * RAG_CHARS_PER_TOKEN;
 
   if (text.length <= chunkChars) {
     return [text.trim()].filter((t) => t.length > 0);
@@ -224,6 +233,7 @@ export async function indexDocuments(
 ): Promise<RagIndexResponse> {
   const { chatId, documents, supabase, tripId, userId } = params;
   const config = indexerConfigSchema.parse(params.config ?? {});
+  const startedAt = performance.now();
 
   return withTelemetrySpan(
     "rag.indexer.index_documents",
@@ -239,10 +249,15 @@ export async function indexDocuments(
         "rag.indexer.trip_id_present": Boolean(tripId),
       },
     },
-    async () => {
+    async (span) => {
       const failed: RagIndexFailedDoc[] = [];
       let indexedCount = 0;
       let chunksCreated = 0;
+      let dbRowsUpserted = 0;
+      let dbUpserts = 0;
+      let embeddingCalls = 0;
+      let embeddingTokens = 0;
+      let embeddingWarnings = 0;
 
       // Process documents in batches to control memory
       for (let i = 0; i < documents.length; i += config.batchSize) {
@@ -261,17 +276,23 @@ export async function indexDocuments(
 
           indexedCount += batchResult.indexed;
           chunksCreated += batchResult.chunksCreated;
+          dbRowsUpserted += batchResult.dbRowsUpserted;
+          dbUpserts += batchResult.dbUpserts;
+          embeddingCalls += batchResult.embeddingCalls;
+          embeddingTokens += batchResult.embeddingTokens;
+          embeddingWarnings += batchResult.embeddingWarnings;
           failed.push(...batchResult.failed);
         } catch (error) {
+          const failureCode = getFailureCode(error);
           // If entire batch fails, mark all documents in batch as failed
           logger.error("batch_failed", {
             batchStart: i,
-            error: error instanceof Error ? error.message : "unknown_error",
+            error: failureCode,
           });
 
           for (let j = 0; j < batch.length; j++) {
             failed.push({
-              error: error instanceof Error ? error.message : "batch_failed",
+              error: failureCode,
               index: i + j,
             });
           }
@@ -289,10 +310,43 @@ export async function indexDocuments(
 
       logger.info("index_complete", {
         chunksCreated,
+        dbRowsUpserted,
+        dbUpserts,
+        durationMs: roundDurationMs(performance.now() - startedAt),
+        embeddingCalls,
+        embeddingTokens,
+        embeddingWarnings,
         failedCount: failed.length,
         indexedCount,
         namespace: config.namespace,
         total: documents.length,
+      });
+
+      const durationMs = roundDurationMs(performance.now() - startedAt);
+      span.setAttribute("rag.indexer.chunks_created", chunksCreated);
+      span.setAttribute("rag.indexer.db_rows_upserted", dbRowsUpserted);
+      span.setAttribute("rag.indexer.db_upserts", dbUpserts);
+      span.setAttribute("rag.indexer.duration_ms", durationMs);
+      span.setAttribute("rag.indexer.embedding_calls", embeddingCalls);
+      span.setAttribute("rag.indexer.embedding_tokens", embeddingTokens);
+      span.setAttribute("rag.indexer.embedding_warnings", embeddingWarnings);
+      span.setAttribute("rag.indexer.failed_count", failed.length);
+      span.setAttribute("rag.indexer.indexed_count", indexedCount);
+
+      recordTelemetryEvent("rag.indexer.index_complete", {
+        attributes: {
+          chunksCreated,
+          dbRowsUpserted,
+          dbUpserts,
+          documentCount: documents.length,
+          durationMs,
+          embeddingCalls,
+          embeddingTokens,
+          embeddingWarnings,
+          failedCount: failed.length,
+          indexedCount,
+          namespace: config.namespace,
+        },
       });
 
       return result;
@@ -318,6 +372,11 @@ interface IndexBatchParams {
  */
 interface IndexBatchResult {
   chunksCreated: number;
+  dbRowsUpserted: number;
+  dbUpserts: number;
+  embeddingCalls: number;
+  embeddingTokens: number;
+  embeddingWarnings: number;
   failed: RagIndexFailedDoc[];
   indexed: number;
 }
@@ -335,7 +394,7 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   let chunksCreated = 0;
   const estimatedChunkChars = Math.max(
     1,
-    (config.chunkSize - config.chunkOverlap) * CHARS_PER_TOKEN
+    (config.chunkSize - config.chunkOverlap) * RAG_CHARS_PER_TOKEN
   );
   let estimatedChunkCount = 0;
 
@@ -381,7 +440,16 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   }
 
   if (allChunks.length === 0) {
-    return { chunksCreated: 0, failed, indexed: 0 };
+    return {
+      chunksCreated: 0,
+      dbRowsUpserted: 0,
+      dbUpserts: 0,
+      embeddingCalls: 0,
+      embeddingTokens: 0,
+      embeddingWarnings: 0,
+      failed,
+      indexed: 0,
+    };
   }
 
   enforceChunkLimit(allChunks.length, {
@@ -391,15 +459,44 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
     documentCount: batch.length,
   });
 
-  // Generate embeddings for all chunks in batch
-  const { embeddings } = await embedMany({
-    abortSignal: AbortSignal.timeout(
-      getEmbedTimeoutMs(allChunks.length, config.maxParallelCalls)
-    ),
-    maxParallelCalls: config.maxParallelCalls,
-    model: getTextEmbeddingModel(),
-    values: allChunks.map((c) => c.chunk),
-  });
+  // Generate embeddings for all chunks in batch without recording raw input/output.
+  let embedResult: Awaited<ReturnType<typeof embedMany>>;
+  try {
+    embedResult = await embedMany({
+      abortSignal: AbortSignal.timeout(
+        getEmbedTimeoutMs(allChunks.length, config.maxParallelCalls)
+      ),
+      // biome-ignore lint/style/useNamingConvention: AI SDK option name.
+      experimental_telemetry: {
+        functionId: "rag.indexer.embed_many",
+        isEnabled: true,
+        metadata: {
+          batchStartIndex,
+          chunkCount: allChunks.length,
+          namespace: config.namespace,
+        },
+        recordInputs: false,
+        recordOutputs: false,
+      },
+      maxParallelCalls: config.maxParallelCalls,
+      model: getTextEmbeddingModel(),
+      values: allChunks.map((c) => c.chunk),
+    });
+  } catch (error) {
+    recordTelemetryEvent("rag.indexer.embedding_failed", {
+      attributes: {
+        batchStartIndex,
+        chunkCount: allChunks.length,
+        documentCount: batch.length,
+        errorName: error instanceof Error ? error.name : "unknown_error",
+        namespace: config.namespace,
+      },
+      level: "error",
+    });
+    throw error;
+  }
+
+  const { embeddings, usage, warnings } = embedResult;
 
   if (embeddings.length !== allChunks.length) {
     throw new Error(
@@ -448,7 +545,16 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
   indexed = successfulDocIndices.size;
   chunksCreated = rows.length;
 
-  return { chunksCreated, failed, indexed };
+  return {
+    chunksCreated,
+    dbRowsUpserted: rows.length,
+    dbUpserts: 1,
+    embeddingCalls: 1,
+    embeddingTokens: usage.tokens,
+    embeddingWarnings: warnings.length,
+    failed,
+    indexed,
+  };
 }
 
 /**

@@ -4,6 +4,8 @@
 
 import { z } from "zod";
 import {
+  isValidRagChunkWindow,
+  MAX_RAG_INDEX_DOCUMENTS,
   MAX_RAG_INDEX_TOTAL_CONTENT_CHARS,
   ragDocumentSchema,
   ragNamespaceSchema,
@@ -89,12 +91,19 @@ export const ragIndexJobSchema = z
     chatId: primitiveSchemas.uuid.nullable().optional(),
     chunkOverlap: z.number().int().nonnegative().max(500).default(100),
     chunkSize: z.number().int().min(100).max(2000).default(512),
-    documents: z.array(ragDocumentSchema).min(1).max(100, {
-      error: "Maximum 100 documents per batch",
-    }),
+    documents: z
+      .array(ragDocumentSchema)
+      .min(1)
+      .max(MAX_RAG_INDEX_DOCUMENTS, {
+        error: `Maximum ${MAX_RAG_INDEX_DOCUMENTS} documents per batch`,
+      }),
     namespace: ragNamespaceSchema.default("user_content"),
     tripId: z.number().int().nonnegative().nullable().optional(),
     userId: primitiveSchemas.uuid,
+  })
+  .refine(isValidRagChunkWindow, {
+    error: "Chunk overlap must be smaller than chunk size",
+    path: ["chunkOverlap"],
   })
   .refine(
     (value) =>

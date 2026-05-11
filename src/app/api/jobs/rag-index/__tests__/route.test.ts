@@ -140,6 +140,31 @@ describe("POST /api/jobs/rag-index", () => {
     expect(res.headers.get("Upstash-NonRetryable-Error")).toBeNull();
   });
 
+  it("returns 489 when all indexer failures are non-retryable RAG budget failures", async () => {
+    indexDocumentsMock.mockResolvedValue({
+      chunksCreated: 0,
+      failed: [{ error: "rag_limit:too_many_chunks", index: 0 }],
+      indexed: 0,
+      namespace: "user_content",
+      success: false,
+      total: 1,
+    });
+
+    const { POST } = await loadRoute();
+    const res = await POST(
+      makeRequest({
+        documents: [{ content: "Hello world" }],
+        userId: "11111111-1111-4111-8111-111111111111",
+      })
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(489);
+    expect(res.headers.get("Upstash-NonRetryable-Error")).toBe("true");
+    expect(json.error).toBe("rag_index_limit");
+    expect(json.reason).toContain("rag_limit:too_many_chunks");
+  });
+
   it("returns 489 for invalid payload and marks as non-retryable", async () => {
     const { POST } = await loadRoute();
 
