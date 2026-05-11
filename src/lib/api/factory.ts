@@ -8,7 +8,6 @@ import type { AgentDependencies } from "@ai/agents/types";
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
-import { Ratelimit } from "@upstash/ratelimit";
 import type { Agent, ToolSet } from "ai";
 import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
@@ -29,7 +28,11 @@ import { type ApiMetric, fireAndForgetMetric } from "@/lib/metrics/api-metrics";
 import { applyRateLimitHeaders } from "@/lib/ratelimit/headers";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
-import { getRedis } from "@/lib/redis";
+import {
+  checkUpstashRateLimit,
+  type DegradedMode,
+  parseRateLimitWindowMs,
+} from "@/lib/ratelimit/upstash";
 import {
   assertHumanOrThrow,
   BOT_DETECTED_RESPONSE,
@@ -48,7 +51,7 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const apiFactoryLogger = createServerLogger("api.factory");
 
-export type DegradedMode = "fail_closed" | "fail_open";
+export type { DegradedMode } from "@/lib/ratelimit/upstash";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -246,28 +249,6 @@ function getRateLimitConfig(
   return ROUTE_RATE_LIMITS[key] || null;
 }
 
-function parseRateLimitWindowMs(window: string): number | null {
-  const parts = window.trim().split(/\s+/);
-  if (parts.length !== 2) return null;
-  const value = Number(parts[0]);
-  const unit = parts[1];
-  if (!Number.isFinite(value) || value <= 0) return null;
-  const unitMs =
-    unit === "ms"
-      ? 1
-      : unit === "s"
-        ? 1000
-        : unit === "m"
-          ? 60_000
-          : unit === "h"
-            ? 3_600_000
-            : unit === "d"
-              ? 86_400_000
-              : null;
-  if (!unitMs) return null;
-  return Math.floor(value * unitMs);
-}
-
 /**
  * Determine the degraded mode for a rate limit key when Redis is unavailable.
  *
@@ -382,28 +363,6 @@ export async function enforceRateLimit(
     return null;
   }
 
-  const redis = getRedis();
-  if (!redis && !rateLimitFactory) {
-    if (options.degradedMode === "fail_closed") {
-      return errorResponse({
-        error: "rate_limit_unavailable",
-        reason: "Rate limiting unavailable",
-        status: 503,
-      });
-    }
-
-    emitOperationalAlertOncePerWindow({
-      attributes: {
-        degradedMode: "fail_open",
-        rateLimitKey,
-        reason: "redis_unavailable",
-      },
-      event: "ratelimit.degraded",
-      windowMs: parseRateLimitWindowMs(config.window) ?? 60_000,
-    });
-    return null;
-  }
-
   try {
     if (rateLimitFactory) {
       const { success, remaining, reset, limit, reason } = await rateLimitFactory(
@@ -431,29 +390,42 @@ export async function enforceRateLimit(
       return null;
     }
 
-    // At this point, rateLimitFactory is falsy, so redis must be defined
-    if (!redis) {
-      return null; // Should not reach here due to earlier check, but satisfy TypeScript
-    }
-
-    const limiter = new Ratelimit({
+    const result = await checkUpstashRateLimit({
       analytics: false,
       dynamicLimits: true,
       ephemeralCache: false,
-      limiter: Ratelimit.slidingWindow(
-        config.limit,
-        config.window as Parameters<typeof Ratelimit.slidingWindow>[1]
-      ),
+      identifier,
+      limit: config.limit,
       prefix: `ratelimit:route:${String(rateLimitKey)}`,
-      redis,
+      window: config.window,
     });
 
-    const { success, remaining, reset, reason } = await limiter.limit(identifier);
-    if (reason === "timeout") {
+    if (result.status === "unavailable") {
       const windowMs = parseRateLimitWindowMs(config.window) ?? 60_000;
-      return handleRateLimitTimeout(rateLimitKey, windowMs, options.degradedMode);
+      if (result.reason === "timeout") {
+        return handleRateLimitTimeout(rateLimitKey, windowMs, options.degradedMode);
+      }
+      if (options.degradedMode === "fail_closed") {
+        return errorResponse({
+          err: result.error,
+          error: "rate_limit_unavailable",
+          reason: "Rate limiting unavailable",
+          status: 503,
+        });
+      }
+      emitOperationalAlertOncePerWindow({
+        attributes: {
+          degradedMode: "fail_open",
+          rateLimitKey,
+          reason: result.reason,
+        },
+        event: "ratelimit.degraded",
+        windowMs,
+      });
+      return null;
     }
-    if (!success) {
+
+    if (result.status === "limited") {
       const response = errorResponse({
         error: "rate_limit_exceeded",
         reason: "Too many requests",
@@ -461,9 +433,9 @@ export async function enforceRateLimit(
       });
       applyRateLimitHeaders(response.headers, {
         limit: config.limit,
-        remaining,
-        reset,
-        success,
+        remaining: result.result.remaining,
+        reset: result.result.reset,
+        success: result.result.success,
       });
       return response;
     }
