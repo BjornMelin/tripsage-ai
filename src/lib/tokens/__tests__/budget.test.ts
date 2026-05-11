@@ -131,9 +131,19 @@ describe("clampMaxTokens", () => {
     for (const model of staleModels) {
       expect(getModelContextLimit(model)).toBe(DEFAULT_CONTEXT_LIMIT);
     }
-    expect(
-      Object.keys(MODEL_LIMITS).some((key) => key.startsWith(oldClaudeSonnetBase))
-    ).toBe(false);
+    const stalePrefixes = [
+      oldGptBase,
+      [oldGptBase, "mini"].join("-"),
+      oldClaudeSonnetBase,
+      oldClaudeOpusBase,
+    ];
+    const hasStaleAliasKey = Object.keys(MODEL_LIMITS).some((key) =>
+      stalePrefixes.some(
+        (prefix) =>
+          key === prefix || key.startsWith(`${prefix}-`) || key.includes(`/${prefix}`)
+      )
+    );
+    expect(hasStaleAliasKey).toBe(false);
   });
 
   it("coerces invalid desiredMax to 1 with reason", () => {

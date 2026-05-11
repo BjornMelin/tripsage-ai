@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import type { Redis } from "@upstash/redis";
+import { HttpResponse, http } from "msw";
 import type { NextRequest } from "next/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -18,6 +19,8 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { ANTHROPIC_MODELS_URL } from "@/test/msw/handlers/ai-providers";
+import { server } from "@/test/msw/server";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
@@ -266,10 +269,16 @@ describe("/api/keys/validate route", () => {
   });
 
   it("validates Anthropic keys through the model catalog without a hard-coded model", async () => {
-    const fetchMock = vi
-      .fn<FetchLike>()
-      .mockResolvedValue(new Response(JSON.stringify({ data: [] }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const requestSpy = vi.fn();
+    server.use(
+      http.get(ANTHROPIC_MODELS_URL, ({ request }) => {
+        requestSpy({
+          anthropicVersion: request.headers.get("anthropic-version"),
+          apiKey: request.headers.get("x-api-key"),
+        });
+        return HttpResponse.json({ data: [] });
+      })
+    );
 
     const { POST } = await import("../route");
     const req = createMockNextRequest({
@@ -281,17 +290,10 @@ describe("/api/keys/validate route", () => {
     const res = await POST(req, createRouteParamsContext());
     const body = await res.json();
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.anthropic.com/v1/models",
-      expect.objectContaining({
-        headers: {
-          "anthropic-version": "2023-06-01",
-          "x-api-key": "sk-ant-test",
-        },
-        method: "GET",
-        signal: expect.any(AbortSignal),
-      })
-    );
+    expect(requestSpy).toHaveBeenCalledWith({
+      anthropicVersion: "2023-06-01",
+      apiKey: "sk-ant-test",
+    });
     expect({ body, status: res.status }).toEqual({
       body: { isValid: true },
       status: 200,
