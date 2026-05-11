@@ -1,3 +1,14 @@
+## [1.32.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.4...v1.32.5) (2026-05-11)
+
+### Bug Fixes
+
+* **config:** address env contract review feedback ([ea05adb](https://github.com/BjornMelin/tripsage-ai/commit/ea05adbf2532d373d4fe6d49dc6dd2ae27c7e29d))
+* **config:** canonicalize Supabase publishable env ([9faa45b](https://github.com/BjornMelin/tripsage-ai/commit/9faa45b4ea642cdab7595cfee816ce77b430e990))
+* **config:** enforce feature-aware env contracts ([7c5369e](https://github.com/BjornMelin/tripsage-ai/commit/7c5369e37d2d26ed16d51010de86ada518bb80e4)), closes [#748](https://github.com/BjornMelin/tripsage-ai/issues/748) [#734](https://github.com/BjornMelin/tripsage-ai/issues/734)
+* **config:** tighten supabase verifier review fixes ([dd0c987](https://github.com/BjornMelin/tripsage-ai/commit/dd0c9872fda5fec0c5c936afcd6ab86971aecb68))
+* **deploy:** enforce feature-aware env contracts ([534ef12](https://github.com/BjornMelin/tripsage-ai/commit/534ef12be4629c38ab1e3c0ef8aca7dc8787d1e1))
+* **qstash:** enforce server-origin job callbacks ([04ceb79](https://github.com/BjornMelin/tripsage-ai/commit/04ceb79f0d9824254d5927b62b4e666cab015084))
+
 ## [1.32.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.3...v1.32.4) (2026-05-09)
 
 ### Bug Fixes
