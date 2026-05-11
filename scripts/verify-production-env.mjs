@@ -68,10 +68,7 @@ function validEmail() {
 }
 
 function supabaseLegacyAnonKey() {
-  return (value) =>
-    isJwtLike(value) || value.startsWith("sb_publishable_")
-      ? null
-      : "must be a Supabase publishable key or legacy anon JWT";
+  return (value) => (isJwtLike(value) ? null : "must be a legacy Supabase anon JWT");
 }
 
 function isJwtLike(value) {

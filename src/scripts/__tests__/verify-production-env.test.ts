@@ -55,9 +55,20 @@ function runVerifier(overrides: Partial<NodeJS.ProcessEnv> = {}) {
     }
   );
 
+  let summary: EnvSummary;
+  try {
+    summary = JSON.parse(result.stdout) as EnvSummary;
+  } catch (error) {
+    throw new Error(
+      `Failed to parse verify-production-env output: ${
+        error instanceof Error ? error.message : String(error)
+      }\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`
+    );
+  }
+
   return {
     ...result,
-    summary: JSON.parse(result.stdout) as EnvSummary,
+    summary,
   };
 }
 
