@@ -23,20 +23,31 @@ type TableUpdate<S extends SchemaName, T extends TableName<S>> =
  * Keep this loose enough for test doubles while avoiding `any`.
  */
 export type TableFilterBuilder = {
-  eq: (...args: unknown[]) => TableFilterBuilder;
-  in: (...args: unknown[]) => TableFilterBuilder;
-  is: (...args: unknown[]) => TableFilterBuilder;
-  gt: (...args: unknown[]) => TableFilterBuilder;
-  gte: (...args: unknown[]) => TableFilterBuilder;
-  lt: (...args: unknown[]) => TableFilterBuilder;
-  lte: (...args: unknown[]) => TableFilterBuilder;
-  neq: (...args: unknown[]) => TableFilterBuilder;
-  like: (...args: unknown[]) => TableFilterBuilder;
-  ilike: (...args: unknown[]) => TableFilterBuilder;
-  contains: (...args: unknown[]) => TableFilterBuilder;
-  overlaps: (...args: unknown[]) => TableFilterBuilder;
-  order: (...args: unknown[]) => TableFilterBuilder;
-  select: (...args: unknown[]) => TableFilterBuilder;
+  eq: (column: string, value: unknown) => TableFilterBuilder;
+  in: (column: string, values: readonly unknown[]) => TableFilterBuilder;
+  is: (column: string, value: boolean | null) => TableFilterBuilder;
+  gt: (column: string, value: unknown) => TableFilterBuilder;
+  gte: (column: string, value: unknown) => TableFilterBuilder;
+  lt: (column: string, value: unknown) => TableFilterBuilder;
+  lte: (column: string, value: unknown) => TableFilterBuilder;
+  neq: (column: string, value: unknown) => TableFilterBuilder;
+  like: (column: string, pattern: string) => TableFilterBuilder;
+  ilike: (column: string, pattern: string) => TableFilterBuilder;
+  contains: (column: string, value: unknown) => TableFilterBuilder;
+  overlaps: (column: string, value: readonly unknown[]) => TableFilterBuilder;
+  order: (
+    column: string,
+    options?: {
+      ascending?: boolean;
+      foreignTable?: string;
+      nullsFirst?: boolean;
+      referencedTable?: string;
+    }
+  ) => TableFilterBuilder;
+  select: (
+    columns?: string,
+    options?: { count?: CountPreference }
+  ) => TableFilterBuilder;
   limit: (count: number) => TableFilterBuilder;
   offset?: (count: number) => TableFilterBuilder;
   range?: (from: number, to: number) => TableFilterBuilder;
@@ -49,12 +60,17 @@ export type TableFilterBuilder = {
 };
 
 type TableQueryBuilder = {
-  select: (...args: unknown[]) => TableFilterBuilder;
+  select: (
+    columns?: string,
+    options?: { count?: CountPreference }
+  ) => TableFilterBuilder;
   insert: (values: unknown) => TableFilterBuilder;
   update: (values: unknown, options?: unknown) => TableFilterBuilder;
   upsert: (values: unknown, options?: unknown) => TableFilterBuilder;
-  delete: (options?: unknown) => TableFilterBuilder;
+  delete: (options?: { count?: CountPreference }) => TableFilterBuilder;
 };
+
+type TableOperation = keyof TableQueryBuilder;
 
 type SupabaseTableSchema = {
   insert?: z.ZodTypeAny;
@@ -63,45 +79,6 @@ type SupabaseTableSchema = {
 };
 
 type CountPreference = "exact" | "planned" | "estimated";
-
-/**
- * Registry of tables supported by runtime Zod validation.
- * authoritative source: src/domain/schemas/supabase.ts
- * To add a new table:
- * 1. Ensure schema exists in src/domain/schemas/supabase.ts
- * 2. Add table name to the appropriate schema array below
- */
-const SUPPORTED_TABLES = {
-  auth: ["sessions"],
-  memories: ["sessions", "turns"],
-  public: [
-    "accommodations",
-    "agent_config",
-    "agent_config_versions",
-    "api_metrics",
-    "auth_backup_codes",
-    "chat_messages",
-    "chat_sessions",
-    "chat_tool_calls",
-    "file_attachments",
-    "flights",
-    "itinerary_items",
-    "mfa_backup_code_audit",
-    "mfa_enrollments",
-    "rag_documents",
-    "saved_places",
-    "trip_collaborators",
-    "trips",
-    "user_settings",
-  ],
-} as const;
-
-type SupportedSchema = keyof typeof SUPPORTED_TABLES;
-
-const isSupportedTable = (schema: SchemaName, table: string): boolean => {
-  const tables = SUPPORTED_TABLES[schema as SupportedSchema];
-  return Array.isArray(tables) && tables.includes(table as never);
-};
 
 const resolveSchema = (schema?: SchemaName): SchemaName => schema ?? "public";
 
@@ -122,14 +99,47 @@ const getFromClient = (
   };
 };
 
-const getValidationSchema = (
+const getTableBuilder = (
+  client: TypedClient,
   schema: SchemaName,
-  table: string
-): SupabaseTableSchema | undefined => {
-  if (!isSupportedTable(schema, table)) return undefined;
-  return getSupabaseSchema(table as never, { schema }) as
+  table: string,
+  operation: TableOperation
+): TableQueryBuilder | Error => {
+  const schemaClient = getFromClient(client, schema);
+  if (!schemaClient) {
+    return new Error("from_unavailable");
+  }
+
+  const base = schemaClient.from(table);
+  if (typeof base[operation] !== "function") {
+    return new Error(`${operation}_unavailable`);
+  }
+  return base;
+};
+
+const resolveValidationSchema = (
+  schema: SchemaName,
+  table: string,
+  shouldValidate: boolean
+): SupabaseTableSchema | Error | undefined => {
+  const tableSchema = getSupabaseSchema(table as never, { schema }) as
     | SupabaseTableSchema
     | undefined;
+  if (shouldValidate && !tableSchema) {
+    return new Error(`unsupported_table_for_validation:${schema}.${table}`);
+  }
+  return tableSchema;
+};
+
+const failWithError = <T extends object>(
+  span: Parameters<typeof recordErrorOnSpan>[0],
+  error: unknown,
+  fallback: T
+): T & { error: unknown } => {
+  if (error instanceof Error) {
+    recordErrorOnSpan(span, error);
+  }
+  return { ...fallback, error };
 };
 
 const resolveMaybeSingle = async (
@@ -163,9 +173,9 @@ const resolveMaybeSingle = async (
  * Use `options.select` to limit returned columns; validation defaults to
  * `false` when selecting partial columns.
  * Explicit validation with partial selects returns an error.
- * When `options.select` is provided, the returned data only contains those
- * columns and may not satisfy the full `TableRow<S, T>` shape at runtime.
- * TODO: Add a type-narrowing overload or dedicated helper for partial selects.
+ * When `options.select` is provided, callers must set `validate: false`; the
+ * returned data only contains the requested columns and is intentionally not
+ * validated against the full row schema.
  *
  * Note: This function accepts only single objects, not arrays.
  * For batch inserts, use `insertMany` instead.
@@ -206,8 +216,15 @@ export function insertSingle<
         return { data: null, error };
       }
       const shouldValidate = options?.validate ?? selectColumns === "*";
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: null });
+      }
       // Validate input if schema exists
-      const schema = getValidationSchema(schemaName, table as string);
       if (Array.isArray(values)) {
         const error = new Error("insert_single_requires_object");
         recordErrorOnSpan(span, error);
@@ -224,14 +241,8 @@ export function insertSingle<
         }
       }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: null, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.insert !== "function") {
-        return { data: null, error: new Error("insert_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "insert");
+      if (base instanceof Error) return { data: null, error: base };
       const insertQb = base.insert(values as unknown);
       // Some tests stub a very lightweight query builder without select/single methods.
       // Gracefully handle those by treating the insert as fire-and-forget.
@@ -315,8 +326,15 @@ export function updateSingle<
         return { data: null, error };
       }
       const shouldValidate = options?.validate ?? selectColumns === "*";
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: null });
+      }
       // Validate input if schema exists
-      const schema = getValidationSchema(schemaName, table as string);
       if (schema?.update && shouldValidate) {
         try {
           schema.update.parse(updates);
@@ -328,14 +346,8 @@ export function updateSingle<
         }
       }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: null, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.update !== "function") {
-        return { data: null, error: new Error("update_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "update");
+      if (base instanceof Error) return { data: null, error: base };
       const filtered = where(base.update(updates as unknown));
       if (filtered && typeof filtered.select === "function") {
         const { data, error } = await filtered.select(selectColumns).single();
@@ -408,7 +420,14 @@ export function updateMany<
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
       const shouldValidate = options?.validate ?? true;
-      const schema = getValidationSchema(schemaName, table as string);
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { count: 0 });
+      }
       if (schema?.update && shouldValidate) {
         try {
           schema.update.parse(updates);
@@ -420,14 +439,8 @@ export function updateMany<
         }
       }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { count: 0, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.update !== "function") {
-        return { count: 0, error: new Error("update_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "update");
+      if (base instanceof Error) return { count: 0, error: base };
       const countPreference = options?.count;
       const updateBuilder =
         countPreference === null
@@ -478,18 +491,19 @@ export function getSingle<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      const schema = getValidationSchema(schemaName, table as string);
       const selectColumns = options?.select ?? "*";
       const shouldValidate = options?.validate ?? selectColumns === "*";
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: null });
+      }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: null, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.select !== "function") {
-        return { data: null, error: new Error("select_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "select");
+      if (base instanceof Error) return { data: null, error: base };
       const qb = where(base.select(selectColumns));
       if (qb && typeof qb === "object" && "error" in qb) {
         return { data: null, error: (qb as { error?: unknown }).error ?? null };
@@ -522,41 +536,27 @@ export function getSingle<
   );
 }
 
-/**
- * Deletes rows from the specified table matching the given criteria.
- * A `where` closure receives the fluent query builder to apply filters
- * (`eq`, `in`, etc.) prior to deletion. Naming follows getSingle/updateSingle;
- * callers must provide filters that target the intended row(s). This helper
- * does not enforce single-row deletion and will delete all rows matching the
- * supplied filter.
- * Use `options.count` to request a PostgREST count preference; set to `null`
- * to skip counting entirely.
- * Use `options.returning: "representation"` (with `options.select`) to request
- * deleted rows when the caller needs return data or reliable count headers.
- *
- * @typeParam S - Supabase schema name for the target table.
- * @typeParam T - Table name within the selected schema.
- * @param client - Typed Supabase client.
- * @param table - Target table name.
- * @param where - Closure to apply filters to the builder.
- * @param options - Optional schema, count preference, returning mode, and select columns.
- * @returns Count of deleted rows and error (if any).
- */
-export function deleteSingle<
+type DeleteOptions<S extends SchemaName> = {
+  schema?: S;
+  count?: CountPreference | null;
+  returning?: "representation";
+  select?: string;
+};
+type DeleteRowsOptions<S extends SchemaName> = DeleteOptions<S> & { limit?: number };
+
+const multiRowDeleteError = (count: number): Error | null =>
+  count > 1 ? new Error("delete_single_matched_multiple_rows") : null;
+
+const deleteRows = async <
   S extends SchemaName = "public",
   T extends TableName<S> = TableName<S>,
 >(
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: {
-    schema?: S;
-    count?: CountPreference | null;
-    returning?: "representation";
-    select?: string;
-  }
-): Promise<{ count: number; error: unknown | null }> {
-  return withTelemetrySpan(
+  options?: DeleteRowsOptions<S>
+): Promise<{ count: number; error: unknown | null }> =>
+  withTelemetrySpan(
     "supabase.delete",
     {
       attributes: {
@@ -568,15 +568,8 @@ export function deleteSingle<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { count: 0, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-
-      if (typeof base.delete !== "function") {
-        return { count: 0, error: new Error("delete_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "delete");
+      if (base instanceof Error) return { count: 0, error: base };
 
       const countPreference = options?.count;
       const deleteBuilder =
@@ -592,21 +585,110 @@ export function deleteSingle<
           ? deleteBuilder.select(selectColumns)
           : deleteBuilder;
 
-      const qb = where(returningBuilder);
+      const filtered = where(returningBuilder);
+      const qb =
+        options?.limit === undefined ? filtered : filtered.limit(options.limit);
       const { count, error } = await qb;
       span.setAttribute("db.supabase.row_count", count ?? 0);
       return { count: count ?? 0, error: error ?? null };
     }
   );
+
+const countDeleteCandidates = async <
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: Pick<DeleteOptions<S>, "schema">
+): Promise<{ count: number; error: unknown | null }> =>
+  withTelemetrySpan(
+    "supabase.delete.preflight",
+    {
+      attributes: {
+        "db.name": "tripsage",
+        "db.supabase.operation": "select",
+        "db.supabase.table": table,
+        "db.system": "postgres",
+      },
+    },
+    async (span) => {
+      const schemaName = resolveSchema(options?.schema);
+      const base = getTableBuilder(client, schemaName, table, "select");
+      if (base instanceof Error) return { count: 0, error: base };
+
+      const qb = where(base.select("id", { count: "exact" }).limit(2));
+      const { count, data, error } = await qb;
+      if (error) return { count: 0, error };
+
+      const rowCount =
+        count ??
+        (Array.isArray(data)
+          ? data.length
+          : data === null || data === undefined
+            ? 0
+            : 1);
+      span.setAttribute("db.supabase.row_count", rowCount);
+      return { count: rowCount, error: null };
+    }
+  );
+
+/**
+ * Deletes at most one row from the specified table matching the given criteria.
+ * A `where` closure receives the fluent query builder to apply filters
+ * (`eq`, etc.) prior to deletion. This helper requests a count and returns an
+ * error if the filter matches more than one row. Use `deleteMany` for bulk
+ * deletes or no-count cleanup operations.
+ *
+ * @typeParam S - Supabase schema name for the target table.
+ * @typeParam T - Table name within the selected schema.
+ * @param client - Typed Supabase client.
+ * @param table - Target table name.
+ * @param where - Closure to apply filters to the builder.
+ * @param options - Optional schema, count preference, returning mode, and select columns.
+ * @returns Count of deleted rows and error (if any).
+ */
+export async function deleteSingle<
+  S extends SchemaName = "public",
+  T extends TableName<S> = TableName<S>,
+>(
+  client: TypedClient,
+  table: T,
+  where: (qb: TableFilterBuilder) => TableFilterBuilder,
+  options?: DeleteOptions<S>
+): Promise<{ count: number; error: unknown | null }> {
+  if (options?.count === null) {
+    return { count: 0, error: new Error("delete_single_requires_count") };
+  }
+
+  const candidateResult = await countDeleteCandidates(client, table, where, options);
+  if (candidateResult.error) return candidateResult;
+  if (candidateResult.count === 0) return candidateResult;
+  const preflightError = multiRowDeleteError(candidateResult.count);
+  if (preflightError) {
+    return {
+      count: candidateResult.count,
+      error: preflightError,
+    };
+  }
+
+  const deleteResult = await deleteRows(client, table, where, {
+    ...options,
+    count: options?.count ?? "exact",
+    limit: 1,
+  });
+  if (deleteResult.error) return deleteResult;
+
+  const deleteCountError = multiRowDeleteError(deleteResult.count);
+  return deleteCountError ? { ...deleteResult, error: deleteCountError } : deleteResult;
 }
 
 /**
  * Deletes rows from the specified table matching the given criteria.
- * Naming aligns with bulk operations (e.g., updateMany) and does not enforce
- * single-row deletes.
- * NOTE: deleteMany is an intentional alias for deleteSingle, and deleteSingle
- * deletes all matching rows. This keeps naming consistent with updateMany and
- * insertMany while sharing the same implementation.
+ * Naming aligns with bulk operations (e.g., updateMany). This helper does not
+ * enforce single-row effects and is the only supported path for no-count
+ * cleanup deletes.
  *
  * @typeParam S - Supabase schema name for the target table.
  * @typeParam T - Table name within the selected schema.
@@ -623,9 +705,9 @@ export function deleteMany<
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: { schema?: S; count?: CountPreference | null }
+  options?: DeleteOptions<S>
 ): Promise<{ count: number; error: unknown | null }> {
-  return deleteSingle(client, table, where, options);
+  return deleteRows(client, table, where, options);
 }
 
 /**
@@ -664,18 +746,19 @@ export function getMaybeSingle<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      const schema = getValidationSchema(schemaName, table as string);
       const selectColumns = options?.select ?? "*";
       const shouldValidate = options?.validate ?? selectColumns === "*";
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: null });
+      }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: null, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.select !== "function") {
-        return { data: null, error: new Error("select_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "select");
+      if (base instanceof Error) return { data: null, error: base };
       const qb = where(base.select(selectColumns));
       if (qb && typeof qb === "object" && "error" in qb) {
         return { data: null, error: (qb as { error?: unknown }).error ?? null };
@@ -739,7 +822,14 @@ export function upsertSingle<
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
       const shouldValidate = options?.validate ?? true;
-      const schema = getValidationSchema(schemaName, table as string);
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: null });
+      }
       if (schema?.insert && shouldValidate) {
         try {
           schema.insert.parse(values);
@@ -751,14 +841,8 @@ export function upsertSingle<
         }
       }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: null, error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.upsert !== "function") {
-        return { data: null, error: new Error("upsert_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "upsert");
+      if (base instanceof Error) return { data: null, error: base };
       const upsertQb = base.upsert(values as unknown, {
         ignoreDuplicates: false,
         onConflict,
@@ -830,7 +914,14 @@ export function upsertMany<
         return { data: [], error: null };
       }
 
-      const schema = getValidationSchema(schemaName, table as string);
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: [] });
+      }
       if (schema?.insert && shouldValidate) {
         try {
           z.array(schema.insert).parse(values);
@@ -842,14 +933,8 @@ export function upsertMany<
         }
       }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: [], error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.upsert !== "function") {
-        return { data: [], error: new Error("upsert_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "upsert");
+      if (base instanceof Error) return { data: [], error: base };
       const upsertQb = base.upsert(values as unknown, {
         ignoreDuplicates: false,
         onConflict,
@@ -941,21 +1026,21 @@ export function getMany<
     },
     async (span) => {
       const schemaName = resolveSchema(options?.schema);
-      const schema = getValidationSchema(schemaName, table as string);
       const selectColumns = options?.select ?? "*";
       const shouldValidate = options?.validate ?? selectColumns === "*";
-
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { count: null, data: [], error: new Error("from_unavailable") };
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { count: null, data: [] });
       }
 
       // Build the initial query with optional count
       const selectOptions = options?.count ? { count: options.count } : undefined;
-      const base = schemaClient.from(table as string);
-      if (typeof base.select !== "function") {
-        return { count: null, data: [], error: new Error("select_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "select");
+      if (base instanceof Error) return { count: null, data: [], error: base };
       let qb = base.select(selectColumns, selectOptions);
 
       // Apply where clause
@@ -1054,8 +1139,15 @@ export function insertMany<
         return { data: [], error: null };
       }
 
+      const schema = resolveValidationSchema(
+        schemaName,
+        table as string,
+        shouldValidate
+      );
+      if (schema instanceof Error) {
+        return failWithError(span, schema, { data: [] });
+      }
       // Validate input if schema exists
-      const schema = getValidationSchema(schemaName, table as string);
       if (schema?.insert && shouldValidate) {
         try {
           for (const value of values) {
@@ -1069,14 +1161,8 @@ export function insertMany<
         }
       }
 
-      const schemaClient = getFromClient(client, schemaName);
-      if (!schemaClient) {
-        return { data: [], error: new Error("from_unavailable") };
-      }
-      const base = schemaClient.from(table as string);
-      if (typeof base.insert !== "function") {
-        return { data: [], error: new Error("insert_unavailable") };
-      }
+      const base = getTableBuilder(client, schemaName, table, "insert");
+      if (base instanceof Error) return { data: [], error: base };
       const insertQb = base.insert(values as unknown);
 
       // Chain select to return the inserted rows

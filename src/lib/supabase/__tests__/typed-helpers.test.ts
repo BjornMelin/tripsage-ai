@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Tables, TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/lib/supabase/typed-helpers";
 import {
+  deleteMany,
   deleteSingle,
   getMany,
   getMaybeSingle,
@@ -24,22 +25,26 @@ import { unsafeCast } from "@/test/helpers/unsafe-cast";
  */
 type MockChain = {
   delete: ReturnType<typeof vi.fn>;
-  eq: (column: string, value: unknown) => MockChain;
-  insert: (values: unknown) => MockChain;
+  eq: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
+  insert: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   range: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
-  update: (values: unknown) => MockChain;
-  upsert: (values: unknown, options: unknown) => MockChain;
+  update: ReturnType<typeof vi.fn>;
+  upsert: ReturnType<typeof vi.fn>;
 };
 
 function makeMockFrom(): MockChain {
   const chain: MockChain = {
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn(),
     order: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
@@ -64,6 +69,17 @@ function makeClientWithChain(): { client: TypedClient; chain: MockChain } {
     },
   });
   return { chain, client };
+}
+
+function mockQueryResult<Result extends object>(
+  chain: MockChain,
+  method: "delete" | "select" | "update",
+  result: Result
+): MockChain {
+  const queryPromise = Promise.resolve(result);
+  const queryChain = Object.assign(queryPromise, chain) as MockChain;
+  chain[method].mockReturnValue(queryChain);
+  return queryChain;
 }
 
 const userId = "123e4567-e89b-12d3-a456-426614174000";
@@ -182,6 +198,60 @@ describe("typed-helpers", () => {
       expect(data).toBeNull();
       expect(error).toBeTruthy();
     });
+
+    it("rejects validation for tables without registered Zod schemas", async () => {
+      const { client, chain } = makeClientWithChain();
+      const unsupportedTable = unsafeCast<"trips">("unsupported_table");
+      const payload: TablesInsert<"trips"> = {
+        budget: 100,
+        destination: "LAX",
+        end_date: "2025-02-01",
+        name: "Unsupported Trip",
+        start_date: "2025-01-01",
+        travelers: 1,
+        user_id: userId,
+      };
+
+      const { data, error } = await insertSingle(client, unsupportedTable, payload);
+
+      expect(data).toBeNull();
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(
+        "unsupported_table_for_validation:public.unsupported_table"
+      );
+      expect(chain.insert).not.toHaveBeenCalled();
+    });
+
+    it("allows generated tables without Zod schemas when validation is disabled", async () => {
+      const { client, chain } = makeClientWithChain();
+      const payload: TablesInsert<"bookings"> = {
+        checkin: "2025-01-01",
+        checkout: "2025-01-02",
+        guest_email: "guest@example.com",
+        guest_name: "Guest User",
+        guests: 1,
+        id: "booking-1",
+        property_id: "hotel-1",
+        provider_booking_id: "provider-booking-1",
+        status: "pending",
+        trip_id: 1,
+        user_id: userId,
+      };
+
+      chain.single.mockResolvedValue({
+        data: unsafeCast<Tables<"bookings">>({ id: "booking-1" }),
+        error: null,
+      });
+
+      const { data, error } = await insertSingle(client, "bookings", payload, {
+        select: "id",
+        validate: false,
+      });
+
+      expect(error).toBeNull();
+      expect(data?.id).toBe("booking-1");
+      expect(chain.insert).toHaveBeenCalledWith(payload);
+    });
   });
 
   describe("updateSingle", () => {
@@ -228,6 +298,29 @@ describe("typed-helpers", () => {
       expect(result.error).toBeTruthy();
       expect(chain.update).not.toHaveBeenCalled();
     });
+
+    it("supports partial selects when validation is disabled", async () => {
+      const { client, chain } = makeClientWithChain();
+      chain.single.mockResolvedValue({
+        data: unsafeCast<Tables<"trips">>({ id: 7 }),
+        error: null,
+      });
+
+      const result = await updateSingle(
+        client,
+        "trips",
+        { name: "Updated" },
+        (qb) => qb.eq("id", 7),
+        {
+          select: "id",
+          validate: false,
+        }
+      );
+
+      expect(result.error).toBeNull();
+      expect(chain.select).toHaveBeenCalledWith("id");
+      expect(result.data?.id).toBe(7);
+    });
   });
 
   describe("updateMany", () => {
@@ -235,10 +328,7 @@ describe("typed-helpers", () => {
       const { client, chain } = makeClientWithChain();
       const updates: Partial<TablesUpdate<"trips">> = { status: "completed" };
 
-      const updatePromise = Promise.resolve({ count: 2, error: null });
-      (chain.update as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(updatePromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "update", { count: 2, error: null });
 
       const { count, error } = await updateMany(client, "trips", updates, (qb) =>
         qb.eq("status", "planning")
@@ -251,10 +341,7 @@ describe("typed-helpers", () => {
       const { client, chain } = makeClientWithChain();
       const updates: Partial<TablesUpdate<"trips">> = { status: "completed" };
 
-      const updatePromise = Promise.resolve({ count: 0, error: null });
-      (chain.update as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(updatePromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "update", { count: 0, error: null });
 
       const { count, error } = await updateMany(client, "trips", updates, (qb) => qb, {
         count: null,
@@ -268,13 +355,10 @@ describe("typed-helpers", () => {
       const { client, chain } = makeClientWithChain();
       const updates: Partial<TablesUpdate<"trips">> = { status: "cancelled" };
 
-      const updatePromise = Promise.resolve({
+      mockQueryResult(chain, "update", {
         count: 0,
         error: { message: "Update failed" },
       });
-      (chain.update as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(updatePromise, chain) as MockChain
-      );
 
       const { count, error } = await updateMany(client, "trips", updates, (qb) => qb);
       expect(count).toBe(0);
@@ -311,26 +395,113 @@ describe("typed-helpers", () => {
   describe("deleteSingle", () => {
     it("deletes successfully", async () => {
       const { client, chain } = makeClientWithChain();
-      // Mock delete to return a thenable that resolves
-      const deleteResult = Promise.resolve({ count: 1, error: null });
-      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
-
-      const { count, error } = await deleteSingle(client, "trips", () => {
-        return unsafeCast(deleteResult);
+      mockQueryResult(chain, "select", {
+        count: 1,
+        data: [{ id: 1 }],
+        error: null,
       });
+      mockQueryResult(chain, "delete", { count: 1, error: null });
+
+      const { count, error } = await deleteSingle(client, "trips", (qb) =>
+        qb.eq("id", 1)
+      );
       expect(count).toBe(1);
       expect(error).toBeNull();
+      expect(chain.delete).toHaveBeenCalledWith({ count: "exact" });
+      expect(chain.limit).toHaveBeenCalledWith(1);
     });
 
+    it("allows zero-row deletes so callers can return not found", async () => {
+      const { client, chain } = makeClientWithChain();
+      mockQueryResult(chain, "select", {
+        count: 0,
+        data: [],
+        error: null,
+      });
+
+      const { count, error } = await deleteSingle(client, "trips", (qb) =>
+        qb.eq("id", 404)
+      );
+      expect(count).toBe(0);
+      expect(error).toBeNull();
+      expect(chain.delete).not.toHaveBeenCalled();
+    });
+
+    it("rejects no-count deletes", async () => {
+      const { client, chain } = makeClientWithChain();
+
+      const { count, error } = await deleteSingle(client, "trips", (qb) => qb, {
+        count: null,
+      });
+
+      expect(count).toBe(0);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe("delete_single_requires_count");
+      expect(chain.delete).not.toHaveBeenCalled();
+    });
+
+    it("returns an error when more than one row matches", async () => {
+      const { client, chain } = makeClientWithChain();
+      mockQueryResult(chain, "select", {
+        count: 2,
+        data: [{ id: 1 }, { id: 2 }],
+        error: null,
+      });
+
+      const { count, error } = await deleteSingle(client, "trips", (qb) =>
+        qb.in("id", [1, 2])
+      );
+
+      expect(count).toBe(2);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe("delete_single_matched_multiple_rows");
+      expect(chain.delete).not.toHaveBeenCalled();
+    });
+
+    it("returns an error if the delete result reports multiple rows after preflight", async () => {
+      const { client, chain } = makeClientWithChain();
+      mockQueryResult(chain, "select", {
+        count: 1,
+        data: [{ id: 1 }],
+        error: null,
+      });
+      mockQueryResult(chain, "delete", { count: 2, error: null });
+
+      const { count, error } = await deleteSingle(client, "trips", (qb) =>
+        qb.eq("status", "planning")
+      );
+
+      expect(count).toBe(2);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe("delete_single_matched_multiple_rows");
+      expect(chain.limit).toHaveBeenCalledWith(1);
+    });
+
+    it("returns error when delete fails", async () => {
+      const { client, chain } = makeClientWithChain();
+      const deleteError = { message: "Delete failed" };
+      mockQueryResult(chain, "select", {
+        count: 1,
+        data: [{ id: 1 }],
+        error: null,
+      });
+      mockQueryResult(chain, "delete", { count: 0, error: deleteError });
+
+      const { count, error } = await deleteSingle(client, "trips", (qb) => qb);
+      expect(count).toBe(0);
+      expect(error).toBeTruthy();
+    });
+  });
+
+  describe("deleteMany", () => {
     it("omits count preference when count is null", async () => {
       const { client, chain } = makeClientWithChain();
-      const deleteResult = Promise.resolve({ count: 0, error: null });
-      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
+      mockQueryResult(chain, "delete", { count: 0, error: null });
 
-      const { count, error } = await deleteSingle(
+      const { count, error } = await deleteMany(
         client,
         "trips",
-        () => unsafeCast(deleteResult),
+        (qb) => qb.in("id", [1, 2]),
         { count: null }
       );
       expect(count).toBe(0);
@@ -338,17 +509,16 @@ describe("typed-helpers", () => {
       expect(chain.delete).toHaveBeenCalledWith();
     });
 
-    it("returns error when delete fails", async () => {
+    it("allows multi-row deletes", async () => {
       const { client, chain } = makeClientWithChain();
-      const deleteError = { message: "Delete failed" };
-      const deleteResult = Promise.resolve({ count: 0, error: deleteError });
-      (chain.delete as ReturnType<typeof vi.fn>).mockReturnValue(deleteResult);
+      mockQueryResult(chain, "delete", { count: 3, error: null });
 
-      const { count, error } = await deleteSingle(client, "trips", () => {
-        return unsafeCast(deleteResult);
-      });
-      expect(count).toBe(0);
-      expect(error).toBeTruthy();
+      const { count, error } = await deleteMany(client, "trips", (qb) =>
+        qb.eq("status", "cancelled")
+      );
+
+      expect(count).toBe(3);
+      expect(error).toBeNull();
     });
   });
 
@@ -466,10 +636,7 @@ describe("typed-helpers", () => {
         mockTripsRow({ ...payloads[1], id: 11 }),
       ];
 
-      const selectPromise = Promise.resolve({ data: rows, error: null });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "select", { data: rows, error: null });
 
       const { data, error } = await upsertMany(client, "trips", payloads, "user_id");
       expect(error).toBeNull();
@@ -492,13 +659,10 @@ describe("typed-helpers", () => {
         },
       ];
 
-      const selectPromise = Promise.resolve({
+      mockQueryResult(chain, "select", {
         data: null,
         error: { message: "Upsert failed" },
       });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
 
       const { data, error } = await upsertMany(client, "trips", payloads, "user_id");
       expect(data).toHaveLength(0);
@@ -515,11 +679,7 @@ describe("typed-helpers", () => {
         mockTripsRow({ id: 3, name: "Trip 3" }),
       ];
 
-      // Mock the select chain to return rows when awaited
-      const selectPromise = Promise.resolve({ count: null, data: rows, error: null });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "select", { count: null, data: rows, error: null });
 
       const { data, count, error } = await getMany(client, "trips", (qb) => qb);
       expect(error).toBeNull();
@@ -532,10 +692,7 @@ describe("typed-helpers", () => {
       const { client, chain } = makeClientWithChain();
       const rows = [mockTripsRow({ id: 2 }), mockTripsRow({ id: 3 })];
 
-      const selectPromise = Promise.resolve({ count: null, data: rows, error: null });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "select", { count: null, data: rows, error: null });
 
       const { data, error } = await getMany(client, "trips", (qb) => qb, {
         limit: 2,
@@ -554,10 +711,7 @@ describe("typed-helpers", () => {
         mockTripsRow({ id: 1 }),
       ];
 
-      const selectPromise = Promise.resolve({ count: null, data: rows, error: null });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "select", { count: null, data: rows, error: null });
 
       const { data, error } = await getMany(client, "trips", (qb) => qb, {
         ascending: false,
@@ -572,10 +726,7 @@ describe("typed-helpers", () => {
       const { client, chain } = makeClientWithChain();
       const rows = [mockTripsRow({ id: 1 })];
 
-      const selectPromise = Promise.resolve({ count: 10, data: rows, error: null });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "select", { count: 10, data: rows, error: null });
 
       const { count, data, error } = await getMany(client, "trips", (qb) => qb, {
         count: "exact",
@@ -589,14 +740,11 @@ describe("typed-helpers", () => {
     it("returns error when query fails", async () => {
       const { client, chain } = makeClientWithChain();
 
-      const selectPromise = Promise.resolve({
+      mockQueryResult(chain, "select", {
         count: null,
         data: null,
         error: { message: "Query failed" },
       });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
 
       const { data, error } = await getMany(client, "trips", (qb) => qb);
       expect(data).toHaveLength(0);
@@ -633,11 +781,7 @@ describe("typed-helpers", () => {
         mockTripsRow({ ...second, id: 2 }),
       ];
 
-      // Mock the insert chain to return rows when select is called
-      const selectPromise = Promise.resolve({ data: rows, error: null });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
+      mockQueryResult(chain, "select", { data: rows, error: null });
 
       const { data, error } = await insertMany(client, "trips", payloads);
       expect(error).toBeNull();
@@ -668,13 +812,10 @@ describe("typed-helpers", () => {
         },
       ];
 
-      const selectPromise = Promise.resolve({
+      mockQueryResult(chain, "select", {
         data: null,
         error: { message: "Insert failed" },
       });
-      (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(
-        Object.assign(selectPromise, chain) as MockChain
-      );
 
       const { data, error } = await insertMany(client, "trips", payloads);
       expect(data).toHaveLength(0);

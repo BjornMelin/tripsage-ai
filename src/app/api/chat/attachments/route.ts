@@ -22,7 +22,7 @@ import {
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { secureUuid } from "@/lib/security/random";
-import { deleteSingle, insertSingle } from "@/lib/supabase/typed-helpers";
+import { deleteMany, insertSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { ensureTripAccess } from "@/lib/trips/trip-access";
 
@@ -136,7 +136,7 @@ export const POST = withApiGuards({
   const cleanupInserted = async (): Promise<void> => {
     if (insertedIds.length === 0) return;
     try {
-      const { error: cleanupError } = await deleteSingle(
+      const { error: cleanupError } = await deleteMany(
         supabase,
         "file_attachments",
         (qb) => qb.in("id", insertedIds),
