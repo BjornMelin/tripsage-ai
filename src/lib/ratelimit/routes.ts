@@ -52,6 +52,7 @@ export const ROUTE_RATE_LIMITS = {
   "auth:mfa:sessions:revoke": { limit: 5, window: "10 m" },
   "auth:mfa:setup": { limit: 3, window: "1 m" },
   "auth:mfa:verify": { limit: 3, window: "1 m" },
+  "auth:password:change": { limit: 3, window: "10 m" },
   "auth:password:reset-request": { limit: 5, window: "10 m" },
   "auth:register": { limit: 3, window: "10 m" },
 
@@ -131,6 +132,7 @@ export const ROUTE_RATE_LIMITS = {
   routes: { limit: 60, window: "1 m" },
 
   // Security
+  "security:csp-report": { limit: 120, window: "1 m" },
   "security:events": { limit: 20, window: "1 m" },
   "security:metrics": { limit: 20, window: "1 m" },
   "security:sessions:list": { limit: 20, window: "1 m" },

@@ -272,7 +272,7 @@ describe("mfa service", () => {
   beforeEach(() => {
     backupRows.length = 0;
     mfaEnrollmentRows.length = 0;
-    process.env.MFA_BACKUP_CODE_PEPPER = "test-pepper-secret-12345";
+    process.env.MFA_BACKUP_CODE_PEPPER = "placeholder-mfa-pepper-secret";
     resetMfaInitForTest();
     vi.clearAllMocks();
   });

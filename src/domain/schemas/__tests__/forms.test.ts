@@ -2,6 +2,7 @@
 
 import {
   changePasswordFormSchema,
+  changePasswordPayloadSchema,
   confirmResetPasswordFormSchema,
   loginFormSchema,
   registerFormSchema,
@@ -154,6 +155,16 @@ describe("forms schemas", () => {
         newPassword: "SamePassword123!",
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("changePasswordPayloadSchema", () => {
+    it.concurrent("should validate password change API payloads without confirmation", () => {
+      const result = changePasswordPayloadSchema.safeParse({
+        currentPassword: "OldPassword123!",
+        newPassword: "Secure123!",
+      });
+      expect(result.success).toBe(true);
     });
   });
 

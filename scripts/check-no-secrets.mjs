@@ -15,7 +15,8 @@ const MODE = ARGS.has("--full") ? "full" : ARGS.has("--staged") ? "staged" : "di
 
 const MAX_FILE_BYTES = 1_000_000; // 1MB
 
-const TEXT_FILE_RE = /\.(c|m)?[tj]sx?$|\.json$|\.ya?ml$|\.md$|\.txt$|\.env(\..*)?$/;
+const TEXT_FILE_RE =
+  /\.(c|m)?[tj]sx?$|\.json$|\.sql$|\.ya?ml$|\.md$|\.txt$|\.env(\..*)?$/;
 const EXCLUDED_PATH_PARTS = [
   "node_modules/",
   ".next/",
@@ -124,30 +125,47 @@ const TOKEN_PATTERNS = [
   { id: "github_token", regex: /\bghp_[0-9A-Za-z]{36,}\b/g },
   { id: "github_pat", regex: /\bgithub_pat_[0-9A-Za-z_]{40,}\b/g },
   { id: "slack_token", regex: /\bxox[baprs]-[0-9A-Za-z-]{20,}\b/g },
+  { id: "anthropic_api_key", regex: /\bsk-ant-[0-9A-Za-z_-]{20,}\b/g },
+  { id: "openrouter_api_key", regex: /\bsk-or-v1-[0-9A-Za-z_-]{20,}\b/g },
   // OpenAI-style keys are longer in practice; use a higher floor to reduce false positives.
   { id: "openai_like_key", regex: /\bsk-[0-9A-Za-z]{40,}\b/g },
+  { id: "resend_api_key", regex: /\bre_[0-9A-Za-z]{20,}\b/g },
   { id: "aws_access_key_id", regex: /\bAKIA[0-9A-Z]{16}\b/g },
   { id: "google_api_key", regex: /\bAIza[0-9A-Za-z-_]{35}\b/g },
   { id: "vercel_token", regex: /\bvercel_[0-9A-Za-z]{20,}\b/g },
 ];
 
 const ENV_ASSIGNMENT_NAMES = [
-  "SUPABASE_SERVICE_ROLE_KEY",
+  "AI_GATEWAY_API_KEY",
+  "AMADEUS_CLIENT_SECRET",
+  "ANTHROPIC_API_KEY",
+  "BYOK_HEALTHCHECK_KEY",
+  "DATABASE_URL",
+  "DUFFEL_ACCESS_TOKEN",
+  "DUFFEL_API_KEY",
+  "EMBEDDINGS_API_KEY",
+  "FIRECRAWL_API_KEY",
+  "GOOGLE_MAPS_SERVER_API_KEY",
+  "HMAC_SECRET",
+  "MFA_BACKUP_CODE_PEPPER",
+  "OPENAI_API_KEY",
+  "OPENROUTER_API_KEY",
+  "OPENWEATHERMAP_API_KEY",
+  "QSTASH_TOKEN",
+  "QSTASH_CURRENT_SIGNING_KEY",
+  "QSTASH_NEXT_SIGNING_KEY",
+  "RESEND_API_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
-  "RESEND_API_KEY",
-  "OPENAI_API_KEY",
-  "AI_GATEWAY_API_KEY",
-  "ANTHROPIC_API_KEY",
-  "XAI_API_KEY",
+  "SUPABASE_JWT_SECRET",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "TELEMETRY_HASH_SECRET",
+  "TELEMETRY_AI_DEMO_KEY",
   "TOGETHER_AI_API_KEY",
   "TOGETHER_API_KEY",
   "UPSTASH_REDIS_REST_TOKEN",
   "UPSTASH_REDIS_REST_URL",
-  "QSTASH_TOKEN",
-  "QSTASH_CURRENT_SIGNING_KEY",
-  "QSTASH_NEXT_SIGNING_KEY",
-  "TELEMETRY_HASH_SECRET",
+  "XAI_API_KEY",
 ];
 
 function isObviousPlaceholder(value) {
@@ -159,10 +177,14 @@ function isObviousPlaceholder(value) {
     "example",
     "changeme",
     "replace_me",
+    "your-",
     "your_",
     "dummysignature",
     "dummy",
+    "mock",
     "placeholder",
+    "postgres:postgres@127.0.0.1",
+    "postgres:postgres@localhost",
   ];
   if (markers.some((m) => lowered.includes(m))) return true;
 
@@ -172,12 +194,34 @@ function isObviousPlaceholder(value) {
   return false;
 }
 
-function findEnvAssignments(text) {
+function findEnvAssignments(text, filePath) {
   const findings = [];
+  const shouldScanUnquotedEnvAssignments = ENV_FILE_RE.test(filePath);
+
   for (const name of ENV_ASSIGNMENT_NAMES) {
-    const re = new RegExp(String.raw`\b${name}\b\s*[:=]\s*(['\"])([^'\"]+)\1`, "g");
+    const re = new RegExp(
+      String.raw`\b${name}\b[ \t]*[:=][ \t]*(['\"])([^'\"\r\n]+)\1`,
+      "g"
+    );
     for (const match of text.matchAll(re)) {
       const value = match[2] ?? "";
+      if (isObviousPlaceholder(value)) continue;
+      if (value.length < 12) continue;
+      findings.push({
+        id: "env_assignment",
+        kind: name,
+        redacted: redactValue(value),
+      });
+    }
+
+    if (!shouldScanUnquotedEnvAssignments) continue;
+
+    const unquotedRe = new RegExp(
+      String.raw`(?:^|\n)[ \t]*(?:export[ \t]+)?${name}[ \t]*=[ \t]*([^#\r\n]+)`,
+      "g"
+    );
+    for (const match of text.matchAll(unquotedRe)) {
+      const value = (match[1] ?? "").trim();
       if (isObviousPlaceholder(value)) continue;
       if (value.length < 12) continue;
       findings.push({
@@ -234,7 +278,7 @@ for (const filePath of filesToScan) {
   }
   if (!text) continue;
 
-  const matches = [...findTokenMatches(text), ...findEnvAssignments(text)];
+  const matches = [...findTokenMatches(text), ...findEnvAssignments(text, filePath)];
   if (matches.length === 0) continue;
 
   violations.push({

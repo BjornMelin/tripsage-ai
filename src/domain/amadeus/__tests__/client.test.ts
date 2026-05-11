@@ -28,7 +28,7 @@ vi.mock("amadeus", () => {
 describe("Amadeus client wrapper", () => {
   beforeEach(() => {
     process.env.AMADEUS_CLIENT_ID = "test-amadeus-client-id";
-    process.env.AMADEUS_CLIENT_SECRET = "test-amadeus-client-secret";
+    process.env.AMADEUS_CLIENT_SECRET = "placeholder-amadeus-client-secret";
     process.env.AMADEUS_ENV = "test";
     constructorMock.mockReset();
     getMock.mockReset();
@@ -46,7 +46,7 @@ describe("Amadeus client wrapper", () => {
     expect(constructorMock).toHaveBeenCalledWith(
       expect.objectContaining({
         clientId: "test-amadeus-client-id",
-        clientSecret: "test-amadeus-client-secret",
+        clientSecret: "placeholder-amadeus-client-secret",
         hostname: "test",
       })
     );

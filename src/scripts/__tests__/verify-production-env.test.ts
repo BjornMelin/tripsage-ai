@@ -182,7 +182,7 @@ describe("verify-production-env", () => {
       AI_GATEWAY_API_KEY: "placeholder",
       ENABLE_AI_DEMO: "true",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_...",
-      TELEMETRY_AI_DEMO_KEY: "telemetry_ai_demo_key_0123456789abc",
+      TELEMETRY_AI_DEMO_KEY: "placeholder-telemetry-ai-demo-key-32chars",
       UPSTASH_REDIS_REST_TOKEN: "placeholder",
     });
 

@@ -44,6 +44,15 @@ function extractNonceFromCsp(cspHeader: string): string {
   return match[1];
 }
 
+function getCspDirective(cspHeader: string, directive: string): string {
+  return (
+    cspHeader
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${directive} `)) ?? ""
+  );
+}
+
 function createMockRequestCookies(initial: Record<string, string>) {
   const store = new Map(Object.entries(initial));
   return {
@@ -114,10 +123,21 @@ describe("src/proxy.ts CSP nonce", () => {
 
       const response = await proxy(request);
       const cspHeader = response.headers.get("Content-Security-Policy");
+      const reportOnlyCspHeader = response.headers.get(
+        "Content-Security-Policy-Report-Only"
+      );
 
       expect(cspHeader).toBeTypeOf("string");
       expect(cspHeader).toContain("script-src 'self' 'unsafe-inline'");
       expect(cspHeader).not.toContain("'nonce-");
+      expect(reportOnlyCspHeader).toBeTypeOf("string");
+      expect(reportOnlyCspHeader).toContain("report-uri /api/security/csp-report");
+      expect(getCspDirective(reportOnlyCspHeader as string, "script-src")).toContain(
+        "'report-sample'"
+      );
+      expect(
+        getCspDirective(reportOnlyCspHeader as string, "script-src")
+      ).not.toContain("'unsafe-inline'");
       expect(response.headers.get("x-middleware-request-x-nonce")).toBeNull();
       expect(
         response.headers.get("x-middleware-request-content-security-policy")
@@ -125,6 +145,41 @@ describe("src/proxy.ts CSP nonce", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("uses an explicit CSP report endpoint when configured", async () => {
+    const { proxy } = await import("@/proxy");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CSP_REPORT_URI", "https://reports.example.com/csp");
+
+    try {
+      const request = unsafeCast<NextRequest>({
+        cookies: createMockRequestCookies({}),
+        headers: new Headers(),
+        url: "https://example.com/",
+      });
+
+      const response = await proxy(request);
+
+      expect(response.headers.get("Content-Security-Policy-Report-Only")).toContain(
+        "report-uri https://reports.example.com/csp"
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("excludes static assets and metadata files from proxy matcher", async () => {
+    const { config } = await import("@/proxy");
+    const matcherSource = config.matcher[0]?.source;
+
+    expect(matcherSource).toContain("_next/static");
+    expect(matcherSource).toContain("_next/image");
+    expect(matcherSource).toContain("favicon.ico");
+    expect(matcherSource).toContain("robots.txt");
+    expect(matcherSource).toContain("sitemap.xml");
+    expect(matcherSource).toContain("manifest.webmanifest");
+    expect(matcherSource).toContain("manifest.json");
   });
 
   it("keeps dev-only CSP allowances (development)", async () => {

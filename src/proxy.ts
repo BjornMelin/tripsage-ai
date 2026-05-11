@@ -10,6 +10,7 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 type CspMode = "authed" | "public";
 
 const AUTHED_ROUTE_PREFIXES = ["/chat", "/dashboard"] as const;
+const DEFAULT_CSP_REPORT_URI = "/api/security/csp-report";
 
 function base64EncodeBytes(value: Uint8Array): string {
   if (typeof Buffer !== "undefined") {
@@ -35,6 +36,12 @@ function getCspModeFromPathname(pathname: string): CspMode {
   );
   if (isAuthedRoute) return "authed";
   return "public";
+}
+
+function getCspReportUri(): string {
+  const configuredReportUri =
+    typeof process === "undefined" ? undefined : process.env.CSP_REPORT_URI;
+  return configuredReportUri?.trim() || DEFAULT_CSP_REPORT_URI;
 }
 
 // Next.js emits inline bootstrap and flight scripts. Authenticated routes stay
@@ -139,9 +146,7 @@ function buildCsp(options: { isDev: boolean; mode: CspMode; nonce?: string }): s
 
     return cspHeader.replace(/\s{2,}/g, " ").trim();
   } else {
-    const reportUri =
-      typeof process === "undefined" ? undefined : process.env.CSP_REPORT_URI;
-    const reportDirective = reportUri ? `report-uri ${reportUri};` : "";
+    const reportDirective = `report-uri ${getCspReportUri()};`;
 
     const connectSrc = "'self' https: wss:";
     const upgradeInsecureRequests = "upgrade-insecure-requests";
@@ -209,6 +214,33 @@ function buildCsp(options: { isDev: boolean; mode: CspMode; nonce?: string }): s
   }
 }
 
+function buildPublicReportOnlyCsp(): string {
+  const reportDirective = `report-uri ${getCspReportUri()};`;
+  const scriptSrc = [
+    "'self'",
+    ...NEXT_BOOTSTRAP_HASHES.map((hash) => `'${hash}'`),
+    "'report-sample'",
+  ];
+
+  const cspHeader = `
+    default-src 'self';
+    script-src ${scriptSrc.join(" ")};
+    style-src 'self' 'unsafe-inline';
+    style-src-attr 'unsafe-inline';
+    img-src 'self' blob: data:;
+    font-src 'self' data:;
+    connect-src 'self' https: wss:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    upgrade-insecure-requests;
+    ${reportDirective}
+  `;
+
+  return cspHeader.replace(/\s{2,}/g, " ").trim();
+}
+
 // Shared with next.config.ts to keep static and dynamic headers in sync.
 function applySecurityHeaders(headers: Headers, options: { isProd: boolean }): void {
   for (const header of COMMON_SECURITY_HEADERS) {
@@ -239,6 +271,8 @@ export async function proxy(request: NextRequest) {
 
   const nonce = !isDev && mode === "authed" ? createNonce() : undefined;
   const contentSecurityPolicyHeaderValue = buildCsp({ isDev, mode, nonce });
+  const reportOnlyContentSecurityPolicyHeaderValue =
+    isProd && mode === "public" ? buildPublicReportOnlyCsp() : null;
 
   let response: NextResponse;
   let requestHeaders: Headers | null = null;
@@ -309,6 +343,12 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set("Content-Security-Policy", contentSecurityPolicyHeaderValue);
+  if (reportOnlyContentSecurityPolicyHeaderValue) {
+    response.headers.set(
+      "Content-Security-Policy-Report-Only",
+      reportOnlyContentSecurityPolicyHeaderValue
+    );
+  }
   applySecurityHeaders(response.headers, { isProd });
 
   return response;
@@ -325,7 +365,7 @@ export const config = {
         { key: "purpose", type: "header", value: "prefetch" },
       ],
       source:
-        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     },
   ],
 };
