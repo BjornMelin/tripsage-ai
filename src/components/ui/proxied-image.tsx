@@ -28,7 +28,7 @@ export interface ProxiedImageProps {
   sizes?: string;
   width?: number;
   height?: number;
-  priority?: boolean;
+  preload?: boolean;
   fallback?: ReactNode;
 }
 
@@ -50,7 +50,7 @@ export function ProxiedImage({
   sizes,
   width,
   height,
-  priority,
+  preload,
   fallback,
 }: ProxiedImageProps) {
   const normalized = typeof src === "string" ? normalizeNextImageSrc(src) : null;
@@ -84,7 +84,7 @@ export function ProxiedImage({
         fill
         className={className}
         sizes={sizes}
-        priority={priority}
+        preload={preload}
       />
     );
   }
@@ -97,7 +97,7 @@ export function ProxiedImage({
       height={height}
       className={className}
       sizes={sizes}
-      priority={priority}
+      preload={preload}
     />
   );
 }

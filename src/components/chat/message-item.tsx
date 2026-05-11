@@ -10,6 +10,7 @@ import {
 } from "@schemas/ai";
 import type { UIMessage } from "ai";
 import { FileIcon } from "lucide-react";
+import Image from "next/image";
 import { BudgetChart } from "@/components/ai-elements/budget-chart";
 import { DestinationCard } from "@/components/ai-elements/destination-card";
 import { FlightOfferCard } from "@/components/ai-elements/flight-card";
@@ -603,20 +604,20 @@ export function ChatMessageItem({
                 return (
                   <div key={renderedPartKey} className="my-2">
                     <div
-                      className="max-h-64 max-w-full overflow-hidden rounded-md border bg-muted/30"
+                      className="relative max-h-64 max-w-full overflow-hidden rounded-md border bg-muted/30"
                       style={{ aspectRatio }}
                     >
-                      {/* biome-ignore lint/performance/noImgElement: External URLs without known dimensions */}
-                      <img
+                      <Image
                         src={fileUrl}
                         alt={fileName}
-                        className="h-full w-full object-contain"
+                        className="object-contain"
+                        fill
                         loading="lazy"
                         onError={(e) => {
                           e.currentTarget.style.display = "none";
                         }}
-                        height={resolvedHeight}
-                        width={resolvedWidth}
+                        sizes="(max-width: 768px) 100vw, 640px"
+                        unoptimized
                       />
                     </div>
                   </div>

@@ -64,7 +64,7 @@ vi.mock("next/image", () => {
     default: (
       props: Record<string, unknown> & { src?: string; alt?: string; fill?: boolean }
     ) => {
-      const { src, alt, fill, ...rest } = props ?? {};
+      const { src, alt, fill, unoptimized: _unoptimized, ...rest } = props ?? {};
       const style = fill
         ? { height: "100%", inset: 0, position: "absolute", width: "100%" }
         : undefined;
