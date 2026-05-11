@@ -47,10 +47,11 @@ describe("/api/security/csp-report", () => {
     expect(LOGGER_WARN).toHaveBeenCalledWith("csp_violation_report", {
       blockedUri: "inline",
       disposition: "report",
-      documentUri: "https://example.com/auth/callback",
+      documentUri: "https://example.com",
       effectiveDirective: "script-src",
     });
     expect(JSON.stringify(LOGGER_WARN.mock.calls)).not.toContain("secret-token");
+    expect(JSON.stringify(LOGGER_WARN.mock.calls)).not.toContain("/auth/callback");
   });
 
   it("rate-limits report ingestion", async () => {

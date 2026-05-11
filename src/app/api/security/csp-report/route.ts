@@ -60,7 +60,7 @@ function sanitizeReportUri(value: string | null): string | null {
 
   try {
     const url = new URL(text);
-    return limitReportField(`${url.origin}${url.pathname}`);
+    return limitReportField(url.origin);
   } catch {
     return limitReportField(text.split(/[?#]/, 1)[0] ?? text);
   }
@@ -78,6 +78,9 @@ function sanitizeDirective(value: string | null): string | null {
 
 /**
  * POST handler for CSP violation reports emitted by enforced/report-only policies.
+ *
+ * @param req - Next.js request containing a CSP report payload.
+ * @returns Empty response when accepted, or a standardized error response for malformed input.
  */
 export const POST = withApiGuards({
   degradedMode: "fail_closed",

@@ -52,14 +52,18 @@ describe("check-no-secrets", () => {
 
   it("detects vendor-specific key shapes outside env assignment syntax", () => {
     const anthropicKey = `sk-ant-${"A".repeat(36)}`;
+    const openAiProjectKey = `sk-proj-${"C".repeat(36)}`;
 
     const result = runScannerInTempRepo(`
       export const badFixture = "${anthropicKey}";
+      export const openAiProjectFixture = "${openAiProjectKey}";
     `);
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("anthropic_api_key");
+    expect(result.stderr).toContain("openai_like_key");
     expect(result.stderr).not.toContain(anthropicKey);
+    expect(result.stderr).not.toContain(openAiProjectKey);
   });
 
   it("scans SQL migrations for token-shaped secrets", () => {

@@ -166,6 +166,14 @@ describe("forms schemas", () => {
       });
       expect(result.success).toBe(true);
     });
+
+    it.concurrent("should reject when new password matches current", () => {
+      const result = changePasswordPayloadSchema.safeParse({
+        currentPassword: "SamePassword123!",
+        newPassword: "SamePassword123!",
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("personalInfoFormSchema", () => {

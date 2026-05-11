@@ -165,6 +165,12 @@ async function handlePasswordChange(
   return NextResponse.json({ ok: true });
 }
 
+/**
+ * Changes the authenticated user's password through the guarded route pipeline.
+ *
+ * @param req - Next.js request containing the current and new password.
+ * @returns JSON response describing the password change result.
+ */
 export const POST = withApiGuards({
   auth: true,
   rateLimit: "auth:password:change",

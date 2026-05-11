@@ -14,7 +14,10 @@ const apiKeyRlsMigration = readFileSync(
 describe("security hardening migrations", () => {
   it("keeps BYOK metadata mutation behind service-role paths", () => {
     expect(apiKeyRlsMigration).toContain(
-      "REVOKE INSERT, UPDATE, DELETE ON TABLE public.api_keys FROM authenticated"
+      "REVOKE ALL ON TABLE public.api_keys FROM authenticated"
+    );
+    expect(apiKeyRlsMigration).toContain(
+      "GRANT SELECT ON TABLE public.api_keys TO authenticated"
     );
     expect(apiKeyRlsMigration).toContain("CREATE POLICY api_keys_owner_select");
     expect(apiKeyRlsMigration).toContain("FOR SELECT");

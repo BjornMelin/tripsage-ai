@@ -128,7 +128,7 @@ const TOKEN_PATTERNS = [
   { id: "anthropic_api_key", regex: /\bsk-ant-[0-9A-Za-z_-]{20,}\b/g },
   { id: "openrouter_api_key", regex: /\bsk-or-v1-[0-9A-Za-z_-]{20,}\b/g },
   // OpenAI-style keys are longer in practice; use a higher floor to reduce false positives.
-  { id: "openai_like_key", regex: /\bsk-[0-9A-Za-z]{40,}\b/g },
+  { id: "openai_like_key", regex: /\bsk-(?:proj-)?[0-9A-Za-z_-]{20,}\b/g },
   { id: "resend_api_key", regex: /\bre_[0-9A-Za-z]{20,}\b/g },
   { id: "aws_access_key_id", regex: /\bAKIA[0-9A-Z]{16}\b/g },
   { id: "google_api_key", regex: /\bAIza[0-9A-Za-z-_]{35}\b/g },
