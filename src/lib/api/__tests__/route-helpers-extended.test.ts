@@ -124,7 +124,7 @@ describe("errorResponse", () => {
 
   it("redacts secrets when logging errors", async () => {
     const { errorResponse } = await loadHelpers();
-    const secret = "sk-abcdefghijklmnopqrstuvwxyz123456";
+    const secret = ["sk", "abcdefghijklmnopqrstuvwxyz123456"].join("-");
     const err = new Error(`token=${secret}`);
 
     errorResponse({

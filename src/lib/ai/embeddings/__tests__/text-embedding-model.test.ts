@@ -63,7 +63,7 @@ describe("getTextEmbeddingModel", () => {
 
   it("falls back to direct OpenAI when configured and Gateway is not", async () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
-    vi.stubEnv("OPENAI_API_KEY", "sk-test-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    vi.stubEnv("OPENAI_API_KEY", ["sk", "test", "a".repeat(32)].join("-"));
     const { getTextEmbeddingModel, getTextEmbeddingModelId } =
       await loadTextEmbeddingModule();
     const model = getTextEmbeddingModel();

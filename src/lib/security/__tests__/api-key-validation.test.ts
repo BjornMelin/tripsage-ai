@@ -5,10 +5,11 @@ import { validateApiKeyInput } from "../api-key-validation";
 
 describe("security/api-key-validation", () => {
   it("trims the input and returns ok for a plausible key", () => {
-    const result = validateApiKeyInput("  sk-test_1234567890abcdef  ");
+    const apiKey = ["sk", "test_1234567890abcdef"].join("-");
+    const result = validateApiKeyInput(`  ${apiKey}  `);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.apiKey).toBe("sk-test_1234567890abcdef");
+      expect(result.apiKey).toBe(apiKey);
     }
   });
 

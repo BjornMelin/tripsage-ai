@@ -197,6 +197,9 @@ describe("verify-production-env", () => {
         expect.objectContaining({ name: "UPSTASH_REDIS_REST_TOKEN" }),
       ])
     );
+    expect(check(result.summary, "ai_demo_telemetry_contract")).toMatchObject({
+      status: "failed",
+    });
     expect(check(result.summary, "ai_provider_contract").details.invalid).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "AI_GATEWAY_API_KEY" })])
     );
