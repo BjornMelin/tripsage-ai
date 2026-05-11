@@ -1,3 +1,10 @@
+## [1.33.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.0...v1.33.1) (2026-05-11)
+
+### Bug Fixes
+
+* **security:** address hosted review hardening ([a8629f9](https://github.com/BjornMelin/tripsage-ai/commit/a8629f9253117cb1d5f05bff9b7dbdec91b14b8f))
+* **security:** harden auth csp rls and secret guards ([3e639ca](https://github.com/BjornMelin/tripsage-ai/commit/3e639cad99c6181291acb8099e9389020024e91a))
+
 ## [1.33.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.5...v1.33.0) (2026-05-11)
 
 ### Features
