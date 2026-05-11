@@ -10,13 +10,11 @@ import "server-only";
 // making it dynamic and preventing caching. No 'use cache' directives are present.
 
 import {
-  ANTHROPIC_VALIDATION_MODEL_ID,
   DEFAULT_GATEWAY_MODEL_ID,
   DEFAULT_OPENAI_MODEL_ID,
   DEFAULT_OPENROUTER_MODEL_ID,
   DEFAULT_XAI_MODEL_ID,
 } from "@ai/models/defaults";
-import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { postKeyBodySchema } from "@schemas/api";
 import { createGateway } from "ai";
@@ -36,7 +34,6 @@ import {
 type ValidateResult = { isValid: boolean; reason?: string };
 
 const DEFAULT_MODEL_IDS: Record<string, string> = {
-  anthropic: ANTHROPIC_VALIDATION_MODEL_ID,
   gateway: DEFAULT_GATEWAY_MODEL_ID,
   openai: DEFAULT_OPENAI_MODEL_ID,
   openrouter: DEFAULT_OPENROUTER_MODEL_ID,
@@ -70,6 +67,7 @@ type ConfigurableModel = {
 const OPENAI_BASE_URL = "https://api.openai.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
+const ANTHROPIC_API_VERSION = "2023-06-01";
 const XAI_BASE_URL = "https://api.x.ai/v1";
 /**
  * Timeout for key validation requests.
@@ -123,14 +121,19 @@ async function buildSDKRequest(
   };
 }
 
+function buildAnthropicModelsRequest(apiKey: string): ProviderRequest {
+  return {
+    fetchImpl: fetch,
+    headers: {
+      "anthropic-version": ANTHROPIC_API_VERSION,
+      "x-api-key": apiKey,
+    },
+    url: new URL("models", `${ANTHROPIC_BASE_URL}/`).toString(),
+  };
+}
+
 const PROVIDER_BUILDERS: Partial<Record<string, ProviderRequestBuilder>> = {
-  anthropic: (apiKey) =>
-    buildSDKRequest({
-      apiKey,
-      defaultBaseURL: ANTHROPIC_BASE_URL,
-      modelId: DEFAULT_MODEL_IDS.anthropic,
-      sdkCreator: createAnthropic as SDKCreator,
-    }),
+  anthropic: buildAnthropicModelsRequest,
   openai: (apiKey) =>
     buildSDKRequest({
       apiKey,

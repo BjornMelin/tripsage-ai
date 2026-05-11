@@ -173,11 +173,11 @@ import { tripCreateSchema } from "@schemas/trips";
 
 // Parse JSON body (handles malformed JSON)
 const parsed = await parseJsonBody(req);
-if ("error" in parsed) return parsed.error;
+if (!parsed.ok) return parsed.error;
 
 // Validate against schema (returns typed data or error response)
-const validation = validateSchema(tripCreateSchema, parsed.body);
-if ("error" in validation) return validation.error;
+const validation = validateSchema(tripCreateSchema, parsed.data);
+if (!validation.ok) return validation.error;
 
 const tripData = validation.data;
 ```
@@ -194,6 +194,13 @@ const tripData = validation.data;
 | `unauthorizedResponse()` | Standardized 401 response |
 | `forbiddenResponse(reason)` | Standardized 403 response |
 | `errorResponse({...})` | Custom error responses |
+
+**Degraded response contract:**
+
+- Domain status payloads return `200` when the route successfully reports the requested state, such as `{ connected: false }` for a disconnected calendar or fallback insights with `success: false`.
+- Partial mutation success returns `207` with explicit failed keys or records so clients can retry only the failed subset.
+- Primary dependency outages return a transport error, usually `503`, when the requested operation cannot complete normally. Routes may still include deterministic fallback data in the error response body, such as accommodations personalization fallback results.
+- Run `pnpm check:api-route-errors:full` before release-sensitive API work to verify current route files do not return ad hoc error JSON where helpers apply.
 
 See [Zod Schema Guide](../standards/zod-schema-guide.md) for schema patterns and [Standards](../standards/standards.md#zod-schemas-v4) for conventions.
 

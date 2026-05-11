@@ -16,7 +16,7 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
-import { requireUserId } from "@/lib/api/route-helpers";
+import { errorResponse, requireUserId } from "@/lib/api/route-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 /**
@@ -92,10 +92,15 @@ export const POST = withApiGuards({
       ...getDefaultPersonalization(hotel),
     }));
 
-    return NextResponse.json({
-      fallback: true,
-      results,
-      warning: "ai_service_unavailable",
+    return errorResponse({
+      error: "service_unavailable",
+      extras: {
+        fallback: true,
+        results,
+        warning: "ai_service_unavailable",
+      },
+      reason: "AI personalization service unavailable",
+      status: 503,
     });
   }
 });

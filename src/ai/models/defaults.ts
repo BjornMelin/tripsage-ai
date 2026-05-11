@@ -41,9 +41,6 @@ export const DEFAULT_GATEWAY_MODEL_ID =
 /** OpenRouter exposes OpenAI models with provider-qualified ids. */
 export const DEFAULT_OPENROUTER_MODEL_ID = `openai/${DEFAULT_OPENAI_MODEL_ID}`;
 
-/** Current Anthropic model used only for explicit-key validation examples. */
-export const ANTHROPIC_VALIDATION_MODEL_ID = "claude-sonnet-4.6";
-
 /** xAI default used only when xAI is the resolved BYOK/server provider. */
 export const DEFAULT_XAI_MODEL_ID = "grok-4.3";
 

@@ -31,8 +31,8 @@ export function countPromptTokens(messages: ChatMessage[], modelHint?: string): 
 Illustrative examples, not an exhaustive canonical table. The active mapping lives in `src/lib/tokens/limits.ts`.
 
 - OpenAI: `gpt-5.5` 1.05M, `gpt-5.4-mini` 400k, `gpt-5.4-nano` 400k.
-- Anthropic: `claude-sonnet-4.6` 1M.
 - xAI: `grok-4.3` 1M.
+- Moonshot AI: `kimi-k2.6` 262k.
 - Unknown models: default 128k.
 
 ## Counting

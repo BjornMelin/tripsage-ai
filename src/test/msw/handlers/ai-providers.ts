@@ -8,6 +8,13 @@ import type { HttpHandler } from "msw";
 import { HttpResponse, http } from "msw";
 import { MSW_FIXED_UNIX_SECONDS } from "../constants";
 
+export const ANTHROPIC_MODELS_URL = "https://api.anthropic.com/v1/models";
+
+/** Default Anthropic model-catalog response for key validation tests. */
+export const anthropicModelsHandler = http.get(ANTHROPIC_MODELS_URL, () =>
+  HttpResponse.json({ data: [] })
+);
+
 /**
  * Default AI provider handlers providing happy-path responses.
  *
@@ -15,6 +22,8 @@ import { MSW_FIXED_UNIX_SECONDS } from "../constants";
  * should be mocked using official AI SDK test utilities (MockLanguageModelV3).
  */
 export const aiProviderHandlers: HttpHandler[] = [
+  anthropicModelsHandler,
+
   // OpenAI API mock (for direct API calls, not AI SDK)
   http.post("https://api.openai.com/v1/chat/completions", () => {
     return HttpResponse.json({
@@ -54,7 +63,7 @@ export const aiProviderHandlers: HttpHandler[] = [
         },
       ],
       id: "msg-mock",
-      model: "claude-sonnet-4.6",
+      model: "claude-current-mock",
       role: "assistant",
       // biome-ignore lint/style/useNamingConvention: match Anthropic payload shape
       stop_reason: "end_turn",

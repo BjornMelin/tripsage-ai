@@ -1,7 +1,6 @@
 /** @vitest-environment node */
 
 import {
-  ANTHROPIC_VALIDATION_MODEL_ID,
   DEFAULT_GATEWAY_MODEL_ID,
   DEFAULT_OPENAI_MODEL_ID,
   DEFAULT_OPENROUTER_MODEL_ID,
@@ -150,13 +149,13 @@ describe("resolveProvider", () => {
       svc === "openrouter" ? "sk-or" : null
     );
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-2", "anthropic/claude-sonnet-4.6");
+    const result = await resolveProvider("user-2", "moonshotai/kimi-k2.6");
     expect(result.provider).toBe("openrouter");
     // The OpenRouter path uses OpenAI provider with baseURL set to openrouter.
     expect(String(result.model)).toContain(
-      "openai-chat(https://openrouter.ai/api/v1)::key::anthropic/claude-sonnet-4.6"
+      "openai-chat(https://openrouter.ai/api/v1)::key::moonshotai/kimi-k2.6"
     );
-    expect(result.modelId).toBe("anthropic/claude-sonnet-4.6");
+    expect(result.modelId).toBe("moonshotai/kimi-k2.6");
   });
 
   it("falls back to OpenRouter when envs unset", async () => {
@@ -199,6 +198,7 @@ describe("resolveProvider", () => {
   });
 
   it("uses Anthropic with an explicit current model", async () => {
+    const explicitAnthropicModel = "claude-current-explicit";
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
       svc === "anthropic" ? "sk-ant" : null
@@ -206,14 +206,12 @@ describe("resolveProvider", () => {
     const { resolveProvider } = await import("@ai/models/registry");
     const result = await resolveProvider(
       "user-3",
-      `anthropic/${ANTHROPIC_VALIDATION_MODEL_ID}`
+      `anthropic/${explicitAnthropicModel}`
     );
 
     expect(result.provider).toBe("anthropic");
-    expect(String(result.model)).toContain(
-      `anthropic::key::${ANTHROPIC_VALIDATION_MODEL_ID}`
-    );
-    expect(result.modelId).toBe(ANTHROPIC_VALIDATION_MODEL_ID);
+    expect(String(result.model)).toContain(`anthropic::key::${explicitAnthropicModel}`);
+    expect(result.modelId).toBe(explicitAnthropicModel);
   });
 
   it("rejects foreign provider-qualified hints for direct BYOK providers", async () => {

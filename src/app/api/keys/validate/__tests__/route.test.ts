@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import type { Redis } from "@upstash/redis";
+import { HttpResponse, http } from "msw";
 import type { NextRequest } from "next/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -18,6 +19,8 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { ANTHROPIC_MODELS_URL } from "@/test/msw/handlers/ai-providers";
+import { server } from "@/test/msw/server";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
@@ -41,7 +44,6 @@ const MOCK_SUPABASE = vi.hoisted(() => ({
 }));
 const CREATE_SUPABASE = vi.hoisted(() => vi.fn(async () => MOCK_SUPABASE));
 const mockCreateOpenAI = vi.hoisted(() => vi.fn());
-const mockCreateAnthropic = vi.hoisted(() => vi.fn());
 const mockCreateGateway = vi.hoisted(() => vi.fn());
 const MOCK_SPAN = vi.hoisted(() => ({
   addEvent: vi.fn(),
@@ -96,10 +98,6 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@ai-sdk/openai", () => ({
   createOpenAI: mockCreateOpenAI,
-}));
-
-vi.mock("@ai-sdk/anthropic", () => ({
-  createAnthropic: mockCreateAnthropic,
 }));
 
 vi.mock("ai", () => ({
@@ -162,7 +160,6 @@ describe("/api/keys/validate route", () => {
     setSupabaseFactoryForTests(async () => CREATE_SUPABASE() as never);
     MOCK_ROUTE_HELPERS.getClientIpFromHeaders.mockReturnValue("127.0.0.1");
     mockCreateOpenAI.mockReset();
-    mockCreateAnthropic.mockReset();
     mockCreateGateway.mockReset();
     CREATE_SUPABASE.mockReset();
     CREATE_SUPABASE.mockResolvedValue(MOCK_SUPABASE);
@@ -267,6 +264,38 @@ describe("/api/keys/validate route", () => {
 
     expect({ body, status: res.status }).toEqual({
       body: { isValid: false, reason: "INVALID_KEY" },
+      status: 200,
+    });
+  });
+
+  it("validates Anthropic keys through the model catalog without a hard-coded model", async () => {
+    const requestSpy = vi.fn();
+    server.use(
+      http.get(ANTHROPIC_MODELS_URL, ({ request }) => {
+        requestSpy({
+          anthropicVersion: request.headers.get("anthropic-version"),
+          apiKey: request.headers.get("x-api-key"),
+        });
+        return HttpResponse.json({ data: [] });
+      })
+    );
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-ant-test", service: "anthropic" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      anthropicVersion: "2023-06-01",
+      apiKey: "sk-ant-test",
+    });
+    expect({ body, status: res.status }).toEqual({
+      body: { isValid: true },
       status: 200,
     });
   });

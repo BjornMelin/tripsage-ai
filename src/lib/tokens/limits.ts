@@ -12,8 +12,6 @@ export type { ModelLimitsTable };
  * Keys are normalized lowercase substrings matched against model names.
  */
 export const MODEL_LIMITS: ModelLimitsTable = {
-  // Anthropic
-  "claude-sonnet-4.6": 1_000_000,
   // DeepSeek
   "deepseek-v4-flash": 1_000_000,
   "deepseek-v4-pro": 1_000_000,
