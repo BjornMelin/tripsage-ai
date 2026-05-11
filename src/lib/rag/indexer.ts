@@ -15,6 +15,7 @@ import {
   indexerConfigSchema,
   MAX_RAG_EMBED_CHUNKS_PER_BATCH,
   RAG_CHARS_PER_TOKEN,
+  RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS,
 } from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
@@ -44,7 +45,11 @@ const EMBED_TIMEOUT_PER_CHUNK_MS = 100;
 function getEmbedTimeoutMs(chunkCount: number, maxParallelCalls: number): number {
   const parallelCalls = Math.max(1, maxParallelCalls);
   const rounds = Math.ceil(chunkCount / parallelCalls);
-  return Math.max(EMBED_TIMEOUT_BASE_MS, rounds * EMBED_TIMEOUT_PER_CHUNK_MS);
+  const dynamicTimeoutMs = Math.max(
+    EMBED_TIMEOUT_BASE_MS,
+    rounds * EMBED_TIMEOUT_PER_CHUNK_MS
+  );
+  return Math.min(dynamicTimeoutMs, RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS);
 }
 
 function roundDurationMs(durationMs: number): number {

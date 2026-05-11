@@ -50,6 +50,10 @@ Requests and responses:
 - `/api/rag/index`
   - Body: `ragIndexRequestSchema`
     - `maxParallelCalls` (optional, default `2`): bounds `embedMany()` concurrency during indexing.
+    - `chunkOverlap` must be smaller than `chunkSize`; this invariant applies to
+      the public API and the QStash RAG job schema.
+    - Request size is bounded by the shared RAG limits: at most 100 documents
+      and 250,000 total content characters per request.
   - Response: `ragIndexResponseSchema` (HTTP 200; partial success via `success: false` and per-item failures)
 - `/api/rag/search`
   - Body: `ragSearchRequestSchema`

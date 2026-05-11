@@ -90,7 +90,12 @@ describe("enqueueJob", () => {
       label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
     });
 
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("qstash.dedup_id_present", true);
     expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+      "qstash.dedup_id_hash_available",
+      false
+    );
+    expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(
       "qstash.dedup_id",
       "test-job:tenant-42"
     );
@@ -105,6 +110,30 @@ describe("enqueueJob", () => {
     expect(mockSpan.setAttribute).toHaveBeenCalledWith(
       "qstash.has_failure_callback",
       true
+    );
+  });
+
+  it("records a hashed deduplication id when telemetry hashing is configured", async () => {
+    GET_ENV_FALLBACK.mockImplementation((key: string, fallback?: string) =>
+      key === "TELEMETRY_HASH_SECRET" ? "test-telemetry-secret" : fallback
+    );
+    const { enqueueJob, setQStashClientFactoryForTests } = await import(
+      "@/lib/qstash/client"
+    );
+    setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
+
+    await enqueueJob("test-job", { ok: true }, "/api/jobs/test", {
+      deduplicationId: "test-job:tenant-42",
+      label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+    });
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+      "qstash.dedup_id_hash",
+      expect.stringMatching(/^[a-f0-9]{64}$/)
+    );
+    expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(
+      "qstash.dedup_id",
+      "test-job:tenant-42"
     );
   });
 

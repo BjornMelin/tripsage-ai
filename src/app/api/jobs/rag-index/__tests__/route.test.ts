@@ -18,6 +18,7 @@ const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
 
 const createAdminSupabaseMock = vi.hoisted(() => vi.fn());
 const indexDocumentsMock = vi.hoisted(() => vi.fn());
+const recordTelemetryEventMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (key: string) => {
@@ -39,7 +40,7 @@ vi.mock("@/lib/rag/indexer", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
-  recordTelemetryEvent: vi.fn(),
+  recordTelemetryEvent: (...args: unknown[]) => recordTelemetryEventMock(...args),
   sanitizeAttributes: vi.fn((attrs) => attrs),
   withTelemetrySpan: vi.fn(
     (_name: string, _opts: unknown, fn: (span: unknown) => unknown) =>
@@ -71,6 +72,7 @@ describe("POST /api/jobs/rag-index", () => {
     vi.clearAllMocks();
     upstashMocks.qstash.__forceVerify(true);
     createAdminSupabaseMock.mockReset();
+    recordTelemetryEventMock.mockReset();
     createAdminSupabaseMock.mockReturnValue({ from: vi.fn() });
     indexDocumentsMock.mockReset();
     indexDocumentsMock.mockResolvedValue({
@@ -111,6 +113,19 @@ describe("POST /api/jobs/rag-index", () => {
           expect.objectContaining({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
         ],
         userId: "11111111-1111-4111-8111-111111111111",
+      })
+    );
+    expect(recordTelemetryEventMock).toHaveBeenCalledWith(
+      "jobs.rag_index.completed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          chunksCreated: 1,
+          documentCount: 1,
+          failedCount: 0,
+          indexedCount: 1,
+          namespace: "user_content",
+          retryOutcome: "not_applicable",
+        }),
       })
     );
   });
@@ -163,6 +178,19 @@ describe("POST /api/jobs/rag-index", () => {
     expect(res.headers.get("Upstash-NonRetryable-Error")).toBe("true");
     expect(json.error).toBe("rag_index_limit");
     expect(json.reason).toContain("rag_limit:too_many_chunks");
+    expect(recordTelemetryEventMock).toHaveBeenCalledWith(
+      "jobs.rag_index.failed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          chunksCreated: 0,
+          documentCount: 1,
+          failedCount: 1,
+          namespace: "user_content",
+          retryOutcome: "non_retryable",
+        }),
+        level: "error",
+      })
+    );
   });
 
   it("returns 489 for invalid payload and marks as non-retryable", async () => {

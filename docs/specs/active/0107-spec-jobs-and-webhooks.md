@@ -52,9 +52,11 @@ Jobs (QStash workers):
   - attachment ingest: duration, file size, MIME type, extracted char counts,
     estimated RAG chunks, serialized RAG payload bytes, skip/error code, and
     retry outcome;
-  - RAG index: duration, document count, chunk count, embedding call count,
-    embedding token usage, DB upsert count, DB rows upserted, provider failure
-    class, failed count, and retry outcome.
+  - RAG job route: document count, chunk count, indexed/failed counts,
+    namespace, and retry outcome;
+  - RAG indexer: duration, document/chunk counts, embedding call count,
+    embedding token usage, embedding warnings, DB upsert count, DB rows
+    upserted, provider failure class, failed count, and namespace.
 - Never record raw attachment filenames, storage paths, document content,
   extracted text, embedding values, or provider payloads in job telemetry.
 
@@ -62,6 +64,7 @@ Jobs (QStash workers):
 
 - Vercel function cap: `vercel.json` sets `src/app/api/**/route.*` to 60s.
 - QStash RAG delivery timeout: 55s.
+- Embedding abort timeout: 50s, capped below QStash delivery timeout.
 - QStash RAG request body cap: 512 KiB, below the documented 1 MiB QStash
   message-size ceiling.
 - Attachment download cap: 10 MiB.
@@ -71,6 +74,10 @@ Jobs (QStash workers):
 - `chunkOverlap` must be smaller than `chunkSize`.
 - RAG budget violations are non-retryable and must return HTTP `489` with
   `Upstash-NonRetryable-Error: true`.
+- Attachment-to-RAG QStash message bodies currently carry extracted document
+  content and attachment metadata; treat QStash retry/DLQ access as sensitive
+  production data access and keep telemetry redacted to counts, booleans,
+  namespaces, low-cardinality codes, and hashes.
 
 Open a follow-up Upstash Workflow pilot only after production telemetry shows
 sustained P95 duration above 45s, repeated QStash delivery timeouts/DLQ events,
