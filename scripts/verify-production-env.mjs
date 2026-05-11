@@ -28,6 +28,8 @@ const valueValidators = new Map([
   ["AMADEUS_CLIENT_SECRET", [minLength(16)]],
   ["AMADEUS_ENV", [oneOf(["production", "test"])]],
   ["HMAC_SECRET", [minLength(32)]],
+  ["NEXT_PUBLIC_SUPABASE_ANON_KEY", [supabaseLegacyAnonKey()]],
+  ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", [startsWithOneOf(["sb_publishable_"])]],
   ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", [startsWithOneOf(["pk_live_", "pk_test_"])]],
   ["QSTASH_CURRENT_SIGNING_KEY", [minLength(32)]],
   ["QSTASH_NEXT_SIGNING_KEY", [minLength(32)]],
@@ -63,6 +65,21 @@ function startsWithOneOf(prefixes) {
 function validEmail() {
   return (value) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? null : "must be an email";
+}
+
+function supabaseLegacyAnonKey() {
+  return (value) =>
+    isJwtLike(value) || value.startsWith("sb_publishable_")
+      ? null
+      : "must be a Supabase publishable key or legacy anon JWT";
+}
+
+function isJwtLike(value) {
+  const parts = value.split(".");
+  return (
+    parts.length === 3 &&
+    parts.every((part) => part.length > 0 && /^[A-Za-z0-9_-]+$/.test(part))
+  );
 }
 
 function isPlaceholderValue(value) {
@@ -208,13 +225,30 @@ addRequiredGroupCheck(
   { requiredWhen: "production" }
 );
 
+const supabasePublicKeyName = hasEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
+  ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  : "NEXT_PUBLIC_SUPABASE_ANON_KEY";
+const supabasePublicKeyMissing = hasEnv(supabasePublicKeyName)
+  ? []
+  : [supabasePublicKeyName];
+const supabasePublicKeyInvalid = hasEnv(supabasePublicKeyName)
+  ? invalidValues([supabasePublicKeyName])
+  : [];
+
 checks.push(
-  makeCheck("supabase_public_key", !isProduction || hasValidAny(SUPABASE_PUBLIC_KEYS), {
-    accepted: SUPABASE_PUBLIC_KEYS,
-    invalid: invalidValues(SUPABASE_PUBLIC_KEYS),
-    preferred: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-    requiredWhen: "production",
-  })
+  makeCheck(
+    "supabase_public_key",
+    !isProduction ||
+      (supabasePublicKeyMissing.length === 0 && supabasePublicKeyInvalid.length === 0),
+    {
+      accepted: SUPABASE_PUBLIC_KEYS,
+      active: supabasePublicKeyName,
+      invalid: supabasePublicKeyInvalid,
+      missing: supabasePublicKeyMissing,
+      preferred: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      requiredWhen: "production",
+    }
+  )
 );
 
 addRequiredGroupCheck("telemetry_core_contract", ["TELEMETRY_HASH_SECRET"], {

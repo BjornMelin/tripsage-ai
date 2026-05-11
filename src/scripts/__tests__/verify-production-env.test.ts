@@ -18,6 +18,8 @@ type EnvSummary = {
 
 const scriptPath = path.join(process.cwd(), "scripts/verify-production-env.mjs");
 const longSecret = "a".repeat(32);
+const legacyAnonJwt =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.signature";
 const validRedisUrl = "https://upstash-valid.test";
 
 const productionEnv = {
@@ -146,7 +148,10 @@ describe("verify-production-env", () => {
   });
 
   it("treats literal undefined public keys as absent", () => {
-    const result = runVerifier({ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "undefined" });
+    const result = runVerifier({
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "undefined",
+    });
 
     expect(result.status).toBe(1);
     expect(check(result.summary, "supabase_public_key")).toMatchObject({
@@ -177,6 +182,41 @@ describe("verify-production-env", () => {
     expect(check(result.summary, "ai_provider_contract").details.invalid).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "AI_GATEWAY_API_KEY" })])
     );
+  });
+
+  it("fails malformed publishable key even when a legacy fallback is configured", () => {
+    const result = runVerifier({
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: legacyAnonJwt,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "not-a-publishable-key",
+    });
+
+    expect(result.status).toBe(1);
+    expect(check(result.summary, "supabase_public_key")).toMatchObject({
+      details: {
+        active: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        invalid: [
+          expect.objectContaining({
+            name: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+          }),
+        ],
+      },
+      status: "failed",
+    });
+  });
+
+  it("accepts a legacy anon JWT only when publishable key is absent", () => {
+    const result = runVerifier({
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: legacyAnonJwt,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+    });
+
+    expect(result.status).toBe(0);
+    expect(check(result.summary, "supabase_public_key")).toMatchObject({
+      details: {
+        active: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      },
+      status: "passed",
+    });
   });
 
   it("requires telemetry auth and one provider when the AI demo is enabled", () => {

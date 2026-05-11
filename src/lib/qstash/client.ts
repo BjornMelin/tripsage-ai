@@ -124,6 +124,11 @@ function parseDelayToSeconds(delay: string): number {
   return exhaustiveCheck;
 }
 
+/**
+ * Resolve a QStash worker path against the trusted server origin.
+ *
+ * @throws Error if the path is not a same-origin absolute path or resolves off-origin.
+ */
 function toQstashCallbackUrl(path: string, origin: string): string {
   const originUrl = new URL(origin);
   if (!path.startsWith("/") || path.startsWith("//")) {

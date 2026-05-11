@@ -64,6 +64,24 @@ export interface GetCurrentUserResult {
 const cookieLogger = createServerLogger("supabase.cookies");
 let didWarnCookieAdapterFailure = false;
 
+type SupabasePublicEnv = Partial<
+  Record<
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    string
+  >
+>;
+
+function getEffectiveSupabasePublicKey(env: SupabasePublicEnv): string {
+  const publicKey =
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!publicKey) {
+    throw new Error(
+      "Supabase public key missing: set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or legacy NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    );
+  }
+  return publicKey;
+}
+
 function warnCookieAdapterFailureOnce(
   operation: "getAll" | "setAll",
   error: unknown
@@ -109,10 +127,12 @@ export function createServerSupabaseClient(
   const env = getServerEnv();
 
   const createClient = () => {
+    const supabasePublicKey = getEffectiveSupabasePublicKey(env);
+
     // Use @supabase/ssr for proper SSR cookie handling
     return createSsrServerClient<Database>(
       env.NEXT_PUBLIC_SUPABASE_URL,
-      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      supabasePublicKey,
       {
         cookies: createCookieMethods(cookies),
       }
@@ -168,10 +188,12 @@ export function createMiddlewareSupabase(
   const env = getClientEnv();
 
   const createClient = () => {
+    const supabasePublicKey = getEffectiveSupabasePublicKey(env);
+
     // Use @supabase/ssr for proper SSR cookie handling
     return createSsrServerClient<Database>(
       env.NEXT_PUBLIC_SUPABASE_URL,
-      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      supabasePublicKey,
       {
         cookies: createCookieMethods(cookies),
       }
