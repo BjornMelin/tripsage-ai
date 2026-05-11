@@ -178,11 +178,17 @@ function mapGatewayCreditsErrorToCode(error: unknown): string {
 }
 
 function createValidationFetch(timeoutMs: number): typeof fetch {
-  return async (input, init) =>
-    fetch(input, {
+  return (input, init) => {
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const signal = init?.signal
+      ? AbortSignal.any([init.signal, timeoutSignal])
+      : timeoutSignal;
+
+    return fetch(input, {
       ...init,
-      signal: init?.signal ?? AbortSignal.timeout(timeoutMs),
+      signal,
     });
+  };
 }
 
 async function validateGatewayKey(apiKey: string): Promise<ValidateResult> {

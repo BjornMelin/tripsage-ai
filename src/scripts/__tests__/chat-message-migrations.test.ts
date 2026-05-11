@@ -19,9 +19,9 @@ describe("chat message persistence migrations", () => {
     expect(migration).toContain("grouped_tool_calls");
     expect(migration).toContain("provider_executed");
     expect(migration).toContain("message_record.role = 'assistant'");
-    expect(migration).toContain("message_record.metadata ? 'requestId'");
-    expect(migration).toContain("message_record.metadata ? 'provider'");
-    expect(migration).toContain("message_record.metadata ? 'uiMessageId'");
+    expect(migration).not.toContain("message_record.metadata ? 'requestId'");
+    expect(migration).not.toContain("message_record.metadata ? 'provider'");
+    expect(migration).not.toContain("message_record.metadata ? 'uiMessageId'");
     expect(migration).toContain("part->>'type' = 'dynamic-tool'");
     expect(migration).toContain("part->>'type' = 'tool-call'");
     expect(migration).toContain("part->>'type' LIKE 'tool-%'");
@@ -104,6 +104,28 @@ describe("chat message persistence migrations", () => {
     expect(migration).toContain("should_strip_tool_parts := true");
     expect(migration).toContain(
       "CASE WHEN status IN ('completed', 'failed') THEN message_record.created_at ELSE NULL END"
+    );
+  });
+
+  it("keeps the consolidated baseline aligned with Gateway and chat hardening", () => {
+    const baseline = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/archive/20260120_predeploy_consolidation/20251122000000_base_schema.sql"
+      ),
+      "utf8"
+    );
+
+    expect(baseline).toContain(
+      "role TEXT NOT NULL CHECK (role IN ('user','assistant','system','tool'))"
+    );
+    expect(baseline).toContain("allow_gateway_fallback BOOLEAN NOT NULL DEFAULT FALSE");
+    expect(baseline).toContain("RETURN coalesce(v_flag, false)");
+    expect(baseline).toContain(
+      "CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR SELECT TO authenticated USING ((select auth.uid()) = user_id)"
+    );
+    expect(baseline).not.toContain(
+      "CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR ALL TO authenticated"
     );
   });
 });

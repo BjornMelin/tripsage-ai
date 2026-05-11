@@ -26,12 +26,7 @@ BEGIN
       CONTINUE;
     END IF;
 
-    IF message_record.role = 'assistant'
-      AND jsonb_typeof(message_record.metadata) = 'object'
-      AND message_record.metadata ? 'requestId'
-      AND message_record.metadata ? 'provider'
-      AND message_record.metadata ? 'uiMessageId'
-    THEN
+    IF message_record.role = 'assistant' THEN
       IF EXISTS (
         WITH raw_parts AS (
           SELECT

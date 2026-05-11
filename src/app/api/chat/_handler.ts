@@ -80,7 +80,7 @@ export type ProviderResolver = (
  */
 export interface ChatDeps {
   supabase: TypedServerSupabase;
-  serverSupabase?: TypedServerSupabase;
+  serverSupabase: TypedServerSupabase;
   toolCallSupabase?: TypedServerSupabase;
   resolveProvider: ProviderResolver;
   logger?: ServerLogger;

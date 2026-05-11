@@ -10,8 +10,10 @@ const DEFAULT_GATEWAY_HOST = "ai-gateway.vercel.sh";
 let cachedAllowedGatewayHosts: Set<string> | null = null;
 let cachedAllowedGatewayHostsEnv: string | null = null;
 
+/** Identifies where a Gateway base URL came from during provider resolution. */
 export type GatewayBaseUrlSource = "default" | "team" | "user";
 
+/** Enumerates reasons a Gateway base URL can be rejected during validation. */
 export type GatewayBaseUrlRejectReason =
   | "credentials"
   | "host_not_allowed"
@@ -19,6 +21,7 @@ export type GatewayBaseUrlRejectReason =
   | "non_https"
   | "private_host";
 
+/** Normalized success result or rejection outcome for Gateway URL validation. */
 export type GatewayBaseUrlValidation =
   | {
       baseUrl?: string;

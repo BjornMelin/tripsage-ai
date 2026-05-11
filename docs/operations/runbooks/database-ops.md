@@ -49,7 +49,8 @@ Local sign-up confirmation:
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
-- `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL` (team fallback; requires user consent)
+- `AI_GATEWAY_API_KEY` (team fallback; requires user consent)
+- `AI_GATEWAY_URL` (optional Gateway endpoint override)
 - `AI_GATEWAY_ALLOWED_HOSTS` (comma-separated allowlist for non-default Gateway hosts)
 - Optional user-provided BYOK keys via Vault
 - Server-side fallback provider keys (optional): `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`
@@ -153,6 +154,8 @@ expect(provider.provider).toBe("openai");
 expect(provider.modelId).toBe("gpt-5.5");
 
 // Provider resolution order is owned by docs/operations/runbooks/byok-gateway-operator.md.
+// To prove fallback, remove the user's BYOK key, configure AI_GATEWAY_API_KEY,
+// and set allowGatewayFallback=true first.
 const fallbackProvider = await resolveProvider(userId, "gpt-5.5");
 expect(fallbackProvider.provider).toBe("openai");
 ```

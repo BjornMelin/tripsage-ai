@@ -368,12 +368,23 @@ export async function resolveProvider(
     }
 
     if (serverApiKey) {
-      return {
-        credentialSource: "server-provider",
-        model: createByokLanguageModel(provider, serverApiKey, modelId),
-        modelId,
-        provider,
-      };
+      return await withTelemetrySpan(
+        "providers.resolve",
+        {
+          attributes: {
+            credentialSource: "server-provider",
+            modelId,
+            path: "server-provider",
+            provider,
+          },
+        },
+        async () => ({
+          credentialSource: "server-provider",
+          model: createByokLanguageModel(provider, serverApiKey, modelId),
+          modelId,
+          provider,
+        })
+      );
     }
   }
 

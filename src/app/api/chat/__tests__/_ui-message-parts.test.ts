@@ -72,6 +72,8 @@ describe("chat UI message part persistence", () => {
         sessionId: "session-1",
       })
     );
+    expect(warn.mock.calls[0]?.[1]).not.toHaveProperty("content");
+    expect(warn.mock.calls[0]?.[1]).not.toHaveProperty("rawContent");
   });
 
   it("rehydrates tool rows as AI SDK v6 static tool UI parts", () => {

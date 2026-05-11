@@ -186,8 +186,8 @@ export type ChatCompletionRequest = z.infer<typeof chatCompletionRequestSchema>;
  * Ensures content is a non-empty string and public callers can only create user messages.
  */
 export const createMessageRequestSchema = z.strictObject({
-  content: z.string().min(1, { error: "Content must be a non-empty string" }),
-  role: z.literal("user").optional(),
+  content: z.string().trim().min(1, { error: "Content must be a non-empty string" }),
+  role: z.literal("user").default("user"),
 });
 
 /** TypeScript type for create message requests. */

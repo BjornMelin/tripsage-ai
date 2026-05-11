@@ -309,7 +309,7 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     session_id UUID NOT NULL REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('user','assistant','system')),
+    role TEXT NOT NULL CHECK (role IN ('user','assistant','system','tool')),
     content TEXT NOT NULL,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -473,7 +473,7 @@ CREATE TABLE IF NOT EXISTS public.api_gateway_configs (
 
 CREATE TABLE IF NOT EXISTS public.user_settings (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  allow_gateway_fallback BOOLEAN NOT NULL DEFAULT TRUE
+  allow_gateway_fallback BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- API keys metadata (vault-backed secret names)
@@ -1033,10 +1033,7 @@ DECLARE v_flag BOOLEAN; BEGIN
     RAISE EXCEPTION 'Must be called as service role';
   END IF;
   SELECT allow_gateway_fallback INTO v_flag FROM public.user_settings WHERE user_id = p_user_id;
-  IF v_flag IS NULL THEN
-    RETURN TRUE;
-  END IF;
-  RETURN v_flag;
+  RETURN coalesce(v_flag, false);
 END; $$;
 
 REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(UUID) FROM PUBLIC;
@@ -1407,7 +1404,7 @@ CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO aut
 
 ALTER TABLE public.api_gateway_configs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "api_gateway_configs_owner" ON public.api_gateway_configs;
-CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR SELECT TO authenticated USING ((select auth.uid()) = user_id);
 DROP POLICY IF EXISTS "api_gateway_configs_service" ON public.api_gateway_configs;
 CREATE POLICY api_gateway_configs_service ON public.api_gateway_configs FOR ALL TO service_role USING (true) WITH CHECK (true);
 
