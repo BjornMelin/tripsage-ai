@@ -59,11 +59,16 @@ Jobs (QStash workers):
     - This disables retries and forwards the message to the configured DLQ.
 
 - When publishing jobs, set an explicit retry delay expression (via `Upstash-Retry-Delay`) so failures reach DLQ promptly instead of waiting hours/days on the QStash default backoff.
+- Production webhook paths must not silently downgrade critical QStash jobs to
+  in-process best-effort work. Any local/test fallback must be explicitly gated
+  by environment.
 
 ## Deduplication (publishing)
 
 - Prefer explicit deduplication keys when publishing jobs:
   - `Upstash-Deduplication-Id` (stable key derived from the business operation).
+- `src/lib/qstash/client.ts` rejects publishes without a non-empty deterministic
+  `deduplicationId`.
 - Optionally enable content-based deduplication for idempotent bodies:
   - `Upstash-Content-Based-Deduplication: true`
 
@@ -71,6 +76,8 @@ Jobs (QStash workers):
 
 - Apply QStash labels for log filtering, DLQ queries, and cancellation.
 - Convention: `tripsage:<job-type>` (see `QSTASH_JOB_LABELS` in `src/lib/qstash/config.ts`).
+- `src/lib/qstash/client.ts` rejects publishes without a canonical non-empty
+  label.
 
 ## Flow control
 

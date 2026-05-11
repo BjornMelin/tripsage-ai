@@ -43,8 +43,9 @@ downstream collaborator webhooks.
     `tryReserveKey` for idempotency.
   - If `QSTASH_TOKEN` is configured, publishes a JSON job `{ eventKey, payload }` to
     `/api/jobs/notify-collaborators` via QStash and returns HTTP 200 immediately.
-  - If `QSTASH_TOKEN` is not configured (development/test), falls back to using
-    `after()` with a fire-and-forget call to the same notification logic.
+  - If QStash enqueue fails in production, returns a 503 so Supabase retries the
+    webhook. Development/test may use an explicitly gated `after()` fallback for
+    local loops without QStash credentials.
 
 - `/api/jobs/notify-collaborators` is a Node runtime worker route that:
   - Verifies the `Upstash-Signature` header with QStash signing keys.

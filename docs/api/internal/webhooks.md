@@ -202,7 +202,7 @@ Postgres real-time change event payload:
 | ----- | ---- | ----------- |
 | `ok` | boolean | Indicates if the webhook was processed successfully |
 | `enqueued` | boolean | Indicates if the event was enqueued to QStash (only present when `true`) |
-| `fallback` | boolean | Indicates if fallback in-process processing was used (only present when `true`) |
+| `fallback` | boolean | Indicates if local/test-only fallback in-process processing was used (only present when `true`) |
 | `skipped` | boolean | Indicates if the event was skipped due to wrong table (only present when `true`) |
 | `duplicate` | boolean | Indicates if the event was a duplicate (only present when `true`) |
 
@@ -243,7 +243,8 @@ This webhook is triggered by Supabase Postgres triggers when `trip_collaborators
 2. Skips events for tables other than `trip_collaborators`
 3. Enforces idempotency using Upstash Redis (duplicate events return `{duplicate: true, ok: true}`)
 4. Enqueues notification jobs to QStash worker (`/api/jobs/notify-collaborators`) when `QSTASH_TOKEN` is configured
-5. Falls back to in-process notification processing if QStash is not available
+5. Fails closed with 503 in production if QStash enqueue fails so Supabase can retry
+6. Falls back to in-process notification processing only in local/test environments where QStash is intentionally absent
 
 Events for other tables are silently skipped with `{ok: true, skipped: true}`.
 
