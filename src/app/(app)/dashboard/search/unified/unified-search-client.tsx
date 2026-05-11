@@ -24,7 +24,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,12 @@ import { FlightSearchForm } from "@/features/search/components/forms/flight-sear
 import { HotelSearchForm } from "@/features/search/components/forms/hotel-search-form";
 import { FlightResults } from "@/features/search/components/results/flight-results";
 import { HotelResults } from "@/features/search/components/results/hotel-results";
+import {
+  isAbortError,
+  toggleStringSetValue,
+  useAbortableSearchTask,
+  usePersistentStringSet,
+} from "@/features/search/hooks/search/use-search-client-state";
 import { getErrorMessage } from "@/lib/api/error-types";
 import type { Result, ResultError } from "@/lib/result";
 import { ROUTES } from "@/lib/routes";
@@ -75,37 +81,14 @@ export default function UnifiedSearchClient({
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [comparisonFlights, setComparisonFlights] = useState<FlightResult[]>([]);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
-  const [wishlistHotelIds, setWishlistHotelIds] = useState<Set<string>>(new Set());
+  const [wishlistHotelIds, setWishlistHotelIds] = usePersistentStringSet(
+    "unifiedSearch:wishlistHotels"
+  );
   const { toast } = useToast();
-  const currentSearchController = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    return () => {
-      currentSearchController.current?.abort();
-      currentSearchController.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("unifiedSearch:wishlistHotels");
-      if (!stored) return;
-      const parsed: unknown = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
-        setWishlistHotelIds(new Set(parsed));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const isAbortError = (error: unknown): boolean =>
-    error instanceof Error && error.name === "AbortError";
+  const { clearSearchController, startSearchController } = useAbortableSearchTask();
 
   const handleFlightSearch = async (params: FlightSearchFormData): Promise<void> => {
-    currentSearchController.current?.abort();
-    const controller = new AbortController();
-    currentSearchController.current = controller;
+    const controller = startSearchController();
     setIsSearching(true);
     setErrorMessage(null);
     try {
@@ -113,11 +96,12 @@ export default function UnifiedSearchClient({
         throw new Error("Flight search is not implemented yet.");
       }
       const results = await onSearchFlights(params, controller.signal);
+      if (controller.signal.aborted) return;
       setFlightResults(results);
       setLastUpdated(new Date());
       setShowResults(true);
     } catch (error) {
-      if (isAbortError(error)) {
+      if (controller.signal.aborted || isAbortError(error)) {
         return;
       }
       const message =
@@ -132,8 +116,8 @@ export default function UnifiedSearchClient({
         variant: "destructive",
       });
     } finally {
-      if (currentSearchController.current === controller) {
-        currentSearchController.current = null;
+      clearSearchController(controller);
+      if (!controller.signal.aborted) {
         setIsSearching(false);
       }
     }
@@ -150,13 +134,12 @@ export default function UnifiedSearchClient({
   };
 
   const handleHotelSearch = async (params: HotelSearchFormData): Promise<void> => {
-    currentSearchController.current?.abort();
-    const controller = new AbortController();
-    currentSearchController.current = controller;
+    const controller = startSearchController();
     setIsSearching(true);
     setErrorMessage(null);
     try {
       const results = await onSearchHotels(params, controller.signal);
+      if (controller.signal.aborted) return;
       if (!results.ok) {
         setHotelResults([]);
         setLastUpdated(null);
@@ -175,7 +158,7 @@ export default function UnifiedSearchClient({
       setLastUpdated(new Date());
       setShowResults(true);
     } catch (error) {
-      if (isAbortError(error)) {
+      if (controller.signal.aborted || isAbortError(error)) {
         return;
       }
       setHotelResults([]);
@@ -189,8 +172,8 @@ export default function UnifiedSearchClient({
         variant: "destructive",
       });
     } finally {
-      if (currentSearchController.current === controller) {
-        currentSearchController.current = null;
+      clearSearchController(controller);
+      if (!controller.signal.aborted) {
         setIsSearching(false);
       }
     }
@@ -220,28 +203,14 @@ export default function UnifiedSearchClient({
   };
 
   const handleSaveToWishlist = (hotelId: string) => {
-    let isNowSaved = false;
-    setWishlistHotelIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(hotelId)) {
-        next.delete(hotelId);
-        isNowSaved = false;
-      } else {
-        next.add(hotelId);
-        isNowSaved = true;
-      }
-      try {
-        window.localStorage.setItem(
-          "unifiedSearch:wishlistHotels",
-          JSON.stringify([...next])
-        );
-      } catch {
-        // ignore
-      }
-      return next;
+    let wasPresent = false;
+    setWishlistHotelIds((currentValues) => {
+      const toggled = toggleStringSetValue(currentValues, hotelId);
+      wasPresent = toggled.wasPresent;
+      return toggled.nextValues;
     });
     toast({
-      description: isNowSaved ? "Saved to wishlist" : "Removed from wishlist",
+      description: wasPresent ? "Removed from wishlist" : "Saved to wishlist",
       title: "Wishlist updated",
     });
   };
@@ -383,7 +352,6 @@ export default function UnifiedSearchClient({
           </DialogContent>
         </Dialog>
 
-        {/* Hero Section */}
         <Card className="bg-linear-to-r from-info/10 to-success/10 border-none">
           <CardContent className="p-8">
             <div className="text-center space-y-4">
@@ -430,7 +398,6 @@ export default function UnifiedSearchClient({
           </div>
         ) : null}
 
-        {/* Search Interface */}
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "flights" | "hotels")}
@@ -506,7 +473,6 @@ export default function UnifiedSearchClient({
           </div>
         </Tabs>
 
-        {/* Features Showcase */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -550,7 +516,6 @@ export default function UnifiedSearchClient({
           </CardContent>
         </Card>
 
-        {/* Implementation Notes */}
         <Card className="bg-muted/50">
           <CardHeader>
             <CardTitle>Implementation Highlights</CardTitle>

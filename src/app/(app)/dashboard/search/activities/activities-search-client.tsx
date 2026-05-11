@@ -32,6 +32,10 @@ import { ActivityCard } from "@/features/search/components/cards/activity-card";
 import { ActivitySearchForm } from "@/features/search/components/forms/activity-search-form";
 import { ActivityComparisonModal } from "@/features/search/components/modals/activity-comparison-modal";
 import { TripSelectionModal } from "@/features/search/components/modals/trip-selection-modal";
+import {
+  isAbortError,
+  useAbortableSearchTask,
+} from "@/features/search/hooks/search/use-search-client-state";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { useComparisonStore } from "@/features/search/store/comparison-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
@@ -85,6 +89,7 @@ export default function ActivitiesSearchClient({
   const searchMetadata = useSearchResultsStore((state) => state.metrics);
   const primaryActionRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const { clearSearchController, startSearchController } = useAbortableSearchTask();
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const didInitFromUrlParams = useRef(false);
@@ -112,14 +117,6 @@ export default function ActivitiesSearchClient({
     initializeSearch("activity");
   }, [initializeSearch]);
 
-  const manualSearchController = useRef<AbortController | null>(null);
-  useEffect(() => {
-    return () => {
-      manualSearchController.current?.abort();
-      manualSearchController.current = null;
-    };
-  }, []);
-
   // Initialize search with URL parameters
   useEffect(() => {
     if (didInitFromUrlParams.current) return;
@@ -137,6 +134,7 @@ export default function ActivitiesSearchClient({
       (async () => {
         try {
           const normalizedParams = await onSubmitServer(initialParams);
+          if (controller.signal.aborted) return;
           if (!normalizedParams.ok) {
             toast({
               description: normalizedParams.error.reason,
@@ -150,10 +148,7 @@ export default function ActivitiesSearchClient({
           if (controller.signal.aborted) return;
           setHasSearched(true);
         } catch (error) {
-          if (
-            controller.signal.aborted ||
-            (error instanceof Error && error.name === "AbortError")
-          ) {
+          if (controller.signal.aborted || isAbortError(error)) {
             return;
           }
           const message = getErrorMessage(error);
@@ -171,11 +166,10 @@ export default function ActivitiesSearchClient({
   const handleSearch = useCallback(
     async (params: ActivitySearchParams) => {
       if (params.destination) {
-        manualSearchController.current?.abort();
-        const controller = new AbortController();
-        manualSearchController.current = controller;
+        const controller = startSearchController();
         try {
           const normalizedParams = await onSubmitServer(params); // server-side telemetry and validation
+          if (controller.signal.aborted) return;
           if (!normalizedParams.ok) {
             toast({
               description: normalizedParams.error.reason,
@@ -189,10 +183,7 @@ export default function ActivitiesSearchClient({
           if (controller.signal.aborted) return;
           setHasSearched(true);
         } catch (error) {
-          if (
-            controller.signal.aborted ||
-            (error instanceof Error && error.name === "AbortError")
-          ) {
+          if (controller.signal.aborted || isAbortError(error)) {
             return;
           }
           const message = getErrorMessage(error);
@@ -202,13 +193,11 @@ export default function ActivitiesSearchClient({
             variant: "destructive",
           });
         } finally {
-          if (manualSearchController.current === controller) {
-            manualSearchController.current = null;
-          }
+          clearSearchController(controller);
         }
       }
     },
-    [executeSearch, onSubmitServer, toast]
+    [clearSearchController, executeSearch, onSubmitServer, startSearchController, toast]
   );
 
   const handleAddToTripClick = useCallback(async () => {
@@ -431,7 +420,6 @@ export default function ActivitiesSearchClient({
     <SearchLayout>
       <TooltipProvider>
         <div className="space-y-6">
-          {/* Search Form Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
               <Card>
@@ -448,7 +436,6 @@ export default function ActivitiesSearchClient({
             </div>
 
             <div className="lg:col-span-2 space-y-4">
-              {/* Comparison Bar */}
               {comparisonList.size > 0 && (
                 <Card className="border-primary/50 bg-primary/5">
                   <CardContent className="py-4">
@@ -498,7 +485,6 @@ export default function ActivitiesSearchClient({
                 </Card>
               )}
 
-              {/* Loading State */}
               {isSearching && (
                 <Card>
                   <CardHeader>
@@ -516,7 +502,6 @@ export default function ActivitiesSearchClient({
                 </Card>
               )}
 
-              {/* Error State */}
               {searchError && (
                 <Alert variant="destructive">
                   <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
@@ -527,7 +512,6 @@ export default function ActivitiesSearchClient({
                 </Alert>
               )}
 
-              {/* Results */}
               {!isSearching && hasActiveResults && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -545,7 +529,6 @@ export default function ActivitiesSearchClient({
                     )}
                   </div>
 
-                  {/* Mixed Results (Verified + AI) */}
                   {verifiedActivities.length > 0 && (
                     <div className="space-y-6">
                       <div>
@@ -606,7 +589,6 @@ export default function ActivitiesSearchClient({
                     </div>
                   )}
 
-                  {/* Standard Results */}
                   {verifiedActivities.length === 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {allAi && (
@@ -631,7 +613,6 @@ export default function ActivitiesSearchClient({
                 </div>
               )}
 
-              {/* Empty State */}
               {!isSearching && !hasActiveResults && !searchError && hasSearched && (
                 <Card>
                   <CardContent className="text-center py-12">
@@ -654,7 +635,6 @@ export default function ActivitiesSearchClient({
                 </Card>
               )}
 
-              {/* Initial State */}
               {!isSearching && !hasSearched && !searchError && (
                 <Card className="bg-muted/50">
                   <CardContent className="text-center py-12">
@@ -681,7 +661,6 @@ export default function ActivitiesSearchClient({
             </div>
           </div>
 
-          {/* Floating Compare Button */}
           {comparisonList.size > 0 && (
             <div className="fixed bottom-6 right-6 z-40">
               <Tooltip>
@@ -705,7 +684,6 @@ export default function ActivitiesSearchClient({
             </div>
           )}
 
-          {/* Comparison Modal */}
           <ActivityComparisonModal
             isOpen={showComparisonModal}
             onClose={() => setShowComparisonModal(false)}
@@ -725,7 +703,6 @@ export default function ActivitiesSearchClient({
             closeButtonRef={closeButtonRef}
           />
 
-          {/* Trip Selection Modal */}
           {selectedActivity && isTripModalOpen && (
             <TripSelectionModal
               isOpen={isTripModalOpen}

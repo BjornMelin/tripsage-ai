@@ -38,6 +38,10 @@ import { buildFlightApiPayload } from "@/features/search/components/filters/api-
 import { FilterPanel } from "@/features/search/components/filters/filter-panel";
 import { FilterPresets } from "@/features/search/components/filters/filter-presets";
 import { FlightSearchForm } from "@/features/search/components/forms/flight-search-form";
+import {
+  isAbortError,
+  useAbortableSearchTask,
+} from "@/features/search/hooks/search/use-search-client-state";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
 import { getErrorMessage } from "@/lib/api/error-types";
@@ -117,7 +121,7 @@ export default function FlightsSearchClient({
   const router = useRouter();
   const { toast } = useToast();
   const activeFilters = useSearchFiltersStore((s) => s.activeFilters);
-  const currentSearchController = React.useRef<AbortController | null>(null);
+  const { clearSearchController, startSearchController } = useAbortableSearchTask();
   const didInitFromUrlParams = React.useRef(false);
   const {
     data: popularRoutes = [],
@@ -135,13 +139,6 @@ export default function FlightsSearchClient({
     queryKey: keys.flights.popularRoutes(),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
-
-  React.useEffect(() => {
-    return () => {
-      currentSearchController.current?.abort();
-      currentSearchController.current = null;
-    };
-  }, []);
 
   React.useEffect(() => {
     initializeSearch("flight");
@@ -191,7 +188,7 @@ export default function FlightsSearchClient({
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
-          if (error instanceof Error && error.name === "AbortError") return;
+          if (isAbortError(error)) return;
           toast({
             description: getErrorMessage(error),
             title: "Search Failed",
@@ -204,9 +201,7 @@ export default function FlightsSearchClient({
   }, [executeSearch, initialUrlParams, onSubmitServer, toast]);
 
   const handleSearch = async (params: FlightSearchParams) => {
-    currentSearchController.current?.abort();
-    const controller = new AbortController();
-    currentSearchController.current = controller;
+    const controller = startSearchController();
     try {
       // Merge form params with active filter payload
       const filterPayload = buildFlightApiPayload(activeFilters);
@@ -236,16 +231,14 @@ export default function FlightsSearchClient({
       }
     } catch (error) {
       if (controller.signal.aborted) return;
-      if (error instanceof Error && error.name === "AbortError") return;
+      if (isAbortError(error)) return;
       toast({
         description: getErrorMessage(error),
         title: "Search Failed",
         variant: "destructive",
       });
     } finally {
-      if (currentSearchController.current === controller) {
-        currentSearchController.current = null;
-      }
+      clearSearchController(controller);
     }
   };
 
@@ -253,9 +246,7 @@ export default function FlightsSearchClient({
     <SearchLayout>
       <TooltipProvider>
         <div className="grid gap-6 lg:grid-cols-4">
-          {/* Main content - 3 columns */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Search Form */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -271,7 +262,6 @@ export default function FlightsSearchClient({
               </CardContent>
             </Card>
 
-            {/* Popular Routes */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -310,7 +300,6 @@ export default function FlightsSearchClient({
               </CardContent>
             </Card>
 
-            {/* Travel Tips */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -347,7 +336,6 @@ export default function FlightsSearchClient({
             </Card>
           </div>
 
-          {/* Sidebar - 1 column */}
           <div className="space-y-6">
             <FilterPanel />
             <FilterPresets />
