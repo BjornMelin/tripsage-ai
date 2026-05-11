@@ -8,6 +8,9 @@ import { upsertMany } from "@/lib/supabase/typed-helpers";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { chunkText, indexDocuments } from "../indexer";
 
+const recordTelemetryEventMock = vi.hoisted(() => vi.fn());
+const spanSetAttributeMock = vi.hoisted(() => vi.fn());
+
 // Mock server-only
 vi.mock("server-only", () => ({}));
 
@@ -31,8 +34,13 @@ vi.mock("@/lib/telemetry/logger", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
+  recordTelemetryEvent: (...args: unknown[]) => recordTelemetryEventMock(...args),
   withTelemetrySpan: vi.fn(
-    async <T>(_name: string, _options: unknown, execute: () => Promise<T>) => execute()
+    async <T>(
+      _name: string,
+      _options: unknown,
+      execute: (span: { setAttribute: typeof spanSetAttributeMock }) => Promise<T>
+    ) => execute({ setAttribute: spanSetAttributeMock })
   ),
 }));
 
@@ -233,5 +241,75 @@ describe("indexDocuments", () => {
         expect(rows[i]?.chunk_index).toBe(i);
       }
     }
+  });
+
+  it("emits redacted embedding telemetry and aggregate cost counters", async () => {
+    const supabase = unsafeCast<SupabaseClient<Database>>({});
+    const upsertManyMock = vi.mocked(upsertMany);
+    upsertManyMock.mockResolvedValue({ data: [], error: null });
+
+    vi.mocked(embedMany).mockResolvedValueOnce({
+      embeddings: [Array(1536).fill(0)],
+      usage: { tokens: 42 },
+      values: ["Short document"],
+      warnings: [],
+    });
+
+    await indexDocuments({
+      config: { chunkOverlap: 20, chunkSize: 100, namespace: "default" },
+      documents: [{ content: "Short document" }],
+      supabase,
+      userId: "22222222-2222-2222-2222-222222222222",
+    });
+
+    expect(embedMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        experimental_telemetry: expect.objectContaining({
+          functionId: "rag.indexer.embed_many",
+          isEnabled: true,
+          recordInputs: false,
+          recordOutputs: false,
+        }),
+        maxParallelCalls: 2,
+      })
+    );
+    expect(spanSetAttributeMock).toHaveBeenCalledWith(
+      "rag.indexer.embedding_tokens",
+      42
+    );
+    expect(recordTelemetryEventMock).toHaveBeenCalledWith(
+      "rag.indexer.index_complete",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          chunksCreated: 1,
+          dbRowsUpserted: 1,
+          dbUpserts: 1,
+          documentCount: 1,
+          embeddingCalls: 1,
+          embeddingTokens: 42,
+          failedCount: 0,
+        }),
+      })
+    );
+  });
+
+  it("marks chunk budget failures with the non-retryable RAG limit code", async () => {
+    const supabase = unsafeCast<SupabaseClient<Database>>({});
+    const result = await indexDocuments({
+      config: {
+        batchSize: 1,
+        chunkOverlap: 99,
+        chunkSize: 100,
+        namespace: "default",
+      },
+      documents: [{ content: "A".repeat(5000) }],
+      supabase,
+      userId: "22222222-2222-2222-2222-222222222222",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.failed).toEqual([{ error: "rag_limit:too_many_chunks", index: 0 }]);
+    expect(embedMany).not.toHaveBeenCalled();
+    expect(upsertMany).not.toHaveBeenCalled();
   });
 });

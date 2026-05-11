@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { ATTACHMENT_MAX_FILE_SIZE } from "@schemas/attachments";
+import { RAG_INDEX_QSTASH_TIMEOUT_SECONDS } from "@schemas/rag";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { QSTASH_JOB_LABELS } from "@/lib/qstash/config";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
@@ -15,7 +16,7 @@ type TryEnqueueJob = (
   jobType: string,
   payload: unknown,
   path: string,
-  options?: { deduplicationId?: string; label?: string }
+  options?: { deduplicationId?: string; label?: string; timeout?: number }
 ) => Promise<
   { success: true; messageId: string } | { success: false; error: Error | null }
 >;
@@ -46,7 +47,7 @@ vi.mock("@/lib/qstash/client", () => ({
     jobType: string,
     payload: unknown,
     path: string,
-    options?: { deduplicationId?: string; label?: string }
+    options?: { deduplicationId?: string; label?: string; timeout?: number }
   ) => tryEnqueueJobMock(jobType, payload, path, options),
 }));
 
@@ -157,6 +158,7 @@ describe("POST /api/jobs/attachments-ingest", () => {
       {
         deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         label: QSTASH_JOB_LABELS.RAG_INDEX,
+        timeout: RAG_INDEX_QSTASH_TIMEOUT_SECONDS,
       }
     );
   });
@@ -342,8 +344,42 @@ describe("POST /api/jobs/attachments-ingest", () => {
       {
         deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         label: QSTASH_JOB_LABELS.RAG_INDEX,
+        timeout: RAG_INDEX_QSTASH_TIMEOUT_SECONDS,
       }
     );
+  });
+
+  it("returns 489 when the generated RAG job payload exceeds the QStash budget", async () => {
+    createAdminSupabaseMock.mockReturnValue(
+      createSupabaseStub({
+        attachment: {
+          bucket_name: "attachments",
+          chat_id: "123e4567-e89b-12d3-a456-426614174000",
+          file_path: "u/c/a/file.txt",
+          file_size: 1024,
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          mime_type: "text/plain",
+          original_filename: `${"x".repeat(400_000)}.txt`,
+          trip_id: null,
+          upload_status: "completed",
+          user_id: "11111111-1111-4111-8111-111111111111",
+          virus_scan_status: "clean",
+        },
+        downloadBlob: new Blob(["x".repeat(300_000)]),
+      })
+    );
+
+    const { POST } = await loadRoute();
+
+    const res = await POST(
+      makeRequest({ attachmentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" })
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(489);
+    expect(res.headers.get("Upstash-NonRetryable-Error")).toBe("true");
+    expect(json.error).toBe("rag_payload_too_large");
+    expect(tryEnqueueJobMock).not.toHaveBeenCalled();
   });
 
   afterAll(() => {

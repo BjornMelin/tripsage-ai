@@ -91,6 +91,23 @@ export type RagSearchResult = z.infer<typeof ragSearchResultSchema>;
 
 /** Maximum total content size for indexing requests (characters). */
 export const MAX_RAG_INDEX_TOTAL_CONTENT_CHARS = 250_000;
+/** Maximum documents accepted in one RAG indexing request or job. */
+export const MAX_RAG_INDEX_DOCUMENTS = 100;
+/** Maximum serialized RAG QStash job body size, kept below the provider 1 MB limit. */
+export const MAX_RAG_INDEX_JOB_BODY_BYTES = 512 * 1024;
+/** Maximum chunks embedded in one provider call batch. */
+export const MAX_RAG_EMBED_CHUNKS_PER_BATCH = 1200;
+/** Conservative token-to-character approximation used for chunk budgets. */
+export const RAG_CHARS_PER_TOKEN = 4;
+/** QStash delivery timeout kept under the configured 60-second Vercel function cap. */
+export const RAG_INDEX_QSTASH_TIMEOUT_SECONDS = 55;
+
+export function isValidRagChunkWindow(value: {
+  chunkOverlap: number;
+  chunkSize: number;
+}): boolean {
+  return value.chunkOverlap < value.chunkSize;
+}
 
 /**
  * Zod schema for POST /api/rag/index request body.
@@ -100,11 +117,18 @@ export const ragIndexRequestSchema = z
   .strictObject({
     chunkOverlap: z.number().int().min(0).max(500).default(100),
     chunkSize: z.number().int().min(100).max(2000).default(512),
-    documents: z.array(ragDocumentSchema).min(1).max(100, {
-      error: "Maximum 100 documents per batch",
-    }),
+    documents: z
+      .array(ragDocumentSchema)
+      .min(1)
+      .max(MAX_RAG_INDEX_DOCUMENTS, {
+        error: `Maximum ${MAX_RAG_INDEX_DOCUMENTS} documents per batch`,
+      }),
     maxParallelCalls: z.number().int().min(1).max(10).default(2),
     namespace: ragNamespaceSchema.default("default"),
+  })
+  .refine(isValidRagChunkWindow, {
+    error: "Chunk overlap must be smaller than chunk size",
+    path: ["chunkOverlap"],
   })
   .refine(
     (value) =>
@@ -281,13 +305,18 @@ export type RerankResult = z.infer<typeof rerankResultSchema>;
  * Zod schema for indexer configuration.
  * Used to configure document chunking and embedding.
  */
-export const indexerConfigSchema = z.strictObject({
-  batchSize: z.number().int().min(1).max(100).default(10),
-  chunkOverlap: z.number().int().min(0).max(500).default(100),
-  chunkSize: z.number().int().min(100).max(2000).default(512),
-  maxParallelCalls: z.number().int().min(1).max(10).default(2),
-  namespace: ragNamespaceSchema.default("default"),
-});
+export const indexerConfigSchema = z
+  .strictObject({
+    batchSize: z.number().int().min(1).max(100).default(10),
+    chunkOverlap: z.number().int().min(0).max(500).default(100),
+    chunkSize: z.number().int().min(100).max(2000).default(512),
+    maxParallelCalls: z.number().int().min(1).max(10).default(2),
+    namespace: ragNamespaceSchema.default("default"),
+  })
+  .refine(isValidRagChunkWindow, {
+    error: "Chunk overlap must be smaller than chunk size",
+    path: ["chunkOverlap"],
+  });
 
 /** TypeScript type for indexer configuration. */
 export type IndexerConfig = z.infer<typeof indexerConfigSchema>;
