@@ -52,7 +52,7 @@ const telemetryHashSecretValue = vi.hoisted(() => "telemetry-test-secret");
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnv: vi.fn(() => ({
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
     [telemetryHashSecretKey]: telemetryHashSecretValue,
   })),
@@ -68,7 +68,7 @@ vi.mock("@/lib/env/server", () => ({
 
 vi.mock("@/lib/env/client", () => ({
   getClientEnv: vi.fn(() => ({
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
   })),
 }));
@@ -132,7 +132,7 @@ describe("Supabase Factory", () => {
 
       expect(mockCreateServerClient).toHaveBeenCalledWith(
         "https://test.supabase.co",
-        "test-anon-key",
+        "test-publishable-key",
         expect.objectContaining({
           cookies: expect.any(Object),
         })
@@ -280,7 +280,7 @@ describe("Supabase Factory", () => {
 
       expect(mockCreateServerClient).toHaveBeenCalledWith(
         "https://test.supabase.co",
-        "test-anon-key",
+        "test-publishable-key",
         expect.objectContaining({
           cookies: expect.any(Object),
         })
@@ -302,7 +302,7 @@ describe("Supabase Factory", () => {
 
       expect(mockCreateServerClient).toHaveBeenCalledWith(
         "https://test.supabase.co",
-        "test-anon-key",
+        "test-publishable-key",
         expect.objectContaining({
           cookies: expect.any(Object),
         })
@@ -353,7 +353,7 @@ describe("Supabase Factory", () => {
       expect(mockEnv).toHaveBeenCalled();
       expect(mockCreateServerClient).toHaveBeenCalledWith(
         "https://test.supabase.co",
-        "test-anon-key",
+        "test-publishable-key",
         expect.any(Object)
       );
     });

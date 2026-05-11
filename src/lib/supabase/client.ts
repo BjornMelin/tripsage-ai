@@ -48,10 +48,12 @@ export function getBrowserClient(): TypedSupabaseClient | null {
   }
 
   const supabaseUrl = getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseAnonKey = getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabasePublishableKey = getClientEnvVar(
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  );
 
   // Allow the app to boot in dev/build placeholder mode without crashing.
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabasePublishableKey) {
     if (process.env.NODE_ENV === "development") {
       console.warn(
         "[supabase/client] Supabase env vars missing (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY). " +
@@ -61,7 +63,7 @@ export function getBrowserClient(): TypedSupabaseClient | null {
     return null;
   }
 
-  client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  client = createBrowserClient<Database>(supabaseUrl, supabasePublishableKey);
   return client;
 }
 
@@ -108,12 +110,14 @@ export function createClient(): TypedSupabaseClient | null {
   }
 
   const supabaseUrl = getClientEnvVar("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseAnonKey = getClientEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabasePublishableKey = getClientEnvVar(
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  );
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabasePublishableKey) {
     return null;
   }
 
   // Intentionally create a fresh client (used by utility code that expects non-singleton behavior)
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient<Database>(supabaseUrl, supabasePublishableKey);
 }

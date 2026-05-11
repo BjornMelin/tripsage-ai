@@ -50,7 +50,7 @@ pnpm install
     Copy the printed local values into `.env.local`:
 
     - `NEXT_PUBLIC_SUPABASE_URL`
-    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
     - `SUPABASE_SERVICE_ROLE_KEY` (use the `sb_secret_...` key from `pnpm supabase:status`)
     - (Recommended) `SUPABASE_JWT_SECRET` (use the `JWT_SECRET` value from `pnpm supabase:status`)
 
@@ -78,8 +78,8 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
 # Set ONE of these public keys:
-# - Preferred: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (sb_publishable_...)
-# - Legacy: NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - Canonical: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (sb_publishable_...)
+# - Legacy fallback: NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 # NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...

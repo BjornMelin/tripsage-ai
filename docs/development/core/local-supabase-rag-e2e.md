@@ -33,7 +33,7 @@ pnpm supabase:reset:dev
 Then copy values from `pnpm supabase:status` into `.env.local`:
 
 - `NEXT_PUBLIC_SUPABASE_URL` → “Project URL”
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) **or** `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) **or** `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
 - `SUPABASE_SERVICE_ROLE_KEY` → use the `sb_secret_...` value (server-only)
 - `SUPABASE_JWT_SECRET` → use the `JWT_SECRET` value (recommended; required for some non-test security flows)
 

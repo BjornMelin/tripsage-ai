@@ -11,9 +11,14 @@ const mockSpan = vi.hoisted(() => ({
 }));
 
 const GET_ENV_FALLBACK = vi.hoisted(() => vi.fn());
+const GET_REQUIRED_SERVER_ORIGIN = vi.hoisted(() => vi.fn(() => "https://example.com"));
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: (...args: unknown[]) => GET_ENV_FALLBACK(...args),
+}));
+
+vi.mock("@/lib/url/server-origin", () => ({
+  getRequiredServerOrigin: () => GET_REQUIRED_SERVER_ORIGIN(),
 }));
 
 vi.mock("@/lib/telemetry/span", async (importOriginal) => {
@@ -32,20 +37,18 @@ describe("enqueueJob", () => {
 
   beforeEach(() => {
     resetUpstashMocks();
+    GET_REQUIRED_SERVER_ORIGIN.mockReturnValue("https://example.com");
   });
 
   afterEach(async () => {
     const { setQStashClientFactoryForTests } = await import("@/lib/qstash/client");
     setQStashClientFactoryForTests(null);
     GET_ENV_FALLBACK.mockReset();
+    GET_REQUIRED_SERVER_ORIGIN.mockReset();
     mockSpan.setAttribute.mockReset();
   });
 
   it("passes label, flowControl, and failureCallback to publishJSON", async () => {
-    GET_ENV_FALLBACK.mockImplementation((key: string) =>
-      key === "NEXT_PUBLIC_SITE_URL" ? "https://example.com" : ""
-    );
-
     const { enqueueJob, setQStashClientFactoryForTests } = await import(
       "@/lib/qstash/client"
     );
@@ -60,6 +63,7 @@ describe("enqueueJob", () => {
 
     const messages = qstash.__getMessages();
     expect(messages).toHaveLength(1);
+    expect(messages[0]?.url).toBe("https://example.com/api/jobs/test");
     expect(messages[0]?.label).toBe("tripsage:test");
     expect(messages[0]?.flowControl).toEqual({ key: "tenant-1", parallelism: 2 });
     expect(messages[0]?.failureCallback).toBe("https://example.com/failure");
@@ -68,10 +72,6 @@ describe("enqueueJob", () => {
   });
 
   it("records telemetry attributes for label, flow control, and failure callback", async () => {
-    GET_ENV_FALLBACK.mockImplementation((key: string) =>
-      key === "NEXT_PUBLIC_SITE_URL" ? "https://example.com" : ""
-    );
-
     const { enqueueJob, setQStashClientFactoryForTests } = await import(
       "@/lib/qstash/client"
     );
@@ -92,5 +92,39 @@ describe("enqueueJob", () => {
       "qstash.has_failure_callback",
       true
     );
+  });
+
+  it("throws when the server-origin contract cannot resolve a callback origin", async () => {
+    GET_REQUIRED_SERVER_ORIGIN.mockImplementation(() => {
+      throw new Error("Server origin not configured");
+    });
+
+    const { enqueueJob, setQStashClientFactoryForTests } = await import(
+      "@/lib/qstash/client"
+    );
+    setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
+
+    await expect(
+      enqueueJob("test-job", { ok: true }, "/api/jobs/test")
+    ).rejects.toThrow("Server origin not configured");
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("qstash.missing_origin", true);
+  });
+
+  it.each([
+    "https://evil.example/api/jobs/test",
+    "//evil.example/api/jobs/test",
+  ])("rejects off-origin job path %s", async (path) => {
+    const { enqueueJob, setQStashClientFactoryForTests } = await import(
+      "@/lib/qstash/client"
+    );
+    setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
+
+    await expect(enqueueJob("test-job", { ok: true }, path)).rejects.toThrow(
+      "QStash job path must be a same-origin absolute path"
+    );
+
+    expect(qstash.__getMessages()).toHaveLength(0);
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("qstash.invalid_path", true);
   });
 });

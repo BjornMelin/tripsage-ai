@@ -30,7 +30,7 @@ if (typeof process !== "undefined" && process.env) {
   const env = process.env as Record<string, string | undefined>;
   env.NODE_ENV ||= "test";
   env.NEXT_PUBLIC_SUPABASE_URL ||= MSW_SUPABASE_URL;
-  env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||= "test-publishable-key";
   // SECURITY: Simulate Vercel environment in tests so proxy headers (X-Forwarded-For,
   // X-Real-IP) are trusted. In production, Vercel sets this automatically.
   // Tests that need to verify untrusted proxy behavior should explicitly unset this.

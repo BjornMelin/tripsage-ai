@@ -10,13 +10,13 @@ Notes:
 ## Core & Supabase
 
 - Core URLs (all usually `http://localhost:3000` during dev):
-  - `APP_BASE_URL`
+  - `APP_BASE_URL` (preferred server origin for callbacks and absolute URLs)
   - `NEXT_PUBLIC_APP_URL`
   - `NEXT_PUBLIC_SITE_URL`
   - `NEXT_PUBLIC_API_URL`
 - Supabase (Dashboard → Settings → API):
   - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `SUPABASE_JWT_SECRET`
   - Console: <https://supabase.com/dashboard>
@@ -80,6 +80,7 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
   - `STRIPE_SECRET_KEY`
   - `STRIPE_WEBHOOK_SECRET` (<https://dashboard.stripe.com/webhooks>)
   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+  - Set all three when enabling payments; leave all unset when payments are disabled.
 
 ## Email / notifications
 
@@ -87,6 +88,7 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
   - `RESEND_API_KEY`
   - `RESEND_FROM_EMAIL`
   - `RESEND_FROM_NAME`
+  - Set all three when enabling email notifications; leave all unset when email notifications are disabled.
 - Webhook signing:
   - `HMAC_SECRET` (generate a strong random string)
 
@@ -98,6 +100,7 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 - Amadeus Self-Service:
   - <https://developers.amadeus.com/get-started>
   - Variables: `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV` (`test`|`production`)
+  - Set all three when enabling Amadeus-backed travel search; leave all unset when disabled.
 - Google Places (New):
   - Enable Places API (New) + Photos in Google Cloud Console
   - Uses the same Google Maps Platform API keys (no separate Places API key required)

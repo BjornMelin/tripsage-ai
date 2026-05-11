@@ -32,7 +32,7 @@ After `pnpm supabase:start`, get local URLs/keys via:
 Populate `.env.local` with at least:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback)
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only; use the `sb_secret_…` key printed by `pnpm supabase:status`; never `NEXT_PUBLIC_*`)
 - (Recommended) `SUPABASE_JWT_SECRET` (use `JWT_SECRET` from `pnpm supabase:status` for local non-test flows like MFA)
 

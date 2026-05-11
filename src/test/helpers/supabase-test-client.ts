@@ -16,7 +16,10 @@ import type { Database } from "@/lib/supabase/database.types";
  */
 export function createTestBrowserClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321";
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "test-anon-key";
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    "test-publishable-key";
 
   return createBrowserClient<Database>(url, key, {
     isSingleton: false,

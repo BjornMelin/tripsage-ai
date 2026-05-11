@@ -13,7 +13,7 @@ export function stubRateLimitDisabled(): void {
   vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "");
   // Provide minimal Supabase env to satisfy server env validation in routes
   vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "publishable-test-key");
   vi.stubEnv?.("SUPABASE_SERVICE_ROLE_KEY", "srk-test-key");
 }
 
@@ -25,7 +25,7 @@ export function stubRateLimitEnabled(): void {
   vi.stubEnv?.("UPSTASH_REDIS_REST_TOKEN", "test-token");
   // Provide minimal Supabase env to satisfy server env validation in routes
   vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
+  vi.stubEnv?.("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "publishable-test-key");
   vi.stubEnv?.("SUPABASE_SERVICE_ROLE_KEY", "srk-test-key");
 }
 

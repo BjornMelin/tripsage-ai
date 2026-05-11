@@ -31,7 +31,7 @@ export default defineConfig({
       NEXT_PUBLIC_APP_URL: baseUrl,
       NEXT_PUBLIC_BASE_URL: baseUrl,
       NEXT_PUBLIC_SITE_URL: baseUrl,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-test-key",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "publishable-test-key",
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54329",
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_ENV: "production",

@@ -7,6 +7,7 @@ import "server-only";
 import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
+import { getRequiredServerOrigin } from "@/lib/url/server-origin";
 import { QSTASH_RETRY_CONFIG } from "./config";
 
 // ===== TYPES =====
@@ -123,6 +124,25 @@ function parseDelayToSeconds(delay: string): number {
   return exhaustiveCheck;
 }
 
+/**
+ * Resolve a QStash worker path against the trusted server origin.
+ *
+ * @throws Error if the path is not a same-origin absolute path or resolves off-origin.
+ */
+function toQstashCallbackUrl(path: string, origin: string): string {
+  const originUrl = new URL(origin);
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw new Error("QStash job path must be a same-origin absolute path");
+  }
+
+  const callbackUrl = new URL(path, originUrl);
+  if (callbackUrl.origin !== originUrl.origin) {
+    throw new Error("QStash job path must resolve to the configured server origin");
+  }
+
+  return callbackUrl.toString();
+}
+
 // ===== JOB ENQUEUE =====
 
 /**
@@ -208,19 +228,28 @@ export async function enqueueJob(
         return null;
       }
 
-      // Get origin for building full URL
-      const origin = getServerEnvVarWithFallback("NEXT_PUBLIC_SITE_URL", "");
-      if (!origin) {
+      let origin: string;
+      try {
+        origin = getRequiredServerOrigin();
+      } catch (error) {
         span.setAttribute("qstash.missing_origin", true);
         recordTelemetryEvent("qstash.missing_origin", {
           attributes: { jobType, path },
           level: "warning",
         });
-        throw new Error(
-          "NEXT_PUBLIC_SITE_URL is not configured; cannot enqueue QStash job"
-        );
+        throw error;
       }
-      const url = `${origin}${path}`;
+      let url: string;
+      try {
+        url = toQstashCallbackUrl(path, origin);
+      } catch (error) {
+        span.setAttribute("qstash.invalid_path", true);
+        recordTelemetryEvent("qstash.invalid_path", {
+          attributes: { jobType, path },
+          level: "warning",
+        });
+        throw error;
+      }
       span.setAttribute("qstash.url", url);
 
       // Deduplication is caller-controlled; random IDs defeat dedup purpose

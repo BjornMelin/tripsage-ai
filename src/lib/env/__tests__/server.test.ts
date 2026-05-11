@@ -13,7 +13,7 @@ describe("env/server", () => {
     // Set up required env vars for tests
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
     __resetServerEnvCacheForTest();
     vi.resetModules();
   });
@@ -53,12 +53,12 @@ describe("env/server", () => {
       );
     });
 
-    it("should accept publishable Supabase key as a fallback for anon key", () => {
-      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
+    it("should accept legacy anon Supabase key as a migration fallback", () => {
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
 
       const env = getServerEnv();
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-publishable-key");
+      expect(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe("test-anon-key");
     });
 
     it("should throw on invalid environment", () => {

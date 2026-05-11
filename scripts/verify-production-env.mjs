@@ -18,6 +18,83 @@ const ORIGIN_KEYS = [
   "NEXT_PUBLIC_APP_URL",
 ];
 const URL_KEYS = ["NEXT_PUBLIC_SUPABASE_URL", "UPSTASH_REDIS_REST_URL"];
+const SUPABASE_PUBLIC_KEYS = [
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+];
+
+const valueValidators = new Map([
+  ["AMADEUS_CLIENT_ID", [minLength(10)]],
+  ["AMADEUS_CLIENT_SECRET", [minLength(16)]],
+  ["AMADEUS_ENV", [oneOf(["production", "test"])]],
+  ["HMAC_SECRET", [minLength(32)]],
+  ["NEXT_PUBLIC_SUPABASE_ANON_KEY", [supabaseLegacyAnonKey()]],
+  ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", [startsWithOneOf(["sb_publishable_"])]],
+  ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", [startsWithOneOf(["pk_live_", "pk_test_"])]],
+  ["QSTASH_CURRENT_SIGNING_KEY", [minLength(32)]],
+  ["QSTASH_NEXT_SIGNING_KEY", [minLength(32)]],
+  ["QSTASH_TOKEN", [minLength(20)]],
+  ["RESEND_API_KEY", [startsWithOneOf(["re_"])]],
+  ["RESEND_FROM_EMAIL", [validEmail()]],
+  ["STRIPE_SECRET_KEY", [startsWithOneOf(["sk_live_", "sk_test_"])]],
+  ["STRIPE_WEBHOOK_SECRET", [startsWithOneOf(["whsec_"])]],
+  ["SUPABASE_JWT_SECRET", [minLength(32)]],
+  ["SUPABASE_SERVICE_ROLE_KEY", [minLength(30)]],
+  ["TELEMETRY_AI_DEMO_KEY", [minLength(32)]],
+  ["TELEMETRY_HASH_SECRET", [minLength(32)]],
+  ["UPSTASH_REDIS_REST_TOKEN", [minLength(20)]],
+]);
+
+function minLength(length) {
+  return (value) =>
+    value.length >= length ? null : `must be at least ${length} characters`;
+}
+
+function oneOf(values) {
+  return (value) =>
+    values.includes(value) ? null : `must be one of ${values.join(", ")}`;
+}
+
+function startsWithOneOf(prefixes) {
+  return (value) =>
+    prefixes.some((prefix) => value.startsWith(prefix))
+      ? null
+      : `must start with ${prefixes.join(" or ")}`;
+}
+
+function validEmail() {
+  return (value) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? null : "must be an email";
+}
+
+function supabaseLegacyAnonKey() {
+  return (value) => (isJwtLike(value) ? null : "must be a legacy Supabase anon JWT");
+}
+
+function isJwtLike(value) {
+  const parts = value.split(".");
+  return (
+    parts.length === 3 &&
+    parts.every((part) => part.length > 0 && /^[A-Za-z0-9_-]+$/.test(part))
+  );
+}
+
+function isPlaceholderValue(value) {
+  const lower = value.toLowerCase();
+  return (
+    lower.startsWith("your-") ||
+    lower.startsWith("your_") ||
+    lower.startsWith("changeme") ||
+    lower.startsWith("replace-") ||
+    lower.startsWith("replace_") ||
+    lower.includes("placeholder") ||
+    lower.includes("example") ||
+    lower.includes("...") ||
+    lower === "null" ||
+    lower === "undefined" ||
+    /^0+$/.test(lower)
+  );
+}
 
 function readArg(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -28,7 +105,9 @@ function readArg(name, fallback) {
 }
 
 function envValue(name) {
-  return process.env[name]?.trim() ?? "";
+  const value = process.env[name]?.trim() ?? "";
+  if (!value || value.toLowerCase() === "undefined") return "";
+  return value;
 }
 
 function hasEnv(name) {
@@ -37,6 +116,10 @@ function hasEnv(name) {
 
 function hasAny(names) {
   return names.some((name) => hasEnv(name));
+}
+
+function hasAll(names) {
+  return names.every((name) => hasEnv(name));
 }
 
 function hasValidUrl(name, { requireHttps }) {
@@ -78,6 +161,42 @@ function missing(names) {
   return names.filter((name) => !hasEnv(name));
 }
 
+function invalidValues(names) {
+  return names.flatMap((name) => {
+    const value = envValue(name);
+    if (!value) return [];
+    if (isPlaceholderValue(value)) {
+      return [{ name, reason: "placeholder value is not allowed" }];
+    }
+
+    const validators = valueValidators.get(name) ?? [];
+    if (validators.length === 0) return [];
+
+    const reason = validators.map((validator) => validator(value)).find(Boolean);
+    return reason ? [{ name, reason }] : [];
+  });
+}
+
+function hasValidAny(names) {
+  return names.some((name) => hasEnv(name) && invalidValues([name]).length === 0);
+}
+
+function addRequiredGroupCheck(name, names, options = {}) {
+  const enabled = options.enabled ?? isProduction;
+  const absent = enabled ? missing(names) : [];
+  const invalid = enabled ? invalidValues(names) : [];
+  checks.push(
+    makeCheck(name, !enabled || (absent.length === 0 && invalid.length === 0), {
+      enabled,
+      enabledBy: options.enabledBy,
+      invalid,
+      missing: absent,
+      required: names,
+      requiredWhen: options.requiredWhen ?? "production",
+    })
+  );
+}
+
 const environment = readArg("--environment", "production");
 const isProduction = environment === "production";
 const requireHttps = isProduction;
@@ -97,32 +216,55 @@ checks.push(
   )
 );
 
-const requiredProduction = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "SUPABASE_JWT_SECRET",
-  "TELEMETRY_HASH_SECRET",
-  "HMAC_SECRET",
-];
+addRequiredGroupCheck(
+  "supabase_core_contract",
+  ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_JWT_SECRET"],
+  { requiredWhen: "production" }
+);
 
-if (isProduction) {
-  const absent = missing(requiredProduction);
-  checks.push(
-    makeCheck("required_production_env", absent.length === 0, {
-      missing: absent,
-      required: requiredProduction,
-    })
-  );
-}
+const supabasePublicKeyName = hasEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
+  ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  : "NEXT_PUBLIC_SUPABASE_ANON_KEY";
+const supabasePublicKeyMissing = hasEnv(supabasePublicKeyName)
+  ? []
+  : [supabasePublicKeyName];
+const supabasePublicKeyInvalid = hasEnv(supabasePublicKeyName)
+  ? invalidValues([supabasePublicKeyName])
+  : [];
+
+checks.push(
+  makeCheck(
+    "supabase_public_key",
+    !isProduction ||
+      (supabasePublicKeyMissing.length === 0 && supabasePublicKeyInvalid.length === 0),
+    {
+      accepted: SUPABASE_PUBLIC_KEYS,
+      active: supabasePublicKeyName,
+      invalid: supabasePublicKeyInvalid,
+      missing: supabasePublicKeyMissing,
+      preferred: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      requiredWhen: "production",
+    }
+  )
+);
+
+addRequiredGroupCheck("telemetry_core_contract", ["TELEMETRY_HASH_SECRET"], {
+  requiredWhen: "production",
+});
+
+addRequiredGroupCheck("webhook_hmac_contract", ["HMAC_SECRET"], {
+  requiredWhen: "production",
+});
 
 checks.push(
   makeCheck(
     "qstash_origin_contract",
-    !isProduction || hasValidUrl("NEXT_PUBLIC_SITE_URL", { requireHttps: true }),
+    !isProduction || ORIGIN_KEYS.some((name) => hasValidUrl(name, { requireHttps })),
     {
+      accepted: ORIGIN_KEYS,
+      preferred: "APP_BASE_URL",
       reason:
-        "QStash enqueue code resolves callback origins from NEXT_PUBLIC_SITE_URL.",
-      required: ["NEXT_PUBLIC_SITE_URL"],
+        "QStash enqueue code resolves callback origins through the server-origin contract.",
       requiredWhen: "production",
     }
   )
@@ -137,38 +279,71 @@ checks.push(
   })
 );
 
-checks.push(
-  makeCheck(
-    "supabase_public_key",
-    hasAny(["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]),
-    {
-      accepted: [
-        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      ],
-    }
-  )
-);
+const upstashRedisRequired = ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"];
+addRequiredGroupCheck("upstash_redis_contract", upstashRedisRequired, {
+  requiredWhen: "production",
+});
 
-const upstashRequired = [
+const qstashRequired = [
+  "QSTASH_TOKEN",
+  "QSTASH_CURRENT_SIGNING_KEY",
+  "QSTASH_NEXT_SIGNING_KEY",
+];
+addRequiredGroupCheck("qstash_delivery_contract", qstashRequired, {
+  requiredWhen: "production",
+});
+
+const stripeRequired = [
+  "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+];
+addRequiredGroupCheck("stripe_feature_contract", stripeRequired, {
+  enabled: hasAny(stripeRequired),
+  enabledBy: "any Stripe key is configured",
+  requiredWhen: "feature enabled",
+});
+
+const resendRequired = ["RESEND_API_KEY", "RESEND_FROM_EMAIL", "RESEND_FROM_NAME"];
+addRequiredGroupCheck("resend_feature_contract", resendRequired, {
+  enabled: hasAny(resendRequired),
+  enabledBy: "any Resend email variable is configured",
+  requiredWhen: "feature enabled",
+});
+
+const amadeusRequired = ["AMADEUS_CLIENT_ID", "AMADEUS_CLIENT_SECRET", "AMADEUS_ENV"];
+addRequiredGroupCheck("amadeus_feature_contract", amadeusRequired, {
+  enabled: hasAny(amadeusRequired),
+  enabledBy: "any Amadeus variable is configured",
+  requiredWhen: "feature enabled",
+});
+
+const legacyUpstashRequired = [
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
   "QSTASH_TOKEN",
   "QSTASH_CURRENT_SIGNING_KEY",
   "QSTASH_NEXT_SIGNING_KEY",
 ];
-const upstashMissing = missing(upstashRequired);
 checks.push(
-  makeCheck("upstash_qstash_contract", !isProduction || upstashMissing.length === 0, {
-    missing: upstashMissing,
+  makeCheck("upstash_qstash_contract", !isProduction || hasAll(legacyUpstashRequired), {
+    deprecatedBy: ["upstash_redis_contract", "qstash_delivery_contract"],
+    missing: isProduction ? missing(legacyUpstashRequired) : [],
     requiredWhen: "production",
   })
 );
 
 const aiDemoEnabled = process.env.ENABLE_AI_DEMO === "true";
+addRequiredGroupCheck("ai_demo_telemetry_contract", ["TELEMETRY_AI_DEMO_KEY"], {
+  enabled: aiDemoEnabled,
+  enabledBy: "ENABLE_AI_DEMO=true",
+  requiredWhen: "feature enabled",
+});
+
 checks.push(
-  makeCheck("ai_provider_contract", !aiDemoEnabled || hasAny(PROVIDER_KEYS), {
+  makeCheck("ai_provider_contract", !aiDemoEnabled || hasValidAny(PROVIDER_KEYS), {
     enabledBy: "ENABLE_AI_DEMO=true",
+    invalid: invalidValues(PROVIDER_KEYS),
     providers: PROVIDER_KEYS,
   })
 );

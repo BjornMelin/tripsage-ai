@@ -15,7 +15,7 @@ describe("env/client", () => {
   describe("getClientEnv", () => {
     it("should return validated client environment", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
       vi.stubEnv("NEXT_PUBLIC_APP_NAME", "TestApp");
 
       // Re-import to get fresh validation
@@ -24,25 +24,25 @@ describe("env/client", () => {
 
       const env = freshGetClientEnv();
       expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("https://test.supabase.co");
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-anon-key");
+      expect(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe("test-publishable-key");
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TestApp");
     });
 
-    it("should accept publishable Supabase key as a fallback for anon key", async () => {
+    it("should accept legacy anon Supabase key as a migration fallback", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
 
       vi.resetModules();
       const { getClientEnv: freshGetClientEnv } = await import("../client");
 
       const env = freshGetClientEnv();
       expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("https://test.supabase.co");
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("test-publishable-key");
+      expect(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe("test-anon-key");
     });
 
     it("should throw on missing required variables in production", async () => {
       vi.stubEnv("NODE_ENV", "production");
-      // Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+      // Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
       vi.resetModules();
       await expect(async () => {
@@ -74,7 +74,7 @@ describe("env/client", () => {
 
       const env = freshGetClientEnv();
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
+      expect(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe("");
       expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
     });
 
@@ -87,7 +87,7 @@ describe("env/client", () => {
 
       const env = freshGetClientEnv();
       expect(env.NEXT_PUBLIC_APP_NAME).toBe("TripSage");
-      expect(env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("");
+      expect(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe("");
       expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe("");
     });
   });
@@ -95,7 +95,7 @@ describe("env/client", () => {
   describe("getClientEnvVar", () => {
     it("should return environment variable value", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
 
       vi.resetModules();
       const { getClientEnvVar: freshGetClientEnvVar } = await import("../client");
@@ -106,7 +106,7 @@ describe("env/client", () => {
 
     it("should throw when variable is missing", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
       // Missing NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY
 
       vi.resetModules();
@@ -121,7 +121,7 @@ describe("env/client", () => {
   describe("getClientEnvVarWithFallback", () => {
     it("should return environment variable value when present", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
 
       vi.resetModules();
       const { getClientEnvVarWithFallback: freshGetClientEnvVarWithFallback } =
@@ -136,7 +136,7 @@ describe("env/client", () => {
 
     it("should return fallback when variable is missing", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
 
       vi.resetModules();
       const { getClientEnvVarWithFallback: freshGetClientEnvVarWithFallback } =
@@ -153,7 +153,7 @@ describe("env/client", () => {
   describe("getGoogleMapsBrowserKey", () => {
     it("should return Google Maps browser API key when configured", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
       vi.stubEnv("NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY", "test-browser-key");
 
       vi.resetModules();
@@ -167,7 +167,7 @@ describe("env/client", () => {
 
     it("should return undefined when key is not configured", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
       // Missing NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY
 
       vi.resetModules();
@@ -183,7 +183,7 @@ describe("env/client", () => {
   describe("publicEnv", () => {
     it("should export frozen public environment object", async () => {
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
 
       vi.resetModules();
       const { publicEnv: freshPublicEnv } = await import("../client");

@@ -174,9 +174,8 @@ const nextEnvSchema = z.object({
 
 // Supabase configuration
 const supabaseEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-    .string()
-    .min(1, { error: "Supabase anonymous key is required" }),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.url({ error: "Invalid Supabase URL" }),
   SUPABASE_JWT_SECRET: supabaseJwtSecretSchema,
   SUPABASE_SERVICE_ROLE_KEY: apiKeySchema("SUPABASE_SERVICE_ROLE_KEY", 30),
@@ -318,10 +317,18 @@ export const envSchema = z
           return false;
         }
 
+        const hasSupabasePublicKey =
+          data.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+          data.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (!hasSupabasePublicKey) {
+          return false;
+        }
+
         // Required variables in production
         const requiredInProduction = [
+          "HMAC_SECRET",
           "NEXT_PUBLIC_SUPABASE_URL",
-          "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "SUPABASE_JWT_SECRET",
           "TELEMETRY_HASH_SECRET",
         ];
 
@@ -329,11 +336,6 @@ export const envSchema = z
           if (!data[key as keyof typeof data]) {
             return false;
           }
-        }
-
-        // Security requirements in production
-        if (!data.SUPABASE_JWT_SECRET) {
-          return false;
         }
       }
 
@@ -345,22 +347,32 @@ export const envSchema = z
   );
 
 // Client-side environment schema (only NEXT_PUBLIC_ variables)
-export const clientEnvSchema = z.object({
-  NEXT_PUBLIC_API_URL: z.url().optional(),
-  NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
-  NEXT_PUBLIC_APP_URL: z.url().optional(),
-  NEXT_PUBLIC_BASE_PATH: z.string().optional(),
-  NEXT_PUBLIC_BASE_URL: z.url().optional(),
-  NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
-  NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
-  NEXT_PUBLIC_OTEL_CLIENT_ENABLED: z.enum(["true", "false"]).optional(),
-  NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
-  NEXT_PUBLIC_SITE_URL: z.url().optional(),
-  NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES: z.string().optional(),
-  NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES: z.string().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_URL: z.url(),
-});
+export const clientEnvSchema = z
+  .object({
+    NEXT_PUBLIC_API_URL: z.url().optional(),
+    NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+    NEXT_PUBLIC_APP_URL: z.url().optional(),
+    NEXT_PUBLIC_BASE_PATH: z.string().optional(),
+    NEXT_PUBLIC_BASE_URL: z.url().optional(),
+    NEXT_PUBLIC_FALLBACK_HOTEL_IMAGE: z.string().optional(),
+    NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: z.string().optional(),
+    NEXT_PUBLIC_OTEL_CLIENT_ENABLED: z.enum(["true", "false"]).optional(),
+    NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
+    NEXT_PUBLIC_SITE_URL: z.url().optional(),
+    NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES: z.string().optional(),
+    NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES: z.string().optional(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
+    NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  })
+  .refine(
+    (data) =>
+      data.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || data.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      error: "Supabase publishable key is required",
+      path: ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"],
+    }
+  );
 
 // Type exports
 export type ServerEnv = z.infer<typeof envSchema>;

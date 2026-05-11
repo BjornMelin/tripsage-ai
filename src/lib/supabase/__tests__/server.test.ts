@@ -31,14 +31,14 @@ vi.mock("@/lib/env/client", () => ({
     NEXT_PUBLIC_BASE_PATH: undefined,
     NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY: undefined,
     NEXT_PUBLIC_SITE_URL: undefined,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
     NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
   })),
 }));
 
 describe("Supabase Server Client", () => {
   const mockSupabaseUrl = "https://test.supabase.co";
-  const mockSupabaseAnonKey = "test-anon-key";
+  const mockSupabasePublishableKey = "test-publishable-key";
 
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -46,7 +46,7 @@ describe("Supabase Server Client", () => {
 
     // Set environment variables
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", mockSupabasePublishableKey);
 
     // Dynamically import after setting env vars
     const serverModule = await import("../server");
@@ -78,7 +78,7 @@ describe("Supabase Server Client", () => {
     expect(cookies).toHaveBeenCalled();
     expect(createServerClient).toHaveBeenCalledWith(
       mockSupabaseUrl,
-      mockSupabaseAnonKey,
+      mockSupabasePublishableKey,
       expect.objectContaining({
         cookies: expect.objectContaining({
           getAll: expect.any(Function),
@@ -146,7 +146,7 @@ describe("Supabase Server Client", () => {
   it("should throw an error when environment variables are missing", async () => {
     // Clear environment variables
     Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_URL");
-    Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    Reflect.deleteProperty(process.env, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
     // Re-import module with missing env vars
     vi.resetModules();

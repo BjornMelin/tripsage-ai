@@ -89,8 +89,8 @@ function parseServerEnv(): ServerEnv {
   try {
     const envForParse = { ...process.env };
 
-    // Supabase renamed "anon" to "publishable" keys; support both to reduce DX drift.
-    // Prefer publishable key when available, but ignore obvious placeholder values.
+    // Supabase renamed "anon" to "publishable" keys; support the legacy name as a
+    // migration shim while keeping the validated runtime shape on the new name.
     const publishableKey = normalizeOptionalEnvVar(
       envForParse.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
     );
@@ -105,7 +105,7 @@ function parseServerEnv(): ServerEnv {
           : undefined;
 
     if (resolvedSupabaseKey) {
-      envForParse.NEXT_PUBLIC_SUPABASE_ANON_KEY = resolvedSupabaseKey;
+      envForParse.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = resolvedSupabaseKey;
     }
 
     const nodeEnvRaw =
