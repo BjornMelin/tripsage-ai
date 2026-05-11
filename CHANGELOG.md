@@ -1,3 +1,9 @@
+## [1.33.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.5...v1.33.0) (2026-05-11)
+
+### Features
+
+* **security:** add BYOK health tracing ([07318df](https://github.com/BjornMelin/tripsage-ai/commit/07318dfbd6c66318fd959e93fd87e15e4f8f97ea))
+
 ## [Unreleased]
 
 ### Security
