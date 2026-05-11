@@ -11,7 +11,7 @@ describe("agentConfigRequestSchema", () => {
     ).toBe(true);
     expect(
       agentConfigRequestSchema.safeParse({
-        model: "anthropic/claude-sonnet-4.6",
+        model: "moonshotai/kimi-k2.6",
       }).success
     ).toBe(true);
   });

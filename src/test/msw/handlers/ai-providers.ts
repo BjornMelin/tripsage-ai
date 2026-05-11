@@ -54,7 +54,7 @@ export const aiProviderHandlers: HttpHandler[] = [
         },
       ],
       id: "msg-mock",
-      model: "claude-sonnet-4.6",
+      model: "claude-current-mock",
       role: "assistant",
       // biome-ignore lint/style/useNamingConvention: match Anthropic payload shape
       stop_reason: "end_turn",

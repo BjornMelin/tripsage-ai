@@ -13,7 +13,7 @@ Model defaults are centralized in `src/ai/models/defaults.ts`.
 - `standard`: `openai/gpt-5.4-mini` via Gateway, `gpt-5.4-mini` for direct OpenAI.
 - `planning`: `openai/gpt-5.5` via Gateway, `gpt-5.5` for direct OpenAI.
 - `utility`: `openai/gpt-5.4-nano` via Gateway, `gpt-5.4-nano` for direct OpenAI.
-- Anthropic has no implicit app-owned default. Use `anthropic/claude-sonnet-4.6` only when a user/admin explicitly selects it.
+- Anthropic has no implicit app-owned default. Users/admins must pick a current provider-owned model from their catalog; key validation probes Anthropic's model catalog instead of hard-coding a Claude model.
 
 User OpenAI BYOK uses direct OpenAI Responses API models so user-owned keys fail closed instead of falling back to team credentials. App-owned traffic uses Vercel AI Gateway when the user has opted into team fallback.
 

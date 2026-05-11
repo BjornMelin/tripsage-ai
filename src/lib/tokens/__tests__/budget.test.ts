@@ -8,7 +8,11 @@ import {
   countPromptTokens,
   countTokens,
 } from "../../tokens/budget";
-import { DEFAULT_CONTEXT_LIMIT, getModelContextLimit } from "../../tokens/limits";
+import {
+  DEFAULT_CONTEXT_LIMIT,
+  getModelContextLimit,
+  MODEL_LIMITS,
+} from "../../tokens/limits";
 
 // Mock js-tiktoken with lightweight deterministic implementation
 const { mockEncode, MOCK_TIKTOKEN } = vi.hoisted(() => {
@@ -80,7 +84,7 @@ describe("countTokens", () => {
   it("falls back to heuristic for unknown providers", () => {
     const s = "1234"; // 4 chars
     // For unknown models, selectTokenizer returns null, so heuristic is used
-    const result = countTokens([s], "claude-sonnet-4.6");
+    const result = countTokens([s], "vendor/custom-model");
     // Should use heuristic: ceil(4 / 4) = 1 token
     expect(result).toBe(Math.ceil(s.length / CHARS_PER_TOKEN_HEURISTIC));
     // Tokenizer should not be called for unknown models
@@ -107,9 +111,29 @@ describe("clampMaxTokens", () => {
     expect(getModelContextLimit("openai/gpt-5.5")).toBe(1_050_000);
   });
 
-  it("uses current Anthropic and xAI context windows", () => {
-    expect(getModelContextLimit("claude-sonnet-4.6")).toBe(1_000_000);
+  it("uses current non-OpenAI context windows", () => {
+    expect(getModelContextLimit("moonshotai/kimi-k2.6")).toBe(262_000);
     expect(getModelContextLimit("grok-4.3")).toBe(1_000_000);
+  });
+
+  it("does not retain stale GPT-5 or Claude 4 model aliases", () => {
+    const oldGptBase = ["gpt", "5"].join("-");
+    const oldClaudeSonnetBase = ["claude", "sonnet", "4"].join("-");
+    const oldClaudeOpusBase = ["claude", "opus", "4"].join("-");
+    const staleModels = [
+      oldGptBase,
+      [oldGptBase, "mini"].join("-"),
+      oldClaudeSonnetBase,
+      oldClaudeOpusBase,
+      `anthropic/${oldClaudeSonnetBase}-20250514`,
+    ];
+
+    for (const model of staleModels) {
+      expect(getModelContextLimit(model)).toBe(DEFAULT_CONTEXT_LIMIT);
+    }
+    expect(
+      Object.keys(MODEL_LIMITS).some((key) => key.startsWith(oldClaudeSonnetBase))
+    ).toBe(false);
   });
 
   it("coerces invalid desiredMax to 1 with reason", () => {
