@@ -27,7 +27,8 @@ const { createUpstashMemoryAdapter } = await import("../upstash-adapter");
 describe("createUpstashMemoryAdapter", () => {
   beforeEach(() => {
     beforeEachHook();
-    envStore.NEXT_PUBLIC_SITE_URL = "https://example.test";
+    envStore.APP_BASE_URL = "https://example.test";
+    envStore.NEXT_PUBLIC_SITE_URL = undefined;
     envStore.QSTASH_TOKEN = TEST_QSTASH_TOKEN;
     envStore.UPSTASH_REDIS_REST_TOKEN = TEST_REDIS_TOKEN;
     envStore.UPSTASH_REDIS_REST_URL = TEST_REDIS_URL;
