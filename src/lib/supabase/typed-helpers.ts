@@ -539,10 +539,10 @@ export function getSingle<
 type DeleteOptions<S extends SchemaName> = {
   schema?: S;
   count?: CountPreference | null;
-  limit?: number;
   returning?: "representation";
   select?: string;
 };
+type DeleteRowsOptions<S extends SchemaName> = DeleteOptions<S> & { limit?: number };
 
 const multiRowDeleteError = (count: number): Error | null =>
   count > 1 ? new Error("delete_single_matched_multiple_rows") : null;
@@ -554,7 +554,7 @@ const deleteRows = async <
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: DeleteOptions<S>
+  options?: DeleteRowsOptions<S>
 ): Promise<{ count: number; error: unknown | null }> =>
   withTelemetrySpan(
     "supabase.delete",
@@ -601,7 +601,7 @@ const countDeleteCandidates = async <
   client: TypedClient,
   table: T,
   where: (qb: TableFilterBuilder) => TableFilterBuilder,
-  options?: DeleteOptions<S>
+  options?: Pick<DeleteOptions<S>, "schema">
 ): Promise<{ count: number; error: unknown | null }> =>
   withTelemetrySpan(
     "supabase.delete.preflight",
@@ -618,8 +618,7 @@ const countDeleteCandidates = async <
       const base = getTableBuilder(client, schemaName, table, "select");
       if (base instanceof Error) return { count: 0, error: base };
 
-      const selectColumns = options?.select ?? "id";
-      const qb = where(base.select(selectColumns, { count: "exact" }).limit(2));
+      const qb = where(base.select("id", { count: "exact" }).limit(2));
       const { count, data, error } = await qb;
       if (error) return { count: 0, error };
 
