@@ -17,8 +17,11 @@ describe("search client state helpers", () => {
   it("detects abort errors", () => {
     const abortError = new Error("cancelled");
     abortError.name = "AbortError";
+    const abortException = new DOMException("cancelled", "AbortError");
 
     expect(isAbortError(abortError)).toBe(true);
+    expect(isAbortError(abortException)).toBe(true);
+    expect(isAbortError({ name: "AbortError" })).toBe(true);
     expect(isAbortError(new Error("other"))).toBe(false);
     expect(isAbortError("AbortError")).toBe(false);
   });
