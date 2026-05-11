@@ -69,14 +69,18 @@ describe("/api/accommodations/personalize route", () => {
 
     const res = await POST(req, createRouteParamsContext());
     const body = (await res.json()) as {
+      error: string;
       fallback: boolean;
+      reason: string;
       results: Array<{ hotelName: string; score: number }>;
       warning: string;
     };
 
     expect(res.status).toBe(503);
     expect(body).toEqual({
+      error: "service_unavailable",
       fallback: true,
+      reason: "AI personalization service unavailable",
       results: [
         expect.objectContaining({
           hotelName: "Union Station Hotel",
