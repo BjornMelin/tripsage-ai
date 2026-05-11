@@ -345,13 +345,13 @@ export async function createMessage(
   id: string,
   payload: { role?: string; parts?: unknown[] }
 ): Promise<Response> {
-  if (!payload?.role || typeof payload.role !== "string")
+  if (payload?.role !== undefined && typeof payload.role !== "string")
     return errorResponse({
       error: "bad_request",
-      reason: "Role is required",
+      reason: "Role must be user",
       status: 400,
     });
-  const normalizedRole = payload.role.toLowerCase();
+  const normalizedRole = payload.role?.toLowerCase() ?? "user";
   if (normalizedRole !== "user") {
     return errorResponse({
       error: "bad_request",

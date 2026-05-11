@@ -53,11 +53,12 @@ describe("sessions _handlers", () => {
     const { id } = (await created.json()) as { id: string };
     const r1 = await createMessage({ logger, supabase: s, userId }, id, {
       parts: [{ text: "hi", type: "text" }],
-      role: "user",
     });
     expect(r1.status).toBe(201);
     const r2 = await listMessages({ logger, supabase: s, userId }, id);
     expect(r2.status).toBe(200);
+    const body = (await r2.json()) as Array<{ role: string }>;
+    expect(body[0]?.role).toBe("user");
   });
 
   it("includes tool output parts for assistant messages", async () => {

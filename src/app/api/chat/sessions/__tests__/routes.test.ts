@@ -256,7 +256,7 @@ describe("/api/chat/sessions", () => {
       expect(resMsg.status).toBe(201);
     });
 
-    it("validation passes for content without role, but handler requires role", async () => {
+    it("defaults omitted message role to user", async () => {
       const resCreate = await SESS_POST(
         createMockNextRequest({
           body: {},
@@ -279,11 +279,7 @@ describe("/api/chat/sessions", () => {
           params: Promise.resolve({ id }),
         }
       );
-      // Schema validation passes (role is optional), but handler enforces role requirement
-      expect(resMsg.status).toBe(400);
-      const error = (await resMsg.json()) as { error: string; reason: string };
-      expect(error.error).toBe("bad_request");
-      expect(error.reason).toBe("Role is required");
+      expect(resMsg.status).toBe(201);
     });
   });
 });

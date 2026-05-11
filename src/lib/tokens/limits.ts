@@ -38,6 +38,16 @@ export const MODEL_LIMITS: ModelLimitsTable = {
 /** Default context window (tokens) when model is unknown. */
 export const DEFAULT_CONTEXT_LIMIT = 128_000;
 
+const sortedLimitKeysCache = new WeakMap<ModelLimitsTable, string[]>();
+
+function getSortedLimitKeys(table: ModelLimitsTable): string[] {
+  const cached = sortedLimitKeysCache.get(table);
+  if (cached) return cached;
+  const keys = Object.keys(table).sort((a, b) => b.length - a.length);
+  sortedLimitKeysCache.set(table, keys);
+  return keys;
+}
+
 /**
  * Resolve the context window limit for a given model.
  * Performs a lowercase substring match against known keys.
@@ -52,7 +62,7 @@ export function getModelContextLimit(
 ): number {
   if (!modelName) return DEFAULT_CONTEXT_LIMIT;
   const name = modelName.toLowerCase();
-  for (const key of Object.keys(table).sort((a, b) => b.length - a.length)) {
+  for (const key of getSortedLimitKeys(table)) {
     if (name.includes(key)) return table[key];
   }
   return DEFAULT_CONTEXT_LIMIT;
