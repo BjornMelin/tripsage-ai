@@ -42,6 +42,13 @@ import { buildHotelApiPayload } from "@/features/search/components/filters/api-p
 import { FilterPanel } from "@/features/search/components/filters/filter-panel";
 import { HotelSearchForm } from "@/features/search/components/forms/hotel-search-form";
 import { HotelResults } from "@/features/search/components/results/hotel-results";
+import {
+  HOTEL_WISHLIST_STORAGE_KEY,
+  isAbortError,
+  toggleStringSetValue,
+  useAbortableSearchTask,
+  usePersistentStringSet,
+} from "@/features/search/hooks/search/use-search-client-state";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { useSearchFiltersStore } from "@/features/search/store/search-filters-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
@@ -76,10 +83,12 @@ export default function HotelsSearchClient({
   const { toast } = useToast();
   const [hasSearched, setHasSearched] = useState(false);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const currentSearchController = useRef<AbortController | null>(null);
+  const { clearSearchController, startSearchController } = useAbortableSearchTask();
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
-  const [wishlistHotelIds, setWishlistHotelIds] = useState<Set<string>>(new Set());
+  const [wishlistHotelIds, setWishlistHotelIds] = usePersistentStringSet(
+    HOTEL_WISHLIST_STORAGE_KEY
+  );
   const [isWishlistUpdating, setIsWishlistUpdating] = useState(false);
   const [popularDestinations, setPopularDestinations] = useState<
     PopularDestinationProps[]
@@ -94,26 +103,6 @@ export default function HotelsSearchClient({
   useEffect(() => {
     initializeSearch("accommodation");
   }, [initializeSearch]);
-
-  useEffect(() => {
-    return () => {
-      currentSearchController.current?.abort();
-      currentSearchController.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("hotelsSearch:wishlistHotels");
-      if (!stored) return;
-      const parsed: unknown = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
-        setWishlistHotelIds(new Set(parsed));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   useEffect(() => {
     const cached = readCachedPopularDestinations(window.sessionStorage, Date.now());
@@ -133,19 +122,18 @@ export default function HotelsSearchClient({
         const body: unknown = await res.json();
         const mapped = mapPopularDestinationsFromApiResponse(body);
 
-        if (mapped.length > 0) {
+        if (!controller.signal.aborted && mapped.length > 0) {
           setPopularDestinations(mapped);
           writeCachedPopularDestinations(window.sessionStorage, Date.now(), mapped);
         }
       } catch (error) {
-        if (
-          controller.signal.aborted ||
-          (error instanceof Error && error.name === "AbortError")
-        ) {
+        if (controller.signal.aborted || isAbortError(error)) {
           return;
         }
       } finally {
-        setIsPopularDestinationsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsPopularDestinationsLoading(false);
+        }
       }
     })();
 
@@ -186,26 +174,15 @@ export default function HotelsSearchClient({
     if (isWishlistUpdating) return;
     setIsWishlistUpdating(true);
     try {
-      const next = new Set(wishlistHotelIds);
-      const wasSaved = next.has(hotelId);
-      if (wasSaved) {
-        next.delete(hotelId);
-      } else {
-        next.add(hotelId);
-      }
-
-      setWishlistHotelIds(next);
-      try {
-        window.localStorage.setItem(
-          "hotelsSearch:wishlistHotels",
-          JSON.stringify([...next])
-        );
-      } catch {
-        // ignore
-      }
+      let wasPresent = false;
+      setWishlistHotelIds((currentValues) => {
+        const toggled = toggleStringSetValue(currentValues, hotelId);
+        wasPresent = toggled.wasPresent;
+        return toggled.nextValues;
+      });
 
       toast({
-        description: wasSaved ? `Removed hotel ${hotelId}` : `Saved hotel ${hotelId}`,
+        description: wasPresent ? `Removed hotel ${hotelId}` : `Saved hotel ${hotelId}`,
         title: "Wishlist updated",
       });
     } catch (error) {
@@ -233,9 +210,7 @@ export default function HotelsSearchClient({
   };
 
   const handleSearch = async (params: SearchAccommodationParams) => {
-    currentSearchController.current?.abort();
-    const controller = new AbortController();
-    currentSearchController.current = controller;
+    const controller = startSearchController();
     try {
       // Merge form params with active filter payload
       const filterPayload = buildHotelApiPayload(activeFilters);
@@ -258,7 +233,7 @@ export default function HotelsSearchClient({
       if (controller.signal.aborted) return;
       setHasSearched(true);
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
+      if (controller.signal.aborted || isAbortError(error)) {
         return;
       }
       toast({
@@ -267,9 +242,7 @@ export default function HotelsSearchClient({
         variant: "destructive",
       });
     } finally {
-      if (currentSearchController.current === controller) {
-        currentSearchController.current = null;
-      }
+      clearSearchController(controller);
     }
   };
 
@@ -313,9 +286,7 @@ export default function HotelsSearchClient({
         </Dialog>
 
         <div className="grid gap-6 lg:grid-cols-4">
-          {/* Main content - 3 columns */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Search Form */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -331,7 +302,6 @@ export default function HotelsSearchClient({
               </CardContent>
             </Card>
 
-            {/* Error State */}
             {searchError && (
               <Alert variant="destructive">
                 <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
@@ -342,7 +312,6 @@ export default function HotelsSearchClient({
               </Alert>
             )}
 
-            {/* Loading State */}
             {isSearching && (
               <Card>
                 <CardHeader>
@@ -366,7 +335,6 @@ export default function HotelsSearchClient({
               </Card>
             )}
 
-            {/* Results State */}
             {hasSearched && !isSearching && hasAccommodationResults && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center flex-wrap gap-4">
@@ -408,7 +376,6 @@ export default function HotelsSearchClient({
               </div>
             )}
 
-            {/* Initial State - Popular Destinations & Tips */}
             {!hasSearched && !isSearching && (
               <HotelsEmptyState
                 baseCurrency={baseCurrency}
@@ -417,7 +384,6 @@ export default function HotelsSearchClient({
               />
             )}
 
-            {/* Empty State */}
             {hasSearched &&
               !isSearching &&
               !hasAccommodationResults &&
@@ -448,7 +414,6 @@ export default function HotelsSearchClient({
               )}
           </div>
 
-          {/* Sidebar - 1 column */}
           <div className="space-y-6" data-testid="filter-panel" ref={filterPanelRef}>
             <FilterPanel />
           </div>

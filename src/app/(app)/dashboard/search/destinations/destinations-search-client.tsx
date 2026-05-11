@@ -13,7 +13,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,10 @@ import { DestinationCard } from "@/features/search/components/cards/destination-
 import { DestinationSearchForm } from "@/features/search/components/forms/destination-search-form";
 import type { DestinationResult } from "@/features/search/hooks/search/use-destination-search";
 import { useDestinationSearch } from "@/features/search/hooks/search/use-destination-search";
+import {
+  isAbortError,
+  useAbortableSearchTask,
+} from "@/features/search/hooks/search/use-search-client-state";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import { getErrorMessage } from "@/lib/api/error-types";
 import type { Result, ResultError } from "@/lib/result";
@@ -56,14 +60,7 @@ export default function DestinationsSearchClient({
   const { searchDestinations, isSearching, searchError, resetSearch, results } =
     useDestinationSearch();
   const { toast } = useToast();
-  const currentSearchController = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    return () => {
-      currentSearchController.current?.abort();
-      currentSearchController.current = null;
-    };
-  }, []);
+  const { clearSearchController, startSearchController } = useAbortableSearchTask();
 
   const [selectedDestinations, setSelectedDestinations] = useState<Destination[]>([]);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
@@ -75,11 +72,10 @@ export default function DestinationsSearchClient({
   /** Handles the search for destinations. */
   const handleSearch = useCallback(
     async (params: DestinationSearchParams) => {
-      currentSearchController.current?.abort();
-      const controller = new AbortController();
-      currentSearchController.current = controller;
+      const controller = startSearchController();
       try {
         const normalized = await onSubmitServer(params); // server-side telemetry and validation
+        if (controller.signal.aborted) return;
         if (!normalized.ok) {
           toast({
             description:
@@ -95,10 +91,7 @@ export default function DestinationsSearchClient({
         await searchDestinations(normalized.data, controller.signal); // client fetch/store update
         if (controller.signal.aborted) return;
       } catch (error) {
-        if (
-          controller.signal.aborted ||
-          (error instanceof Error && error.name === "AbortError")
-        ) {
+        if (controller.signal.aborted || isAbortError(error)) {
           return;
         }
         const normalizedError =
@@ -115,15 +108,19 @@ export default function DestinationsSearchClient({
           variant: "destructive",
         });
       } finally {
-        if (currentSearchController.current === controller) {
-          currentSearchController.current = null;
-        }
+        clearSearchController(controller);
         if (!controller.signal.aborted) {
           setHasSearched(true);
         }
       }
     },
-    [onSubmitServer, searchDestinations, toast]
+    [
+      clearSearchController,
+      onSubmitServer,
+      searchDestinations,
+      startSearchController,
+      toast,
+    ]
   );
 
   /** Handles the selection of a destination. */
@@ -240,7 +237,6 @@ export default function DestinationsSearchClient({
     <SearchLayout>
       <TooltipProvider>
         <div className="space-y-6">
-          {/* Search Form Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -253,7 +249,6 @@ export default function DestinationsSearchClient({
             </CardContent>
           </Card>
 
-          {/* Comparison Bar */}
           {selectedDestinations.length > 0 && (
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader className="pb-3">
@@ -305,7 +300,6 @@ export default function DestinationsSearchClient({
             </Card>
           )}
 
-          {/* Loading State */}
           {isLoading && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"].map((id) => (
@@ -316,7 +310,6 @@ export default function DestinationsSearchClient({
             </div>
           )}
 
-          {/* Error State */}
           {searchError && (
             <Alert variant="destructive">
               <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
@@ -330,7 +323,6 @@ export default function DestinationsSearchClient({
             </Alert>
           )}
 
-          {/* Empty State */}
           {!isLoading && hasSearched && !hasActiveResults && !searchError && (
             <Card>
               <CardContent className="text-center py-12">
@@ -356,7 +348,6 @@ export default function DestinationsSearchClient({
             </Card>
           )}
 
-          {/* Results Grid */}
           {!isLoading && !searchError && hasActiveResults && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -385,7 +376,6 @@ export default function DestinationsSearchClient({
             </div>
           )}
 
-          {/* Initial State */}
           {!isLoading && !hasSearched && !searchError && (
             <Card className="bg-muted/50">
               <CardContent className="text-center py-12">
@@ -407,7 +397,6 @@ export default function DestinationsSearchClient({
             </Card>
           )}
 
-          {/* Floating Compare Button */}
           {selectedDestinations.length > 0 && (
             <div className="fixed bottom-6 right-6 z-40">
               <Tooltip>
@@ -431,7 +420,6 @@ export default function DestinationsSearchClient({
             </div>
           )}
 
-          {/* Comparison Modal */}
           <DestinationComparisonModal
             isOpen={showComparisonModal}
             onClose={handleCloseComparisonModal}
