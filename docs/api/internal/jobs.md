@@ -33,6 +33,7 @@ workflow-orchestration rewrite:
 | --- | ---: | --- |
 | Vercel function max duration | 60s | `vercel.json` |
 | QStash RAG delivery timeout | 55s | `RAG_INDEX_QSTASH_TIMEOUT_SECONDS` |
+| Embedding abort timeout | 50s | `RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS` |
 | QStash RAG request body cap | 512 KiB | `MAX_RAG_INDEX_JOB_BODY_BYTES` |
 | QStash documented message-size ceiling | 1 MiB | Upstash QStash docs |
 | Attachment download cap | 10 MiB | `ATTACHMENT_MAX_FILE_SIZE` |
@@ -53,6 +54,13 @@ and durations only:
   upserted, indexed count, failed count, and namespace.
 - `rag.indexer.embedding_failed`: chunk count, document count, namespace, and
   provider error class name; never raw document content or provider payloads.
+
+The attachment-to-RAG QStash message body is a raw user-content processor
+boundary: it carries extracted document content and attachment metadata so the
+worker can index asynchronously, and retryable failures can leave that body in
+QStash retry/DLQ storage. Treat QStash credentials, DLQ access, and payload
+inspection as sensitive production data access. Telemetry must only record
+redacted aggregate counters and hashes, never the payload content or metadata.
 
 Open a separate Upstash Workflow pilot issue only if production telemetry shows
 one of these conditions for the attachment/RAG path:

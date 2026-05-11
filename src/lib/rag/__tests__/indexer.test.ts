@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS } from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMany } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -291,6 +292,33 @@ describe("indexDocuments", () => {
         }),
       })
     );
+  });
+
+  it("caps embedding abort timeout under the QStash delivery budget", async () => {
+    const supabase = unsafeCast<SupabaseClient<Database>>({});
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockImplementation(() => new AbortController().signal);
+    vi.mocked(embedMany).mockRejectedValueOnce(new Error("provider_down"));
+
+    try {
+      await indexDocuments({
+        config: {
+          batchSize: 1,
+          chunkOverlap: 99,
+          chunkSize: 100,
+          namespace: "default",
+        },
+        documents: [{ content: "A".repeat(4800) }],
+        supabase,
+        userId: "22222222-2222-2222-2222-222222222222",
+      });
+      expect(timeoutSpy).toHaveBeenCalledWith(RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+
+    expect(upsertMany).not.toHaveBeenCalled();
   });
 
   it("marks chunk budget failures with the non-retryable RAG limit code", async () => {

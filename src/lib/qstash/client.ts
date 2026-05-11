@@ -6,6 +6,7 @@ import "server-only";
 
 import { Client } from "@upstash/qstash";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
+import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 import { getRequiredServerOrigin } from "@/lib/url/server-origin";
 import { QSTASH_JOB_LABELS, QSTASH_RETRY_CONFIG, type QStashJobLabel } from "./config";
@@ -271,7 +272,13 @@ export async function enqueueJob(
       span.setAttribute("qstash.url", url);
 
       const deduplicationId = options.deduplicationId;
-      span.setAttribute("qstash.dedup_id", deduplicationId);
+      span.setAttribute("qstash.dedup_id_present", true);
+      const deduplicationIdHash = hashTelemetryIdentifier(deduplicationId);
+      if (deduplicationIdHash) {
+        span.setAttribute("qstash.dedup_id_hash", deduplicationIdHash);
+      } else {
+        span.setAttribute("qstash.dedup_id_hash_available", false);
+      }
 
       if (options.contentBasedDeduplication) {
         span.setAttribute("qstash.content_based_dedup", true);

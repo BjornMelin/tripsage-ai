@@ -160,6 +160,10 @@ QStash helpers emit spans for enqueue operations:
 
 Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt`
 (derived from `Upstash-Retried`) for correlation with the Upstash Console.
+Publish spans record whether a deduplication id was present and, when
+`TELEMETRY_HASH_SECRET` is configured, `qstash.dedup_id_hash`; they must not
+export the raw deduplication id because job dedup keys can include tenant,
+attachment, or event identifiers.
 
 Attachment/RAG jobs add cost and duration signals without content:
 

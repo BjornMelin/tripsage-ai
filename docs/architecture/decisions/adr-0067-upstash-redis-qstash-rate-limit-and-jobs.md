@@ -44,6 +44,8 @@ TripSage needs:
   workflow SDK rewrite:
   - `vercel.json` caps API route execution at 60 seconds.
   - RAG QStash delivery timeout is 55 seconds.
+  - RAG embedding abort timeout is 50 seconds so workers can finish cleanup
+    before QStash gives up on delivery.
   - RAG QStash request bodies are capped at 512 KiB, below the documented 1 MiB
     QStash message-size ceiling.
   - Attachment downloads are capped at 10 MiB.
@@ -55,6 +57,11 @@ TripSage needs:
   class, retry outcome, and QStash payload bytes. Never record raw attachment
   filenames, storage paths, extracted text, document content, embedding values,
   provider payloads, or user/trip/chat identifiers.
+- Treat attachment-to-RAG QStash message bodies as a raw user-content processor
+  boundary. They carry extracted document content and attachment metadata for
+  asynchronous indexing, and retryable failures can leave those bodies in
+  QStash retry/DLQ storage. Operator access to QStash payloads/DLQs is sensitive
+  production data access; telemetry must remain aggregate and redacted.
 
 ## Decision Matrix
 

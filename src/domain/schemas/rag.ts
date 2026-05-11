@@ -101,6 +101,9 @@ export const MAX_RAG_EMBED_CHUNKS_PER_BATCH = 1200;
 export const RAG_CHARS_PER_TOKEN = 4;
 /** QStash delivery timeout kept under the configured 60-second Vercel function cap. */
 export const RAG_INDEX_QSTASH_TIMEOUT_SECONDS = 55;
+/** Embedding abort timeout kept below QStash delivery timeout for handler cleanup. */
+export const RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS =
+  (RAG_INDEX_QSTASH_TIMEOUT_SECONDS - 5) * 1000;
 
 export function isValidRagChunkWindow(value: {
   chunkOverlap: number;

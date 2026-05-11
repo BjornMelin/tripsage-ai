@@ -30,6 +30,7 @@ const envStore = vi.hoisted<Record<string, string | undefined>>(() => ({
 
 const tryEnqueueJobMock = vi.hoisted(() => vi.fn<TryEnqueueJob>());
 const createAdminSupabaseMock = vi.hoisted(() => vi.fn());
+const recordTelemetryEventMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (key: string) => {
@@ -56,7 +57,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 vi.mock("@/lib/telemetry/span", () => ({
-  recordTelemetryEvent: vi.fn(),
+  recordTelemetryEvent: (...args: unknown[]) => recordTelemetryEventMock(...args),
   sanitizeAttributes: vi.fn((attrs) => attrs),
   withTelemetrySpan: vi.fn(
     (_name: string, _opts: unknown, fn: (span: unknown) => unknown) =>
@@ -106,6 +107,7 @@ describe("POST /api/jobs/attachments-ingest", () => {
     tryEnqueueJobMock.mockReset();
     tryEnqueueJobMock.mockResolvedValue({ messageId: "rag-1", success: true });
     createAdminSupabaseMock.mockReset();
+    recordTelemetryEventMock.mockReset();
     upstashMocks.qstash.__forceVerify(true);
 
     createAdminSupabaseMock.mockReturnValue(
@@ -160,6 +162,18 @@ describe("POST /api/jobs/attachments-ingest", () => {
         label: QSTASH_JOB_LABELS.RAG_INDEX,
         timeout: RAG_INDEX_QSTASH_TIMEOUT_SECONDS,
       }
+    );
+    expect(recordTelemetryEventMock).toHaveBeenCalledWith(
+      "jobs.attachments_ingest.completed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          estimatedChunks: expect.any(Number),
+          fileSizeBytes: 1024,
+          mimeType: "text/plain",
+          ragPayloadBytes: expect.any(Number),
+          retryOutcome: "not_applicable",
+        }),
+      })
     );
   });
 
@@ -380,6 +394,16 @@ describe("POST /api/jobs/attachments-ingest", () => {
     expect(res.headers.get("Upstash-NonRetryable-Error")).toBe("true");
     expect(json.error).toBe("rag_payload_too_large");
     expect(tryEnqueueJobMock).not.toHaveBeenCalled();
+    expect(recordTelemetryEventMock).toHaveBeenCalledWith(
+      "jobs.attachments_ingest.failed",
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          errorCode: "rag_payload_too_large",
+          retryOutcome: "non_retryable",
+        }),
+        level: "error",
+      })
+    );
   });
 
   afterAll(() => {
