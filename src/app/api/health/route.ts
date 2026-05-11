@@ -7,8 +7,6 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { nowIso } from "@/lib/security/random";
 
-export const dynamic = "force-dynamic";
-
 /**
  * Return a lightweight deployment health response for smoke checks.
  *
