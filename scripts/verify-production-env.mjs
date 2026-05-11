@@ -45,8 +45,18 @@ function hasValidUrl(name, { requireHttps }) {
 
   try {
     const url = new URL(value);
-    if (requireHttps) return url.protocol === "https:";
-    return url.protocol === "https:" || url.protocol === "http:";
+    const hasValidProtocol = requireHttps
+      ? url.protocol === "https:"
+      : url.protocol === "https:" || url.protocol === "http:";
+
+    return (
+      hasValidProtocol &&
+      url.pathname === "/" &&
+      url.search === "" &&
+      url.hash === "" &&
+      url.username === "" &&
+      url.password === ""
+    );
   } catch {
     return false;
   }

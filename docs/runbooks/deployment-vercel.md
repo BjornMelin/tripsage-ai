@@ -141,10 +141,11 @@ vercel inspect <deployment-url> --token "$VERCEL_TOKEN"
 ## Manual Local Verification
 
 Before changing deployment behavior, run the local checks that do not require
-production secrets:
+production secrets. Use Biome in non-mutating check mode for this verification
+pass:
 
 ```bash
-pnpm biome:fix
+pnpm biome:check
 pnpm type-check
 pnpm test:affected
 ```

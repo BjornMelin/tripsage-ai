@@ -101,7 +101,68 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -Eq "git\+|github:" pnpm-lock.yaml package.json; then
+          if node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const gitSpecifier = /(?:git\+|github:)/i;
+          const dependencySections = new Set([
+            "dependencies",
+            "devDependencies",
+            "optionalDependencies",
+            "peerDependencies",
+          ]);
+
+          const matches = [];
+          const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+
+          for (const section of dependencySections) {
+            const dependencies = packageJson[section];
+            if (!dependencies || typeof dependencies !== "object") continue;
+
+            for (const [name, specifier] of Object.entries(dependencies)) {
+              if (typeof specifier === "string" && gitSpecifier.test(specifier)) {
+                matches.push(`package.json:${section}.${name}`);
+              }
+            }
+          }
+
+          const lockfile = readFileSync("pnpm-lock.yaml", "utf8");
+          const stack = [];
+
+          for (const line of lockfile.split(/\r?\n/)) {
+            const match = line.match(/^(\s*)([^:#][^:]*):(?:\s+(.*))?$/);
+            if (!match) continue;
+
+            const [, indentText, rawKey, rawValue = ""] = match;
+            const indent = indentText.length;
+            while (stack.length > 0 && stack.at(-1).indent >= indent) stack.pop();
+
+            const key = rawKey.trim().replace(/^['"]|['"]$/g, "");
+            const value = rawValue.trim().replace(/^['"]|['"]$/g, "");
+            const path = stack.map((entry) => entry.key);
+            const inDependencySection = path.some((entry) =>
+              dependencySections.has(entry)
+            );
+            const inPackagesSection = path.includes("packages");
+
+            if (
+              (inDependencySection && gitSpecifier.test(`${key} ${value}`)) ||
+              (inPackagesSection && gitSpecifier.test(key))
+            ) {
+              matches.push(`pnpm-lock.yaml:${[...path, key].join(".")}`);
+            }
+
+            stack.push({ indent, key });
+          }
+
+          if (matches.length > 0) {
+            for (const match of matches) console.error(match);
+            process.exit(1);
+          }
+          NODE
+          then
+            :
+          else
             echo "::error::Git dependencies detected. Configure pnpm allowBuilds/onlyBuiltDependencies for 10.26+ before deploying."
             exit 1
           fi
@@ -215,6 +276,7 @@ jobs:
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
 
       - name: Run deployment smoke checks
+        id: smoke
         shell: bash
         env:
           DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
@@ -222,6 +284,7 @@ jobs:
         run: pnpm deploy:smoke -- --url "$DEPLOYMENT_URL" --environment "$DEPLOY_ENVIRONMENT"
 
       - name: Promote production deployment
+        id: promote
         if: steps.vercel_env.outputs.promote_after_smoke == 'true'
         shell: bash
         env:
@@ -232,19 +295,69 @@ jobs:
         run: vercel promote "$DEPLOYMENT_URL" --yes --timeout=5m --token="$VERCEL_TOKEN"
 
       - name: Write machine-readable deployment summary
+        if: always()
         shell: bash
         env:
           DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
-          PROMOTED: ${{ steps.vercel_env.outputs.promote_after_smoke }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          PROMOTE_AFTER_SMOKE: ${{ steps.vercel_env.outputs.promote_after_smoke }}
+          PROMOTE_OUTCOME: ${{ steps.promote.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
         run: |
           set -euo pipefail
+          deploy_status="${DEPLOY_OUTCOME:-skipped}"
+          smoke_status="skipped"
+          case "${SMOKE_OUTCOME:-skipped}" in
+            success) smoke_status="passed" ;;
+            failure|cancelled) smoke_status="failed" ;;
+            skipped) smoke_status="skipped" ;;
+            *) smoke_status="unknown" ;;
+          esac
+
+          promote_required="$PROMOTE_AFTER_SMOKE"
+          promote_status="skipped"
+          promoted="false"
+          if [[ "$promote_required" == "true" ]]; then
+            case "${PROMOTE_OUTCOME:-skipped}" in
+              success)
+                promote_status="passed"
+                promoted="true"
+                ;;
+              failure|cancelled) promote_status="failed" ;;
+              skipped) promote_status="skipped" ;;
+              *) promote_status="unknown" ;;
+            esac
+          fi
+
+          status="verified"
+          if [[ "$deploy_status" != "success" || "$smoke_status" != "passed" ]]; then
+            status="failed"
+          fi
+          if [[ "$promote_required" == "true" && "$promote_status" != "passed" ]]; then
+            status="failed"
+          fi
+
           jq -n \
+            --arg deploy_status "$deploy_status" \
             --arg environment "$DEPLOY_ENVIRONMENT" \
-            --arg promoted "$PROMOTED" \
+            --arg promote_required "$promote_required" \
+            --arg promote_status "$promote_status" \
+            --arg promoted "$promoted" \
             --arg sha "$GITHUB_SHA" \
+            --arg smoke_status "$smoke_status" \
+            --arg status "$status" \
             --arg url "$DEPLOYMENT_URL" \
-            '{environment: $environment, promoted: ($promoted == "true"), sha: $sha, smoke: {status: "passed"}, status: "verified", url: $url}' \
+            '{
+              deploy: {status: $deploy_status},
+              environment: $environment,
+              promote: {required: ($promote_required == "true"), status: $promote_status},
+              promoted: ($promoted == "true"),
+              sha: $sha,
+              smoke: {status: $smoke_status},
+              status: $status,
+              url: (if $url == "" then null else $url end)
+            }' \
             > deployment-summary.json
 
       - name: Write deployment summary
