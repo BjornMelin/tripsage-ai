@@ -18,8 +18,12 @@ import { NextResponse } from "next/server";
 import { withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody, validateSchema } from "@/lib/api/route-helpers";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
-import { recordTelemetryEvent } from "@/lib/telemetry/span";
-import { mapProviderExceptionToCode, mapProviderStatusToCode } from "../_error-mapping";
+import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
+import {
+  mapProviderExceptionToCode,
+  mapProviderStatusToCode,
+  PLANNED_ERROR_CODES,
+} from "../_error-mapping";
 
 type ValidateResult = { isValid: boolean; reason?: string };
 
@@ -166,33 +170,57 @@ async function validateProviderKey(
   apiKey: string
 ): Promise<ValidateResult> {
   const providerId = service.trim().toLowerCase();
-  const builder = PROVIDER_BUILDERS[providerId];
-  if (!builder) {
-    return { isValid: false, reason: "INVALID_SERVICE" };
-  }
-
-  try {
-    const { fetchImpl, headers, url } = builder(apiKey);
-    const response = await fetchImpl(url, {
-      headers,
-      method: "GET",
-      signal: AbortSignal.timeout(VALIDATE_TIMEOUT_MS),
-    });
-    if (response.status === 200) return { isValid: true };
-    return { isValid: false, reason: mapProviderStatusToCode(response.status) };
-  } catch (error) {
-    const reason = normalizeErrorReason(error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    recordTelemetryEvent("api.keys.validate_provider_error", {
+  return await withTelemetrySpan(
+    "keys.provider.validate",
+    {
       attributes: {
-        message,
-        provider: providerId,
-        reason,
+        "keys.provider": providerId,
+        "keys.validation.timeout_ms": VALIDATE_TIMEOUT_MS,
       },
-      level: "error",
-    });
-    return { isValid: false, reason };
-  }
+    },
+    async (span) => {
+      const builder = PROVIDER_BUILDERS[providerId];
+      if (!builder) {
+        // Planned BYOK GA codes intentionally collapse schema/provider-builder
+        // drift into user-actionable invalid-key handling instead of returning
+        // the legacy unstable INVALID_SERVICE code.
+        span.setAttribute("keys.validation.is_valid", false);
+        span.setAttribute("keys.validation.reason", PLANNED_ERROR_CODES.invalidKey);
+        return { isValid: false, reason: PLANNED_ERROR_CODES.invalidKey };
+      }
+
+      try {
+        const { fetchImpl, headers, url } = builder(apiKey);
+        const response = await fetchImpl(url, {
+          headers,
+          method: "GET",
+          signal: AbortSignal.timeout(VALIDATE_TIMEOUT_MS),
+        });
+        span.setAttribute("http.response.status_code", response.status);
+        if (response.status === 200) {
+          span.setAttribute("keys.validation.is_valid", true);
+          return { isValid: true };
+        }
+        const reason = mapProviderStatusToCode(response.status);
+        span.setAttribute("keys.validation.is_valid", false);
+        span.setAttribute("keys.validation.reason", reason);
+        return { isValid: false, reason };
+      } catch (error) {
+        const reason = normalizeErrorReason(error);
+        span.setAttribute("keys.validation.is_valid", false);
+        span.setAttribute("keys.validation.reason", reason);
+        recordTelemetryEvent("api.keys.validate_provider_error", {
+          attributes: {
+            error_name: error instanceof Error ? error.name : typeof error,
+            provider: providerId,
+            reason,
+          },
+          level: "error",
+        });
+        return { isValid: false, reason };
+      }
+    }
+  );
 }
 
 /**

@@ -81,7 +81,8 @@ All resolution happens server-side (`@/lib/providers/registry`); keys are never 
 
 - `POST /api/keys` — insert BYOK or Gateway key (`service:"gateway"` optional `baseUrl`).
 - `POST /api/user-settings` — set `allowGatewayFallback`.
-- `POST /api/keys/validate` — validate key; expect 401/403 on invalid or consent denial.
+- `POST /api/keys/validate` — authenticated user route to validate a provider key without persisting it.
+- `GET /api/health/byok` — operator-only readiness route. Send `x-internal-key: $BYOK_HEALTHCHECK_KEY`; the backing RPC creates, decrypts, and deletes a non-user probe secret, and the response contains Vault/RPC status only.
 
 ## Security Notes
 
@@ -91,7 +92,9 @@ All resolution happens server-side (`@/lib/providers/registry`); keys are never 
 
 ## Troubleshooting
 
-- **401/403 on /api/keys/validate**: key invalid, consent off, or missing service role in RPC call.
+- **401/403 on /api/keys/validate**: user authentication missing or rejected by route guards before provider validation.
+- **401/403 on /api/health/byok**: missing or invalid `BYOK_HEALTHCHECK_KEY`; rotate the health token if the value may have leaked.
+- **503 `VAULT_UNAVAILABLE` on /api/health/byok**: check `SUPABASE_SERVICE_ROLE_KEY`, the `check_byok_vault_health()` migration, Vault extension status, and service-role RPC execution.
 - **No fallback despite team key**: ensure `allowGatewayFallback=true` for user and `AI_GATEWAY_API_KEY` set.
 - **High latency resolving provider**: check Vault availability; reduce repeated lookups or cache consent in request scope.
 - **RPC denied**: verify migrations applied and functions marked SECURITY DEFINER; call with service role token.

@@ -49,9 +49,9 @@ export const POST = withApiGuards({
         try {
           await insertUserApiKey(u, s, k);
           span.setAttribute("keys.rpc.error", false);
-        } catch (rpcError) {
+        } catch {
           span.setAttribute("keys.rpc.error", true);
-          throw rpcError;
+          throw new Error("BYOK key insert failed");
         }
       }
     );
@@ -77,9 +77,9 @@ export const POST = withApiGuards({
             try {
               await upsertUserGatewayBaseUrl(u, baseUrl);
               span.setAttribute("keys.rpc.error", false);
-            } catch (rpcError) {
+            } catch {
               span.setAttribute("keys.rpc.error", true);
-              throw rpcError;
+              throw new Error("BYOK gateway config upsert failed");
             }
           }
         ),

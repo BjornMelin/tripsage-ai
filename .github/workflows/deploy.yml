@@ -283,6 +283,19 @@ jobs:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
         run: pnpm deploy:smoke -- --url "$DEPLOYMENT_URL" --environment "$DEPLOY_ENVIRONMENT"
 
+      - name: Run BYOK health smoke check
+        if: steps.vercel_env.outputs.deploy_environment == 'production'
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          VERCEL_ENVIRONMENT: ${{ steps.vercel_env.outputs.name }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          vercel env run -e "$VERCEL_ENVIRONMENT" -- pnpm ops ai check byok-health --url "$DEPLOYMENT_URL"
+
       - name: Promote production deployment
         id: promote
         if: steps.vercel_env.outputs.promote_after_smoke == 'true'

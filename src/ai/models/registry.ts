@@ -254,6 +254,10 @@ function createByokClient(
   }
 }
 
+function getSafeErrorName(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
+
 /**
  * Resolves a BYOK provider and returns a ready AI SDK model.
  */
@@ -268,9 +272,7 @@ async function resolveByokProvider(
   // Fire-and-forget: update last used timestamp (ignore errors)
   touchUserApiKey(userId, provider).catch((error) => {
     providerRegistryLogger.warn("touch_user_api_key_failed", {
-      errorMessage:
-        error instanceof Error ? error.message.slice(0, 500) : String(error),
-      errorName: error instanceof Error ? error.name : "unknown_error",
+      errorName: getSafeErrorName(error),
       provider,
     });
   });
@@ -337,9 +339,7 @@ export async function resolveProvider(
     }
   } catch (error) {
     providerRegistryLogger.warn("gateway_lookup_failed", {
-      errorMessage:
-        error instanceof Error ? error.message.slice(0, 500) : String(error),
-      errorName: error instanceof Error ? error.name : "unknown_error",
+      errorName: getSafeErrorName(error),
     });
   }
 
@@ -354,9 +354,7 @@ export async function resolveProvider(
       }
     } catch (error) {
       providerRegistryLogger.warn("byok_lookup_failed", {
-        errorMessage:
-          error instanceof Error ? error.message.slice(0, 500) : String(error),
-        errorName: error instanceof Error ? error.name : "unknown_error",
+        errorName: getSafeErrorName(error),
         provider,
       });
     }
@@ -415,9 +413,7 @@ export async function resolveProvider(
       allowFallback = await getUserAllowGatewayFallback(userId);
     } catch (error) {
       providerRegistryLogger.warn("gateway_fallback_preference_lookup_failed", {
-        errorMessage:
-          error instanceof Error ? error.message.slice(0, 500) : String(error),
-        errorName: error instanceof Error ? error.name : "unknown_error",
+        errorName: getSafeErrorName(error),
       });
       allowFallback = null;
     }

@@ -112,7 +112,17 @@ Secure third-party API key management:
 - **Encryption**: Vault extension with service-role-only access
 - **Storage**: Encrypted in Supabase Vault with RLS protection
 - **Access**: Users can only access their own keys via server-side checks; enforcement relies on backend logic and Supabase RLS rather than Next.js route caching directives (Route Segment config options are disabled when Cache Components is enabled).
-- **Audit**: Telemetry infrastructure exists, but BYOK RPCs (`insertUserApiKey`, `deleteUserApiKey`, `getUserApiKey` in `src/lib/supabase/rpc.ts`) are not currently wrapped in OpenTelemetry spans. To enable tracing, wrap these calls with `withTelemetrySpan` in a shared helper before invoking the RPCs.
+- **Audit**: BYOK RPC helpers in `src/lib/supabase/rpc.ts` emit redacted OpenTelemetry spans (`supabase.rpc.*`) with operation, RPC name, provider, and hashed user identifiers when `TELEMETRY_HASH_SECRET` is configured. Secret values and API keys are never added to span attributes.
+- **Readiness**: `/api/health/byok` is an operator-only endpoint protected by `BYOK_HEALTHCHECK_KEY` through `x-internal-key` or `Authorization: Bearer`. It calls `check_byok_vault_health()` with the service-role Supabase client, creates/decrypts/deletes a non-user probe secret, and returns only status metadata.
+
+### BYOK Alerts
+
+Wire the following alerts in Datadog, Sentry, or the active OpenTelemetry backend:
+
+- `/api/health/byok` HTTP 5xx: page on 3 consecutive production failures.
+- `/api/health/byok` p95 latency > 5s for 5 minutes: page during launch windows, otherwise ticket.
+- `health.byok` span status `error` or `health.byok_failure` event: investigate Supabase Vault, service-role credentials, and the `check_byok_vault_health()` RPC.
+- `keys.provider.validate` span `keys.validation.reason` of `NETWORK_ERROR` or `REQUEST_TIMEOUT` above baseline: check provider transport health before treating user keys as invalid.
 
 ## Security Testing
 

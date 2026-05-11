@@ -2481,6 +2481,7 @@ export type Database = {
         }[];
       };
       auth_user_id_by_email: { Args: { p_email: string }; Returns: string };
+      check_byok_vault_health: { Args: never; Returns: boolean };
       delete_user_api_key: {
         Args: { p_service: string; p_user_id: string };
         Returns: undefined;

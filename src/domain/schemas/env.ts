@@ -272,6 +272,8 @@ const imageProxyEnvSchema = z.object({
 
 // Security configuration
 const securityEnvSchema = z.object({
+  // Operator token for the protected /api/health/byok readiness endpoint.
+  BYOK_HEALTHCHECK_KEY: apiKeySchema("BYOK_HEALTHCHECK_KEY", 32),
   // Optional downstream collaborator webhook URL (signed at app layer)
   COLLAB_WEBHOOK_URL: z.url().optional(),
   // HMAC secret for verifying Supabase Database Webhooks

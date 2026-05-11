@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Security
+
+* BYOK readiness now has an operator-only `/api/health/byok` probe backed by a service-role Vault health RPC that creates/decrypts/deletes a non-user probe secret, redacted `supabase.rpc.*` and provider-validation spans, and deployment smoke documentation for the planned `VAULT_UNAVAILABLE`, `INVALID_KEY`, `NETWORK_ERROR`, and `REQUEST_TIMEOUT` error-code contract.
+
 ## [1.32.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.4...v1.32.5) (2026-05-11)
 
 ### Bug Fixes

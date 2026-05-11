@@ -49,6 +49,11 @@ const MOCK_SPAN = vi.hoisted(() => ({
   setAttribute: vi.fn(),
   setStatus: vi.fn(),
 }));
+const MOCK_WITH_TELEMETRY_SPAN = vi.hoisted(() =>
+  vi.fn((_name: string, _attrs: unknown, fn: (span: typeof MOCK_SPAN) => unknown) =>
+    fn(MOCK_SPAN)
+  )
+);
 const MOCK_GET_REDIS = vi.hoisted(() =>
   vi.fn<() => Redis | undefined>(() => undefined)
 );
@@ -101,7 +106,7 @@ vi.mock("@/lib/telemetry/span", () => ({
   recordErrorOnSpan: vi.fn(),
   recordTelemetryEvent: vi.fn(),
   sanitizeAttributes: vi.fn((attributes) => attributes),
-  withTelemetrySpan: vi.fn((_name, _attrs, fn) => fn(MOCK_SPAN)),
+  withTelemetrySpan: MOCK_WITH_TELEMETRY_SPAN,
 }));
 
 vi.mock("@/lib/env/server", () => ({
@@ -221,6 +226,20 @@ describe("/api/keys/validate route", () => {
       body: { isValid: true },
       status: 200,
     });
+    expect(MOCK_WITH_TELEMETRY_SPAN).toHaveBeenCalledWith(
+      "keys.provider.validate",
+      {
+        attributes: {
+          "keys.provider": "openai",
+          "keys.validation.timeout_ms": 5000,
+        },
+      },
+      expect.any(Function)
+    );
+    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith(
+      "keys.validation.is_valid",
+      true
+    );
   });
 
   it("returns INVALID_KEY when provider denies access", async () => {
@@ -245,6 +264,27 @@ describe("/api/keys/validate route", () => {
     });
   });
 
+  it("returns planned INVALID_KEY code for unsupported services", async () => {
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "sk-test", service: "unsupported" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect({ body, status: res.status }).toEqual({
+      body: { isValid: false, reason: "INVALID_KEY" },
+      status: 200,
+    });
+    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith(
+      "keys.validation.reason",
+      "INVALID_KEY"
+    );
+  });
+
   it("returns NETWORK_ERROR when request fails", async () => {
     const fetchMock = vi
       .fn<FetchLike>()
@@ -265,6 +305,10 @@ describe("/api/keys/validate route", () => {
       body: { isValid: false, reason: "NETWORK_ERROR" },
       status: 200,
     });
+    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith(
+      "keys.validation.reason",
+      "NETWORK_ERROR"
+    );
   });
 
   it("returns NETWORK_ERROR when provider SDK shape is unexpected", async () => {
