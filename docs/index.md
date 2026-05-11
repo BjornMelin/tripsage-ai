@@ -45,7 +45,9 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 - **[Security Guide](operations/security-guide.md)** - Security
   implementation and best practices
 - **[Deployment Guide](operations/deployment-guide.md)** - Production
-  deployment procedures
+  environment and platform setup
+- **[Vercel Deployment Runbook](runbooks/deployment-vercel.md)** -
+  Authoritative production deployment and promotion procedure
 
 ## Quick Setup
 
