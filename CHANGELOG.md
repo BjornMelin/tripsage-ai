@@ -1,3 +1,9 @@
+## [1.33.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.4...v1.33.5) (2026-05-11)
+
+### Performance Improvements
+
+* **next:** harden production telemetry and images ([2de5d5a](https://github.com/BjornMelin/tripsage-ai/commit/2de5d5a3e4ee443344b8988a9edfbdfd85bb83d1))
+
 ## [1.33.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.3...v1.33.4) (2026-05-11)
 
 ### Bug Fixes
