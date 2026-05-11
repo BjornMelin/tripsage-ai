@@ -46,7 +46,7 @@ Behavior:
 interface ProviderSettings { preference: ProviderId[] }
 ```
 
-Env sources: none (no attribution headers required). User setting: `allowGatewayFallback` (default false).
+Env sources: gateway-related envs are runtime-configured; see `docs/operations/runbooks/byok-gateway-operator.md`. User consent remains `allowGatewayFallback` (default false).
 
 ## Tests
 

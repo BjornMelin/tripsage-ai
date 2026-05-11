@@ -19,6 +19,7 @@ export type GatewayBaseUrlRejectReason =
   | "host_not_allowed"
   | "invalid_url"
   | "non_https"
+  | "port_not_allowed"
   | "private_host";
 
 /** Normalized success result or rejection outcome for Gateway URL validation. */
@@ -141,6 +142,9 @@ export function validateGatewayBaseUrl(
 
   if (parsed.protocol !== "https:") return { ok: false, reason: "non_https" };
   if (parsed.username || parsed.password) return { ok: false, reason: "credentials" };
+  if (parsed.port && parsed.port !== "443") {
+    return { ok: false, reason: "port_not_allowed" };
+  }
   if (isPrivateGatewayHost(parsed.hostname)) {
     return { ok: false, reason: "private_host" };
   }

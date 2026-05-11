@@ -120,7 +120,7 @@ describe("resolveProvider", () => {
     );
   });
 
-  it("skips stale invalid user Gateway base URL and continues to direct BYOK", async () => {
+  it("fails closed when a configured user Gateway base URL is invalid", async () => {
     const { getUserApiKey, getUserGatewayBaseUrl } = await import("@/lib/supabase/rpc");
     vi.mocked(getUserApiKey).mockImplementation((_uid: string, svc: string) => {
       if (svc === "gateway") return Promise.resolve("gw-user-key");
@@ -132,11 +132,9 @@ describe("resolveProvider", () => {
     );
 
     const { resolveProvider } = await import("@ai/models/registry");
-    const result = await resolveProvider("user-stale-gw");
-
-    expect(result.provider).toBe("openai");
-    expect(result.modelId).toBe(DEFAULT_OPENAI_MODEL_ID);
-    expect(String(result.model)).toContain("openai-responses(api.openai.com)");
+    await expect(resolveProvider("user-stale-gw")).rejects.toThrow(
+      /Gateway base URL rejected: host_not_allowed/
+    );
     expect(LOGGER_WARN).toHaveBeenCalledWith(
       "gateway_base_url_rejected",
       expect.objectContaining({
@@ -266,7 +264,7 @@ describe("resolveProvider", () => {
     try {
       const { getUserApiKey } = await import("@/lib/supabase/rpc");
       vi.mocked(getUserApiKey).mockImplementation((_uid: string, svc: string) => {
-        if (svc === "gateway" || svc === "openai") {
+        if (svc === "openai") {
           return Promise.reject(new Error("secret leaked"));
         }
         return Promise.resolve(null);
@@ -277,10 +275,6 @@ describe("resolveProvider", () => {
         /OpenAI BYOK lookup failed/
       );
 
-      expect(LOGGER_WARN).toHaveBeenCalledWith(
-        "gateway_lookup_failed",
-        expect.not.objectContaining({ errorMessage: expect.anything() })
-      );
       expect(LOGGER_WARN).toHaveBeenCalledWith(
         "byok_lookup_failed",
         expect.objectContaining({
@@ -364,7 +358,40 @@ describe("resolveProvider", () => {
     }
   });
 
-  it("throws when user disables Gateway fallback", async () => {
+  it("uses server provider keys when user disables team Gateway fallback", async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+      ANTHROPIC_API_KEY: undefined,
+      // Minimal required vars so server env parsing doesn't fail.
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: "aaaaaaaaaaaaaaaaaaaa",
+    };
+
+    try {
+      const { getUserAllowGatewayFallback, getUserApiKey } = await import(
+        "@/lib/supabase/rpc"
+      );
+      const { resolveProvider } = await import("@ai/models/registry");
+
+      vi.mocked(getUserAllowGatewayFallback).mockResolvedValue(false);
+      vi.mocked(getUserApiKey).mockResolvedValue(null);
+
+      const result = await resolveProvider("user-server-provider");
+
+      expect(result.provider).toBe("xai");
+      expect(result.credentialSource).toBe("server-provider");
+      expect(String(result.model)).toContain(`xai::key::${DEFAULT_XAI_MODEL_ID}`);
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  it("reports no eligible provider when user disables Gateway fallback and no server keys exist", async () => {
     const originalEnv = process.env;
     process.env = {
       ...process.env,
@@ -388,7 +415,7 @@ describe("resolveProvider", () => {
       vi.mocked(getUserApiKey).mockResolvedValue(null);
 
       await expect(resolveProvider("user-no-fallback")).rejects.toThrow(
-        /not enabled Gateway fallback/
+        /Team Gateway fallback was skipped because disabled/
       );
     } finally {
       process.env = originalEnv;

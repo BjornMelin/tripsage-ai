@@ -260,6 +260,38 @@ function normalizeJsonValue(value: unknown, fallback: Json): Json {
   }
 }
 
+function buildToolResultPersistence(
+  maybeResult: ParsedToolResult | undefined,
+  completedAt: string
+): {
+  completedAt: string | null;
+  errorMessage: string | null;
+  providerExecuted: boolean;
+  result: Json | null;
+  status: "completed" | "failed" | "pending";
+} {
+  if (!maybeResult) {
+    return {
+      completedAt: null,
+      errorMessage: null,
+      providerExecuted: false,
+      result: null,
+      status: "pending",
+    };
+  }
+
+  return {
+    completedAt,
+    errorMessage:
+      maybeResult.isError && typeof maybeResult.result === "string"
+        ? maybeResult.result
+        : null,
+    providerExecuted: true,
+    result: normalizeJsonValue(maybeResult.result ?? null, null),
+    status: maybeResult.isError ? "failed" : "completed",
+  };
+}
+
 function getLastUserText(messages: UIMessage[]): string | undefined {
   const last = messages.findLast((m) => m.role === "user");
   if (!last) return undefined;
@@ -1144,6 +1176,7 @@ export async function handleChat(
 
   // Track tool calls already persisted to avoid duplicates across steps.
   const persistedToolCallIds = new Set<string>();
+  const completedToolCallIds = new Set<string>();
   const stepTimeoutMs =
     typeof deps.config?.stepTimeoutSeconds === "number" &&
     Number.isFinite(deps.config.stepTimeoutSeconds)
@@ -1244,30 +1277,25 @@ export async function handleChat(
             parsedToolCalls.push(parsed);
             if (persistedToolCallIds.has(parsed.toolCallId)) continue;
 
-            persistedToolCallIds.add(parsed.toolCallId);
             const maybeResult = resultsById.get(parsed.toolCallId);
 
             const args = normalizeJsonValue(parsed.args ?? parsed.input ?? {}, {});
-            const status = maybeResult?.isError ? "failed" : "completed";
-            const errorMessage =
-              maybeResult?.isError && typeof maybeResult.result === "string"
-                ? maybeResult.result
-                : null;
+            const resultPatch = buildToolResultPersistence(maybeResult, now);
 
             const toolRow = {
               arguments: args,
               // biome-ignore lint/style/useNamingConvention: Database field name
-              completed_at: now,
+              completed_at: resultPatch.completedAt,
               // biome-ignore lint/style/useNamingConvention: Database field name
               created_at: now,
               // biome-ignore lint/style/useNamingConvention: Database field name
-              error_message: errorMessage,
+              error_message: resultPatch.errorMessage,
               // biome-ignore lint/style/useNamingConvention: Database field name
               message_id: assistantMessageId,
               // biome-ignore lint/style/useNamingConvention: Database field name
-              provider_executed: true,
-              result: normalizeJsonValue(maybeResult?.result ?? null, null),
-              status,
+              provider_executed: resultPatch.providerExecuted,
+              result: resultPatch.result,
+              status: resultPatch.status,
               // biome-ignore lint/style/useNamingConvention: Database field name
               tool_id: parsed.toolCallId,
               // biome-ignore lint/style/useNamingConvention: Database field name
@@ -1293,7 +1321,53 @@ export async function handleChat(
                   toolName: parsed.toolName,
                   ...buildChatLogIdentifiers({ sessionId, userId }),
                 });
+              } else {
+                persistedToolCallIds.add(parsed.toolCallId);
+                if (maybeResult) completedToolCallIds.add(parsed.toolCallId);
               }
+            }
+          }
+
+          for (const maybeResult of resultsById.values()) {
+            if (
+              !canPersistAssistantMessage ||
+              !persistedToolCallIds.has(maybeResult.toolCallId) ||
+              completedToolCallIds.has(maybeResult.toolCallId)
+            ) {
+              continue;
+            }
+
+            const resultPatch = buildToolResultPersistence(maybeResult, now);
+            const { error } = await updateSingle(
+              toolCallSupabase,
+              "chat_tool_calls",
+              {
+                // biome-ignore lint/style/useNamingConvention: Database field name
+                completed_at: resultPatch.completedAt,
+                // biome-ignore lint/style/useNamingConvention: Database field name
+                error_message: resultPatch.errorMessage,
+                // biome-ignore lint/style/useNamingConvention: Database field name
+                provider_executed: resultPatch.providerExecuted,
+                result: resultPatch.result,
+                status: resultPatch.status,
+              },
+              (qb) =>
+                qb
+                  .eq("message_id", assistantMessageId)
+                  .eq("tool_id", maybeResult.toolCallId),
+              { select: "id", validate: false }
+            );
+
+            if (error) {
+              deps.logger?.warn?.("chat:tool_update_failed", {
+                error: error instanceof Error ? error.message : String(error),
+                requestId,
+                toolCallId: maybeResult.toolCallId,
+                toolName: maybeResult.toolName,
+                ...buildChatLogIdentifiers({ sessionId, userId }),
+              });
+            } else {
+              completedToolCallIds.add(maybeResult.toolCallId);
             }
           }
 

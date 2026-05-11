@@ -209,58 +209,63 @@ async function resolveByokProvider(
 /**
  * Resolve user's preferred provider and return a ready AI SDK model.
  *
- * @param userId Supabase auth user id; used to fetch BYOK keys server-side.
- * @param modelHint Optional generic model hint (e.g., "gpt-5.5").
+ * @param userId - Supabase auth user id; used to fetch BYOK keys server-side.
+ * @param modelHint - Optional generic model hint (e.g., "gpt-5.5").
  * @returns ProviderResolution including provider id, model id, and model instance.
- * @throws Error if no provider key is found for the user.
+ * @throws RejectedGatewayBaseUrlError - If a selected user or team Gateway base URL fails validation.
+ * @throws MissingExplicitProviderModelError - If the resolved provider requires explicit model selection.
+ * @throws Error - If a required provider lookup fails, no eligible credential source exists, or provider SDK initialization fails.
  */
 export async function resolveProvider(
   userId: string,
   modelHint?: string
 ): Promise<ProviderResolution> {
   // 0) Per-user Gateway key (if present): highest precedence
+  let userGatewayKey: string | null;
   try {
-    const userGatewayKey = await getUserApiKey(userId, "gateway");
-    if (userGatewayKey) {
-      const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
-      const gatewayBaseUrl = resolveGatewayBaseUrl(rawBaseUrl, "user");
-
-      const client = createGateway({
-        apiKey: userGatewayKey,
-        ...(gatewayBaseUrl.baseUrl
-          ? {
-              // biome-ignore lint/style/useNamingConvention: provider option name
-              baseURL: gatewayBaseUrl.baseUrl,
-            }
-          : {}),
-      });
-
-      const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-      const modelId = normalizeGatewayModelId("openai", resolvedModelId);
-      return await withTelemetrySpan(
-        "providers.resolve",
-        {
-          attributes: {
-            baseUrlHost: gatewayBaseUrl.host,
-            baseUrlSource: gatewayBaseUrl.source,
-            credentialSource: "user-gateway",
-            modelId,
-            path: "user-gateway",
-            provider: "gateway",
-          },
-        },
-        async () => ({
-          credentialSource: "user-gateway",
-          model: toLanguageModel(client(modelId), "openai", modelId),
-          modelId,
-          provider: "openai",
-        })
-      );
-    }
+    userGatewayKey = await getUserApiKey(userId, "gateway");
   } catch (error) {
     providerRegistryLogger.warn("gateway_lookup_failed", {
       errorName: getSafeErrorName(error),
     });
+    throw new Error("Gateway key lookup failed; refusing fallback.");
+  }
+
+  if (userGatewayKey) {
+    const rawBaseUrl = (await getUserGatewayBaseUrl(userId)) ?? undefined;
+    const gatewayBaseUrl = resolveGatewayBaseUrl(rawBaseUrl, "user");
+
+    const client = createGateway({
+      apiKey: userGatewayKey,
+      ...(gatewayBaseUrl.baseUrl
+        ? {
+            // biome-ignore lint/style/useNamingConvention: provider option name
+            baseURL: gatewayBaseUrl.baseUrl,
+          }
+        : {}),
+    });
+
+    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
+    return await withTelemetrySpan(
+      "providers.resolve",
+      {
+        attributes: {
+          baseUrlHost: gatewayBaseUrl.host,
+          baseUrlSource: gatewayBaseUrl.source,
+          credentialSource: "user-gateway",
+          modelId,
+          path: "user-gateway",
+          provider: "gateway",
+        },
+      },
+      async () => ({
+        credentialSource: "user-gateway",
+        model: toLanguageModel(client(modelId), "openai", modelId),
+        modelId,
+        provider: "openai",
+      })
+    );
   }
 
   // 1) Check for BYOK keys in preference order (OpenAI, OpenRouter, Anthropic, xAI)
@@ -291,6 +296,7 @@ export async function resolveProvider(
   // App-owned fallback: Vercel AI Gateway (if configured and allowed).
   // Gateway provides unified routing, budgets, retries, and observability.
   const gatewayApiKey = getServerEnvVarWithFallback("AI_GATEWAY_API_KEY", undefined);
+  let teamGatewaySkippedReason: "disabled" | "preference_lookup_failed" | undefined;
   if (gatewayApiKey) {
     let allowFallback: boolean | null = null;
     try {
@@ -303,44 +309,43 @@ export async function resolveProvider(
     }
 
     const gatewayUrl = getServerEnvVarWithFallback("AI_GATEWAY_URL", undefined);
-    if (allowFallback !== true) {
-      throw new Error(
-        "User has not enabled Gateway fallback; no per-user BYOK keys found."
-      );
-    }
+    if (allowFallback === true) {
+      const gatewayBaseUrl = resolveGatewayBaseUrl(gatewayUrl, "team");
+      const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
+      const modelId = normalizeGatewayModelId("openai", resolvedModelId);
 
-    const gatewayBaseUrl = resolveGatewayBaseUrl(gatewayUrl, "team");
-    const resolvedModelId = DEFAULT_MODEL_MAPPER("openai", modelHint);
-    const modelId = normalizeGatewayModelId("openai", resolvedModelId);
-
-    const gateway = createGateway({
-      apiKey: gatewayApiKey,
-      ...(gatewayBaseUrl.baseUrl
-        ? {
-            // biome-ignore lint/style/useNamingConvention: provider option name
-            baseURL: gatewayBaseUrl.baseUrl,
-          }
-        : {}),
-    });
-    return await withTelemetrySpan(
-      "providers.resolve",
-      {
-        attributes: {
-          baseUrlHost: gatewayBaseUrl.host,
-          baseUrlSource: gatewayBaseUrl.source,
-          credentialSource: "team-gateway",
-          modelId,
-          path: "team-gateway",
-          provider: "gateway",
+      const gateway = createGateway({
+        apiKey: gatewayApiKey,
+        ...(gatewayBaseUrl.baseUrl
+          ? {
+              // biome-ignore lint/style/useNamingConvention: provider option name
+              baseURL: gatewayBaseUrl.baseUrl,
+            }
+          : {}),
+      });
+      return await withTelemetrySpan(
+        "providers.resolve",
+        {
+          attributes: {
+            baseUrlHost: gatewayBaseUrl.host,
+            baseUrlSource: gatewayBaseUrl.source,
+            credentialSource: "team-gateway",
+            modelId,
+            path: "team-gateway",
+            provider: "gateway",
+          },
         },
-      },
-      async () => ({
-        credentialSource: "team-gateway",
-        model: toLanguageModel(gateway(modelId), "openai", modelId),
-        modelId,
-        provider: "openai",
-      })
-    );
+        async () => ({
+          credentialSource: "team-gateway",
+          model: toLanguageModel(gateway(modelId), "openai", modelId),
+          modelId,
+          provider: "openai",
+        })
+      );
+    } else {
+      teamGatewaySkippedReason =
+        allowFallback === null ? "preference_lookup_failed" : "disabled";
+    }
   }
 
   // Break-glass fallback: direct server-side provider keys. This is intentionally
@@ -388,10 +393,13 @@ export async function resolveProvider(
     }
   }
 
+  const teamGatewayDetail = teamGatewaySkippedReason
+    ? ` Team Gateway fallback was skipped because ${teamGatewaySkippedReason}.`
+    : "";
   throw new Error(
     "No provider key found for user and no server-side fallback keys configured; " +
       "please add a provider API key (BYOK) for one of: openai, openrouter, anthropic, xai, " +
       "or configure server-side fallback keys: OPENAI_API_KEY, OPENROUTER_API_KEY, " +
-      "ANTHROPIC_API_KEY, XAI_API_KEY, or AI_GATEWAY_API_KEY."
+      `ANTHROPIC_API_KEY, XAI_API_KEY, or AI_GATEWAY_API_KEY.${teamGatewayDetail}`
   );
 }
