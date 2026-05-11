@@ -12,7 +12,6 @@ import {
   type ToolErrorCode,
 } from "@ai/tools/server/errors";
 import type { AgentWorkflowKind } from "@schemas/agents";
-import { Ratelimit } from "@upstash/ratelimit";
 import type { FlexibleSchema, JSONValue, Tool, ToolExecutionOptions } from "ai";
 import { asSchema } from "ai";
 import { headers } from "next/headers";
@@ -25,7 +24,7 @@ import {
   normalizeRateLimitResetToMs,
 } from "@/lib/ratelimit/headers";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
-import { getRedis } from "@/lib/redis";
+import { checkUpstashRateLimit, type RateLimitWindow } from "@/lib/ratelimit/upstash";
 import {
   type Span,
   type TelemetrySpanAttributes,
@@ -103,9 +102,6 @@ function toJsonValue(value: unknown): JSONValue {
     );
   }
 }
-
-/** Type alias for rate limit window duration accepted by Upstash Ratelimit. */
-type RateLimitWindow = Parameters<typeof Ratelimit.slidingWindow>[1];
 
 /**
  * Signature for tool execution functions that receive validated input and call options.
@@ -254,18 +250,6 @@ export type CreateAiToolOptions<InputValue, OutputValue> = ToolOptions<
 type CacheLookupResult<OutputValue> =
   | { hit: true; value: OutputValue }
   | { hit: false };
-
-/**
- * Cache of Ratelimit instances by configuration key.
- *
- * Design decision: Upstash Ratelimit instances are stateless Redis clients,
- * so reusing them across requests is safe and reduces instantiation overhead.
- * Each unique (prefix, limit, window) combination gets its own cached instance.
- * The cache key format is `${namespace}:${limit}:${window}` to ensure distinct
- * configurations don't share limiters.
- */
-const rateLimiterCache = new Map<string, InstanceType<typeof Ratelimit>>();
-const MAX_RATE_LIMITER_CACHE_SIZE = 128;
 
 /**
  * Builds lifecycle hooks object from options, including only defined hooks.
@@ -628,45 +612,31 @@ async function enforceRateLimit<InputValue>(
     ? toHashedLimiterIdentifier(override)
     : await getRateLimitIdentifier();
 
-  const redis = getRedis();
-  if (!redis) {
-    span.addEvent("ratelimit_skipped", { reason: "redis_unavailable" });
+  const limiterNamespace = config.prefix ?? `ratelimit:tool:${toolName}`;
+  const result = await checkUpstashRateLimit({
+    analytics: false,
+    dynamicLimits: true,
+    identifier,
+    limit: config.limit,
+    prefix: limiterNamespace,
+    window: config.window as RateLimitWindow,
+  });
+  if (result.status === "unavailable") {
+    span.addEvent("ratelimit_skipped", { reason: result.reason });
     return;
   }
+  if (result.status === "pass") return;
 
-  const limiterNamespace = config.prefix ?? `ratelimit:tool:${toolName}`;
-  const limiterKey = `${limiterNamespace}:${config.limit}:${config.window}`;
-  let limiter = rateLimiterCache.get(limiterKey);
-  if (!limiter) {
-    limiter = new Ratelimit({
-      analytics: false,
-      dynamicLimits: true,
-      limiter: Ratelimit.slidingWindow(config.limit, config.window as RateLimitWindow),
-      prefix: limiterNamespace,
-      redis,
-    });
-    if (rateLimiterCache.size >= MAX_RATE_LIMITER_CACHE_SIZE) {
-      const oldestKey = rateLimiterCache.keys().next().value;
-      if (oldestKey) {
-        rateLimiterCache.delete(oldestKey);
-      }
-    }
-    rateLimiterCache.set(limiterKey, limiter);
-  }
-
-  const result = await limiter.limit(identifier);
   // Validate rate limit result structure using schema
   const validatedResult: RateLimitResult = rateLimitResultSchema.parse({
-    limit: result.limit,
-    remaining: result.remaining,
+    limit: result.result.limit,
+    remaining: result.result.remaining,
     reset:
-      typeof result.reset === "number"
-        ? normalizeRateLimitResetToMs(result.reset)
+      typeof result.result.reset === "number"
+        ? normalizeRateLimitResetToMs(result.result.reset)
         : undefined,
-    success: result.success,
+    success: result.result.success,
   });
-
-  if (validatedResult.success) return;
 
   const subjectType = identifier.startsWith("user:")
     ? "user"

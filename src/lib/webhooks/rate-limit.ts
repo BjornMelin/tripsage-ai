@@ -4,13 +4,11 @@
 
 import "server-only";
 
-import { Ratelimit } from "@upstash/ratelimit";
 import { NextResponse } from "next/server";
-import type { DegradedMode } from "@/lib/api/factory";
 import { getClientIpFromHeaders } from "@/lib/http/ip";
 import { createRateLimitHeaders as createStandardRateLimitHeaders } from "@/lib/ratelimit/headers";
 import { hashIdentifier } from "@/lib/ratelimit/identifier";
-import { getRedis } from "@/lib/redis";
+import { checkUpstashRateLimit, type DegradedMode } from "@/lib/ratelimit/upstash";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { warnRedisUnavailable } from "@/lib/telemetry/redis";
 import { sanitizePathnameForTelemetry } from "@/lib/telemetry/route-key";
@@ -87,15 +85,29 @@ export async function checkWebhookRateLimitWithPolicy(
 ): Promise<RateLimitResult> {
   const degradedMode = options.degradedMode ?? "fail_closed";
   const route = sanitizePathnameForTelemetry(new URL(req.url).pathname);
-  const redis = getRedis();
-  if (!redis) {
-    warnRedisUnavailable(REDIS_FEATURE);
+
+  const ip = getClientIp(req);
+  const identifier = ip === "unknown" ? "ip:unknown" : `ip:${hashIdentifier(ip)}`;
+  const result = await checkUpstashRateLimit({
+    analytics: true,
+    dynamicLimits: true,
+    ephemeralCache: false,
+    identifier,
+    limit: 100,
+    prefix: "webhook:rl",
+    window: "1 m",
+  });
+
+  if (result.status === "unavailable") {
+    if (result.reason === "redis_unavailable") {
+      warnRedisUnavailable(REDIS_FEATURE);
+    }
     if (degradedMode === "fail_open") {
       emitOperationalAlertOncePerWindow({
         attributes: {
           degradedMode: "fail_open",
           feature: REDIS_FEATURE,
-          reason: "redis_unavailable",
+          reason: result.reason,
           route,
         },
         event: "ratelimit.degraded",
@@ -103,36 +115,8 @@ export async function checkWebhookRateLimitWithPolicy(
       });
       return { reason: "limiter_unavailable", success: true };
     }
-    return { reason: "limiter_unavailable", success: false };
-  }
 
-  const rateLimiter = new Ratelimit({
-    analytics: true,
-    dynamicLimits: true,
-    limiter: Ratelimit.slidingWindow(100, "1 m"),
-    prefix: "webhook:rl",
-    redis,
-  });
-
-  const ip = getClientIp(req);
-  const identifier = ip === "unknown" ? "ip:unknown" : `ip:${hashIdentifier(ip)}`;
-  try {
-    const { success, reset, remaining, limit, reason } =
-      await rateLimiter.limit(identifier);
-    if (reason === "timeout") {
-      if (degradedMode === "fail_open") {
-        emitOperationalAlertOncePerWindow({
-          attributes: {
-            degradedMode: "fail_open",
-            feature: REDIS_FEATURE,
-            reason: "timeout",
-            route,
-          },
-          event: "ratelimit.degraded",
-          windowMs: 60_000,
-        });
-        return { reason: "limiter_unavailable", success: true };
-      }
+    if (result.reason === "timeout") {
       recordTelemetryEvent("webhook.rate_limit_timeout", {
         attributes: {
           feature: REDIS_FEATURE,
@@ -140,34 +124,35 @@ export async function checkWebhookRateLimitWithPolicy(
         },
         level: "error",
       });
-      return { reason: "limiter_unavailable", success: false };
-    }
-    if (!success) return { limit, reason: "rate_limited", remaining, reset, success };
-    return { limit, remaining, reset, success };
-  } catch (error) {
-    if (degradedMode === "fail_open") {
-      emitOperationalAlertOncePerWindow({
+    } else if (result.reason === "enforcement_error") {
+      recordTelemetryEvent("webhook.rate_limit_error", {
         attributes: {
-          degradedMode: "fail_open",
+          error: result.error instanceof Error ? result.error.message : "unknown_error",
           feature: REDIS_FEATURE,
-          reason: "enforcement_error",
           route,
         },
-        event: "ratelimit.degraded",
-        windowMs: 60_000,
+        level: "error",
       });
-      return { reason: "limiter_unavailable", success: true };
     }
-    recordTelemetryEvent("webhook.rate_limit_error", {
-      attributes: {
-        error: error instanceof Error ? error.message : "unknown_error",
-        feature: REDIS_FEATURE,
-        route,
-      },
-      level: "error",
-    });
     return { reason: "limiter_unavailable", success: false };
   }
+
+  if (result.status === "limited") {
+    return {
+      limit: result.result.limit,
+      reason: "rate_limited",
+      remaining: result.result.remaining,
+      reset: result.result.reset,
+      success: false,
+    };
+  }
+
+  return {
+    limit: result.result.limit,
+    remaining: result.result.remaining,
+    reset: result.result.reset,
+    success: true,
+  };
 }
 
 /**

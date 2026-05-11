@@ -16,12 +16,11 @@ import {
 } from "@ai/tools/schemas/web-search-batch";
 import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
 import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
-import { Ratelimit } from "@upstash/ratelimit";
 import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
-import { getRedis } from "@/lib/redis";
+import { checkUpstashRateLimit } from "@/lib/ratelimit/upstash";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { webSearch } from "./web-search";
 
@@ -47,25 +46,32 @@ async function resolveToolResult(result: unknown): Promise<unknown> {
   return await Promise.resolve(result);
 }
 
-/**
- * Build Upstash rate limiter for batch web search tool.
- *
- * Returns undefined if Upstash env vars are missing. Uses sliding window:
- * 20 requests per minute per user.
- *
- * @returns Rate limiter instance or undefined if not configured.
- */
-
-function buildToolRateLimiter(): InstanceType<typeof Ratelimit> | undefined {
-  const redis = getRedis();
-  if (!redis) return undefined;
-  return new Ratelimit({
+async function enforceBatchRateLimit(userId: string): Promise<void> {
+  const identifier = `user:${hashIdentifier(normalizeIdentifier(userId))}`;
+  const result = await checkUpstashRateLimit({
     analytics: true,
     dynamicLimits: true,
-    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    ephemeralCache: false,
+    identifier,
+    limit: 20,
     prefix: "ratelimit:tools:web-search-batch",
-    redis,
+    window: "1 m",
   });
+
+  if (result.status === "unavailable") {
+    webSearchBatchLogger.error("rate_limiter_unavailable", {
+      reason: result.reason,
+    });
+    return;
+  }
+  if (result.status === "limited") {
+    throw createToolError(TOOL_ERROR_CODES.webSearchRateLimited, undefined, {
+      limit: result.result.limit,
+      remaining: result.result.remaining,
+      reset: result.result.reset,
+      success: false,
+    });
+  }
 }
 
 /**
@@ -94,13 +100,8 @@ export const webSearchBatch = createAiTool({
     const started = Date.now();
     // Optional top-level rate limiting (in addition to per-query limits)
     try {
-      const rl = buildToolRateLimiter();
-      if (rl && userId) {
-        const identifier = `user:${hashIdentifier(normalizeIdentifier(userId))}`;
-        const rr = await rl.limit(identifier);
-        if (!rr.success) {
-          throw createToolError(TOOL_ERROR_CODES.webSearchRateLimited, undefined, rr);
-        }
+      if (userId) {
+        await enforceBatchRateLimit(userId);
       }
     } catch (e) {
       if (
