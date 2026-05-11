@@ -1,6 +1,12 @@
 # TripSage Deployment Guide (Next.js + AI SDK v6)
 
-This guide replaces the legacy FastAPI backend material. TripSage now runs as a server-first Next.js 16 app with AI SDK v6 route handlers.
+This guide replaces the legacy FastAPI backend material. TripSage now runs as a
+server-first Next.js 16 app with AI SDK v6 route handlers.
+
+For the authoritative production deployment procedure, use
+[Deployment Runbook: Vercel + Supabase + Upstash](../runbooks/deployment-vercel.md).
+Git-based Vercel deployments are disabled; production is promoted only through
+the CLI prebuilt deployment workflow after smoke checks pass.
 
 ## Prerequisites
 
@@ -49,6 +55,9 @@ make supa.db.push                       # apply supabase/migrations/* to remote
 ## Deployment
 
 - **Canonical: Vercel (Next.js App Router)**  
+  - Production deployment procedure:
+    [Deployment Runbook: Vercel + Supabase + Upstash](../runbooks/deployment-vercel.md).
+  - Git-based Vercel deployments are disabled in `vercel.json`.
   - Default runtime: **Node.js**. Use Edge only for stateless/public paths that do not require Supabase SSR cookies.  
   - Set Environment Variables in Project Settings for `production` and `preview`.  
   - Build command: `pnpm build`; Output: `Next.js`.  
@@ -64,6 +73,9 @@ The `vercel.json` file configures function settings:
     "src/app/api/**/route.*": {
       "maxDuration": 60
     }
+  },
+  "git": {
+    "deploymentEnabled": false
   }
 }
 ```
