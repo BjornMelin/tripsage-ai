@@ -35,7 +35,7 @@ workflow-orchestration rewrite:
 | QStash RAG delivery timeout | 55s | `RAG_INDEX_QSTASH_TIMEOUT_SECONDS` |
 | Embedding abort timeout | 50s | `RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS` |
 | QStash RAG request body cap | 512 KiB | `MAX_RAG_INDEX_JOB_BODY_BYTES` |
-| QStash documented message-size ceiling | 1 MiB | Upstash QStash docs |
+| QStash documented default message-size limit | 1 MiB | Upstash QStash docs |
 | Attachment download cap | 10 MiB | `ATTACHMENT_MAX_FILE_SIZE` |
 | Extracted text cap | 250,000 chars | `MAX_RAG_INDEX_TOTAL_CONTENT_CHARS` |
 | Documents per RAG job | 100 | `MAX_RAG_INDEX_DOCUMENTS` |
@@ -59,8 +59,10 @@ The attachment-to-RAG QStash message body is a raw user-content processor
 boundary: it carries extracted document content and attachment metadata so the
 worker can index asynchronously, and retryable failures can leave that body in
 QStash retry/DLQ storage. Treat QStash credentials, DLQ access, and payload
-inspection as sensitive production data access. Telemetry must only record
-redacted aggregate counters and hashes, never the payload content or metadata.
+inspection as sensitive production data access. The publisher must request
+provider-side request-body log redaction for this message. Telemetry must only
+record redacted aggregate counters and hashes, never the payload content or
+sensitive metadata such as filenames and storage paths.
 
 Open a separate Upstash Workflow pilot issue only if production telemetry shows
 one of these conditions for the attachment/RAG path:

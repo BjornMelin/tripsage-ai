@@ -61,6 +61,7 @@ describe("enqueueJob", () => {
       failureCallback: "https://example.com/failure",
       flowControl: { key: "tenant-1", parallelism: 2 },
       label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+      redact: { body: true },
       timeout: 30,
     });
 
@@ -73,6 +74,7 @@ describe("enqueueJob", () => {
     expect(messages[0]?.failureCallback).toBe("https://example.com/failure");
     expect(messages[0]?.retries).toBe(5);
     expect(messages[0]?.retryDelay).toBe("10000 * pow(2, retried)");
+    expect(messages[0]?.redact).toEqual({ body: true });
     expect(messages[0]?.timeout).toBe(30);
     expect(result?.messageId).toBe("qstash-mock-1");
   });

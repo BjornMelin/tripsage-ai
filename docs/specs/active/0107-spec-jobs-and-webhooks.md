@@ -76,8 +76,9 @@ Jobs (QStash workers):
   `Upstash-NonRetryable-Error: true`.
 - Attachment-to-RAG QStash message bodies currently carry extracted document
   content and attachment metadata; treat QStash retry/DLQ access as sensitive
-  production data access and keep telemetry redacted to counts, booleans,
-  namespaces, low-cardinality codes, and hashes.
+  production data access, request provider-side body log redaction on publish,
+  and keep telemetry redacted to counts, booleans, namespaces, low-cardinality
+  codes, and hashes.
 
 Open a follow-up Upstash Workflow pilot only after production telemetry shows
 sustained P95 duration above 45s, repeated QStash delivery timeouts/DLQ events,

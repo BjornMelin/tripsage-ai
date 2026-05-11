@@ -369,6 +369,7 @@ export async function handleAttachmentsIngest(
       {
         deduplicationId: `rag-index:attachment:${job.attachmentId}`,
         label: QSTASH_JOB_LABELS.RAG_INDEX,
+        redact: { body: true },
         timeout: RAG_INDEX_QSTASH_TIMEOUT_SECONDS,
       }
     );
