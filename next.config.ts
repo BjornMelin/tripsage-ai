@@ -49,7 +49,6 @@ const nextConfig: NextConfig = {
   experimental: {
     // Package import optimization by allowlist
     optimizePackageImports: [
-      "@radix-ui/react-icons",
       "@supabase/supabase-js",
       "zod",
       "ai",
@@ -63,7 +62,6 @@ const nextConfig: NextConfig = {
       "@hookform/resolvers",
       "@opentelemetry/api",
       "motion",
-      "@hello-pangea/dnd",
       "streamdown",
       "@streamdown/code",
       "@streamdown/math",
