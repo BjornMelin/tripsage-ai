@@ -87,7 +87,7 @@ function createTestDeps(overrides: Partial<AgentDependencies> = {}): AgentDepend
   return {
     identifier: "test-user-123",
     model: createMockModel(),
-    modelId: "gpt-4",
+    modelId: "gpt-5.4-mini",
     sessionId: "test-session-456",
     userId: "test-user-123",
     ...overrides,
@@ -109,7 +109,7 @@ describe("createTripSageAgent", () => {
 
     expect(result).toBeDefined();
     expect(result.agentType).toBe("budgetPlanning");
-    expect(result.modelId).toBe("gpt-4");
+    expect(result.modelId).toBe("gpt-5.4-mini");
     expect(result.agent).toBeDefined();
     expect(result.defaultMessages).toEqual(config.defaultMessages);
 
@@ -158,7 +158,7 @@ describe("createTripSageAgent", () => {
     // Verify that undefined sessionId/userId are handled gracefully
     expect(result.agent).toBeDefined();
     // Agent should be created even without sessionId/userId
-    expect(result.modelId).toBe("gpt-4");
+    expect(result.modelId).toBe("gpt-5.4-mini");
   });
 
   it("sanitizes prepareCall instruction overrides", async () => {
@@ -211,7 +211,7 @@ describe("extractAgentParameters", () => {
       createdAt: "2025-01-01T00:00:00.000Z",
       id: "test-id",
       isEnabled: true,
-      model: "gpt-4" as const,
+      model: "gpt-5.4-mini" as const,
       parameters: {},
       scope: "global" as const,
       updatedAt: "2025-01-01T00:00:00.000Z",
@@ -231,7 +231,7 @@ describe("extractAgentParameters", () => {
       createdAt: "2025-01-01T00:00:00.000Z",
       id: "test-id",
       isEnabled: true,
-      model: "gpt-4" as const,
+      model: "gpt-5.4-mini" as const,
       parameters: {
         maxOutputTokens: 8192,
         stepLimit: 20,

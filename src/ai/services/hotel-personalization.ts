@@ -289,7 +289,7 @@ export async function personalizeHotels(
 
       // Generate via AI
       const prompt = buildPersonalizationPrompt(hotels, preferences);
-      const { model, modelId } = await resolveProvider(userId, "gpt-4o-mini");
+      const { model, modelId } = await resolveProvider(userId);
 
       let response: Awaited<ReturnType<typeof generateText>>;
       try {

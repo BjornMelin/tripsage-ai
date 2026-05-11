@@ -37,8 +37,8 @@ import type { AgentDependencies } from "../types";
 describe("createFlightAgent", () => {
   const mockDeps: AgentDependencies = {
     identifier: "test-agent",
-    model: { modelId: "gpt-4" } as AgentDependencies["model"],
-    modelId: "gpt-4",
+    model: { modelId: "gpt-5.4-mini" } as AgentDependencies["model"],
+    modelId: "gpt-5.4-mini",
     sessionId: "session-123",
     userId: "user-456",
   };
@@ -48,7 +48,7 @@ describe("createFlightAgent", () => {
     agentType: "flightAgent",
     createdAt: "2025-01-01T00:00:00Z",
     id: "config-1",
-    model: "gpt-4",
+    model: "gpt-5.4-mini",
     parameters: {
       maxOutputTokens: 2048,
       stepLimit: 10,
@@ -113,7 +113,7 @@ describe("createFlightAgent", () => {
         expect.objectContaining({ role: "user" }),
       ]),
       2048,
-      "gpt-4"
+      "gpt-5.4-mini"
     );
   });
 

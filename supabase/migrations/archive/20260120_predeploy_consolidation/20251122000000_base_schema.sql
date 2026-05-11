@@ -1100,7 +1100,7 @@ BEGIN
       'createdAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
       'updatedAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
       'id', concat('v', extract(epoch from now())::bigint, '_seed_', agent),
-      'model', 'gpt-4o',
+      'model', 'gpt-5.5',
       'parameters', jsonb_build_object(
         'temperature', 0.3,
         'maxTokens', 4096,
@@ -1362,7 +1362,9 @@ CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authent
   )
 );
 DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;
-CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
+CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND role = 'user' AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
+DROP POLICY IF EXISTS "chat_messages_service_insert" ON public.chat_messages;
+CREATE POLICY chat_messages_service_insert ON public.chat_messages FOR INSERT TO service_role WITH CHECK (true);
 
 ALTER TABLE public.chat_tool_calls ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "chat_tool_calls_select" ON public.chat_tool_calls;

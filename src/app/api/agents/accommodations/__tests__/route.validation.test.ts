@@ -22,7 +22,7 @@ vi.mock("next/headers", () => ({
 
 // Mock provider registry
 vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-4o" })),
+  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-5.5" })),
 }));
 
 // Mock accommodation agent

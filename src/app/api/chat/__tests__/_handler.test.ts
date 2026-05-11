@@ -120,6 +120,9 @@ describe("handleChat", () => {
       },
       user: { id: userId },
     });
+    const serverSupabase = createMockSupabaseClient({
+      user: { id: userId },
+    });
 
     getMaybeSingleMock.mockResolvedValue({ data: { id: sessionId }, error: null });
     getManyMock.mockResolvedValue({ count: null, data: [], error: null });
@@ -137,10 +140,15 @@ describe("handleChat", () => {
     await handleChat(
       {
         resolveProvider: async () => ({
+          credentialSource: "user-provider",
           model: createMockModel(),
-          modelId: "gpt-4o",
+          modelId: "gpt-5.5",
           provider: "openai",
         }),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(
+            serverSupabase
+          ),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },
@@ -158,6 +166,18 @@ describe("handleChat", () => {
     );
 
     expect(createUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+    expect(insertSingleMock).toHaveBeenNthCalledWith(
+      1,
+      supabase,
+      "chat_messages",
+      expect.objectContaining({ role: "user" })
+    );
+    expect(insertSingleMock).toHaveBeenNthCalledWith(
+      2,
+      serverSupabase,
+      "chat_messages",
+      expect.objectContaining({ role: "assistant" })
+    );
     const responseOpts = captured.responseOptions as {
       consumeSseStream?: unknown;
     };
@@ -210,6 +230,7 @@ describe("handleChat", () => {
     });
 
     expect(updateSingleMock).toHaveBeenCalledTimes(1);
+    expect(updateSingleMock.mock.calls[0]?.[0]).toBe(serverSupabase);
     const update = updateSingleMock.mock.calls[0]?.[2] as {
       content?: unknown;
       metadata?: unknown;
@@ -266,7 +287,7 @@ describe("handleChat", () => {
     );
   });
 
-  it("does not 500 when history contains legacy model tool-call parts", async () => {
+  it("loads canonicalized history and rehydrates tool rows for model context", async () => {
     const { handleChat } = await import("../_handler");
 
     const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -277,14 +298,15 @@ describe("handleChat", () => {
         chat_messages: {
           data: [
             {
-              content: JSON.stringify([
-                {
-                  args: { query: "london" },
-                  toolCallId: "call-legacy-1",
-                  toolName: "webSearch",
-                  type: "tool-call",
-                },
-              ]),
+              content: JSON.stringify([{ text: "ignore me", type: "text" }]),
+              id: 99,
+              metadata: {},
+              role: "system",
+              session_id: sessionId,
+              user_id: userId,
+            },
+            {
+              content: JSON.stringify([{ text: "", type: "text" }]),
               id: 1,
               metadata: {},
               role: "assistant",
@@ -331,8 +353,9 @@ describe("handleChat", () => {
     const res = await handleChat(
       {
         resolveProvider: async () => ({
+          credentialSource: "user-provider",
           model: createMockModel(),
-          modelId: "gpt-4o",
+          modelId: "gpt-5.5",
           provider: "openai",
         }),
         supabase:
@@ -353,5 +376,11 @@ describe("handleChat", () => {
 
     expect(res.status).toBe(200);
     expect(createUIMessageStreamResponseMock).toHaveBeenCalledTimes(1);
+    const streamOpts = captured.streamOptions as {
+      originalMessages?: Array<{ role: string }>;
+    };
+    expect(
+      streamOpts.originalMessages?.some((message) => message.role === "system")
+    ).toBe(false);
   });
 });

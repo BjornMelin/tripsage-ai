@@ -31,7 +31,7 @@ vi.mock("@ai/models/registry", () => {
   return {
     resolveProvider: vi.fn(async () => ({
       model,
-      modelId: "openai/gpt-4o",
+      modelId: "openai/gpt-5.5",
       provider: "openai",
     })),
   };

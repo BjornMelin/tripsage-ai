@@ -72,6 +72,8 @@ export type ProviderResolver = (
 
 export interface ChatDeps {
   supabase: TypedServerSupabase;
+  serverSupabase?: TypedServerSupabase;
+  toolCallSupabase?: TypedServerSupabase;
   resolveProvider: ProviderResolver;
   logger?: ServerLogger;
   clock?: { now: () => number };
@@ -660,7 +662,7 @@ async function loadChatHistory(options: {
             ascending: true,
             orderBy: "id",
             select:
-              "message_id, tool_id, tool_name, arguments, result, status, error_message",
+              "message_id, tool_id, tool_name, arguments, result, status, provider_executed, error_message",
             validate: false,
           }
         )
@@ -702,7 +704,9 @@ async function loadChatHistory(options: {
     toolCallsByMessageId.set(messageId, existing);
   }
 
-  const rawUiMessages = ordered.map((row) => {
+  const trustedRows = ordered.filter((row) => row.role !== "system");
+
+  const rawUiMessages = trustedRows.map((row) => {
     const baseParts = parsePersistedUiParts({
       content: row.content,
       logger: options.logger,
@@ -788,7 +792,7 @@ async function loadChatHistory(options: {
   }
 
   const hydrated: HydratedChatMessage[] = validated.data.map((uiMessage, index) => {
-    const row = ordered[index];
+    const row = trustedRows[index];
     const uiMessageId = uiMessage.id;
     const isSuperseded = isSupersededMessage(row?.metadata);
 
@@ -966,6 +970,8 @@ export async function handleChat(
     }
   }
 
+  const serverSupabase = deps.serverSupabase ?? deps.toolCallSupabase ?? deps.supabase;
+
   const attachmentValidation = validateImageAttachments(promptUiMessages);
   if (!attachmentValidation.valid) {
     return errorResponse({
@@ -1045,7 +1051,7 @@ export async function handleChat(
       });
 
       const { error } = await updateSingle(
-        deps.supabase,
+        serverSupabase,
         "chat_messages",
         { metadata: supersededMeta },
         (qb) => qb.eq("id", target.dbId).eq("user_id", userId),
@@ -1065,6 +1071,7 @@ export async function handleChat(
   const assistantBaseMetadata: Json = {
     model: provider.modelId,
     provider: provider.provider,
+    providerCredentialSource: provider.credentialSource,
     regenerationOf,
     requestId,
     sessionId,
@@ -1080,7 +1087,7 @@ export async function handleChat(
     metadata: assistantBaseMetadata,
     role: "assistant",
     sessionId,
-    supabase: deps.supabase,
+    supabase: serverSupabase,
     userId,
   });
   if (!assistantPersist.ok) return assistantPersist.res;
@@ -1186,7 +1193,7 @@ export async function handleChat(
           }
 
           const { error } = await updateSingle(
-            deps.supabase,
+            serverSupabase,
             "chat_messages",
             { content, metadata: updatedMeta },
             (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
@@ -1241,6 +1248,8 @@ export async function handleChat(
               error_message: errorMessage,
               // biome-ignore lint/style/useNamingConvention: Database field name
               message_id: assistantMessageId,
+              // biome-ignore lint/style/useNamingConvention: Database field name
+              provider_executed: true,
               result: normalizeJsonValue(maybeResult?.result ?? null, null),
               status,
               // biome-ignore lint/style/useNamingConvention: Database field name
@@ -1251,7 +1260,7 @@ export async function handleChat(
 
             if (canPersistAssistantMessage) {
               const { error } = await insertSingle(
-                deps.supabase,
+                deps.toolCallSupabase ?? serverSupabase,
                 "chat_tool_calls",
                 toolRow,
                 { select: "id", validate: false }
@@ -1295,7 +1304,7 @@ export async function handleChat(
 
               if (canPersistAssistantMessage) {
                 const { error: stepError } = await updateSingle(
-                  deps.supabase,
+                  serverSupabase,
                   "chat_messages",
                   { metadata: stepMetadata },
                   (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),
@@ -1388,7 +1397,7 @@ export async function handleChat(
       }
 
       const { error } = await updateSingle(
-        deps.supabase,
+        serverSupabase,
         "chat_messages",
         { content, metadata: updatedMeta },
         (qb) => qb.eq("id", assistantMessageId).eq("user_id", userId),

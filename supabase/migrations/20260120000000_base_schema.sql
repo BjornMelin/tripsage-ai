@@ -319,6 +319,7 @@ CREATE TABLE IF NOT EXISTS public.chat_tool_calls (
     arguments JSONB NOT NULL DEFAULT '{}'::jsonb,
     result JSONB,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','completed','failed')),
+    provider_executed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     completed_at TIMESTAMPTZ,
     error_message TEXT
@@ -468,7 +469,7 @@ CREATE TABLE IF NOT EXISTS public.api_gateway_configs (
 
 CREATE TABLE IF NOT EXISTS public.user_settings (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  allow_gateway_fallback BOOLEAN NOT NULL DEFAULT TRUE
+  allow_gateway_fallback BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- API keys metadata (vault-backed secret names)
@@ -1120,7 +1121,7 @@ DECLARE v_flag BOOLEAN; BEGIN
   END IF;
   SELECT allow_gateway_fallback INTO v_flag FROM public.user_settings WHERE user_id = p_user_id;
   IF v_flag IS NULL THEN
-    RETURN TRUE;
+    RETURN FALSE;
   END IF;
   RETURN v_flag;
 END; $$;
@@ -1186,7 +1187,7 @@ BEGIN
       'createdAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
       'updatedAt', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
       'id', concat('v', extract(epoch from now())::bigint, '_', substr(md5(agent), 1, 8)),
-      'model', 'gpt-4o',
+      'model', 'gpt-5.5',
       'parameters', jsonb_build_object(
         'temperature', 0.3,
         'maxOutputTokens', 4096,
@@ -2159,7 +2160,9 @@ CREATE POLICY chat_messages_select ON public.chat_messages FOR SELECT TO authent
   )
 );
 DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;
-CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
+CREATE POLICY chat_messages_insert ON public.chat_messages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND role = 'user' AND session_id IN (SELECT id FROM public.chat_sessions WHERE user_id = auth.uid()));
+DROP POLICY IF EXISTS "chat_messages_service_insert" ON public.chat_messages;
+CREATE POLICY chat_messages_service_insert ON public.chat_messages FOR INSERT TO service_role WITH CHECK (true);
 
 ALTER TABLE public.chat_tool_calls ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "chat_tool_calls_select" ON public.chat_tool_calls;
@@ -2177,15 +2180,11 @@ CREATE POLICY chat_tool_calls_select ON public.chat_tool_calls FOR SELECT TO aut
   )
 );
 DROP POLICY IF EXISTS "chat_tool_calls_insert" ON public.chat_tool_calls;
-CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO authenticated WITH CHECK (
-  message_id IN (
-    SELECT id FROM public.chat_messages WHERE user_id = auth.uid()
-  )
-);
+CREATE POLICY chat_tool_calls_insert ON public.chat_tool_calls FOR INSERT TO service_role WITH CHECK (true);
 
 ALTER TABLE public.api_gateway_configs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "api_gateway_configs_owner" ON public.api_gateway_configs;
-CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY api_gateway_configs_owner ON public.api_gateway_configs FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "api_gateway_configs_service" ON public.api_gateway_configs;
 CREATE POLICY api_gateway_configs_service ON public.api_gateway_configs FOR ALL TO service_role USING (true) WITH CHECK (true);
 

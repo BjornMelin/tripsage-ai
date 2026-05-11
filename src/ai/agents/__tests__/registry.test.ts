@@ -109,7 +109,7 @@ function createTestDeps(): AgentDependencies {
   return {
     identifier: "test-user-123",
     model: createMockModelWithTracking({ text: "Mock response" }).model,
-    modelId: "gpt-4",
+    modelId: "gpt-5.4-mini",
     sessionId: "test-session-456",
     userId: "test-user-123",
   };
@@ -184,7 +184,7 @@ describe("createAgentForWorkflow", () => {
       agentType,
       createdAt: "2025-01-01T00:00:00.000Z",
       id: "test-config-id",
-      model: "gpt-4" as const,
+      model: "gpt-5.4-mini" as const,
       parameters: {
         maxOutputTokens: 4096,
         stepLimit: 10,
@@ -319,7 +319,7 @@ describe("createAgentForWorkflow", () => {
       agentType: "budgetAgent" as const,
       createdAt: "2025-01-01T00:00:00.000Z",
       id: "test-config-id",
-      model: "gpt-4" as const,
+      model: "gpt-5.4-mini" as const,
       parameters: {}, // Empty parameters should use defaults
       scope: "global" as const,
       updatedAt: "2025-01-01T00:00:00.000Z",

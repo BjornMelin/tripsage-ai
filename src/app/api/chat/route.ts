@@ -15,6 +15,7 @@ import {
   parseJsonBody,
   requireUserId,
 } from "@/lib/api/route-helpers";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { createMemorySummaryCache, handleChat } from "./_handler";
 
@@ -147,6 +148,7 @@ export const POST = withApiGuards({
   const stepLimit = getDefaultMaxSteps();
   const timeoutSeconds = getDefaultTimeoutSeconds();
   const stepTimeoutSeconds = getDefaultStepTimeoutSeconds(timeoutSeconds);
+  const adminSupabase = getAdminSupabase();
   return handleChat(
     {
       clock: { now: () => Date.now() },
@@ -159,7 +161,9 @@ export const POST = withApiGuards({
       logger,
       memorySummaryCache,
       resolveProvider,
+      serverSupabase: adminSupabase,
       supabase,
+      toolCallSupabase: adminSupabase,
     },
     {
       abortSignal: req.signal,

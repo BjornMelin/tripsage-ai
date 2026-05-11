@@ -104,25 +104,18 @@ describe("sessions _handlers", () => {
 
     const assistant = body.find((m) => m.role === "assistant");
     expect(assistant).toBeTruthy();
-    const toolPart = assistant?.parts.find(
-      (p) => p.type === "dynamic-tool" || p.type.startsWith("tool-")
-    );
+    const toolPart = assistant?.parts.find((p) => p.type.startsWith("tool-"));
     expect(toolPart).toBeTruthy();
     expect(toolPart).toMatchObject({
       input: { query: "london" },
       output: { ok: true },
       toolCallId: "call-1",
-      toolName: "webSearch",
-      type: "dynamic-tool",
+      type: "tool-webSearch",
     });
-    expect(
-      assistant?.parts.some(
-        (p) => p.type === "dynamic-tool" || p.type.startsWith("tool-")
-      )
-    ).toBe(true);
+    expect(assistant?.parts.some((p) => p.type === "tool-webSearch")).toBe(true);
   });
 
-  it("tolerates legacy model tool-call parts in stored content", async () => {
+  it("rehydrates persisted tool rows after stored content has been canonicalized", async () => {
     const s: TypedServerSupabase = createMockSupabaseClient({ user: { id: userId } });
     const created = await createSession({ logger, supabase: s, userId }, "Trip");
     const { id: sessionId } = (await created.json()) as { id: string };
@@ -139,15 +132,7 @@ describe("sessions _handlers", () => {
           user_id: userId,
         },
         {
-          // Stored by older implementations as model message parts (invalid for UIMessage parts).
-          content: JSON.stringify([
-            {
-              args: { query: "london" },
-              toolCallId: "call-legacy-1",
-              toolName: "webSearch",
-              type: "tool-call",
-            },
-          ]),
+          content: JSON.stringify([{ text: "", type: "text" }]),
           id: 2,
           metadata: {},
           role: "assistant",
@@ -176,7 +161,7 @@ describe("sessions _handlers", () => {
     expect(assistant).toBeTruthy();
     expect(
       assistant?.parts.some(
-        (p) => p.type === "dynamic-tool" && p.toolCallId === "call-legacy-1"
+        (p) => p.type === "tool-webSearch" && p.toolCallId === "call-legacy-1"
       )
     ).toBe(true);
   });

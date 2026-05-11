@@ -183,11 +183,11 @@ export type ChatCompletionRequest = z.infer<typeof chatCompletionRequestSchema>;
 /**
  * Zod schema for creating a chat message in a session.
  * Validates request body for POST /api/chat/sessions/[id]/messages endpoint.
- * Ensures content is a non-empty string and role is a valid optional message role.
+ * Ensures content is a non-empty string and public callers can only create user messages.
  */
 export const createMessageRequestSchema = z.strictObject({
   content: z.string().min(1, { error: "Content must be a non-empty string" }),
-  role: messageRoleSchema.optional(),
+  role: z.literal("user").optional(),
 });
 
 /** TypeScript type for create message requests. */

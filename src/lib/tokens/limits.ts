@@ -13,16 +13,26 @@ export type { ModelLimitsTable };
  */
 export const MODEL_LIMITS: ModelLimitsTable = {
   // Anthropic
-  "claude-3.5-haiku": 200_000,
-  "claude-3.5-sonnet": 200_000,
-  "gpt-4o": 128_000,
-  "gpt-4o-mini": 128_000,
+  "claude-sonnet-4.6": 1_000_000,
+  // DeepSeek
+  "deepseek-v4-flash": 1_000_000,
+  "deepseek-v4-pro": 1_000_000,
+  // Google
+  "gemini-3.1-flash-lite": 1_000_000,
+  // Z.ai
+  "glm-5.1": 202_800,
   // OpenAI
-  "gpt-5": 200_000,
-  "gpt-5-mini": 200_000,
+  "gpt-5.4-mini": 400_000,
+  "gpt-5.4-nano": 400_000,
+  "gpt-5.5": 1_000_000,
 
-  // xAI (conservative default unless provider docs specify higher)
-  grok: 128_000,
+  // xAI
+  "grok-4.3": 1_000_000,
+  // Moonshot AI
+  "kimi-k2.6": 262_000,
+  "mimo-v2.5": 1_050_000,
+  // Xiaomi
+  "mimo-v2.5-pro": 1_050_000,
 };
 
 /** Default context window (tokens) when model is unknown. */
@@ -32,7 +42,7 @@ export const DEFAULT_CONTEXT_LIMIT = 128_000;
  * Resolve the context window limit for a given model.
  * Performs a lowercase substring match against known keys.
  *
- * @param modelName The model identifier (e.g., "gpt-4o").
+ * @param modelName The model identifier (e.g., "gpt-5.5").
  * @param table Optional override table.
  * @returns Context window token limit.
  */
@@ -42,7 +52,7 @@ export function getModelContextLimit(
 ): number {
   if (!modelName) return DEFAULT_CONTEXT_LIMIT;
   const name = modelName.toLowerCase();
-  for (const key of Object.keys(table)) {
+  for (const key of Object.keys(table).sort((a, b) => b.length - a.length)) {
     if (name.includes(key)) return table[key];
   }
   return DEFAULT_CONTEXT_LIMIT;

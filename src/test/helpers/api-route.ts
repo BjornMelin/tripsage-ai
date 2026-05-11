@@ -172,6 +172,7 @@ const CREATE_SUPABASE_MOCK = vi.hoisted(() => vi.fn(async () => getSupabaseClien
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE_MOCK,
+  getAdminSupabase: CREATE_SUPABASE_MOCK,
 }));
 
 vi.mock("@/lib/api/route-helpers", async () => {

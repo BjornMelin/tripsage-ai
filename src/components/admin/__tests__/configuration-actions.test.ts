@@ -33,8 +33,8 @@ describe("fetchAgentBundle", () => {
       agentType: "budgetAgent",
       createdAt: "2026-01-01T00:00:00.000Z",
       id: "v1",
-      model: "gpt-4o",
-      parameters: { model: "gpt-4o" },
+      model: "gpt-5.5",
+      parameters: { model: "gpt-5.5" },
       scope: "global",
       updatedAt: "2026-01-01T00:00:00.000Z",
     };

@@ -4,6 +4,7 @@
 
 import type { PostKeyBody } from "@schemas/api";
 import { NextResponse } from "next/server";
+import { validateGatewayBaseUrl } from "@/lib/ai/gateway-url";
 import { errorResponse } from "@/lib/api/route-helpers";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { getMany } from "@/lib/supabase/typed-helpers";
@@ -45,8 +46,16 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
 
   // If service is gateway and baseUrl provided, persist base URL metadata
   if (normalized === "gateway" && body.baseUrl && deps.upsertUserGatewayBaseUrl) {
+    const gatewayBaseUrl = validateGatewayBaseUrl(body.baseUrl, { source: "user" });
+    if (!gatewayBaseUrl.ok || !gatewayBaseUrl.baseUrl) {
+      return errorResponse({
+        error: "bad_request",
+        reason: "Gateway base URL is not allowed",
+        status: 400,
+      });
+    }
     try {
-      await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
+      await deps.upsertUserGatewayBaseUrl(deps.userId, gatewayBaseUrl.baseUrl);
     } catch {
       return vaultUnavailableResponse("Failed to persist gateway base URL");
     }

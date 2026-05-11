@@ -31,7 +31,7 @@ export const aiProviderHandlers: HttpHandler[] = [
       ],
       created: MSW_FIXED_UNIX_SECONDS,
       id: "chatcmpl-mock",
-      model: "gpt-4o-mini",
+      model: "gpt-5.5",
       object: "chat.completion",
       usage: {
         // biome-ignore lint/style/useNamingConvention: match OpenAI payload shape
@@ -54,7 +54,7 @@ export const aiProviderHandlers: HttpHandler[] = [
         },
       ],
       id: "msg-mock",
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4.6",
       role: "assistant",
       // biome-ignore lint/style/useNamingConvention: match Anthropic payload shape
       stop_reason: "end_turn",

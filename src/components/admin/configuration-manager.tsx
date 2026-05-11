@@ -361,7 +361,7 @@ export default function ConfigurationManager(props: ConfigurationManagerProps) {
                   id="model"
                   value={currentParams.model ?? ""}
                   onChange={(e) => onParamChange("model", e.target.value)}
-                  placeholder="gpt-4o"
+                  placeholder="gpt-5.5"
                 />
               </div>
 

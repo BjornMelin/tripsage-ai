@@ -25,24 +25,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isToolLikeType(type: string): boolean {
-  if (type === "dynamic-tool") return true;
-  if (type.startsWith("tool-")) return true;
-
-  // Model-only tool parts (tool-call / tool-result / approvals).
-  if (
+function isPersistedToolPartType(type: string): boolean {
+  return (
+    type === "dynamic-tool" ||
     type === "tool-call" ||
     type === "tool-result" ||
     type === "tool-approval-request" ||
-    type === "tool-approval-response"
-  ) {
-    return true;
-  }
+    type === "tool-approval-response" ||
+    type.startsWith("tool-") ||
+    type.startsWith("tool-input-") ||
+    type.startsWith("tool-output-")
+  );
+}
 
-  // UI stream chunk types (never valid persisted UIMessage parts).
-  if (type.startsWith("tool-input-") || type.startsWith("tool-output-")) return true;
-
-  return false;
+function getStaticToolPartType(toolName: string): `tool-${string}` {
+  return `tool-${toolName}`;
 }
 
 function sanitizePersistedPart(part: unknown): UiParts[number] | null {
@@ -50,7 +47,7 @@ function sanitizePersistedPart(part: unknown): UiParts[number] | null {
   const type = part.type;
   if (typeof type !== "string") return null;
 
-  if (isToolLikeType(type)) return null;
+  if (isPersistedToolPartType(type)) return null;
 
   if (type === "text") {
     const text = part.text;
@@ -157,13 +154,14 @@ export function parsePersistedUiParts(options: {
 }
 
 /**
- * Rehydrates tool invocation rows into dynamic tool UI parts.
+ * Rehydrates tool invocation rows into AI SDK v6 static tool UI parts.
  *
  * Expects `toolRows` with fields like `tool_name`, `tool_id`, `arguments`,
  * `status` ("completed" | "failed"), `provider_executed`, `result`, and
- * `error_message`. Returns `dynamic-tool` parts with state
- * ("input-available" | "output-available" | "output-error") plus input/output
- * and error text when applicable.
+ * `error_message`. Returns `tool-${toolName}` parts with state
+ * (`input-available`, `output-available`, or `output-error`) plus input/output
+ * and error text when applicable. `chat_tool_calls` is the authoritative
+ * lifecycle store; persisted message content must not own tool state.
  */
 export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
   const parts: UiParts = [];
@@ -182,12 +180,13 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
     if (!toolName || !toolCallId) continue;
 
     const input = toolRow.arguments ?? {};
+    const type = getStaticToolPartType(toolName);
 
     const status = typeof toolRow.status === "string" ? toolRow.status : undefined;
     const providerExecuted =
       typeof toolRow.provider_executed === "boolean"
         ? toolRow.provider_executed
-        : status === "completed" || status === "failed";
+        : false;
     if (status === "failed") {
       const errorText =
         typeof toolRow.error_message === "string" &&
@@ -203,22 +202,20 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
         providerExecuted,
         state: "output-error",
         toolCallId,
-        toolName,
-        type: "dynamic-tool",
+        type,
       });
       continue;
     }
 
     if (status === "completed") {
       if (toolRow.result == null) {
-        // toolRow completed without a result; providerExecuted stays true and we keep state as "input-available".
         parts.push({
           input,
+          output: null,
           providerExecuted,
-          state: "input-available",
+          state: "output-available",
           toolCallId,
-          toolName,
-          type: "dynamic-tool",
+          type,
         });
         continue;
       }
@@ -229,8 +226,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
         providerExecuted,
         state: "output-available",
         toolCallId,
-        toolName,
-        type: "dynamic-tool",
+        type,
       });
       continue;
     }
@@ -240,8 +236,7 @@ export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
       providerExecuted,
       state: "input-available",
       toolCallId,
-      toolName,
-      type: "dynamic-tool",
+      type,
     });
   }
 

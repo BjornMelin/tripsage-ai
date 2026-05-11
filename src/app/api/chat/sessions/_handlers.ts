@@ -230,7 +230,7 @@ export async function listMessages(deps: SessionsDeps, id: string): Promise<Resp
             ascending: true,
             orderBy: "id",
             select:
-              "message_id, tool_id, tool_name, arguments, result, status, error_message",
+              "message_id, tool_id, tool_name, arguments, result, status, provider_executed, error_message",
             validate: false,
           }
         )
@@ -352,10 +352,10 @@ export async function createMessage(
       status: 400,
     });
   const normalizedRole = payload.role.toLowerCase();
-  if (!["user", "assistant", "system"].includes(normalizedRole)) {
+  if (normalizedRole !== "user") {
     return errorResponse({
       error: "bad_request",
-      reason: "Role must be user, assistant, or system",
+      reason: "Role must be user",
       status: 400,
     });
   }
@@ -379,7 +379,7 @@ export async function createMessage(
     {
       content,
       metadata: {},
-      role: normalizedRole as "user" | "system" | "assistant",
+      role: "user",
       // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md
       session_id: id,
       // biome-ignore lint/style/useNamingConvention: Database field name. see: docs/architecture/decisions/adr-0018-centralize-supabase-typed-helpers-for-crud.md

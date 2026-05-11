@@ -1,5 +1,6 @@
 /** @vitest-environment node */
 
+import { DEFAULT_GATEWAY_MODEL_ID } from "@ai/models/defaults";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type SpanCapture = { attrs: Record<string, unknown> | undefined; name: string };
@@ -40,6 +41,7 @@ vi.mock("ai", () => ({
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVar: (key: string) => process.env[key] || "",
   getServerEnvVarWithFallback: (key: string, fallback?: string) => {
+    if (key === "AI_GATEWAY_ALLOWED_HOSTS") return "gw.example.com";
     if (key === "AI_GATEWAY_API_KEY") return "team-key";
     if (key === "AI_GATEWAY_URL") return "https://ai-gateway.vercel.sh/v3/ai";
     return fallback as string | undefined;
@@ -54,7 +56,7 @@ describe("resolveProvider telemetry", () => {
 
   it("emits attributes for user-gateway path", async () => {
     const { resolveProvider } = await import("@ai/models/registry");
-    await resolveProvider("u1", "openai/gpt-4o-mini");
+    await resolveProvider("u1", DEFAULT_GATEWAY_MODEL_ID);
     const span = CAPTURED.find((c) => c.name === "providers.resolve");
     expect(span?.attrs).toMatchObject({
       baseUrlHost: "gw.example.com",
@@ -71,7 +73,7 @@ describe("resolveProvider telemetry", () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "aaaaaaaaaaaaaaaaaaaa");
     vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v3/ai");
     const { resolveProvider } = await import("@ai/models/registry");
-    await resolveProvider("u2", "openai/gpt-4o-mini");
+    await resolveProvider("u2", DEFAULT_GATEWAY_MODEL_ID);
     const span = CAPTURED.filter((c) => c.name === "providers.resolve").pop();
     expect(span?.attrs).toMatchObject({
       baseUrlHost: "ai-gateway.vercel.sh",

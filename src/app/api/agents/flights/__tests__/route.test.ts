@@ -19,11 +19,11 @@ vi.mock("@/lib/agents/config-resolver", () => ({
       agentType: "flightAgent",
       createdAt: "2025-01-01T00:00:00Z",
       id: "v1700000000_deadbeef",
-      model: "gpt-4o-mini",
+      model: "gpt-5.5",
       parameters: {
         description: "Flight search agent",
         maxOutputTokens: 4096,
-        model: "gpt-4o-mini",
+        model: "gpt-5.5",
         temperature: 0.7,
         timeoutSeconds: 30,
         topKTools: 4,
@@ -64,7 +64,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 // Mock provider registry
 vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-4o" })),
+  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "gpt-5.5" })),
 }));
 
 // Mock flight agent
@@ -73,7 +73,7 @@ vi.mock("@ai/agents", () => ({
     agent: {},
     agentType: "flightAgent",
     defaultMessages: [{ content: "schema", role: "user" }],
-    modelId: "gpt-4o",
+    modelId: "gpt-5.5",
   })),
 }));
 

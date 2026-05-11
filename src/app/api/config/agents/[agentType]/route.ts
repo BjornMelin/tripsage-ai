@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { DEFAULT_AGENT_MODEL_ID } from "@ai/models/defaults";
 import {
   type AgentConfig,
   type AgentType,
@@ -48,7 +49,7 @@ function buildConfigPayload(
   const now = nowIso();
   const baseConfigId =
     existing?.id ?? `v${Math.floor(Date.now() / 1000)}_${secureId(8)}`;
-  const effectiveModel = body.model ?? existing?.model ?? "gpt-4o";
+  const effectiveModel = body.model ?? existing?.model ?? DEFAULT_AGENT_MODEL_ID;
   return configurationAgentConfigSchema.parse({
     agentType,
     createdAt: existing?.createdAt ?? now,

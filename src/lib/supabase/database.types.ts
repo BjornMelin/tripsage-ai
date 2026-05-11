@@ -1449,6 +1449,7 @@ export type Database = {
           error_message: string | null;
           id: number;
           message_id: number;
+          provider_executed: boolean;
           result: Json | null;
           status: string;
           tool_id: string;
@@ -1461,6 +1462,7 @@ export type Database = {
           error_message?: string | null;
           id?: never;
           message_id: number;
+          provider_executed?: boolean;
           result?: Json | null;
           status?: string;
           tool_id: string;
@@ -1473,6 +1475,7 @@ export type Database = {
           error_message?: string | null;
           id?: never;
           message_id?: number;
+          provider_executed?: boolean;
           result?: Json | null;
           status?: string;
           tool_id?: string;

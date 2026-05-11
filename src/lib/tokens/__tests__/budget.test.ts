@@ -43,13 +43,6 @@ vi.mock("js-tiktoken/ranks/o200k_base", () => ({
     __mock: true,
   },
 }));
-vi.mock("js-tiktoken/ranks/cl100k_base", () => ({
-  default: {
-    // biome-ignore lint/style/useNamingConvention: Test-only sentinel property name.
-    __mock: true,
-  },
-}));
-
 describe("countTokens", () => {
   beforeEach(() => {
     // Clear call history but preserve mock implementations
@@ -63,16 +56,16 @@ describe("countTokens", () => {
   });
 
   it("returns 0 for empty input", () => {
-    expect(countTokens([], "gpt-4o")).toBe(0);
+    expect(countTokens([], "gpt-5.5")).toBe(0);
   });
 
-  it("counts tokens using mocked tokenizer for gpt-4o/gpt-5 families", () => {
+  it("counts tokens using mocked tokenizer for current OpenAI profiles", () => {
     const sample = "hello world"; // 11 chars
     const heuristicValue = Math.ceil(sample.length / CHARS_PER_TOKEN_HEURISTIC); // ceil(11/4) = 3
     const tokenizerValue = Math.ceil(sample.length / 3); // ceil(11/3) = 4
 
-    const result1 = countTokens([sample], "gpt-4o");
-    const result2 = countTokens([sample], "gpt-5-mini");
+    const result1 = countTokens([sample], "gpt-5.5");
+    const result2 = countTokens([sample], "gpt-5.4-mini");
 
     // Both models should produce the same result
     expect(result1).toBe(result2);
@@ -87,7 +80,7 @@ describe("countTokens", () => {
   it("falls back to heuristic for unknown providers", () => {
     const s = "1234"; // 4 chars
     // For unknown models, selectTokenizer returns null, so heuristic is used
-    const result = countTokens([s], "claude-3.5-sonnet");
+    const result = countTokens([s], "claude-sonnet-4.6");
     // Should use heuristic: ceil(4 / 4) = 1 token
     expect(result).toBe(Math.ceil(s.length / CHARS_PER_TOKEN_HEURISTIC));
     // Tokenizer should not be called for unknown models
@@ -97,21 +90,30 @@ describe("countTokens", () => {
 
 describe("clampMaxTokens", () => {
   it("clamps to model limit minus prompt tokens", () => {
-    const model = "gpt-4o";
+    const model = "gpt-5.5";
     const limit = getModelContextLimit(model);
     const messages = [
       { content: "system", role: "system" as const },
       { content: "hello world", role: "user" as const },
     ];
     const promptTokens = countPromptTokens(messages, model);
-    const desired = 999_999; // intentionally too large
+    const desired = 2_000_000; // intentionally too large
     const result = clampMaxTokens(messages, desired, model);
     expect(result.maxOutputTokens).toBe(Math.max(1, limit - promptTokens));
     expect(result.reasons).toContain("maxTokens_clamped_model_limit");
   });
 
+  it("uses the specific GPT-5.5 context window before the broader GPT-5 match", () => {
+    expect(getModelContextLimit("openai/gpt-5.5")).toBe(1_000_000);
+  });
+
+  it("uses current Anthropic and xAI context windows", () => {
+    expect(getModelContextLimit("claude-sonnet-4.6")).toBe(1_000_000);
+    expect(getModelContextLimit("grok-4.3")).toBe(1_000_000);
+  });
+
   it("coerces invalid desiredMax to 1 with reason", () => {
-    const model = "gpt-4o";
+    const model = "gpt-5.5";
     const messages = [{ content: "test", role: "user" as const }];
     const result = clampMaxTokens(messages, 0, model);
     expect(result.maxOutputTokens).toBe(1);
@@ -140,7 +142,7 @@ describe("clampMaxTokens", () => {
 
 describe("countPromptTokens invariants", () => {
   it("is order-insensitive for total count", () => {
-    const model = "gpt-4o";
+    const model = "gpt-5.5";
     const a = { content: "alpha beta", role: "system" as const };
     const b = { content: "gamma delta", role: "user" as const };
     const c = { content: "epsilon zeta", role: "assistant" as const };

@@ -54,7 +54,7 @@ const supabaseData = {
     agentType: "budgetAgent",
     createdAt: new Date().toISOString(),
     id: "v1732250000_deadbeef",
-    model: "gpt-4o",
+    model: "gpt-5.5",
     parameters: { maxOutputTokens: 1000, temperature: 0.3, topP: 0.9 },
     scope: "global",
     updatedAt: new Date().toISOString(),
@@ -158,7 +158,7 @@ describe("config routes", () => {
     const body = {
       description: "updated",
       maxOutputTokens: 500,
-      model: "gpt-4o-mini",
+      model: "gpt-5.5",
       stepTimeoutSeconds: 12,
       temperature: 0.4,
       timeoutSeconds: 30,
