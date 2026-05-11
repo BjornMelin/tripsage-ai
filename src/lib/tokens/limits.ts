@@ -38,14 +38,13 @@ export const MODEL_LIMITS: ModelLimitsTable = {
 /** Default context window (tokens) when model is unknown. */
 export const DEFAULT_CONTEXT_LIMIT = 128_000;
 
-const sortedLimitKeysCache = new WeakMap<ModelLimitsTable, string[]>();
+const sortedDefaultLimitKeys = Object.keys(MODEL_LIMITS).sort(
+  (a, b) => b.length - a.length
+);
 
 function getSortedLimitKeys(table: ModelLimitsTable): string[] {
-  const cached = sortedLimitKeysCache.get(table);
-  if (cached) return cached;
-  const keys = Object.keys(table).sort((a, b) => b.length - a.length);
-  sortedLimitKeysCache.set(table, keys);
-  return keys;
+  if (table === MODEL_LIMITS) return sortedDefaultLimitKeys;
+  return Object.keys(table).sort((a, b) => b.length - a.length);
 }
 
 /**

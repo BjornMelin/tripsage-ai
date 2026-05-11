@@ -74,6 +74,10 @@ describe("chat message persistence migrations", () => {
       "CREATE POLICY chat_tool_calls_insert\n  ON public.chat_tool_calls\n  FOR INSERT\n  TO service_role"
     );
     expect(migration).toContain(
+      "CREATE POLICY api_gateway_configs_owner\n  ON public.api_gateway_configs\n  FOR SELECT\n  TO authenticated"
+    );
+    expect(migration).toContain("USING ((select auth.uid()) = user_id)");
+    expect(migration).toContain(
       "ALTER COLUMN allow_gateway_fallback SET DEFAULT false"
     );
     expect(migration).toContain("RETURN coalesce(v_flag, false)");
@@ -95,6 +99,9 @@ describe("chat message persistence migrations", () => {
     expect(migration).toContain("should_strip_tool_parts := false");
     expect(migration).toContain("raw_parts.tool_id IS NULL");
     expect(migration).toContain("grouped_tool_calls.tool_name IS NULL");
+    expect(migration).toContain(
+      "WHERE raw_parts.tool_id IS NULL\n          OR grouped_tool_calls.tool_name IS NULL\n      ) THEN\n        CONTINUE;"
+    );
     expect(migration).toContain("should_strip_tool_parts := true");
     expect(migration).toContain(
       "CASE WHEN status IN ('completed', 'failed') THEN message_record.created_at ELSE NULL END"

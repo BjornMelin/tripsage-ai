@@ -112,6 +112,10 @@ function isPrivateGatewayHost(hostname: string): boolean {
  *
  * Custom hosts are intentionally allowlisted with `AI_GATEWAY_ALLOWED_HOSTS`
  * so user-owned config cannot turn Gateway calls into arbitrary SSRF probes.
+ *
+ * @param rawBaseUrl - Raw Gateway base URL, or empty/nullish for the default.
+ * @param options - Optional source context for user/team-owned URLs.
+ * @returns Validation result with normalized URL or a rejection reason.
  */
 export function validateGatewayBaseUrl(
   rawBaseUrl: string | null | undefined,
