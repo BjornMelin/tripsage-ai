@@ -105,6 +105,12 @@ export const RAG_INDEX_QSTASH_TIMEOUT_SECONDS = 55;
 export const RAG_INDEX_EMBED_TIMEOUT_BUDGET_MS =
   (RAG_INDEX_QSTASH_TIMEOUT_SECONDS - 5) * 1000;
 
+/**
+ * Validates that a RAG chunk overlap is smaller than the chunk size.
+ *
+ * @param value - Chunk window settings containing `chunkOverlap` and `chunkSize`.
+ * @returns True when `chunkOverlap` is strictly smaller than `chunkSize`.
+ */
 export function isValidRagChunkWindow(value: {
   chunkOverlap: number;
   chunkSize: number;
