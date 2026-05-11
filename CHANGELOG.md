@@ -1,3 +1,9 @@
+## [1.33.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.1...v1.33.2) (2026-05-11)
+
+### Bug Fixes
+
+* **qstash:** enforce durable job publish contracts ([3d1b30e](https://github.com/BjornMelin/tripsage-ai/commit/3d1b30ea82e4b565eb0b81839594b924406135d7))
+
 ## [1.33.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.0...v1.33.1) (2026-05-11)
 
 ### Bug Fixes
