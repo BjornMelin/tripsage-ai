@@ -101,13 +101,13 @@ curl -X POST https://<project>.supabase.co/rest/v1/rpc/insert_user_api_key \
 
 # Positive: service role
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/insert_user_api_key \
-  -H "Authorization: Bearer '$SUPABASE_SERVICE_ROLE_KEY'" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
   -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_service":"openai","p_api_key":"sk-test"}'
 
 # Gateway config
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/upsert_user_gateway_config \
-  -H "Authorization: Bearer '$SUPABASE_SERVICE_ROLE_KEY'" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
   -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_base_url":"https://my-gateway.vercel.sh/v3/ai"}'
 ```

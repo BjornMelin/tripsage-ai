@@ -72,12 +72,12 @@ const result = await streamText({
   model: gatewayModel, // from resolveProvider(...)
   messages,
   providerOptions: {
-	    gateway: {
-	      order: ["anthropic", "openai"],
-	      tags: ["tripsage:chat"],
-	      zeroDataRetention: true,
-	    },
-	  },
+    gateway: {
+      order: ["anthropic", "openai"],
+      tags: ["tripsage:chat"],
+      zeroDataRetention: true,
+    },
+  },
 });
 ```
 
