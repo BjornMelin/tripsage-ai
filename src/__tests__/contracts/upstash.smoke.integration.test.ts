@@ -15,11 +15,11 @@ describe("Upstash live smoke", () => {
 
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-  const qstashUrl = process.env.UPSTASH_QSTASH_URL;
-  const qstashToken = process.env.UPSTASH_QSTASH_TOKEN;
+  const qstashTargetUrl = process.env.UPSTASH_QSTASH_SMOKE_TARGET_URL;
+  const qstashToken = process.env.QSTASH_TOKEN;
 
   const haveRedis = !!redisUrl && !!redisToken;
-  const haveQstash = !!qstashUrl && !!qstashToken;
+  const haveQstash = !!qstashTargetUrl && !!qstashToken;
 
   it.skipIf(!enabled || !haveRedis)(
     "hits Redis set/get and ratelimit",
@@ -47,10 +47,13 @@ describe("Upstash live smoke", () => {
   it.skipIf(!enabled || !haveQstash)(
     "publishes QStash message",
     async () => {
-      const qstashUrl = required("UPSTASH_QSTASH_URL");
-      const qstashToken = required("UPSTASH_QSTASH_TOKEN");
+      const qstashTargetUrl = required("UPSTASH_QSTASH_SMOKE_TARGET_URL");
+      const qstashToken = required("QSTASH_TOKEN");
+      const publishUrl = `https://qstash.upstash.io/v2/publish/${encodeURIComponent(
+        qstashTargetUrl
+      )}`;
 
-      const res = await fetch(qstashUrl, {
+      const res = await fetch(publishUrl, {
         body: JSON.stringify({ hello: "world" }),
         headers: {
           Authorization: `Bearer ${qstashToken}`,
