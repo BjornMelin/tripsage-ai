@@ -28,15 +28,15 @@ We are migrating BYOK key CRUD/validation from FastAPI to Next.js route handlers
 
 - **Vault availability:** Production must have `vault`/`supabase_vault` installed; migrations fail fast if missing (see `supabase/migrations/20260120000000_base_schema.sql`). Local/CI may use the stubbed `vault.secrets` table but must never ship to prod.
 - **Error surfaces:** Distinguish infrastructure errors (`VAULT_UNAVAILABLE`) from user errors (`INVALID_KEY`), transport errors (`NETWORK_ERROR`), and timeout errors (`REQUEST_TIMEOUT`). Codes are documented in [SPEC-0011](../../specs/archive/0011-spec-byok-routes-and-security.md) and returned by `/api/keys/*` handlers.
-- **Rotation/readiness checks (design):** A health check endpoint (service-role) will ping `vault.decrypted_secrets` and integrate with Sentry + Datadog monitors (HTTP 5xx or latency >5s triggers pager). **Status: not yet implemented**—see follow-up tasks below for delivery plan. Tracking: [#632](https://github.com/BjornMelin/tripsage-ai/issues/632)
-- **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only. Deployment validation should fail if the stub schema exists in production (`app.environment=prod` guard in migration). Tracking: [#633](https://github.com/BjornMelin/tripsage-ai/issues/633)
+- **Rotation/readiness checks:** `/api/health/byok` is protected by the scoped `BYOK_HEALTHCHECK_KEY` operator token, calls the service-role-only `check_byok_vault_health()` RPC, creates/decrypts/deletes a non-user probe secret, and returns only status metadata. Operators wire HTTP 5xx and p95 latency >5s to Sentry/Datadog or the active OpenTelemetry backend. Tracking: [#632](https://github.com/BjornMelin/tripsage-ai/issues/632), [#633](https://github.com/BjornMelin/tripsage-ai/issues/633)
+- **No-secret fallback:** Never persist BYOK secrets to regular tables or environment variables; stubs are for local/CI only. Deployment validation should fail if the stub schema exists in production (`app.environment=prod` guard in migration).
 
-### Monitoring and operational follow-ups (deferred)
+### Monitoring and operational follow-ups
 
-The following work is required for production BYOK readiness and must be completed before a BYOK feature launch in production:
+The BYOK production readiness loop is implemented in application code. Operators must still create provider-specific monitors in the active observability backend:
 
-- **Health endpoint delivery (follow-up):** `/api/health/byok` (service-role) is not yet implemented. Action: add a Next.js route that performs a lightweight `vault.decrypted_secrets` ping and returns 200/500; a deployment-time pre-flight check must verify this endpoint exists before allowing production deploy.
-- **Alert wiring (follow-up):** Add Datadog + Sentry alerts on `/api/health/byok` for HTTP 5xx and p95 latency > 5s (page on 3 consecutive failures, otherwise create ticket). Reuse existing incident runbook for BYOK once monitors are live.
+- **Health endpoint delivery:** `/api/health/byok` performs a lightweight Vault/RPC readiness ping through `check_byok_vault_health()` and is exercised by `pnpm ops ai check byok-health` when `BYOK_HEALTHCHECK_KEY` is configured.
+- **Alert wiring:** Add Datadog + Sentry alerts on `/api/health/byok` for HTTP 5xx and p95 latency > 5s (page on 3 consecutive failures, otherwise create ticket). Reuse the BYOK operator runbook for incident triage.
 
 ## Consequences
 
@@ -53,4 +53,5 @@ The following work is required for production BYOK readiness and must be complet
 
 - PostgREST roles/claims: <https://docs.postgrest.org/en/v10/auth.html>
 - Supabase Vault RPCs: `supabase/migrations/20260120000000_base_schema.sql` (historical split migrations are archived under `supabase/migrations/archive/`)
+- BYOK health RPC: `supabase/migrations/20260511000000_byok_vault_health_check.sql`
 - Rate-limiting ADR: [ADR-0020](adr-0020-rate-limiting-strategy.md)

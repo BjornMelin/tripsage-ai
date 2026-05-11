@@ -8,6 +8,16 @@ const makeModel = (label: string) => {
   return fn;
 };
 
+const LOGGER_WARN = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/telemetry/logger", () => ({
+  createServerLogger: () => ({
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: LOGGER_WARN,
+  }),
+}));
+
 vi.mock("@/lib/supabase/rpc", () => ({
   getUserAllowGatewayFallback: vi.fn(async () => true),
   getUserApiKey: vi.fn(),
@@ -47,6 +57,7 @@ describe("resolveProvider", () => {
   const env = process.env;
   beforeEach(() => {
     vi.resetModules();
+    vi.clearAllMocks();
     process.env = {
       ...env,
       NEXT_PUBLIC_APP_NAME: "TripSage",
@@ -184,6 +195,48 @@ describe("resolveProvider", () => {
 
     // Restore original environment
     process.env = originalEnv;
+  });
+
+  it("logs BYOK lookup failures without raw RPC messages", async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...process.env,
+      AI_GATEWAY_API_KEY: undefined,
+      ANTHROPIC_API_KEY: undefined,
+      OPENAI_API_KEY: undefined,
+      OPENROUTER_API_KEY: undefined,
+      XAI_API_KEY: undefined,
+    };
+
+    try {
+      const { getUserApiKey } = await import("@/lib/supabase/rpc");
+      vi.mocked(getUserApiKey).mockImplementation((_uid: string, svc: string) => {
+        if (svc === "gateway" || svc === "openai") {
+          return Promise.reject(new Error("secret leaked"));
+        }
+        return Promise.resolve(null);
+      });
+      const { resolveProvider } = await import("@ai/models/registry");
+
+      await expect(resolveProvider("user-log")).rejects.toThrow(
+        /No provider key found/
+      );
+
+      expect(LOGGER_WARN).toHaveBeenCalledWith(
+        "gateway_lookup_failed",
+        expect.not.objectContaining({ errorMessage: expect.anything() })
+      );
+      expect(LOGGER_WARN).toHaveBeenCalledWith(
+        "byok_lookup_failed",
+        expect.objectContaining({
+          errorName: "Error",
+          provider: "openai",
+        })
+      );
+      expect(JSON.stringify(LOGGER_WARN.mock.calls)).not.toContain("secret leaked");
+    } finally {
+      process.env = originalEnv;
+    }
   });
 
   it("falls back to team Gateway when configured and user has no keys", async () => {

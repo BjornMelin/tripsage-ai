@@ -24,6 +24,7 @@ const validRedisUrl = "https://upstash-valid.test";
 
 const productionEnv = {
   APP_BASE_URL: "https://app.example.com",
+  BYOK_HEALTHCHECK_KEY: longSecret,
   HMAC_SECRET: longSecret,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
   NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
@@ -125,6 +126,7 @@ describe("verify-production-env", () => {
 
   it("fails values that runtime env schema would reject", () => {
     const result = runVerifier({
+      BYOK_HEALTHCHECK_KEY: "short",
       HMAC_SECRET: "short",
       QSTASH_CURRENT_SIGNING_KEY: "short",
       QSTASH_NEXT_SIGNING_KEY: "short",
@@ -143,6 +145,11 @@ describe("verify-production-env", () => {
     );
     expect(check(result.summary, "webhook_hmac_contract").details.invalid).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "HMAC_SECRET" })])
+    );
+    expect(check(result.summary, "byok_health_contract").details.invalid).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "BYOK_HEALTHCHECK_KEY" }),
+      ])
     );
     expect(check(result.summary, "telemetry_core_contract").details.invalid).toEqual(
       expect.arrayContaining([

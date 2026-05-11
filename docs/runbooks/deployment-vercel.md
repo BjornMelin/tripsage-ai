@@ -101,6 +101,12 @@ The workflow must fail if no Vercel deployment URL is produced.
 - `/login?next=%2Fdashboard` renders an HTML shell for auth redirects.
 - `/api/keys/validate` rejects unauthenticated BYOK validation requests. This
   is a route-guard smoke check, not an authenticated provider health check.
+- `/api/health/byok` can be checked by operators with
+  `BYOK_HEALTHCHECK_KEY` via
+  `pnpm ops ai check byok-health --url <deployment-url>`; production deploys
+  run this against the candidate deployment before promotion. It validates the
+  service-role Vault health RPC by creating, decrypting, and deleting a
+  non-user probe secret without returning decrypted values.
 - QStash job routes reject unsigned POST requests with `401` after environment
   validation has already confirmed the signing-key variables are present:
   - `/api/jobs/attachments-ingest`
@@ -109,9 +115,9 @@ The workflow must fail if no Vercel deployment URL is produced.
   - `/api/jobs/rag-index`
 
 The smoke script prints a JSON summary and exits non-zero on failure. It never
-prints provider tokens or secret values.
-
-Authenticated BYOK/provider lifecycle health remains owned by #735.
+prints provider tokens or secret values. BYOK Vault readiness is a protected
+operator smoke check so production/previews can fail deployment without making
+secret validation public.
 
 `staging` and `development` workflow inputs use Vercel Preview environment
 settings. Add `--target=<custom-environment>` only after the Vercel project has

@@ -27,6 +27,7 @@ const valueValidators = new Map([
   ["AMADEUS_CLIENT_ID", [minLength(10)]],
   ["AMADEUS_CLIENT_SECRET", [minLength(16)]],
   ["AMADEUS_ENV", [oneOf(["production", "test"])]],
+  ["BYOK_HEALTHCHECK_KEY", [minLength(32)]],
   ["HMAC_SECRET", [minLength(32)]],
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", [supabaseLegacyAnonKey()]],
   ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", [startsWithOneOf(["sb_publishable_"])]],
@@ -253,6 +254,10 @@ addRequiredGroupCheck("telemetry_core_contract", ["TELEMETRY_HASH_SECRET"], {
 });
 
 addRequiredGroupCheck("webhook_hmac_contract", ["HMAC_SECRET"], {
+  requiredWhen: "production",
+});
+
+addRequiredGroupCheck("byok_health_contract", ["BYOK_HEALTHCHECK_KEY"], {
   requiredWhen: "production",
 });
 

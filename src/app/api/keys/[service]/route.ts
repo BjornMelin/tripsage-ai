@@ -9,15 +9,10 @@ import { NextResponse } from "next/server";
 import { buildKeySpanAttributes } from "@/app/api/keys/_telemetry";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
-import {
-  errorResponse,
-  parseStringId,
-  redactErrorForLogging,
-  requireUserId,
-} from "@/lib/api/route-helpers";
+import { errorResponse, parseStringId, requireUserId } from "@/lib/api/route-helpers";
 import { deleteUserApiKey, deleteUserGatewayBaseUrl } from "@/lib/supabase/rpc";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
-import { vaultUnavailableResponse } from "../_error-mapping";
+import { PLANNED_ERROR_CODES, vaultUnavailableResponse } from "../_error-mapping";
 
 const ALLOWED_SERVICES = new Set([
   "openai",
@@ -84,30 +79,24 @@ export function DELETE(
             }
             await deleteUserApiKey(userId, normalizedService);
             span.setAttribute("keys.rpc.error", false);
-          } catch (rpcError) {
+          } catch {
             span.setAttribute("keys.rpc.error", true);
-            throw rpcError;
+            throw new Error("BYOK key deletion failed");
           }
         }
       );
       return new NextResponse(null, { status: 204 });
     } catch (err) {
-      const { message: safeMessage, context: safeContext } = redactErrorForLogging(
-        err,
-        {
-          operation: "delete_key",
-          service: serviceForLog,
-        }
-      );
       recordTelemetryEvent("api.keys.delete_error", {
         attributes: {
-          message: safeMessage,
+          code: PLANNED_ERROR_CODES.vaultUnavailable,
+          error_name: err instanceof Error ? err.name : typeof err,
+          operation: "delete_key",
           service: serviceForLog ?? "unknown",
-          ...safeContext,
         },
         level: "error",
       });
-      return vaultUnavailableResponse("Failed to delete API key", err);
+      return vaultUnavailableResponse("Failed to delete API key");
     }
   })(req, context);
 }

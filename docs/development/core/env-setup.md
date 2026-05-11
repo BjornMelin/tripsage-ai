@@ -48,6 +48,7 @@ Notes:
   - `TOGETHER_AI_API_KEY` — <https://www.together.ai>
 - Optional:
   - `EMBEDDINGS_API_KEY` (internal key for `/api/embeddings`; required, otherwise the endpoint is disabled)
+  - `BYOK_HEALTHCHECK_KEY` (operator-only internal key for `/api/health/byok` and `pnpm ops ai check byok-health`)
 
 ## AI demo (disabled by default)
 

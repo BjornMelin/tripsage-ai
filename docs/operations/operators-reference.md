@@ -37,6 +37,8 @@ pnpm ops infra check upstash    # Redis ping + QStash topics probe
 
 # AI configuration
 pnpm ops ai check config        # Gateway/BYOK credential presence + reachability
+pnpm ops ai check byok-health   # Protected /api/health/byok Vault readiness
+pnpm ops ai check byok-health --url https://preview.example.vercel.app
 
 # Combined
 pnpm ops check all              # Run all checks with summary
@@ -60,6 +62,13 @@ The authoritative deployment workflow is documented in
 Production deploys run blocking Supabase and Upstash probes with
 `pnpm ops infra check supabase` and `pnpm ops infra check upstash` after the
 Vercel production environment contract passes.
+When `BYOK_HEALTHCHECK_KEY` and an app base URL are configured,
+`pnpm ops check all` also probes `/api/health/byok`; otherwise it reports the
+BYOK check as skipped. The endpoint uses `x-internal-key` and never returns
+Vault secret values. Deployment automation should pass `--url` so the check
+targets the candidate Vercel deployment instead of the currently promoted
+production alias. The command accepts HTTPS URLs and local loopback HTTP URLs;
+do not send `BYOK_HEALTHCHECK_KEY` to unowned hosts.
 
 ## Notes
 

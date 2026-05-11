@@ -47,14 +47,14 @@ export async function postKey(deps: KeysDeps, body: PostKeyBody): Promise<Respon
   if (normalized === "gateway" && body.baseUrl && deps.upsertUserGatewayBaseUrl) {
     try {
       await deps.upsertUserGatewayBaseUrl(deps.userId, body.baseUrl);
-    } catch (err) {
-      return vaultUnavailableResponse("Failed to persist gateway base URL", err);
+    } catch {
+      return vaultUnavailableResponse("Failed to persist gateway base URL");
     }
   }
   try {
     await deps.insertUserApiKey(deps.userId, normalized, body.apiKey);
-  } catch (err) {
-    return vaultUnavailableResponse("Failed to store API key", err);
+  } catch {
+    return vaultUnavailableResponse("Failed to store API key");
   }
   return new Response(null, { status: 204 });
 }
@@ -81,7 +81,7 @@ export async function getKeys(deps: {
     }
   );
   if (error) {
-    return vaultUnavailableResponse("Failed to fetch keys", error);
+    return vaultUnavailableResponse("Failed to fetch keys");
   }
   type ApiKeyRow = {
     // biome-ignore lint/style/useNamingConvention: mirrors DB columns

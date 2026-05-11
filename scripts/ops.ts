@@ -7,6 +7,7 @@
  *   pnpm ops infra check supabase   -- Supabase auth health (+ storage with service role key)
  *   pnpm ops infra check upstash    -- Upstash Redis ping + QStash token probe
  *   pnpm ops ai check config        -- AI Gateway/BYOK credential presence + gateway reachability
+ *   pnpm ops ai check byok-health   -- Protected /api/health/byok Vault readiness smoke
  *   pnpm ops check all              -- Run all infra/AI checks with summary
  *   pnpm ops test analyze failures  -- Analyze test failures from Vitest JSON report
  *   pnpm ops test analyze all       -- Full test analysis (failures + performance summary)
@@ -45,6 +46,13 @@ const aiEnvSchema = z.object({
   openaiApiKey: z.string().min(1).optional(),
   openrouterApiKey: z.string().min(1).optional(),
   xaiApiKey: z.string().min(1).optional(),
+});
+
+const byokHealthEnvSchema = z.object({
+  appBaseUrl: z.string().url().refine(isSafeHealthUrl, {
+    message: "BYOK health URL must be HTTPS or localhost",
+  }),
+  byokHealthcheckKey: z.string().min(32),
 });
 
 // ===== VITEST REPORT SCHEMAS =====
@@ -119,6 +127,17 @@ const FAILURES_SHOW_THRESHOLD = 10;
 /** Number of failures to show when count exceeds threshold. */
 const FAILURES_SHOW_COUNT = 5;
 
+function isSafeHealthUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:") return true;
+    if (url.protocol !== "http:") return false;
+    return ["127.0.0.1", "::1", "localhost"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function formatError(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
@@ -131,6 +150,7 @@ function printUsage(): void {
   console.log("    pnpm ops infra check supabase   -- Supabase auth health + storage");
   console.log("    pnpm ops infra check upstash    -- Redis ping + QStash probe");
   console.log("    pnpm ops ai check config        -- AI Gateway/BYOK credentials");
+  console.log("    pnpm ops ai check byok-health   -- BYOK Vault health endpoint");
   console.log("    pnpm ops check all              -- Run all infra/AI checks");
   console.log("");
   console.log("  Test analysis:");
@@ -265,14 +285,71 @@ async function checkAiConfig(): Promise<void> {
   console.log("AI config check: OK");
 }
 
+function resolveAppBaseUrl(): string | undefined {
+  const cliUrl = getArgValue(process.argv.slice(2), "--url");
+  if (cliUrl) return cliUrl;
+  return (
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL
+  );
+}
+
+function shouldRunByokHealthCheck(): boolean {
+  return Boolean(process.env.BYOK_HEALTHCHECK_KEY && resolveAppBaseUrl());
+}
+
+async function checkByokHealth(): Promise<void> {
+  const env = byokHealthEnvSchema.parse({
+    appBaseUrl: resolveAppBaseUrl(),
+    byokHealthcheckKey: process.env.BYOK_HEALTHCHECK_KEY,
+  });
+  const healthUrl = new URL("/api/health/byok", env.appBaseUrl);
+
+  const res = await fetch(healthUrl, {
+    headers: {
+      "x-internal-key": env.byokHealthcheckKey,
+    },
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    let reason = `${res.status} ${res.statusText}`;
+    try {
+      const body = (await res.json()) as { error?: string; reason?: string };
+      reason = [body.error, body.reason].filter(Boolean).join(": ") || reason;
+    } catch {
+      // Keep the status-only reason when the response is not JSON.
+    }
+    throw new Error(`BYOK health check failed (${reason})`);
+  }
+
+  const body = (await res.json()) as { status?: string };
+  if (body.status !== "ok") {
+    throw new Error("BYOK health check returned an unexpected payload");
+  }
+
+  console.log("BYOK health check: OK");
+}
+
 async function checkAll(): Promise<void> {
   const checks = [
     { fn: checkSupabase, name: "Supabase" },
     { fn: checkUpstash, name: "Upstash" },
     { fn: checkAiConfig, name: "AI Config" },
+    ...(shouldRunByokHealthCheck()
+      ? [{ fn: checkByokHealth, name: "BYOK Health" }]
+      : []),
   ];
 
   const results: Array<{ name: string; ok: boolean; error?: string }> = [];
+
+  if (!shouldRunByokHealthCheck()) {
+    console.log(
+      "\n[BYOK Health]\n  Skipped: BYOK_HEALTHCHECK_KEY and app base URL are not both configured"
+    );
+  }
 
   for (const { name, fn } of checks) {
     console.log(`\n[${name}]`);
@@ -623,6 +700,7 @@ async function analyzeTestAll(): Promise<void> {
 }
 
 const commandMap: Record<string, Command> = {
+  "ai:check:byok-health": checkByokHealth,
   "ai:check:config": checkAiConfig,
   "check:all": checkAll,
   "infra:check:supabase": checkSupabase,
@@ -633,7 +711,9 @@ const commandMap: Record<string, Command> = {
 
 async function main(): Promise<void> {
   const [, , ...args] = process.argv;
-  const key = args.join(":");
+  const firstFlagIndex = args.findIndex((arg) => arg.startsWith("--"));
+  const commandArgs = firstFlagIndex === -1 ? args : args.slice(0, firstFlagIndex);
+  const key = commandArgs.join(":");
 
   try {
     const command = commandMap[key];

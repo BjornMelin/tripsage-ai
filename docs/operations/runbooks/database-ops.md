@@ -402,6 +402,8 @@ The BYOK system integrates with OpenTelemetry:
 
 - **Factory Initialization**: `supabase.init` spans with database connection tracking
 - **Provider Resolution**: `providers.resolve` spans with user ID redaction and path tracking
+- **BYOK RPCs**: `supabase.rpc.*` spans for Vault/gateway RPCs with operation, RPC name, provider, and hashed user identifiers; secret values are never attached.
+- **BYOK Health**: `health.byok` spans and `health.byok_failure` events for the protected `/api/health/byok` operator probe. The backing RPC creates, decrypts, and deletes a non-user probe secret to prove the Vault path without returning decrypted values.
 - **Auth Operations**: `supabase.auth.getUser` spans for session management
 - **Middleware**: Session refresh spans in Edge runtime
 
@@ -416,6 +418,9 @@ The BYOK system integrates with OpenTelemetry:
 
 - BYOK resolution failure rate > 5%
 - Vault operation latency > 500ms p95
+- `/api/health/byok` HTTP 5xx for 3 consecutive checks
+- `/api/health/byok` p95 latency > 5s over 5 minutes
+- Provider validation `NETWORK_ERROR` or `REQUEST_TIMEOUT` spikes above baseline
 - RLS policy violations > 0
 - Missing API keys for active users
 - Repeated webhook verification failures (reason = `missing_secret_env` | `invalid_signature`)

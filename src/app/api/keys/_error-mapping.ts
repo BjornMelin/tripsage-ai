@@ -21,12 +21,10 @@ export type PlannedErrorCode =
  * Creates a 500 Response indicating the Vault service is unavailable.
  *
  * @param reason - Detailed reason for the failure.
- * @param err - Optional underlying error object.
  * @returns Error response with VAULT_UNAVAILABLE code.
  */
-export function vaultUnavailableResponse(reason: string, err?: unknown): Response {
+export function vaultUnavailableResponse(reason: string): Response {
   return errorResponse({
-    err,
     error: PLANNED_ERROR_CODES.vaultUnavailable,
     reason,
     status: 500,
