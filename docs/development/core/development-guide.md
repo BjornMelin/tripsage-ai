@@ -197,9 +197,9 @@ const tripData = validation.data;
 
 **Degraded response contract:**
 
-- Domain status payloads return `200` when the route successfully reports state, such as `{ connected: false }` for a disconnected calendar or fallback insights with `success: false`.
+- Domain status payloads return `200` when the route successfully reports the requested state, such as `{ connected: false }` for a disconnected calendar or fallback insights with `success: false`.
 - Partial mutation success returns `207` with explicit failed keys or records so clients can retry only the failed subset.
-- Dependency outages return a transport error, usually `503`, even when the route can include deterministic fallback data in the response body.
+- Primary dependency outages return a transport error, usually `503`, when the requested operation cannot complete normally. Routes may still include deterministic fallback data in the error response body, such as accommodations personalization fallback results.
 - Run `pnpm check:api-route-errors:full` before release-sensitive API work to verify current route files do not return ad hoc error JSON where helpers apply.
 
 See [Zod Schema Guide](../standards/zod-schema-guide.md) for schema patterns and [Standards](../standards/standards.md#zod-schemas-v4) for conventions.
