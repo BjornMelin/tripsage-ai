@@ -45,6 +45,7 @@ import { HotelSearchForm } from "@/features/search/components/forms/hotel-search
 import { FlightResults } from "@/features/search/components/results/flight-results";
 import { HotelResults } from "@/features/search/components/results/hotel-results";
 import {
+  HOTEL_WISHLIST_STORAGE_KEY,
   isAbortError,
   toggleStringSetValue,
   useAbortableSearchTask,
@@ -82,7 +83,7 @@ export default function UnifiedSearchClient({
   const [comparisonFlights, setComparisonFlights] = useState<FlightResult[]>([]);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const [wishlistHotelIds, setWishlistHotelIds] = usePersistentStringSet(
-    "unifiedSearch:wishlistHotels"
+    HOTEL_WISHLIST_STORAGE_KEY
   );
   const { toast } = useToast();
   const { clearSearchController, startSearchController } = useAbortableSearchTask();

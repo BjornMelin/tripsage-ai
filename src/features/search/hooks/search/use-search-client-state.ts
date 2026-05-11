@@ -8,7 +8,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type StringSetUpdate = Set<string> | ((values: ReadonlySet<string>) => Set<string>);
 
-/** Returns true for DOM abort errors produced by cancelled client searches. */
+/** Local storage key shared by hotel search surfaces for saved hotel state. */
+export const HOTEL_WISHLIST_STORAGE_KEY = "hotelsSearch:wishlistHotels";
+
+/**
+ * Checks whether an unknown thrown value represents a cancelled client search.
+ *
+ * @param error - Unknown error value thrown by an abortable async operation.
+ * @returns `true` when the value exposes the standard AbortError name.
+ */
 export function isAbortError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -18,7 +26,11 @@ export function isAbortError(error: unknown): boolean {
   );
 }
 
-/** Creates a small lifecycle helper for one in-flight search task. */
+/**
+ * Creates lifecycle helpers for one in-flight search task.
+ *
+ * @returns Controller helpers that abort the previous task before a new task starts.
+ */
 export function useAbortableSearchTask() {
   const currentController = useRef<AbortController | null>(null);
 
@@ -65,7 +77,12 @@ function writeStoredStringSet(key: string, values: ReadonlySet<string>): void {
   }
 }
 
-/** Persists a string Set to localStorage while keeping the caller API Set-based. */
+/**
+ * Persists a string Set to localStorage while keeping the caller API Set-based.
+ *
+ * @param key - Local storage key that owns the persisted Set payload.
+ * @returns Current values and a setter that accepts either a Set or functional update.
+ */
 export function usePersistentStringSet(
   key: string
 ): readonly [Set<string>, (update: StringSetUpdate) => Set<string>] {
@@ -93,7 +110,13 @@ export function usePersistentStringSet(
   return [values, setStoredValues] as const;
 }
 
-/** Toggles one value in a Set without mutating the caller's Set. */
+/**
+ * Toggles one value in a Set without mutating the caller's Set.
+ *
+ * @param values - Source Set to copy before toggling.
+ * @param value - String value to add or remove.
+ * @returns The copied Set and whether the value was already present.
+ */
 export function toggleStringSetValue(
   values: ReadonlySet<string>,
   value: string

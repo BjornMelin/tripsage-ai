@@ -43,6 +43,7 @@ import { FilterPanel } from "@/features/search/components/filters/filter-panel";
 import { HotelSearchForm } from "@/features/search/components/forms/hotel-search-form";
 import { HotelResults } from "@/features/search/components/results/hotel-results";
 import {
+  HOTEL_WISHLIST_STORAGE_KEY,
   isAbortError,
   toggleStringSetValue,
   useAbortableSearchTask,
@@ -86,7 +87,7 @@ export default function HotelsSearchClient({
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [wishlistHotelIds, setWishlistHotelIds] = usePersistentStringSet(
-    "hotelsSearch:wishlistHotels"
+    HOTEL_WISHLIST_STORAGE_KEY
   );
   const [isWishlistUpdating, setIsWishlistUpdating] = useState(false);
   const [popularDestinations, setPopularDestinations] = useState<
