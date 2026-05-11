@@ -112,7 +112,7 @@ export function createServerSupabaseClient(
     // Use @supabase/ssr for proper SSR cookie handling
     return createSsrServerClient<Database>(
       env.NEXT_PUBLIC_SUPABASE_URL,
-      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
       {
         cookies: createCookieMethods(cookies),
       }
@@ -171,7 +171,7 @@ export function createMiddlewareSupabase(
     // Use @supabase/ssr for proper SSR cookie handling
     return createSsrServerClient<Database>(
       env.NEXT_PUBLIC_SUPABASE_URL,
-      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
       {
         cookies: createCookieMethods(cookies),
       }

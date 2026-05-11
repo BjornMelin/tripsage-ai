@@ -174,9 +174,10 @@ const nextEnvSchema = z.object({
 
 // Supabase configuration
 const supabaseEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z
     .string()
-    .min(1, { error: "Supabase anonymous key is required" }),
+    .min(1, { error: "Supabase publishable key is required" }),
   NEXT_PUBLIC_SUPABASE_URL: z.url({ error: "Invalid Supabase URL" }),
   SUPABASE_JWT_SECRET: supabaseJwtSecretSchema,
   SUPABASE_SERVICE_ROLE_KEY: apiKeySchema("SUPABASE_SERVICE_ROLE_KEY", 30),
@@ -320,8 +321,10 @@ export const envSchema = z
 
         // Required variables in production
         const requiredInProduction = [
+          "HMAC_SECRET",
+          "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
           "NEXT_PUBLIC_SUPABASE_URL",
-          "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "SUPABASE_JWT_SECRET",
           "TELEMETRY_HASH_SECRET",
         ];
 
@@ -329,11 +332,6 @@ export const envSchema = z
           if (!data[key as keyof typeof data]) {
             return false;
           }
-        }
-
-        // Security requirements in production
-        if (!data.SUPABASE_JWT_SECRET) {
-          return false;
         }
       }
 
@@ -358,7 +356,8 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
   NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES: z.string().optional(),
   NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES: z.string().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
 });
 

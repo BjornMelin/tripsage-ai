@@ -36,7 +36,7 @@ function normalizeOptionalEnvVar(value: string | undefined): string | undefined 
 function validateClientEnv(): ClientEnv {
   // Avoid enumerating process.env in client bundles; Next.js inlines env var
   // accesses but does not guarantee process.env is enumerable in the browser.
-  const resolvedSupabaseKey =
+  const resolvedSupabasePublishableKey =
     normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
     normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -56,7 +56,10 @@ function validateClientEnv(): ClientEnv {
       process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT
     ),
     NEXT_PUBLIC_SITE_URL: normalizeOptionalEnvVar(process.env.NEXT_PUBLIC_SITE_URL),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: resolvedSupabaseKey,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: normalizeOptionalEnvVar(
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: resolvedSupabasePublishableKey,
     NEXT_PUBLIC_SUPABASE_URL: normalizeOptionalEnvVar(
       process.env.NEXT_PUBLIC_SUPABASE_URL
     ),
@@ -84,7 +87,7 @@ function validateClientEnv(): ClientEnv {
           NEXT_PUBLIC_APP_NAME: "TripSage",
           NEXT_PUBLIC_OTEL_CLIENT_ENABLED: undefined,
           NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: undefined,
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
           NEXT_PUBLIC_SUPABASE_URL: "",
         };
       }
