@@ -48,6 +48,34 @@ Jobs (QStash workers):
   - `event.key` (dedup key), `table`, `op`
   - `qstash.message_id`, `qstash.attempt` (derived from `Upstash-Retried`)
 - Prefer server log events with consistent keys (e.g., `job_type`, `event_key`) rather than free-form strings.
+- High-cost jobs must also record redacted cost counters and duration signals:
+  - attachment ingest: duration, file size, MIME type, extracted char counts,
+    estimated RAG chunks, serialized RAG payload bytes, skip/error code, and
+    retry outcome;
+  - RAG index: duration, document count, chunk count, embedding call count,
+    embedding token usage, DB upsert count, DB rows upserted, provider failure
+    class, failed count, and retry outcome.
+- Never record raw attachment filenames, storage paths, document content,
+  extracted text, embedding values, or provider payloads in job telemetry.
+
+## Attachment and RAG budget contract
+
+- Vercel function cap: `vercel.json` sets `src/app/api/**/route.*` to 60s.
+- QStash RAG delivery timeout: 55s.
+- QStash RAG request body cap: 512 KiB, below the documented 1 MiB QStash
+  message-size ceiling.
+- Attachment download cap: 10 MiB.
+- Extracted text and RAG total content cap: 250,000 chars.
+- Documents per RAG job: 100.
+- Chunks per embedding batch: 1,200.
+- `chunkOverlap` must be smaller than `chunkSize`.
+- RAG budget violations are non-retryable and must return HTTP `489` with
+  `Upstash-NonRetryable-Error: true`.
+
+Open a follow-up Upstash Workflow pilot only after production telemetry shows
+sustained P95 duration above 45s, repeated QStash delivery timeouts/DLQ events,
+or enough custom checkpoint/state code that a workflow SDK would delete more
+code than it adds.
 
 ## Error handling and retries
 

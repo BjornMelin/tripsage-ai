@@ -1,6 +1,6 @@
 # ADR-0067: Upstash Redis + QStash for caching, rate limits, and background jobs
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Status**: Accepted  
 **Date**: 2026-01-05  
 **Category**: backend + ops  
@@ -40,6 +40,21 @@ TripSage needs:
   - canonical `label` from `QSTASH_JOB_LABELS`
   - explicit retry count and retry delay expression
   - optional flow control and failure callback where the job owner needs them
+- Keep the expensive attachment ingest and RAG index path bounded before any
+  workflow SDK rewrite:
+  - `vercel.json` caps API route execution at 60 seconds.
+  - RAG QStash delivery timeout is 55 seconds.
+  - RAG QStash request bodies are capped at 512 KiB, below the documented 1 MiB
+    QStash message-size ceiling.
+  - Attachment downloads are capped at 10 MiB.
+  - Extracted text/RAG content is capped at 250,000 characters.
+  - RAG jobs accept at most 100 documents and 1,200 embedding chunks per batch.
+  - RAG chunk overlap must be smaller than chunk size.
+- Record redacted job telemetry for duration, estimated chunk count, document
+  count, embedding calls/tokens/warnings, DB upsert count/rows, provider failure
+  class, retry outcome, and QStash payload bytes. Never record raw attachment
+  filenames, storage paths, extracted text, document content, embedding values,
+  provider payloads, or user/trip/chat identifiers.
 
 ## Decision Matrix
 
@@ -54,6 +69,21 @@ The hardened-current-stack option wins because it preserves the serverless
 provider fit while deleting duplicate rate-limit construction and tightening
 publish contracts. Workflow products stay viable future options, but they are
 not a net simplification for the current job graph.
+
+## Workflow pilot thresholds
+
+Do not add `@upstash/workflow`, Vercel Workflow, or Vercel Queues for the
+attachment/RAG path until telemetry from the bounded QStash implementation shows
+one or more of:
+
+- sustained P95 job duration above 45 seconds or recurring 60-second Vercel
+  function timeouts;
+- repeated QStash delivery timeouts, retries, or DLQ entries after the payload
+  and chunk budgets are enforced;
+- multi-step checkpoint/state code that a workflow SDK would delete more than it
+  adds;
+- embedding or retry volume that remains cost-excessive after tightening
+  content, chunk, and batch limits.
 
 ## Consequences
 
@@ -72,6 +102,9 @@ Upstash QStash local development: https://upstash.com/docs/qstash/howto/local-de
 QStash retry behavior: https://upstash.com/docs/qstash/features/retry
 QStash deduplication: https://upstash.com/docs/qstash/features/deduplication
 QStash flow control: https://upstash.com/docs/qstash/features/flowcontrol
+QStash message size and timeout: https://upstash.com/docs/qstash
+Vercel Functions duration: https://vercel.com/docs/functions/configuring-functions/duration
+Vercel AI SDK embedMany: https://ai-sdk.dev/docs/reference/ai-sdk-core/embed-many
 QStash DLQ operations: https://upstash.com/docs/qstash/api-reference/dlq/bulk-retry-dlq-messages
 NPM @upstash/ratelimit: https://www.npmjs.com/package/@upstash/ratelimit
 NPM @upstash/redis: https://www.npmjs.com/package/@upstash/redis

@@ -24,6 +24,47 @@ Background job endpoints delivered by Upstash QStash.
 - **Production degradation**: job enqueue failures on production webhook paths
   must fail closed. Local/test-only in-process fallbacks must be explicitly gated.
 
+## Attachment and RAG budgets
+
+The attachment ingest to RAG index path is intentionally bounded before any
+workflow-orchestration rewrite:
+
+| Budget | Value | Owner |
+| --- | ---: | --- |
+| Vercel function max duration | 60s | `vercel.json` |
+| QStash RAG delivery timeout | 55s | `RAG_INDEX_QSTASH_TIMEOUT_SECONDS` |
+| QStash RAG request body cap | 512 KiB | `MAX_RAG_INDEX_JOB_BODY_BYTES` |
+| QStash documented message-size ceiling | 1 MiB | Upstash QStash docs |
+| Attachment download cap | 10 MiB | `ATTACHMENT_MAX_FILE_SIZE` |
+| Extracted text cap | 250,000 chars | `MAX_RAG_INDEX_TOTAL_CONTENT_CHARS` |
+| Documents per RAG job | 100 | `MAX_RAG_INDEX_DOCUMENTS` |
+| Chunks per embedding batch | 1,200 | `MAX_RAG_EMBED_CHUNKS_PER_BATCH` |
+
+Telemetry must stay redacted and low-cardinality. The job path records counts
+and durations only:
+
+- `jobs.attachments_ingest.completed|skipped|failed`: duration, file size,
+  MIME type, extracted char counts, estimated chunk count, serialized RAG
+  payload bytes, truncation, retry outcome, and skip/error code.
+- `jobs.rag_index.completed|failed`: document count, chunk count, indexed and
+  failed counts, namespace, and retry outcome.
+- `rag.indexer.index_complete`: duration, document/chunk counts, embedding
+  calls, embedding token usage, embedding warnings, DB upsert count, DB rows
+  upserted, indexed count, failed count, and namespace.
+- `rag.indexer.embedding_failed`: chunk count, document count, namespace, and
+  provider error class name; never raw document content or provider payloads.
+
+Open a separate Upstash Workflow pilot issue only if production telemetry shows
+one of these conditions for the attachment/RAG path:
+
+- sustained P95 job duration above 45s or recurring 60s function timeouts;
+- repeated QStash delivery timeout or retry/DLQ events for the same budget
+  class after input caps are enforced;
+- embedding calls or DB upserts require multi-step checkpointing that would
+  delete more custom state code than the workflow SDK adds;
+- operator cost traces show runaway embedding volume that cannot be solved with
+  tighter payload/chunk/batch limits.
+
 ## Job ownership and publish labels
 
 | Job | Owner | Worker | Publish label | Dedup key shape |
@@ -116,6 +157,10 @@ Persist conversation turns and update memory sync markers for a chat session.
 
 Ingest a single uploaded attachment: download from Supabase Storage, extract text, then enqueue a RAG indexing job.
 
+The worker caps extracted text at 250,000 characters, validates the serialized
+RAG job payload against the 512 KiB QStash body budget, estimates chunk fan-out
+before enqueueing, and sets a 55s QStash delivery timeout for `/api/jobs/rag-index`.
+
 ### Request body
 
 ```json
@@ -138,6 +183,10 @@ Ingest a single uploaded attachment: download from Supabase Storage, extract tex
 ## `POST /api/jobs/rag-index`
 
 Index documents into the RAG store (chunking + embeddings + storage).
+
+The worker rejects request bodies over 512 KiB before JSON parsing, validates
+chunk overlap is smaller than chunk size, maps RAG budget-limit failures to
+HTTP `489`, and records embedding/DB cost counters without content.
 
 ### Request body
 

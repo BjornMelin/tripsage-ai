@@ -18,6 +18,10 @@
 * BYOK readiness now has an operator-only `/api/health/byok` probe backed by a service-role Vault health RPC that creates/decrypts/deletes a non-user probe secret, redacted `supabase.rpc.*` and provider-validation spans, and deployment smoke documentation for the planned `VAULT_UNAVAILABLE`, `INVALID_KEY`, `NETWORK_ERROR`, and `REQUEST_TIMEOUT` error-code contract.
 * BYOK metadata writes are now restricted to service-role RPC/API paths, password changes run through shared auth and rate-limit guards, public CSP has a stricter report-only staging policy, and secret scanning covers the expanded provider/env secret surface.
 
+### Performance
+
+* Attachment ingest and RAG indexing jobs now emit redacted duration/cost counters, enforce QStash payload and RAG chunk budgets, and map RAG budget failures to non-retryable DLQ responses.
+
 ## [1.32.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.32.4...v1.32.5) (2026-05-11)
 
 ### Bug Fixes

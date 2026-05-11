@@ -161,6 +161,23 @@ QStash helpers emit spans for enqueue operations:
 Job routes (e.g. `jobs.*` spans) should record `qstash.message_id` and `qstash.attempt`
 (derived from `Upstash-Retried`) for correlation with the Upstash Console.
 
+Attachment/RAG jobs add cost and duration signals without content:
+
+| Event | Purpose |
+| :--- | :--- |
+| `jobs.attachments_ingest.completed` | Attachment extraction duration, truncation, estimated chunk count, RAG payload bytes, and QStash dedupe status |
+| `jobs.attachments_ingest.skipped` | Unsupported/empty attachment outcomes that should not retry |
+| `jobs.attachments_ingest.failed` | Retryable vs non-retryable attachment ingest failures with safe error codes |
+| `jobs.rag_index.completed` | RAG job document/chunk/index counts and retry outcome |
+| `jobs.rag_index.failed` | Retryable vs non-retryable RAG job failure counts |
+| `rag.indexer.index_complete` | Embedding calls, embedding token usage, embedding warnings, DB upserts, DB rows, and duration |
+| `rag.indexer.embedding_failed` | Provider failure class name plus document/chunk counts |
+
+Do not record raw attachment filenames, storage paths, extracted text, document
+content, embedding values, provider payloads, or user/trip/chat identifiers in
+these job telemetry events. Use counts, booleans, namespaces, MIME types, and
+low-cardinality error codes.
+
 #### DLQ visibility (Upstash native)
 
 When a job is non-retryable and should be forwarded to the DLQ, return HTTP `489`
