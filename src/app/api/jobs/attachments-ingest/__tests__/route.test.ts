@@ -16,7 +16,12 @@ type TryEnqueueJob = (
   jobType: string,
   payload: unknown,
   path: string,
-  options?: { deduplicationId?: string; label?: string; timeout?: number }
+  options?: {
+    deduplicationId?: string;
+    label?: string;
+    redact?: { body?: true };
+    timeout?: number;
+  }
 ) => Promise<
   { success: true; messageId: string } | { success: false; error: Error | null }
 >;
@@ -48,7 +53,12 @@ vi.mock("@/lib/qstash/client", () => ({
     jobType: string,
     payload: unknown,
     path: string,
-    options?: { deduplicationId?: string; label?: string; timeout?: number }
+    options?: {
+      deduplicationId?: string;
+      label?: string;
+      redact?: { body?: true };
+      timeout?: number;
+    }
   ) => tryEnqueueJobMock(jobType, payload, path, options),
 }));
 
@@ -160,6 +170,7 @@ describe("POST /api/jobs/attachments-ingest", () => {
       {
         deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         label: QSTASH_JOB_LABELS.RAG_INDEX,
+        redact: { body: true },
         timeout: RAG_INDEX_QSTASH_TIMEOUT_SECONDS,
       }
     );
@@ -358,6 +369,7 @@ describe("POST /api/jobs/attachments-ingest", () => {
       {
         deduplicationId: "rag-index:attachment:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         label: QSTASH_JOB_LABELS.RAG_INDEX,
+        redact: { body: true },
         timeout: RAG_INDEX_QSTASH_TIMEOUT_SECONDS,
       }
     );

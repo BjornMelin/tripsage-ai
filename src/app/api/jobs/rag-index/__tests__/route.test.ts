@@ -109,6 +109,10 @@ describe("POST /api/jobs/rag-index", () => {
     expect(json.success).toBe(true);
     expect(indexDocumentsMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        config: expect.objectContaining({
+          batchSize: 1,
+          namespace: "user_content",
+        }),
         documents: [
           expect.objectContaining({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
         ],
@@ -126,6 +130,35 @@ describe("POST /api/jobs/rag-index", () => {
           namespace: "user_content",
           retryOutcome: "not_applicable",
         }),
+      })
+    );
+  });
+
+  it("uses one indexer batch for the validated job payload", async () => {
+    const { POST } = await loadRoute();
+
+    const res = await POST(
+      makeRequest({
+        documents: [
+          {
+            content: "First document",
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            sourceId: "src-1",
+          },
+          {
+            content: "Second document",
+            id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            sourceId: "src-2",
+          },
+        ],
+        userId: "11111111-1111-4111-8111-111111111111",
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(indexDocumentsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({ batchSize: 2 }),
       })
     );
   });

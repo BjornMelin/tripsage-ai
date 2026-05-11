@@ -47,7 +47,7 @@ TripSage needs:
   - RAG embedding abort timeout is 50 seconds so workers can finish cleanup
     before QStash gives up on delivery.
   - RAG QStash request bodies are capped at 512 KiB, below the documented 1 MiB
-    QStash message-size ceiling.
+    default QStash message-size limit.
   - Attachment downloads are capped at 10 MiB.
   - Extracted text/RAG content is capped at 250,000 characters.
   - RAG jobs accept at most 100 documents and 1,200 embedding chunks per batch.
@@ -60,8 +60,9 @@ TripSage needs:
 - Treat attachment-to-RAG QStash message bodies as a raw user-content processor
   boundary. They carry extracted document content and attachment metadata for
   asynchronous indexing, and retryable failures can leave those bodies in
-  QStash retry/DLQ storage. Operator access to QStash payloads/DLQs is sensitive
-  production data access; telemetry must remain aggregate and redacted.
+  QStash retry/DLQ storage. The publisher requests provider-side request-body
+  log redaction for this path. Operator access to QStash payloads/DLQs is
+  sensitive production data access; telemetry must remain aggregate and redacted.
 
 ## Decision Matrix
 

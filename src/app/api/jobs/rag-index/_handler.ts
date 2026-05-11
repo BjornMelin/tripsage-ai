@@ -20,6 +20,7 @@ export async function handleRagIndexJob(
   return await indexDocuments({
     chatId: job.chatId ?? undefined,
     config: {
+      batchSize: job.documents.length,
       chunkOverlap: job.chunkOverlap,
       chunkSize: job.chunkSize,
       namespace: job.namespace,

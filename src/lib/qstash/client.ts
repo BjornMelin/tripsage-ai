@@ -162,6 +162,8 @@ export interface EnqueueJobOptions {
   failureCallback?: string;
   /** HTTP timeout in seconds */
   timeout?: number;
+  /** Provider-side log redaction for sensitive message fields */
+  redact?: QStashPublishJsonOptions["redact"];
   /** Delay before first delivery in seconds */
   delay?: number;
   /** Override default retry count */
@@ -312,6 +314,7 @@ export async function enqueueJob(
         flowControl: options.flowControl,
         headers,
         label: options.label,
+        redact: options.redact,
         retries: options.retries ?? QSTASH_RETRY_CONFIG.retries,
         retryDelay: options.retryDelay ?? QSTASH_RETRY_CONFIG.retryDelay,
         timeout: options.timeout,
