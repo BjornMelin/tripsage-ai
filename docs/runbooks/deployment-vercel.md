@@ -90,7 +90,7 @@ The workflow must fail if no Vercel deployment URL is produced.
 - Public app shell returns HTML.
 - `/api/health` returns a no-store JSON health payload.
 - `/auth/me` rejects unauthenticated requests with `401`.
-- `/login?redirect_url=%2Fdashboard` renders an HTML shell for auth redirects.
+- `/login?next=%2Fdashboard` renders an HTML shell for auth redirects.
 - `/api/keys/validate` rejects unauthenticated BYOK validation requests. This
   is a route-guard smoke check, not an authenticated provider health check.
 - QStash job routes reject unsigned POST requests with `401` after environment

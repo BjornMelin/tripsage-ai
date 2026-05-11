@@ -10,6 +10,8 @@ const JOB_ROUTES = [
   "/api/jobs/notify-collaborators",
   "/api/jobs/rag-index",
 ];
+const RETRY_DELAY_MS = 1_000;
+const REQUEST_ATTEMPTS = 3;
 
 function readArg(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -30,18 +32,47 @@ function normalizeBaseUrl(raw) {
   return url.toString().replace(/\/$/, "");
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function request(baseUrl, path, init = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
-  try {
-    return await fetch(new URL(path, baseUrl), {
-      redirect: init.redirect ?? "follow",
-      signal: controller.signal,
-      ...init,
-    });
-  } finally {
-    clearTimeout(timeout);
+  let lastError;
+
+  for (let attempt = 1; attempt <= REQUEST_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const response = await fetch(new URL(path, baseUrl), {
+        redirect: init.redirect ?? "follow",
+        signal: controller.signal,
+        ...init,
+      });
+      if (response.status < 500 || attempt === REQUEST_ATTEMPTS) {
+        return response;
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === REQUEST_ATTEMPTS) {
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    await delay(RETRY_DELAY_MS * attempt);
   }
+
+  throw lastError ?? new Error(`Request failed for ${path}`);
+}
+
+function requestAll(baseUrl, paths, init) {
+  return Promise.all(
+    paths.map(async (path) => {
+      const response = await request(baseUrl, path, init);
+      return { path, response };
+    })
+  );
 }
 
 function passed(name, details = {}) {
@@ -90,7 +121,7 @@ async function checkUnauthenticatedAuth(baseUrl) {
 }
 
 async function checkLoginShell(baseUrl) {
-  const response = await request(baseUrl, "/login?redirect_url=%2Fdashboard");
+  const response = await request(baseUrl, "/login?next=%2Fdashboard");
   const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok || !contentType.includes("text/html")) {
     throw new Error(
@@ -116,42 +147,43 @@ async function checkByokGuard(baseUrl) {
 }
 
 async function checkQstashRoutes(baseUrl) {
-  const results = [];
-  for (const path of JOB_ROUTES) {
-    const response = await request(baseUrl, path, {
-      body: "{}",
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      redirect: "manual",
-    });
-    if (response.status !== 401) {
-      throw new Error(
-        `${path} expected unsigned QStash request to return 401, got ${response.status}`
-      );
-    }
-    results.push({ path, status: response.status });
-  }
-  return { routes: results };
+  const routeResponses = await requestAll(baseUrl, JOB_ROUTES, {
+    body: "{}",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+    redirect: "manual",
+  });
+
+  return {
+    routes: routeResponses.map(({ path, response }) => {
+      if (response.status !== 401) {
+        throw new Error(
+          `${path} expected unsigned QStash request to return 401, got ${response.status}`
+        );
+      }
+      return { path, status: response.status };
+    }),
+  };
 }
 
-async function runCheck(name, fn, checks) {
+async function runCheck(name, fn) {
   try {
-    checks.push(passed(name, await fn()));
+    return passed(name, await fn());
   } catch (error) {
-    checks.push(failed(name, error));
+    return failed(name, error);
   }
 }
 
 const baseUrl = normalizeBaseUrl(readArg("--url"));
 const environment = readArg("--environment", "production");
-const checks = [];
-
-await runCheck("app_shell", () => checkAppShell(baseUrl), checks);
-await runCheck("health_endpoint", () => checkHealth(baseUrl), checks);
-await runCheck("auth_session_guard", () => checkUnauthenticatedAuth(baseUrl), checks);
-await runCheck("authenticated_redirect_shell", () => checkLoginShell(baseUrl), checks);
-await runCheck("byok_route_guard", () => checkByokGuard(baseUrl), checks);
-await runCheck("qstash_job_route_guards", () => checkQstashRoutes(baseUrl), checks);
+const checks = await Promise.all([
+  runCheck("app_shell", () => checkAppShell(baseUrl)),
+  runCheck("health_endpoint", () => checkHealth(baseUrl)),
+  runCheck("auth_session_guard", () => checkUnauthenticatedAuth(baseUrl)),
+  runCheck("authenticated_redirect_shell", () => checkLoginShell(baseUrl)),
+  runCheck("byok_route_guard", () => checkByokGuard(baseUrl)),
+  runCheck("qstash_job_route_guards", () => checkQstashRoutes(baseUrl)),
+]);
 
 const failedChecks = checks.filter((check) => check.status === "failed");
 const summary = {

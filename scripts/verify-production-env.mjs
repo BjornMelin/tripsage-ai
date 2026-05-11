@@ -174,7 +174,7 @@ console.log(JSON.stringify(summary, null, 2));
 
 if (failed.length > 0) {
   console.error(
-    `Production environment validation failed: ${failed
+    `${environment} environment validation failed: ${failed
       .map((check) => check.name)
       .join(", ")}`
   );

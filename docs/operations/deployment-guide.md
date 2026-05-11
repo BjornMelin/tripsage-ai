@@ -65,7 +65,9 @@ make supa.db.push                       # apply supabase/migrations/* to remote
 
 ### Vercel configuration (`vercel.json`)
 
-The `vercel.json` file configures function settings:
+The `vercel.json` file configures function settings and disables Git-based
+Vercel deployments so production can only move through the CLI promotion
+workflow:
 
 ```json
 {

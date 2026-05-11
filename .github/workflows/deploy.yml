@@ -206,10 +206,9 @@ jobs:
           if [[ -n "$SKIP_DOMAIN_FLAG" ]]; then
             deploy_args+=("$SKIP_DOMAIN_FLAG")
           fi
-          deploy_output="$(vercel deploy "${deploy_args[@]}")"
-          printf '%s\n' "$deploy_output"
-          deployment_url="$(printf '%s\n' "$deploy_output" | grep -Eo 'https://[^[:space:]]+' | tail -n 1)"
-          if [[ -z "$deployment_url" ]]; then
+          deployment_url="$(vercel deploy "${deploy_args[@]}")"
+          printf '%s\n' "$deployment_url"
+          if [[ ! "$deployment_url" =~ ^https://[^[:space:]]+$ ]]; then
             echo "::error::Vercel CLI did not emit a deployment URL."
             exit 1
           fi
