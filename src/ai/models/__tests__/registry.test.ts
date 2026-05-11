@@ -216,6 +216,18 @@ describe("resolveProvider", () => {
     expect(result.modelId).toBe(ANTHROPIC_VALIDATION_MODEL_ID);
   });
 
+  it("rejects foreign provider-qualified hints for direct BYOK providers", async () => {
+    const { getUserApiKey } = await import("@/lib/supabase/rpc");
+    vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>
+      svc === "anthropic" ? "sk-ant" : null
+    );
+    const { resolveProvider } = await import("@ai/models/registry");
+
+    await expect(
+      resolveProvider("user-foreign-hint", "openai/gpt-5.5")
+    ).rejects.toThrow(/targets a different provider/);
+  });
+
   it("uses xAI when only xai key exists", async () => {
     const { getUserApiKey } = await import("@/lib/supabase/rpc");
     vi.mocked(getUserApiKey).mockImplementation(async (_uid: string, svc: string) =>

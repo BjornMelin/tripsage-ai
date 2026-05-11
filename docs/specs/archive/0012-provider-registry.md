@@ -27,7 +27,7 @@ Behavior:
 ## Integration Mapping
 
 - OpenAI → `createOpenAI({ apiKey }).responses(modelId)`; default model mapping: `gpt-5.4-mini`.
-- OpenRouter → `createOpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' })(modelId)` (OpenAI‑compatible endpoint).
+- OpenRouter → `createOpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' }).chat(modelId)` (OpenAI‑compatible endpoint).
 - Anthropic → `createAnthropic({ apiKey })(modelId)`; no implicit app-owned default.
 - xAI → `createXai({ apiKey })(modelId)` from `@ai-sdk/xai`; default model mapping: `grok-4.3`.
 - Gateway (user/team) → `createGateway({ apiKey, baseURL? })(modelId)` from `ai` (AI SDK v6 exports Gateway in the core package). Team fallback path now uses createGateway for parity with user BYOK Gateway.

@@ -48,6 +48,15 @@ class MissingExplicitProviderModelError extends Error {
   }
 }
 
+class ForeignProviderModelHintError extends Error {
+  constructor(provider: ProviderId, modelId: string) {
+    super(
+      `Model hint ${modelId} targets a different provider; expected ${provider} or an unqualified provider-native model id.`
+    );
+    this.name = "ForeignProviderModelHintError";
+  }
+}
+
 function resolveGatewayBaseUrl(
   rawBaseUrl: string | null | undefined,
   source: "team" | "user"
@@ -83,6 +92,9 @@ function stripProviderPrefix(provider: ProviderId, modelId: string): string {
   const prefix = `${provider}/`;
   if (trimmed.startsWith(prefix)) {
     return trimmed.slice(prefix.length);
+  }
+  if (trimmed.includes("/")) {
+    throw new ForeignProviderModelHintError(provider, trimmed);
   }
   return trimmed;
 }
@@ -212,9 +224,10 @@ async function resolveByokProvider(
  * @param userId - Supabase auth user id; used to fetch BYOK keys server-side.
  * @param modelHint - Optional generic model hint (e.g., "gpt-5.5").
  * @returns ProviderResolution including provider id, model id, and model instance.
- * @throws RejectedGatewayBaseUrlError - If a selected user or team Gateway base URL fails validation.
- * @throws MissingExplicitProviderModelError - If the resolved provider requires explicit model selection.
- * @throws Error - If a required provider lookup fails, no eligible credential source exists, or provider SDK initialization fails.
+ * @throws {RejectedGatewayBaseUrlError} - If a selected user or team Gateway base URL fails validation.
+ * @throws {MissingExplicitProviderModelError} - If the resolved provider requires explicit model selection.
+ * @throws {ForeignProviderModelHintError} - If a direct BYOK/server provider receives a model hint for another provider.
+ * @throws {Error} - If a required provider lookup fails, no eligible credential source exists, or provider SDK initialization fails.
  */
 export async function resolveProvider(
   userId: string,
@@ -279,6 +292,9 @@ export async function resolveProvider(
       }
     } catch (error) {
       if (error instanceof MissingExplicitProviderModelError) {
+        throw error;
+      }
+      if (error instanceof ForeignProviderModelHintError) {
         throw error;
       }
       providerRegistryLogger.warn("byok_lookup_failed", {
@@ -358,6 +374,9 @@ export async function resolveProvider(
     } catch (error) {
       if (error instanceof MissingExplicitProviderModelError) {
         continue;
+      }
+      if (error instanceof ForeignProviderModelHintError) {
+        throw error;
       }
       throw error;
     }
