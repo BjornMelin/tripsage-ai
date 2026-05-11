@@ -1126,6 +1126,11 @@ DECLARE v_flag BOOLEAN; BEGIN
   RETURN v_flag;
 END; $$;
 
+REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(UUID) FROM anon;
+REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(UUID) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_allow_gateway_fallback(UUID) TO service_role;
+
 -- Admin flag helper
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean

@@ -7,6 +7,8 @@ import "server-only";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 
 const DEFAULT_GATEWAY_HOST = "ai-gateway.vercel.sh";
+let cachedAllowedGatewayHosts: Set<string> | null = null;
+let cachedAllowedGatewayHostsEnv: string | null = null;
 
 export type GatewayBaseUrlSource = "default" | "team" | "user";
 
@@ -31,11 +33,17 @@ export type GatewayBaseUrlValidation =
 
 function allowedGatewayHosts(): Set<string> {
   const configured = getServerEnvVarWithFallback("AI_GATEWAY_ALLOWED_HOSTS", "") ?? "";
+  if (cachedAllowedGatewayHosts && cachedAllowedGatewayHostsEnv === configured) {
+    return cachedAllowedGatewayHosts;
+  }
+
   const hosts = new Set([DEFAULT_GATEWAY_HOST]);
   for (const host of configured.split(",")) {
     const normalized = host.trim().toLowerCase();
     if (normalized) hosts.add(normalized);
   }
+  cachedAllowedGatewayHosts = hosts;
+  cachedAllowedGatewayHostsEnv = configured;
   return hosts;
 }
 

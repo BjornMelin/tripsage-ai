@@ -506,6 +506,29 @@ describe("/api/keys/validate route", () => {
     expect(res.status).toBe(200);
   });
 
+  it("returns INVALID_KEY when Gateway credits validation rejects credentials", async () => {
+    mockCreateGateway.mockReturnValue({
+      getCredits: vi.fn(() => Promise.reject({ status: 401 })),
+    });
+
+    const { POST } = await import("../route");
+    const req = createMockNextRequest({
+      body: { apiKey: "gw-test", service: "gateway" },
+      method: "POST",
+      url: "http://localhost/api/keys/validate",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    const body = await res.json();
+
+    expect(body).toEqual({ isValid: false, reason: "INVALID_KEY" });
+    expect(res.status).toBe(200);
+    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith(
+      "keys.validation.reason",
+      "INVALID_KEY"
+    );
+  });
+
   it("throttles per user id and returns headers", async () => {
     stubRateLimitEnabled();
     setRateLimitFactoryForTests(RATE_LIMIT_FACTORY);

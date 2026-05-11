@@ -41,6 +41,9 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(uuid) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.get_user_allow_gateway_fallback(uuid) TO service_role;
 
 DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;

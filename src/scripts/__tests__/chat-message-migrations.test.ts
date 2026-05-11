@@ -69,12 +69,35 @@ describe("chat message persistence migrations", () => {
     expect(migration).toContain("CREATE POLICY chat_messages_insert");
     expect(migration).toContain("AND role = 'user'");
     expect(migration).toContain("CREATE POLICY chat_messages_service_insert");
+    expect(migration).toContain("CREATE POLICY chat_tool_calls_insert");
+    expect(migration).toContain(
+      "CREATE POLICY chat_tool_calls_insert\n  ON public.chat_tool_calls\n  FOR INSERT\n  TO service_role"
+    );
     expect(migration).toContain(
       "ALTER COLUMN allow_gateway_fallback SET DEFAULT false"
     );
     expect(migration).toContain("RETURN coalesce(v_flag, false)");
-    expect(migration).toContain("FOR INSERT");
-    expect(migration).toContain("TO service_role");
+    expect(migration).toContain(
+      "REVOKE ALL ON FUNCTION public.get_user_allow_gateway_fallback(uuid) FROM PUBLIC"
+    );
     expect(migration).toContain("FOR SELECT");
+  });
+
+  it("preserves legacy tool parts when canonicalization is incomplete", () => {
+    const migration = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260511020000_canonicalize_chat_message_parts.sql"
+      ),
+      "utf8"
+    );
+
+    expect(migration).toContain("should_strip_tool_parts := false");
+    expect(migration).toContain("raw_parts.tool_id IS NULL");
+    expect(migration).toContain("grouped_tool_calls.tool_name IS NULL");
+    expect(migration).toContain("should_strip_tool_parts := true");
+    expect(migration).toContain(
+      "CASE WHEN status IN ('completed', 'failed') THEN message_record.created_at ELSE NULL END"
+    );
   });
 });

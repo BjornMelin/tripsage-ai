@@ -160,6 +160,23 @@ function normalizeErrorReason(error: unknown): string {
   return mapProviderExceptionToCode(error);
 }
 
+function getErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === "number") return status;
+  const statusCode = (error as { statusCode?: unknown }).statusCode;
+  if (typeof statusCode === "number") return statusCode;
+  const response = (error as { response?: { status?: unknown } }).response;
+  return typeof response?.status === "number" ? response.status : undefined;
+}
+
+function mapGatewayCreditsErrorToCode(error: unknown): string {
+  const status = getErrorStatus(error);
+  return typeof status === "number"
+    ? mapProviderStatusToCode(status)
+    : mapProviderExceptionToCode(error);
+}
+
 function createValidationFetch(timeoutMs: number): typeof fetch {
   return async (input, init) =>
     fetch(input, {
@@ -185,8 +202,12 @@ async function validateGatewayKey(apiKey: string): Promise<ValidateResult> {
       : {}),
   });
 
-  await gateway.getCredits();
-  return { isValid: true };
+  try {
+    await gateway.getCredits();
+    return { isValid: true };
+  } catch (error) {
+    return { isValid: false, reason: mapGatewayCreditsErrorToCode(error) };
+  }
 }
 
 /**
@@ -211,24 +232,19 @@ async function validateProviderKey(
       },
     },
     async (span) => {
-      const builder = PROVIDER_BUILDERS[providerId];
-      if (!builder && providerId !== "gateway") {
-        // Planned BYOK GA codes intentionally collapse schema/provider-builder
-        // drift into user-actionable invalid-key handling instead of returning
-        // the legacy unstable INVALID_SERVICE code.
-        span.setAttribute("keys.validation.is_valid", false);
-        span.setAttribute("keys.validation.reason", PLANNED_ERROR_CODES.invalidKey);
-        return { isValid: false, reason: PLANNED_ERROR_CODES.invalidKey };
-      }
-
       try {
         if (providerId === "gateway") {
           const result = await validateGatewayKey(apiKey);
           span.setAttribute("keys.validation.is_valid", result.isValid);
+          if (result.reason) span.setAttribute("keys.validation.reason", result.reason);
           return result;
         }
 
+        const builder = PROVIDER_BUILDERS[providerId];
         if (!builder) {
+          // Planned BYOK GA codes intentionally collapse schema/provider-builder
+          // drift into user-actionable invalid-key handling instead of returning
+          // the legacy unstable INVALID_SERVICE code.
           span.setAttribute("keys.validation.is_valid", false);
           span.setAttribute("keys.validation.reason", PLANNED_ERROR_CODES.invalidKey);
           return { isValid: false, reason: PLANNED_ERROR_CODES.invalidKey };

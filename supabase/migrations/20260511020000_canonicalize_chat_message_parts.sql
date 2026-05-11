@@ -7,12 +7,15 @@ DECLARE
   canonical_parts jsonb;
   message_record record;
   parsed_parts jsonb;
+  should_strip_tool_parts boolean;
 BEGIN
   FOR message_record IN
-    SELECT id, content, metadata, role
+    SELECT id, content, metadata, role, created_at
     FROM public.chat_messages
     WHERE content ~ '^\s*\['
   LOOP
+    should_strip_tool_parts := false;
+
     BEGIN
       parsed_parts := message_record.content::jsonb;
     EXCEPTION WHEN others THEN
@@ -29,6 +32,70 @@ BEGIN
       AND message_record.metadata ? 'provider'
       AND message_record.metadata ? 'uiMessageId'
     THEN
+      IF EXISTS (
+        WITH raw_parts AS (
+          SELECT
+            part,
+            ord,
+            part->>'type' AS part_type,
+            coalesce(
+              nullif(part->>'toolCallId', ''),
+              nullif(part->>'tool_call_id', ''),
+              nullif(part->>'toolId', ''),
+              nullif(part->>'id', '')
+            ) AS tool_id
+          FROM jsonb_array_elements(parsed_parts) WITH ORDINALITY AS parts(part, ord)
+          WHERE jsonb_typeof(part) = 'object'
+            AND (
+              part->>'type' = 'dynamic-tool'
+              OR part->>'type' = 'tool-call'
+              OR part->>'type' = 'tool-result'
+              OR part->>'type' = 'tool-approval-request'
+              OR part->>'type' = 'tool-approval-response'
+              OR part->>'type' LIKE 'tool-%'
+              OR part->>'type' LIKE 'tool-input-%'
+              OR part->>'type' LIKE 'tool-output-%'
+            )
+        ),
+        normalized_parts AS (
+          SELECT
+            tool_id,
+            coalesce(
+              nullif(part->>'toolName', ''),
+              nullif(part->>'tool_name', ''),
+              CASE
+                WHEN part_type LIKE 'tool-%'
+                  AND part_type NOT LIKE 'tool-input-%'
+                  AND part_type NOT LIKE 'tool-output-%'
+                  AND part_type NOT IN (
+                    'tool-call',
+                    'tool-result',
+                    'tool-approval-request',
+                    'tool-approval-response'
+                  )
+                  THEN substring(part_type from 6)
+                ELSE NULL
+              END
+            ) AS tool_name
+          FROM raw_parts
+        ),
+        grouped_tool_calls AS (
+          SELECT
+            tool_id,
+            (array_agg(tool_name) FILTER (WHERE tool_name IS NOT NULL))[1] AS tool_name
+          FROM normalized_parts
+          WHERE tool_id IS NOT NULL
+          GROUP BY tool_id
+        )
+        SELECT 1
+        FROM raw_parts
+        LEFT JOIN grouped_tool_calls USING (tool_id)
+        WHERE raw_parts.tool_id IS NULL
+          OR grouped_tool_calls.tool_name IS NULL
+      ) THEN
+        CONTINUE;
+      END IF;
+
       WITH raw_parts AS (
         SELECT
           part,
@@ -137,7 +204,7 @@ BEGIN
         result,
         status,
         provider_executed,
-        CASE WHEN status IN ('completed', 'failed') THEN now() ELSE NULL END,
+        CASE WHEN status IN ('completed', 'failed') THEN message_record.created_at ELSE NULL END,
         error_message
       FROM grouped_tool_calls
       WHERE tool_name IS NOT NULL
@@ -147,24 +214,30 @@ BEGIN
           WHERE existing.message_id = message_record.id
             AND existing.tool_id = grouped_tool_calls.tool_id
         );
+
+      should_strip_tool_parts := true;
     END IF;
 
-    SELECT COALESCE(jsonb_agg(part ORDER BY ord), '[]'::jsonb)
-    INTO canonical_parts
-    FROM jsonb_array_elements(parsed_parts) WITH ORDINALITY AS parts(part, ord)
-    WHERE NOT (
-      jsonb_typeof(part) = 'object'
-      AND (
-        part->>'type' = 'dynamic-tool'
-        OR part->>'type' = 'tool-call'
-        OR part->>'type' = 'tool-result'
-        OR part->>'type' = 'tool-approval-request'
-        OR part->>'type' = 'tool-approval-response'
-        OR part->>'type' LIKE 'tool-%'
-        OR part->>'type' LIKE 'tool-input-%'
-        OR part->>'type' LIKE 'tool-output-%'
-      )
-    );
+    IF should_strip_tool_parts THEN
+      SELECT COALESCE(jsonb_agg(part ORDER BY ord), '[]'::jsonb)
+      INTO canonical_parts
+      FROM jsonb_array_elements(parsed_parts) WITH ORDINALITY AS parts(part, ord)
+      WHERE NOT (
+        jsonb_typeof(part) = 'object'
+        AND (
+          part->>'type' = 'dynamic-tool'
+          OR part->>'type' = 'tool-call'
+          OR part->>'type' = 'tool-result'
+          OR part->>'type' = 'tool-approval-request'
+          OR part->>'type' = 'tool-approval-response'
+          OR part->>'type' LIKE 'tool-%'
+          OR part->>'type' LIKE 'tool-input-%'
+          OR part->>'type' LIKE 'tool-output-%'
+        )
+      );
+    ELSE
+      canonical_parts := parsed_parts;
+    END IF;
 
     IF canonical_parts = '[]'::jsonb THEN
       canonical_parts := '[{"type":"text","text":""}]'::jsonb;

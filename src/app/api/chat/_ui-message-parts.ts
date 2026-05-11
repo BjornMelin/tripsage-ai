@@ -28,10 +28,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isPersistedToolPartType(type: string): boolean {
   return (
     type === "dynamic-tool" ||
-    type === "tool-call" ||
-    type === "tool-result" ||
-    type === "tool-approval-request" ||
-    type === "tool-approval-response" ||
     type.startsWith("tool-") ||
     type.startsWith("tool-input-") ||
     type.startsWith("tool-output-")

@@ -52,9 +52,9 @@ function getSortedLimitKeys(table: ModelLimitsTable): string[] {
  * Resolve the context window limit for a given model.
  * Performs a lowercase substring match against known keys.
  *
- * @param modelName The model identifier (e.g., "gpt-5.5").
- * @param table Optional override table.
- * @returns Context window token limit.
+ * @param modelName - The model identifier (e.g., "gpt-5.5").
+ * @param table - Optional override table.
+ * @returns - Context window token limit.
  */
 export function getModelContextLimit(
   modelName: string | undefined,
