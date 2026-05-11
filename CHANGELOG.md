@@ -1,3 +1,15 @@
+## [1.33.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.2...v1.33.3) (2026-05-11)
+
+### Bug Fixes
+
+* **jobs:** address rag review telemetry ([489824b](https://github.com/BjornMelin/tripsage-ai/commit/489824bc45c151f72b7e9c3bd95e6830dcc5f302))
+* **jobs:** align rag telemetry bounds ([e79c216](https://github.com/BjornMelin/tripsage-ai/commit/e79c216d77c1413970764afe162f56717e4731b4))
+* **qstash:** redact rag job payloads ([b191cb7](https://github.com/BjornMelin/tripsage-ai/commit/b191cb751ede0341557a3802252c970f52961f18))
+
+### Performance Improvements
+
+* **jobs:** instrument bounded rag indexing ([100e42e](https://github.com/BjornMelin/tripsage-ai/commit/100e42e98ab9400d7b82a4d3481c560e2a7636db))
+
 ## [1.33.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.1...v1.33.2) (2026-05-11)
 
 ### Bug Fixes
