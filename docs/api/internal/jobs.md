@@ -44,9 +44,14 @@ workflow-orchestration rewrite:
 Telemetry must stay redacted and low-cardinality. The job path records counts
 and durations only:
 
-- `jobs.attachments_ingest.completed|skipped|failed`: duration, file size,
-  MIME type, extracted char counts, estimated chunk count, serialized RAG
-  payload bytes, truncation, retry outcome, and skip/error code.
+- `jobs.attachments_ingest.completed`: duration, file size, MIME type,
+  extracted char counts, estimated chunk count, serialized RAG payload bytes,
+  truncation, retry outcome, and QStash deduplication result.
+- `jobs.attachments_ingest.skipped`: duration, file size, MIME type, skip
+  reason, and retry outcome.
+- `jobs.attachments_ingest.failed`: duration, file size, MIME type, extracted
+  char counts, estimated chunk count, serialized RAG payload bytes, error code,
+  and retry outcome.
 - `jobs.rag_index.completed|failed`: document count, chunk count, indexed and
   failed counts, namespace, and retry outcome.
 - `rag.indexer.index_complete`: duration, document/chunk counts, embedding

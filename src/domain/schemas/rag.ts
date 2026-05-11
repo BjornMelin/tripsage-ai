@@ -93,7 +93,7 @@ export type RagSearchResult = z.infer<typeof ragSearchResultSchema>;
 export const MAX_RAG_INDEX_TOTAL_CONTENT_CHARS = 250_000;
 /** Maximum documents accepted in one RAG indexing request or job. */
 export const MAX_RAG_INDEX_DOCUMENTS = 100;
-/** Maximum serialized RAG QStash job body size, kept below the provider 1 MB limit. */
+/** Maximum serialized RAG QStash job body size for the app's operational budget. */
 export const MAX_RAG_INDEX_JOB_BODY_BYTES = 512 * 1024;
 /** Maximum chunks embedded in one provider call batch. */
 export const MAX_RAG_EMBED_CHUNKS_PER_BATCH = 1200;
