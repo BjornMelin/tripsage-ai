@@ -4,23 +4,21 @@
 
 import "server-only";
 
-import { changePasswordFormSchema } from "@schemas/auth";
+import { changePasswordPayloadSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { type RouteContext, withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody } from "@/lib/api/route-helpers";
-import { requireUser } from "@/lib/auth/server";
 import {
   getAuthErrorCode,
   getAuthErrorStatus,
   isMfaRequiredError,
 } from "@/lib/auth/supabase-errors";
-import { ROUTES } from "@/lib/routes";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { isPlainObject } from "@/lib/utils/type-guards";
 
 interface ChangePasswordPayload {
-  confirmPassword?: unknown;
   currentPassword?: unknown;
   newPassword?: unknown;
 }
@@ -30,7 +28,10 @@ const MAX_BODY_BYTES = 4 * 1024;
 
 const logger = createServerLogger("auth.password.change");
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+async function handlePasswordChange(
+  request: NextRequest,
+  { supabase, user }: RouteContext
+): Promise<NextResponse> {
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
   if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
@@ -49,8 +50,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ? parsedBody.data
     : {};
 
-  const parsed = changePasswordFormSchema.safeParse({
-    confirmPassword: payload.confirmPassword,
+  const parsed = changePasswordPayloadSchema.safeParse({
     currentPassword: payload.currentPassword,
     newPassword: payload.newPassword,
   });
@@ -63,10 +63,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { supabase, user } = await requireUser({
-    redirectTo: ROUTES.dashboard.security,
-  });
-  const email = user.email;
+  const email = user?.email;
 
   if (!email) {
     return NextResponse.json(
@@ -167,3 +164,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withApiGuards({
+  auth: true,
+  rateLimit: "auth:password:change",
+  telemetry: "auth.password.change",
+})(handlePasswordChange);

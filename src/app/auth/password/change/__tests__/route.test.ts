@@ -1,35 +1,18 @@
 /** @vitest-environment node */
 
-import type { MockInstance } from "vitest";
+import type { AuthTokenResponsePassword, UserResponse } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockNextRequest } from "@/test/helpers/route";
-
-const REQUIRE_USER_MOCK = vi.hoisted(
-  () =>
-    vi.fn(async () => ({
-      supabase: {
-        auth: {
-          signInWithPassword: vi.fn(async () => ({ error: null })),
-          updateUser: vi.fn(async () => ({ error: null })),
-        },
-      },
-      user: { email: "user@example.com" },
-    })) as MockInstance<
-      (_args: { redirectTo: string }) => Promise<{
-        supabase: {
-          auth: {
-            signInWithPassword: MockInstance;
-            updateUser: MockInstance;
-          };
-        };
-        user: { email?: string };
-      }>
-    >
-);
-
-vi.mock("@/lib/auth/server", () => ({
-  requireUser: REQUIRE_USER_MOCK,
-}));
+import {
+  apiRouteRateLimitSpy,
+  createRouteParamsContext,
+  enableApiRouteRateLimit,
+  getApiRouteSupabaseMock,
+  makeJsonRequest,
+  mockApiRouteAuthUser,
+  mockApiRouteRateLimitOnce,
+  resetApiRouteMocks,
+} from "@/test/helpers/api-route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 vi.mock("@/lib/telemetry/degraded-mode", () => ({
   emitOperationalAlertOncePerWindow: vi.fn(),
@@ -47,22 +30,19 @@ import { POST } from "../route";
 
 describe("/auth/password/change route", () => {
   beforeEach(() => {
-    REQUIRE_USER_MOCK.mockClear();
+    resetApiRouteMocks();
+    enableApiRouteRateLimit();
   });
 
   it("returns 413 when payload exceeds the size limit", async () => {
     const huge = "a".repeat(10_000);
-    const req = createMockNextRequest({
-      body: {
-        confirmPassword: huge,
-        currentPassword: huge,
-        newPassword: huge,
-      },
-      method: "POST",
-      url: "http://localhost/auth/password/change",
+    const req = makeJsonRequest("/auth/password/change", {
+      confirmPassword: huge,
+      currentPassword: huge,
+      newPassword: huge,
     });
 
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(413);
     await expect(res.json()).resolves.toEqual({
       code: "PAYLOAD_TOO_LARGE",
@@ -71,52 +51,96 @@ describe("/auth/password/change route", () => {
   });
 
   it("returns 403 when MFA is required to verify current password", async () => {
-    const signInWithPassword = vi.fn(async () => ({
+    const signInWithPassword = vi.fn(async (_credentials: unknown) => ({
+      data: { session: null, user: null },
       error: { code: "mfa_required", message: "mfa required", status: 403 },
     }));
-    const updateUser = vi.fn(async () => ({ error: null }));
+    const updateUser = vi.fn(async () =>
+      unsafeCast<UserResponse>({ data: { user: null }, error: null })
+    );
+    const supabase = getApiRouteSupabaseMock();
+    vi.spyOn(supabase.auth, "signInWithPassword").mockImplementation(
+      async (credentials) =>
+        unsafeCast<AuthTokenResponsePassword>(await signInWithPassword(credentials))
+    );
+    vi.spyOn(supabase.auth, "updateUser").mockImplementation(updateUser);
 
-    REQUIRE_USER_MOCK.mockResolvedValueOnce({
-      supabase: { auth: { signInWithPassword, updateUser } },
-      user: { email: "user@example.com" },
+    const req = makeJsonRequest("/auth/password/change", {
+      confirmPassword: "StrongPassword!234",
+      currentPassword: "CurrentPassword!234",
+      newPassword: "StrongPassword!234",
     });
 
-    const req = createMockNextRequest({
-      body: {
-        confirmPassword: "StrongPassword!234",
-        currentPassword: "CurrentPassword!234",
-        newPassword: "StrongPassword!234",
-      },
-      method: "POST",
-      url: "http://localhost/auth/password/change",
-    });
-
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toMatchObject({ code: "mfa_required" });
   });
 
-  it("returns ok:true when password is changed successfully", async () => {
-    const signInWithPassword = vi.fn(async () => ({ error: null }));
-    const updateUser = vi.fn(async () => ({ error: null }));
+  it("returns ok:true when password is changed successfully with the store payload", async () => {
+    const signInWithPassword = vi.fn(async () =>
+      unsafeCast<AuthTokenResponsePassword>({
+        data: { session: null, user: null },
+        error: null,
+      })
+    );
+    const updateUser = vi.fn(async () =>
+      unsafeCast<UserResponse>({ data: { user: null }, error: null })
+    );
+    const supabase = getApiRouteSupabaseMock();
+    vi.spyOn(supabase.auth, "signInWithPassword").mockImplementation(
+      signInWithPassword
+    );
+    vi.spyOn(supabase.auth, "updateUser").mockImplementation(updateUser);
 
-    REQUIRE_USER_MOCK.mockResolvedValueOnce({
-      supabase: { auth: { signInWithPassword, updateUser } },
-      user: { email: "user@example.com" },
+    const req = makeJsonRequest("/auth/password/change", {
+      currentPassword: "CurrentPassword!234",
+      newPassword: "StrongPassword!234",
     });
 
-    const req = createMockNextRequest({
-      body: {
-        confirmPassword: "StrongPassword!234",
-        currentPassword: "CurrentPassword!234",
-        newPassword: "StrongPassword!234",
-      },
-      method: "POST",
-      url: "http://localhost/auth/password/change",
-    });
-
-    const res = await POST(req);
+    const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "test@example.com",
+      password: "CurrentPassword!234",
+    });
+    expect(updateUser).toHaveBeenCalledWith({ password: "StrongPassword!234" });
+  });
+
+  it("rate-limits password change attempts before body validation", async () => {
+    mockApiRouteRateLimitOnce({
+      limit: 3,
+      remaining: 0,
+      reset: Date.now() + 60_000,
+      success: false,
+    });
+
+    const req = makeJsonRequest("/auth/password/change", {
+      confirmPassword: "short",
+      currentPassword: "short",
+      newPassword: "short",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+
+    expect(res.status).toBe(429);
+    expect(apiRouteRateLimitSpy).toHaveBeenCalledWith(
+      "auth:password:change",
+      expect.stringMatching(/^user:/)
+    );
+  });
+
+  it("rejects unauthenticated password changes before parsing the body", async () => {
+    mockApiRouteAuthUser(null);
+
+    const req = makeJsonRequest("/auth/password/change", {
+      confirmPassword: "StrongPassword!234",
+      currentPassword: "CurrentPassword!234",
+      newPassword: "StrongPassword!234",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+
+    expect(res.status).toBe(401);
   });
 });

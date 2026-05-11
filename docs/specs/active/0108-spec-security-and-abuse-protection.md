@@ -27,6 +27,7 @@
 - CSP + security headers
   - `src/proxy.ts` is the single canonical source of truth.
   - Proxy generates a per-request nonce and sets `x-nonce` on the request for SSR consumption.
+  - Public routes keep a compatibility CSP while stricter script-src rules run in report-only mode. Reports default to `/api/security/csp-report`; set `CSP_REPORT_URI` to send reports to an external collector.
   - With Cache Components enabled, Dynamic APIs (e.g. `headers()`) must only be awaited under `<Suspense>` boundaries to avoid `blocking-route` build errors.
 - Rate limiting (Upstash)
   - `src/lib/api/factory.ts` (`enforceRateLimit`, `withApiGuards`)

@@ -112,3 +112,21 @@ export const changePasswordFormSchema = z
 
 /** TypeScript type for password change form data. */
 export type ChangePasswordFormData = z.infer<typeof changePasswordFormSchema>;
+
+/**
+ * Zod schema for authenticated password change API payloads.
+ * Confirmation stays a UI-only concern; the API reauthenticates the current password
+ * and only needs the current/new password pair.
+ */
+export const changePasswordPayloadSchema = z
+  .strictObject({
+    currentPassword: z.string().min(1, { error: "Current password is required" }),
+    newPassword: PASSWORD_SCHEMA,
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    error: "New password must be different from current password",
+    path: ["newPassword"],
+  });
+
+/** TypeScript type for password change API payloads. */
+export type ChangePasswordPayload = z.infer<typeof changePasswordPayloadSchema>;

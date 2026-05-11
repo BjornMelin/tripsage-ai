@@ -37,7 +37,7 @@ export default defineConfig({
       NODE_ENV: "production",
       PORT: `${e2ePort}`,
       // Required-by-schema production secrets (test-only dummy values).
-      SUPABASE_JWT_SECRET: "test-supabase-jwt-secret-32chars-minimum!!",
+      SUPABASE_JWT_SECRET: "placeholder-supabase-jwt-secret-32chars-minimum!!",
       TELEMETRY_HASH_SECRET: "test-telemetry-hash-placeholder-32chars-minimum!!",
     },
     reuseExistingServer: false,
