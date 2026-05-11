@@ -19,7 +19,7 @@
 - Handlers must be idempotent: wrap side-effecting operations in a per-business-key Upstash Redis reservation (default TTL 300s) before executing.  
 - Retry policy: max 6 attempts (1 initial + 5 retries), with an explicit retry delay expression via `Upstash-Retry-Delay` (configured by `src/lib/qstash/client.ts`).  
 - Dead Letter Queue (DLQ): Use QStash's native DLQ support. For non-retryable errors, return HTTP `489` and set `Upstash-NonRetryable-Error: true` so QStash forwards the message to the configured DLQ.  
-- Observability: emit OTEL span attributes `qstash.attempt`, `qstash.dedup_id_present`, optional `qstash.dedup_id_hash`, `qstash.dlq`, and structured log on final failure. Never export the raw deduplication id because job keys can include tenant, attachment, or event identifiers.
+- Observability: emit OTEL span attributes `qstash.attempt`, `qstash.dedup_id_present`, optional `qstash.dedup_id_hash`, and structured log on final failure. Never export the raw deduplication id because job keys can include tenant, attachment, or event identifiers.
 - Security:
   - Validate QStash signature on the raw request body; reject unverified requests before any side effects.
   - Enforce a hard request body size limit before verification/parsing (reject before JSON parsing). For QStash-delivered jobs, treat oversized payloads as non-retryable (`489` + header) to avoid retry loops.
