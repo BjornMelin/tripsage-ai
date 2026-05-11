@@ -39,7 +39,8 @@ export const configurationScopeSchema = z.enum([
 /** TypeScript type for configuration scopes. */
 export type ConfigurationScope = z.infer<typeof configurationScopeSchema>;
 
-const modelIdentifierPattern = /^[a-z0-9][a-z0-9._:/-]*$/iu;
+const modelIdentifierPattern =
+  /^[a-z0-9](?:[a-z0-9._:-]*[a-z0-9])?(?:\/[a-z0-9](?:[a-z0-9._:-]*[a-z0-9])?)*$/iu;
 
 function isOpenAiReasoningFamilyModel(model: string): boolean {
   return /(?:^|\/)gpt-[45](?:[./-]|$)/iu.test(model);
@@ -63,6 +64,9 @@ export const modelNameSchema = z
   })
   .refine((value) => !value.includes("://"), {
     error: "Model must be a provider model identifier, not a URL",
+  })
+  .refine((value) => !value.includes("//"), {
+    error: "Model must not contain empty provider/model segments",
   });
 
 /** TypeScript type for model names. */

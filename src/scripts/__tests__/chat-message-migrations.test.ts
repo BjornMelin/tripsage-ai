@@ -63,6 +63,9 @@ describe("chat message persistence migrations", () => {
     );
 
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS provider_executed");
+    expect(migration).toContain("SET provider_executed = false");
+    expect(migration).toContain("ALTER COLUMN provider_executed SET DEFAULT false");
+    expect(migration).toContain("ALTER COLUMN provider_executed SET NOT NULL");
     expect(migration).toContain("CREATE POLICY chat_messages_insert");
     expect(migration).toContain("AND role = 'user'");
     expect(migration).toContain("CREATE POLICY chat_messages_service_insert");

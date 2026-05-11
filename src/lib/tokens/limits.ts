@@ -20,19 +20,19 @@ export const MODEL_LIMITS: ModelLimitsTable = {
   // Google
   "gemini-3.1-flash-lite": 1_000_000,
   // Z.ai
-  "glm-5.1": 202_800,
+  "glm-5.1": 131_072,
   // OpenAI
   "gpt-5.4-mini": 400_000,
   "gpt-5.4-nano": 400_000,
-  "gpt-5.5": 1_000_000,
+  "gpt-5.5": 1_050_000,
 
   // xAI
   "grok-4.3": 1_000_000,
   // Moonshot AI
   "kimi-k2.6": 262_000,
-  "mimo-v2.5": 1_050_000,
+  "mimo-v2.5": 1_000_000,
   // Xiaomi
-  "mimo-v2.5-pro": 1_050_000,
+  "mimo-v2.5-pro": 1_000_000,
 };
 
 /** Default context window (tokens) when model is unknown. */

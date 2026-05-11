@@ -103,8 +103,8 @@ describe("clampMaxTokens", () => {
     expect(result.reasons).toContain("maxTokens_clamped_model_limit");
   });
 
-  it("uses the specific GPT-5.5 context window before the broader GPT-5 match", () => {
-    expect(getModelContextLimit("openai/gpt-5.5")).toBe(1_000_000);
+  it("resolves the GPT-5.5 context window correctly", () => {
+    expect(getModelContextLimit("openai/gpt-5.5")).toBe(1_050_000);
   });
 
   it("uses current Anthropic and xAI context windows", () => {

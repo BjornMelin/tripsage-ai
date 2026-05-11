@@ -169,10 +169,13 @@ const getSupabaseClient = () => {
 };
 
 const CREATE_SUPABASE_MOCK = vi.hoisted(() => vi.fn(async () => getSupabaseClient()));
+const CREATE_ADMIN_SUPABASE_MOCK = vi.hoisted(() =>
+  vi.fn(async () => getSupabaseClient())
+);
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: CREATE_SUPABASE_MOCK,
-  getAdminSupabase: CREATE_SUPABASE_MOCK,
+  getAdminSupabase: CREATE_ADMIN_SUPABASE_MOCK,
 }));
 
 vi.mock("@/lib/api/route-helpers", async () => {
@@ -210,6 +213,8 @@ export function resetApiRouteMocks(): void {
   const client = getSupabaseClient();
   CREATE_SUPABASE_MOCK.mockReset();
   CREATE_SUPABASE_MOCK.mockResolvedValue(client);
+  CREATE_ADMIN_SUPABASE_MOCK.mockReset();
+  CREATE_ADMIN_SUPABASE_MOCK.mockResolvedValue(client);
   setSupabaseFactoryForTests(async () => client);
   LIMIT_SPY.mockReset();
   LIMIT_SPY.mockResolvedValue({ ...DEFAULT_RATE_LIMIT });

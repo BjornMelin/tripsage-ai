@@ -28,7 +28,7 @@ export function countPromptTokens(messages: ChatMessage[], modelHint?: string): 
 
 ## Model Limits
 
-- OpenAI: `gpt-5.5` 1M, `gpt-5.4-mini` 400k, `gpt-5.4-nano` 400k.
+- OpenAI: `gpt-5.5` 1.05M, `gpt-5.4-mini` 400k, `gpt-5.4-nano` 400k.
 - Anthropic: `claude-sonnet-4.6` 1M.
 - xAI: `grok-4.3` 1M.
 - Unknown models: default 128k.

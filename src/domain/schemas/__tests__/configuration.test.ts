@@ -23,6 +23,12 @@ describe("agentConfigRequestSchema", () => {
     expect(agentConfigRequestSchema.safeParse({ model: "gpt 5.5" }).success).toBe(
       false
     );
+    expect(agentConfigRequestSchema.safeParse({ model: "openai/" }).success).toBe(
+      false
+    );
+    expect(
+      agentConfigRequestSchema.safeParse({ model: "openai//gpt-5.5" }).success
+    ).toBe(false);
   });
 
   it("applies OpenAI temperature limits to provider-qualified GPT models", () => {

@@ -70,6 +70,14 @@ export type ProviderResolver = (
   modelHint?: string
 ) => Promise<ProviderResolution>;
 
+/**
+ * Dependencies required by `handleChat`.
+ *
+ * `supabase` handles authenticated user reads and user-authored writes.
+ * `serverSupabase` handles server-authored assistant message persistence.
+ * `toolCallSupabase` optionally separates privileged tool-call persistence.
+ * `resolveProvider` selects the runtime model/provider for the request.
+ */
 export interface ChatDeps {
   supabase: TypedServerSupabase;
   serverSupabase?: TypedServerSupabase;
@@ -970,7 +978,15 @@ export async function handleChat(
     }
   }
 
-  const serverSupabase = deps.serverSupabase ?? deps.toolCallSupabase ?? deps.supabase;
+  const serverSupabase = deps.serverSupabase;
+  if (!serverSupabase) {
+    return errorResponse({
+      error: "internal",
+      reason: "serverSupabase is required for assistant message persistence",
+      status: 500,
+    });
+  }
+  const toolCallSupabase = deps.toolCallSupabase ?? serverSupabase;
 
   const attachmentValidation = validateImageAttachments(promptUiMessages);
   if (!attachmentValidation.valid) {
@@ -1260,7 +1276,7 @@ export async function handleChat(
 
             if (canPersistAssistantMessage) {
               const { error } = await insertSingle(
-                deps.toolCallSupabase ?? serverSupabase,
+                toolCallSupabase,
                 "chat_tool_calls",
                 toolRow,
                 { select: "id", validate: false }

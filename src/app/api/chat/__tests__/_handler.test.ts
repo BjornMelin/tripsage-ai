@@ -262,6 +262,8 @@ describe("handleChat", () => {
       {
         resolveProvider: async () =>
           await Promise.reject(new Error("No provider keys configured.")),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },
@@ -358,6 +360,8 @@ describe("handleChat", () => {
           modelId: "gpt-5.5",
           provider: "openai",
         }),
+        serverSupabase:
+          unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
         supabase:
           unsafeCast<import("@/lib/supabase/server").TypedServerSupabase>(supabase),
       },

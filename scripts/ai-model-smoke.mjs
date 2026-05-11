@@ -29,11 +29,15 @@ function parseArgs(argv) {
     } else if (arg === "--required") {
       options.required = true;
     } else if (arg.startsWith("--models=")) {
-      options.models = arg
+      const models = arg
         .slice("--models=".length)
         .split(",")
         .map((model) => model.trim())
         .filter(Boolean);
+      if (models.length === 0) {
+        throw new Error("--models requires at least one model id");
+      }
+      options.models = models;
     }
   }
 
@@ -191,7 +195,13 @@ async function runModelSmoke(gateway, modelId) {
   };
 }
 
-const options = parseArgs(process.argv.slice(2));
+let options;
+try {
+  options = parseArgs(process.argv.slice(2));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
 const apiKey = process.env.AI_GATEWAY_API_KEY;
 
 if (!apiKey) {

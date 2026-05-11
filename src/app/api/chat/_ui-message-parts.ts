@@ -162,6 +162,9 @@ export function parsePersistedUiParts(options: {
  * (`input-available`, `output-available`, or `output-error`) plus input/output
  * and error text when applicable. `chat_tool_calls` is the authoritative
  * lifecycle store; persisted message content must not own tool state.
+ *
+ * @param toolRows - Persisted `chat_tool_calls` rows to rehydrate.
+ * @returns AI SDK v6 static tool UI parts for the assistant message.
  */
 export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
   const parts: UiParts = [];
