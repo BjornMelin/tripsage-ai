@@ -14,7 +14,36 @@ Background job endpoints delivered by Upstash QStash.
   - Any **non-2xx** response triggers a retry (until QStash retry limit is reached).
   - Retry delay behavior is configured on publish via `Upstash-Retry-Delay` (see `src/lib/qstash/client.ts`).
   - **Non-retryable** failures return `489` with `Upstash-NonRetryable-Error: true` (QStash forwards to DLQ if configured).
-- **DLQ operations**: Use the Upstash Console to **republish** or **delete** DLQ messages.
+- **Publishing contract**: every publish through `enqueueJob()`/`tryEnqueueJob()`
+  must include a deterministic `deduplicationId` and a canonical `label` from
+  `QSTASH_JOB_LABELS`; the helper always sends the configured retry count and
+  retry-delay expression.
+- **DLQ operations**: Filter by `label`, message URL, or `Upstash-Message-Id` in
+  the Upstash Console or the QStash DLQ API, then **republish** after fixing the
+  root cause or **delete** when the payload is obsolete/non-replayable.
+- **Production degradation**: job enqueue failures on production webhook paths
+  must fail closed. Local/test-only in-process fallbacks must be explicitly gated.
+
+## Job ownership and publish labels
+
+| Job | Owner | Worker | Publish label | Dedup key shape |
+| --- | --- | --- | --- | --- |
+| Attachment ingest | File webhook | `/api/jobs/attachments-ingest` | `tripsage:attachments-ingest` | `attachments-ingest:<attachmentId>` |
+| RAG index | Attachment ingest | `/api/jobs/rag-index` | `tripsage:rag-index` | `rag-index:attachment:<attachmentId>` |
+| Memory sync | Memory adapter | `/api/jobs/memory-sync` | `tripsage:memory-sync` | `memory-sync:<sync-idempotency-key>` |
+| Collaborator notifications | Trip webhook | `/api/jobs/notify-collaborators` | `tripsage:notify-collaborators` | `notify:<eventKey>` |
+
+## Local QStash development
+
+Use the shared mocks for unit tests. For local integration, set
+`UPSTASH_USE_EMULATOR=1`, point `UPSTASH_REDIS_REST_URL` at the Redis REST
+emulator, and set `UPSTASH_QSTASH_DEV_URL` to the QStash dev server endpoint.
+`UPSTASH_EMULATOR_URL` remains a legacy Redis alias only.
+
+Live smoke tests use production-compatible env names for credentials:
+`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `QSTASH_TOKEN`.
+Set `UPSTASH_QSTASH_SMOKE_TARGET_URL` to a disposable request-bin style URL
+before running `UPSTASH_SMOKE=1 pnpm test:upstash:smoke`.
 
 ---
 

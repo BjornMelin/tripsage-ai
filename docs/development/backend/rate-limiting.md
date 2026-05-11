@@ -6,6 +6,11 @@ TripSage uses Upstash Redis + `@upstash/ratelimit` for server-side throttling:
 - **Webhooks**: enforced in `src/lib/webhooks/rate-limit.ts` and applied by `src/lib/webhooks/handler.ts`.
 - **AI tools**: enforced in `src/ai/lib/tool-factory.ts` (`createAiTool({ guardrails: { rateLimit: ... } })`).
 
+All `@upstash/ratelimit` instances are constructed through
+`src/lib/ratelimit/upstash.ts`. That module owns limiter caching, sliding-window
+construction, timeout normalization, and Redis-unavailable detection. Surface
+modules own only response shape and degraded-mode policy.
+
 ## Degraded-mode policy (fail-open vs fail-closed)
 
 Some endpoints are privileged or cost-bearing and must **fail closed** if rate limiting cannot be enforced (missing Redis config, Redis unavailable, enforcement errors).
@@ -49,6 +54,8 @@ Always obtain Redis via `getRedis()`:
 
 - `src/lib/redis.ts` exports `getRedis()` with a test injection hook.
 - Do not call `Redis.fromEnv()` in application code.
+- Do not construct `Ratelimit` directly in feature code; call
+  `checkUpstashRateLimit()` from `src/lib/ratelimit/upstash.ts`.
 
 ## Client IP extraction (canonical)
 
@@ -103,5 +110,11 @@ Prefer existing Upstash test harness utilities:
 - Shared mocks/stubs: `src/test/upstash/*`
 - MSW handlers: `src/test/msw/handlers/upstash.ts`
 - API route rate limiting can be overridden via `setRateLimitFactoryForTests()` in `src/lib/api/factory.ts`.
+- Optional emulator integration uses `UPSTASH_USE_EMULATOR=1` plus
+  `UPSTASH_REDIS_REST_URL` for Redis and `UPSTASH_QSTASH_DEV_URL` for the
+  QStash dev server.
+- Live smoke tests use runtime credential names (`UPSTASH_REDIS_REST_URL`,
+  `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`) plus
+  `UPSTASH_QSTASH_SMOKE_TARGET_URL` as the disposable publish target.
 
 See [Testing](../testing/testing.md#decision-table) for the current test tiers and mock setup guidance.
