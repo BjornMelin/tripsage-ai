@@ -32,7 +32,7 @@ Get agent configuration.
   "agentType": "flightAgent",
   "scope": "global",
   "config": {
-    "model": "gpt-4",
+    "model": "gpt-5.5",
     "temperature": 0.7,
     "maxOutputTokens": 2048,
     "stepLimit": 10,
@@ -78,7 +78,7 @@ Update agent configuration.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
-| `model` | string | No | Model name |
+| `model` | string | No | Compact provider model identifier such as `gpt-5.5` or `openai/gpt-5.5` |
 | `temperature` | number | No | Temperature (0-2) |
 | `maxOutputTokens` | number | No | Maximum output tokens |
 | `stepLimit` | number | No | Maximum tool steps per response |
@@ -95,7 +95,7 @@ Update agent configuration.
   "agentType": "flightAgent",
   "scope": "global",
   "config": {
-    "model": "gpt-4",
+    "model": "gpt-5.5",
     "temperature": 0.7,
     "maxOutputTokens": 2048,
     "stepLimit": 10,
@@ -144,7 +144,7 @@ List agent configuration versions.
       "updatedAt": "2025-01-20T15:30:00Z",
       "description": "Updated temperature to 0.7",
       "config": {
-        "model": "gpt-4",
+        "model": "gpt-5.5",
         "temperature": 0.7
       }
     },
@@ -154,7 +154,7 @@ List agent configuration versions.
       "updatedAt": "2025-01-15T10:00:00Z",
       "description": "Initial configuration",
       "config": {
-        "model": "gpt-4",
+        "model": "gpt-5.5",
         "temperature": 0.5
       }
     }
@@ -198,7 +198,7 @@ Rollback agent configuration to a previous version.
   "createdAt": "2025-01-15T10:00:00Z",
   "updatedAt": "2025-01-20T15:35:00Z",
   "config": {
-    "model": "gpt-4",
+    "model": "gpt-5.5",
     "temperature": 0.5,
     "maxOutputTokens": 2048,
     "stepLimit": 10,

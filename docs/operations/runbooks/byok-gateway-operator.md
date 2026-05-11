@@ -27,7 +27,8 @@ SUPABASE_SERVICE_ROLE_KEY=...
 
 # Team Gateway fallback (optional)
 AI_GATEWAY_API_KEY=...
-AI_GATEWAY_URL=https://ai-gateway.vercel.sh/v3/ai   # optional baseURL override
+AI_GATEWAY_URL=...                                  # optional baseURL override
+AI_GATEWAY_ALLOWED_HOSTS=my-gateway.vercel.sh       # required for non-default Gateway hosts
 
 # Optional provider fallbacks (server-only)
 OPENAI_API_KEY=...
@@ -39,43 +40,50 @@ OPENROUTER_API_KEY=...
 ## Migrations to Verify
 
 - `supabase/migrations/20260120000000_base_schema.sql` (squashed)
-  - Tables: `api_gateway_configs` (owner RLS), `user_settings` (owner RLS, `allow_gateway_fallback` default true).
+  - Tables: `api_gateway_configs` (owner RLS), `user_settings` (owner RLS, `allow_gateway_fallback` default false).
   - RPCs (SECURITY DEFINER, service_role only): `upsert_user_gateway_config`, `get_user_gateway_base_url`, `delete_user_gateway_config`, `get_user_allow_gateway_fallback`.
 
 ## Verification (service role curl)
 
 ```bash
-# Insert user Gateway key + base URL
+# Insert user Gateway key
+curl -X POST https://<project>.supabase.co/rest/v1/rpc/insert_user_api_key \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_service":"gateway","p_api_key":"sk-gateway"}'
+
+# Store optional user Gateway base URL
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/upsert_user_gateway_config \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test-user","p_base_url":"https://my-gateway.vercel.sh/v3/ai","p_api_key":"sk-gateway"}'
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001","p_base_url":"https://my-gateway.vercel.sh/v3/ai"}'
 
 # Read back base URL
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/get_user_gateway_base_url \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test-user"}'
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001"}'
 
 # Consent toggle
 curl -X POST https://<project>.supabase.co/rest/v1/rpc/get_user_allow_gateway_fallback \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"p_user_id":"test-user"}'
+  -d '{"p_user_id":"00000000-0000-0000-0000-000000000001"}'
 ```
 
 **Expected:**
 
 - Gateway config RPCs succeed with service role, fail with anon key.
-- `allow_gateway_fallback` respects user setting default true.
+- `allow_gateway_fallback` respects user setting default false.
 
 ## Provider Resolution Order (code contract)
 
 1. User Gateway key (Vercel AI Gateway)  
 2. User provider BYOK keys (OpenAI/Anthropic/xAI/OpenRouter)  
 3. Team fallback `AI_GATEWAY_API_KEY` if user consent `allowGatewayFallback=true`  
+4. Server provider keys only when Gateway is not configured
 
-All resolution happens server-side (`@/lib/providers/registry`); keys are never exposed to the client.
+All resolution happens server-side (`@ai/models/registry`); keys are never exposed to the client.
 
 ## App Endpoints to Exercise
 

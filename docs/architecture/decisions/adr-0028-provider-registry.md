@@ -13,7 +13,7 @@
 We are migrating to AI SDK v6 providers and removing Python-based provider wrappers. We need a single server-only registry that:
 
 - Resolves a user's BYOK provider key via Supabase RPCs.
-- Applies a strict preference order: openai → openrouter → anthropic → xai (configurable).
+- Applies the provider-resolution order owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 - Returns an AI SDK `LanguageModel` ready for downstream use.
 
 ## Decision
@@ -43,9 +43,9 @@ We are migrating to AI SDK v6 providers and removing Python-based provider wrapp
 
 ## Gateway Compatibility
 
-- If Vercel AI Gateway is enabled, the registry can still fall back to Gateway keys. No attribution logic is required. In v6, `createGateway` is exported from the `ai` package, and both user and team Gateway paths use `createGateway` for parity.
+- In v6, `createGateway` is exported from the `ai` package, and both user and team Gateway paths use `createGateway` for parity. Provider-resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 
 ## Testing Status
 
-- Vitest unit tests cover provider precedence and OpenRouter resolution without attribution headers in `src/lib/providers/__tests__/registry.test.ts`.
+- Vitest unit tests cover provider resolution and OpenRouter mapping in `src/ai/models/__tests__/registry.test.ts`.
 - Chat streaming adds `provider` to message metadata for observability and debugging.

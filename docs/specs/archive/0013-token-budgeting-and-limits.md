@@ -28,15 +28,15 @@ export function countPromptTokens(messages: ChatMessage[], modelHint?: string): 
 
 ## Model Limits
 
-- OpenAI: `gpt-4o` 128k, `gpt-4o-mini` 128k, `gpt-5` 200k, `gpt-5-mini` 200k.
-- Anthropic: `claude-3.5-sonnet` 200k, `claude-3.5-haiku` 200k.
-- xAI: conservative default 128k.
+- OpenAI: `gpt-5.5` 1M, `gpt-5.4-mini` 400k, `gpt-5.4-nano` 400k.
+- Anthropic: `claude-sonnet-4.6` 1M.
+- xAI: `grok-4.3` 1M.
 - Unknown models: default 128k.
 
 ## Counting
 
 - Prefer provider usage when available.
-- OpenAI: `js-tiktoken/lite` with `o200k_base` (modern) and `cl100k_base` (older) encodings.
+- OpenAI: `js-tiktoken/lite` with `o200k_base` for current GPT-5.4/5.5 profiles.
 - Others: heuristic ~4 chars/token (approximation; verify against provider usage when reported). Documented in code and tests.
 
 ## Clamping
