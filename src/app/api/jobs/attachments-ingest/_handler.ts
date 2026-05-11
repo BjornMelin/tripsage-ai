@@ -25,9 +25,10 @@ export interface AttachmentsIngestDeps {
     jobType: string,
     payload: unknown,
     path: string,
-    options?: EnqueueJobOptions
+    options: EnqueueJobOptions
   ) => Promise<
-    { success: true; messageId: string } | { success: false; error: Error | null }
+    | { success: true; messageId: string; deduplicated?: boolean }
+    | { success: false; error: Error | null }
   >;
 }
 

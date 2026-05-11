@@ -106,7 +106,7 @@ describe("createUpstashMemoryAdapter", () => {
         userId: "user-456",
       },
     });
-    expect(messages[0]?.deduplicationId).toBeUndefined();
+    expect(messages[0]?.deduplicationId).toBe("memory-sync:incr-sync:session-123");
     expect(messages[1]?.body).toEqual({
       idempotencyKey: "full-sync:session-123",
       payload: {
@@ -115,6 +115,6 @@ describe("createUpstashMemoryAdapter", () => {
         userId: "user-456",
       },
     });
-    expect(messages[1]?.deduplicationId).toBeUndefined();
+    expect(messages[1]?.deduplicationId).toBe("memory-sync:full-sync:session-123");
   });
 });

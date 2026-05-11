@@ -86,6 +86,7 @@ async function handleSyncSession(
       },
       "/api/jobs/memory-sync",
       {
+        deduplicationId: `memory-sync:${idempotencyKey}`,
         delay: isFull ? undefined : 5,
         label: QSTASH_JOB_LABELS.MEMORY_SYNC,
       }

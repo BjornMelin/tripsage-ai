@@ -13,6 +13,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { recordErrorOnSpan, withTelemetrySpan } from "@/lib/telemetry/span";
+import { WebhookServiceUnavailableError } from "@/lib/webhooks/errors";
 import { createWebhookHandler } from "@/lib/webhooks/handler";
 
 type TripCollaboratorRow = Database["public"]["Tables"]["trip_collaborators"]["Row"];
@@ -76,7 +77,14 @@ export const POST = createWebhookHandler({
       return { enqueued: true };
     }
 
-    // Fallback: fire-and-forget via after() if QStash unavailable
+    if (process.env.NODE_ENV === "production") {
+      span.setAttribute("qstash.unavailable", true);
+      throw new WebhookServiceUnavailableError("qstash_unavailable", {
+        cause: result.error ?? undefined,
+      });
+    }
+
+    // Local/test fallback: keep developer loops usable when QStash is intentionally absent.
     after(async () => {
       try {
         await withTelemetrySpan(
