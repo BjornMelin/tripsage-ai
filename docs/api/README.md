@@ -17,10 +17,10 @@ pnpm dev
 ### First API Call
 
 ```bash
-# Health check via dashboard endpoint
-curl http://localhost:3000/api/dashboard
+# Public health check
+curl http://localhost:3000/api/health
 
-# Response includes trip stats, recent trips, and system health
+# Response includes runtime health metadata
 ```
 
 ## Architecture Overview
@@ -78,7 +78,7 @@ return result.toUIMessageStreamResponse({ originalMessages: messages });
 
 ### Complete API Reference
 
-**[API Reference](api-reference.md)** - Complete endpoint documentation with request/response examples (TS, Python, cURL) for all implemented routes.
+**[API Reference](api-reference.md)** - Complete endpoint documentation with TypeScript and cURL request/response examples for implemented routes.
 
 ### Supporting Documentation
 
@@ -91,7 +91,8 @@ return result.toUIMessageStreamResponse({ originalMessages: messages });
 
 ### AI Agents (`/api/agents/*`)
 
-Streaming AI agents with tool calling for travel planning:
+Streaming AI agents with tool calling for travel planning, plus a JSON router
+classification endpoint:
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
@@ -137,10 +138,11 @@ User context and preference storage via Supabase pgvector:
 | :--- | :--- | :--- |
 | `/api/memory/conversations` | POST | Store conversation memory |
 | `/api/memory/search` | POST | Search memories |
-| `/api/memory/context/[userId]` | GET | Get user context |
-| `/api/memory/preferences/[userId]` | POST | Update preferences |
-| `/api/memory/stats/[userId]` | GET | Memory statistics |
-| `/api/memory/insights/[userId]` | GET | AI-generated insights |
+| `/api/memory/context/{userId}` | GET | Get user context |
+| `/api/memory/preferences/{userId}` | POST | Update preferences |
+| `/api/memory/stats/{userId}` | GET | Memory statistics |
+| `/api/memory/insights/{userId}` | GET | AI-generated insights |
+| `/api/memory/user/{userId}` | DELETE | Delete authenticated user's memories |
 
 ### Calendar (`/api/calendar/*`)
 

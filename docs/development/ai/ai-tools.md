@@ -495,7 +495,7 @@ try {
 
 ## Real-World Example
 
-See [Activities Developer Guide](activities.md) for a complete implementation example with:
+See [Activities Developer Guide](../frontend/activities.md) for a complete implementation example with:
 
 - Search and details tools using `createAiTool`
 - Google Places API integration
@@ -505,10 +505,10 @@ See [Activities Developer Guide](activities.md) for a complete implementation ex
 ## Related Documentation
 
 - [AI Integration](ai-integration.md) - Gateway/BYOK provider configuration
-- [Zod Schema Guide](zod-schema-guide.md) - Tool input schema patterns
+- [Zod Schema Guide](../standards/zod-schema-guide.md) - Tool input schema patterns
 - [Observability](observability.md) - Telemetry spans and logging
-- [Activities](activities.md) - Real-world tool implementation example
-- [Testing](testing.md) - Test patterns and MSW handlers
+- [Activities](../frontend/activities.md) - Real-world tool implementation example
+- [Testing](../testing/testing.md) - Test patterns and MSW handlers
 
 ## Source Files
 

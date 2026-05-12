@@ -1,10 +1,10 @@
 # AI Agents
 
-All agent endpoints return Server-Sent Events (SSE) streams using AI SDK v6 UI message format. Responses are streamed in real-time.
+Agent workflow endpoints return Server-Sent Events (SSE) streams using AI SDK v6 UI message format. `/api/agents/router` is the exception: it returns a JSON intent-classification result.
 
 ## Streaming Overview
 
-Agent endpoints use Server-Sent Events (SSE) for streaming responses. The stream contains AI SDK v6 UI messages that can be consumed using `ReadableStream`/`EventSource` in JavaScript or an SSE-capable library in other languages.
+Agent workflow endpoints use Server-Sent Events (SSE) for streaming responses. The stream contains AI SDK v6 UI messages that can be consumed using `ReadableStream` or `EventSource` in JavaScript.
 
 **Authentication Note**: All agent endpoints require authentication. Use the `sb-access-token` cookie (Supabase default cookie name) or pass the JWT token via `Authorization: Bearer <token>` header.
 
@@ -33,32 +33,6 @@ while (true) {
   const chunk = decoder.decode(value);
   // Process SSE messages
 }
-```
-
-### Python Example
-
-**Note**: This example requires the external `sseclient-py` library. Install it with: `pip install sseclient-py`
-
-Alternatively, you can use standard library with manual SSE parsing using `requests` and `urllib`.
-
-```python
-import requests
-import sseclient
-
-response = requests.post(
-    "http://localhost:3000/api/agents/flights",
-    cookies={"sb-access-token": jwt_token},
-    json={
-        "origin": "JFK",
-        "destination": "CDG",
-        "departureDate": "2025-07-01"
-    },
-    stream=True
-)
-
-client = sseclient.SSEClient(response)
-for event in client.events():
-    print(event.data)
 ```
 
 ---

@@ -1,50 +1,56 @@
 # SPEC-0110: Deployment on Vercel (Supabase + Upstash)
 
-**Version**: 1.0.0  
-**Status**: Final  
-**Date**: 2026-01-05
+**Version**: 1.1.0
+**Status**: Final
+**Date**: 2026-05-11
 
 ## Goals
 
-- One-command deploy via Vercel.
+- Deterministic Vercel CLI deploys using prebuilt artifacts and explicit promotion.
 - Safe secret handling.
-- Repeatable environment bootstrapping.
+- Repeatable feature-aware environment validation.
 
 For operational runbooks (monitoring, alerting, incident response, secret rotation), see [Deployment Runbook](../../runbooks/deployment-vercel.md).
 
 ## Non-goals
 
-- Manual deployments or self-hosted infrastructure (Vercel is the canonical platform).
+- Self-hosted infrastructure (Vercel is the canonical platform).
 - Providing production runbooks for incident response or scaling (see [Deployment Runbook](../../runbooks/deployment-vercel.md)).
 - Supporting multiple deployment platforms (Vercel is the standardized target).
 
 ## Requirements
 
 - Vercel Project configured with:
+  - Git deployments disabled; `.github/workflows/deploy.yml` owns build, smoke,
+    and promotion.
   - Supabase integration (env vars)
   - Upstash integration (env vars)
   - BotID (Vercel's bot detection) enabled for configured routes (see [ADR-0059](../../architecture/decisions/adr-0059-botid-chat-and-agents.md))
   - Proxy enabled via `src/proxy.ts` (CSP nonce + baseline security headers + Supabase SSR cookie refresh)
 
-- Environment validation at runtime using Zod:
-  - Schema: `src/domain/schemas/env.ts`
-  - Fails fast on missing/invalid env vars in production (check deployment logs for Zod validation errors)
+- Environment validation:
+  - Runtime schema: `src/domain/schemas/env.ts`
+  - Deploy gate: `scripts/verify-production-env.mjs`
+  - Fails fast on missing/invalid production secrets before build/deploy.
 
-- Required environment variables:
-  - Supabase:
-    - NEXT_PUBLIC_SUPABASE_URL
-    - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (canonical) or NEXT_PUBLIC_SUPABASE_ANON_KEY (legacy fallback)
-    - SUPABASE_SERVICE_ROLE_KEY
-  - Upstash:
-    - UPSTASH_REDIS_REST_URL
-    - UPSTASH_REDIS_REST_TOKEN
+- Required environment groups:
+  - Core origins: `APP_BASE_URL`, public app/API/site URLs, and CSP report origin.
+  - Supabase: project URL, publishable key, service role key, JWT secret, and Vault RPC support.
+  - Security: `HMAC_SECRET`, `TELEMETRY_HASH_SECRET`, and `BYOK_HEALTHCHECK_KEY`.
+  - Upstash: Redis REST credentials, QStash token, and QStash signing keys.
+  - Feature-aware providers: Stripe, Resend, Amadeus, Duffel, Expedia, analytics,
+    and AI provider keys are required only when the corresponding feature is enabled.
 
 ## Environment setup
 
-1) Connect the Git repository to a Vercel project.
-2) Configure Supabase and Upstash integrations (or set the required env vars manually).
+1) Link the repository to a Vercel project, but keep Vercel Git deployments disabled.
+2) Configure Supabase and Upstash integrations or set equivalent env vars manually.
 3) Enable BotID for the routes described in ADR-0059.
-4) Trigger a deployment and verify the build and runtime logs are free of env validation errors.
+4) Run `pnpm deploy:check-env`.
+5) Build with `vercel build --prod`.
+6) Deploy the prebuilt artifact with `vercel deploy --prebuilt --prod --skip-domain`.
+7) Run `pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"`.
+8) Promote with `vercel promote "$DEPLOYMENT_URL" --yes --timeout=5m`.
 
 Notes:
 

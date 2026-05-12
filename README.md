@@ -2,7 +2,7 @@
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
 [![AI SDK v6](https://img.shields.io/badge/Vercel%20AI%20SDK-v6-blue.svg)](https://ai-sdk.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-SSR-3fcf8e?logo=supabase)](https://supabase.com)
 [![Upstash](https://img.shields.io/badge/Upstash-Redis%20%7C%20QStash-00E9A3?logo=upstash)](https://upstash.com)
 [![Vercel](https://img.shields.io/badge/Vercel-AI%20Gateway-black?logo=vercel)](https://vercel.com)
@@ -29,7 +29,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 - **AI Gateway + BYOK Routing**: Vercel AI Gateway for app-owned OpenAI profiles, direct user BYOK for OpenAI/OpenRouter/Anthropic/xAI, and encrypted key storage
 - **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v6 with Zod validation—flights (Duffel), accommodations, weather, maps, planning, and memory
-- **Hybrid RAG Pipeline**: Vector similarity search with Supabase pgvector + keyword fusion, Cohere Rerank v3.5 for optimal retrieval accuracy
+- **Hybrid RAG Pipeline**: Vector similarity search with Supabase pgvector + keyword fusion, with Together.ai and Mixedbread reranking for retrieval accuracy
 - **Structured Outputs**: Schema-first LLM responses with `generateText` + `Output.object` for deterministic parsing and type-safe validation
 - **Streaming Intelligence**: Real-time SSE streaming with interleaved tool calls and generative UI components
 
@@ -44,7 +44,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 - **Upstash Redis**: Serverless HTTP Redis for sub-10ms global caching, sliding-window rate limiting, and deduplication keys
 - **Upstash QStash**: Webhook-driven background jobs with signature verification, Redis idempotency gates, and batch processing (memory sync, async tasks)
-- **Edge-First Architecture**: Next.js 16 Edge runtime support, Vercel deployment with global CDN, optimized for low-latency responses
+- **Vercel Runtime Architecture**: Next.js 16 route handlers, Vercel CLI prebuilt promotion, and global CDN delivery for low-latency responses
 - **React Compiler**: Automatic memoization and zero-overhead reactive rendering for optimal performance
 
 ### Security & Compliance
@@ -58,8 +58,8 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 ### Modern Frontend
 
 - **Next.js 16 + React 19**: App Router with RSC-first architecture, Server Components by default, React Compiler enabled
-- **TypeScript 5.9**: Strict mode with end-to-end type safety, Zod schemas as single source of truth
-- **AI SDK v6 Native**: Complete TypeScript migration from Python—unified provider API, native streaming, edge runtime support
+- **TypeScript 6**: Strict mode with end-to-end type safety, Zod schemas as single source of truth
+- **AI SDK v6 Native**: TypeScript-native provider resolution, streaming, tool calling, and structured outputs
 
 ## Quick Start
 
@@ -176,76 +176,50 @@ tripsage-ai/
 
 ## Deployment
 
-### Docker Deployment
+Production deploys use the Vercel CLI workflow in
+[docs/runbooks/deployment-vercel.md](docs/runbooks/deployment-vercel.md):
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
-
-# Production build
-docker build -t tripsage-ai .
-docker run -p 3000:3000 --env-file .env.production tripsage-ai
+pnpm deploy:check-env
+vercel pull --yes --environment=production
+vercel build --prod
+vercel deploy --prebuilt --prod --skip-domain --archive=tgz --yes
+pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"
+vercel promote "$DEPLOYMENT_URL" --yes --timeout=5m
 ```
 
-### Kubernetes Deployment
-
-```bash
-# Apply Kubernetes manifests
-kubectl apply -f k8s/
-
-# Check deployment status
-kubectl get pods -l app=tripsage-ai
-```
+Docker compose files in `docker/` are local observability/dev helpers, not the
+production deploy authority.
 
 ### Environment Configuration
 
-| Variable | Description | Required |
-| :--- | :--- | :--- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`NEXT_PUBLIC_SUPABASE_ANON_KEY` remains a legacy fallback) | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
-| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key (required only when AI demo/provider routes are enabled) | ⚠️ |
-| `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
-| `APP_BASE_URL` | Server origin for callbacks and absolute URLs | ✅ |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | ✅ |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | ✅ |
-| `NEXT_PUBLIC_STREAMDOWN_ALLOWED_LINK_PREFIXES` | Extra link prefix allowlist for markdown hardening (comma-separated) | ⚠️ |
-| `NEXT_PUBLIC_STREAMDOWN_ALLOWED_IMAGE_PREFIXES` | Image prefix allowlist for markdown hardening (comma-separated) | ⚠️ |
+`scripts/verify-production-env.mjs` is the deploy-time source of truth. It
+validates core app origins, Supabase SSR/Vault, Upstash Redis/QStash, security
+secrets, BYOK health checks, and feature-aware provider groups for Stripe,
+Resend, Amadeus, Duffel, Expedia, analytics, and AI providers.
 
-✅ Required | ⚠️ Optional (fallback available)
-
-**Notes:**
-
-- All routes use Upstash REST credentials for rate limiting and caching via `@upstash/redis` and `@upstash/ratelimit`.
-- BYOK keys are stored encrypted in Supabase Vault and resolved server-side only.
-- Markdown rendering uses Streamdown v2.1+ and its plugin architecture (`@streamdown/code`, `@streamdown/mermaid`, `@streamdown/math`).
+For local setup, start from `.env.local.example`. For production, run
+`pnpm deploy:check-env` before `vercel build`.
 
 ---
 
 ## 🔌 API Overview
 
-### Core Endpoints
+### Core Route Groups
 
 ```bash
-# Authentication
-POST /api/auth/login              # User login
-POST /api/auth/register           # User registration
-POST /api/auth/refresh            # Token refresh
-
-# Trip Management
-GET  /api/trips/suggestions       # AI-powered trip suggestions (read-only)
-# Note: Trip CRUD, collaborators, and itinerary mutations use Next.js Server Actions (no internal REST).
-
-# Flight Services
-GET  /api/flights/search          # Search flights
-POST /api/flights/book            # Book selected flight
-GET  /api/flights/bookings        # List user bookings
-
-# AI Chat & Memory
-POST /api/chat/completions        # AI chat interface
-POST /api/memory/conversation     # Store conversation
-GET  /api/memory/context          # Get user context
+GET  /api/health                  # Public runtime health
+POST /api/chat                    # AI SDK v6 UI message stream
+POST /api/flights/search          # Flight search
+GET  /api/trips/suggestions       # AI-powered trip suggestions
+POST /api/keys/validate           # BYOK provider validation
+GET  /api/health/byok             # Operator-only BYOK health probe
 ```
+
+The authoritative route catalog is
+[docs/api/api-reference.md](docs/api/api-reference.md). Trip CRUD,
+collaboration, and itinerary mutations use Server Actions rather than internal
+REST routes.
 
 ### Realtime Client (Supabase Realtime only - private channel)
 
@@ -316,12 +290,15 @@ pnpm test --grep security
 
 ---
 
-### Service Validation
+### Runtime Validation
 
-- **Unified result model**: Both API key validation and external service health checks return an `ApiValidationResult`, eliminating duplicate response types.
-- **Context-aware fields**: Validation flows populate `is_valid`, `status`, and `validated_at`, while health probes use `health_status`, `checked_at`, and leave validation-only fields unset (`None`).
-- **Shared metadata**: Rate-limit quotas, capability discovery, latency timing, and diagnostic details flow through identical fields for streamlined analytics and caching.
-- **Computed insights**: `success_rate_category` and `is_healthy` computed fields provide quick rollups regardless of whether the result originated from validation or monitoring.
+- **Provider validation**: `/api/keys/validate` verifies BYOK provider keys
+  server-side without exposing secret material.
+- **Operator health**: `/api/health/byok` uses `BYOK_HEALTHCHECK_KEY` and
+  reports provider readiness without returning Vault values.
+- **Deploy smoke**: `pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"`
+  checks health, security headers, auth guards, BYOK health when configured,
+  and QStash-protected jobs before promotion.
 
 ---
 

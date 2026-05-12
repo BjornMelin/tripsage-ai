@@ -7,7 +7,7 @@ Bring Your Own Key (BYOK) API key management for AI providers.
 List stored provider API keys (metadata only, no secrets).
 
 **Authentication**: Required
-**Rate Limit Key**: `keys:list`
+**Rate Limit Key**: `keys:create`
 
 ### Response
 

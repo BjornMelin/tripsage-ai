@@ -288,7 +288,7 @@ export const step3Schema = tripSchema.pick({ budget: true, travelers: true });
 
 Vercel AI SDK v6 tool schemas require specific patterns for reliable LLM function calling.
 
-For tool creation patterns with guardrails (caching, rate limiting, telemetry), see [AI Tools Guide](ai-tools.md).
+For tool creation patterns with guardrails (caching, rate limiting, telemetry), see [AI Tools Guide](../ai/ai-tools.md).
 
 **Requirements:**
 
@@ -415,6 +415,6 @@ export const toolInputSchema = z.strictObject({
 
 ## References
 
-- [AI Tools Guide](ai-tools.md) - Tool creation with `createAiTool` factory and guardrails
+- [AI Tools Guide](../ai/ai-tools.md) - Tool creation with `createAiTool` factory and guardrails
 - [Google TypeScript Style Guide](https://google.github.io/styleguide/tsguide.html)
 - [Zod v4 Documentation](https://zod.dev/)

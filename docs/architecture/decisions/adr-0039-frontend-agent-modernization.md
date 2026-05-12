@@ -10,7 +10,7 @@
 
 ## Context
 
-- After deleting the Python destination-research agent, the remaining LangGraph nodes (flight, accommodation, budget, memory-update, router/error handling) continue to run inside `tripsage/` and `tripsage_core`, blocking our goal of a Next.js-only agent stack.
+- At decision time, legacy LangGraph nodes still ran inside `tripsage/` and `tripsage_core`, blocking our goal of a Next.js-only agent stack.
 - ADR-0038 committed us to a hybrid ToolLoopAgent + guardrail architecture for destination and itinerary workflows. We now need a consistent migration path for every agent while integrating richer provider data (e.g., OpenTripMap POIs and safety/advisory feeds).
 - Three rollout options were evaluated via Zen consensus: (A) migrate each workflow sequentially, (B) uplift the shared frontend agent framework first and then migrate workflows in waves, (C) attempt a big-bang rewrite. Consensus scoring favored Option B (framework-first waves) for leverage, value, and manageable maintenance.
 
@@ -42,7 +42,7 @@ We will adopt **Option B: framework-first waves** to retire the remaining backen
 ### Negative
 
 - Requires upfront investment in framework hardening (schemas, caching, guardrails) before visible user features ship.
-- For a period, legacy LangGraph nodes and new frontend agents will coexist, requiring careful routing/feature-flag management.
+- During migration, legacy LangGraph nodes and new frontend agents coexisted briefly; the current runtime is fully Next.js/AI SDK v6.
 
 ### Neutral
 

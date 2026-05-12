@@ -46,17 +46,6 @@ const response = await fetch("http://localhost:3000/api/trips/suggestions", {
 });
 ```
 
-#### Python
-
-```python
-import requests
-
-response = requests.get(
-    "http://localhost:3000/api/trips/suggestions",
-    cookies={"sb-access-token": jwt_token}
-)
-```
-
 ### Anonymous Endpoints
 
 Endpoints marked as "Anonymous" do not require authentication:
@@ -227,7 +216,7 @@ All schemas use Zod v4 APIs exclusively. See [Zod Schemas](../development/standa
 
 ## Streaming Endpoints
 
-Endpoints under `/agents/*` and `/chat/stream` return Server-Sent Events (SSE) streams using AI SDK v6 UI message format.
+Endpoints under `/agents/*` except `/agents/router`, plus `/chat`, return Server-Sent Events (SSE) streams using AI SDK v6 UI message format.
 
 ### JavaScript/TypeScript
 
@@ -253,26 +242,6 @@ while (true) {
 }
 ```
 
-### Python (SSE)
-
-Use `sseclient-py` library:
-
-```python
-import requests
-import sseclient
-
-response = requests.post(
-    "http://localhost:3000/api/agents/flights",
-    cookies={"sb-access-token": jwt_token},
-    json={...},
-    stream=True
-)
-
-client = sseclient.SSEClient(response)
-for event in client.events():
-    print(event.data)
-```
-
 ### cURL
 
 ```bash
@@ -296,6 +265,6 @@ This reference mirrors the current handlers in `src/app/api/**`. Update alongsid
 1. Document authentication requirements
 2. Include rate limit key
 3. Document request/response schemas
-4. Provide examples in TypeScript, Python, and cURL
+4. Provide examples in TypeScript and cURL
 5. List all possible error responses
 6. Update the appropriate resource file

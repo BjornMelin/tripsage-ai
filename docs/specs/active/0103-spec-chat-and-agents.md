@@ -2,7 +2,7 @@
 
 **Version**: 1.0.0  
 **Status**: Final  
-**Date**: 2026-01-05
+**Date**: 2026-05-11
 
 ## Goals
 
@@ -15,9 +15,9 @@
 - chat
   - id, user_id, trip_id nullable, title, created_at
 - chat_message
-  - chat_id, role, content, created_at
-  - tool_invocations JSONB (optional)
-  - tool_results JSONB (optional)
+  - chat_id, role, parts JSONB, metadata JSONB, created_at
+- chat_tool_calls
+  - message_id, tool_call_id, tool_name, state, input_json, output_json, error_json, created_at
 
 ## Tooling
 

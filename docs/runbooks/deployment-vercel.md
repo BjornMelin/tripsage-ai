@@ -101,6 +101,8 @@ The workflow must fail if no Vercel deployment URL is produced.
 - `/login?next=%2Fdashboard` renders an HTML shell for auth redirects.
 - `/api/keys/validate` rejects unauthenticated BYOK validation requests. This
   is a route-guard smoke check, not an authenticated provider health check.
+- `/api/chat/attachments` rejects unauthenticated signed-upload requests. This
+  verifies the protected attachment upload guard before promotion.
 - `/api/health/byok` can be checked by operators with
   `BYOK_HEALTHCHECK_KEY` via
   `pnpm ops ai check byok-health --url <deployment-url>`; production deploys

@@ -72,6 +72,7 @@ do not send `BYOK_HEALTHCHECK_KEY` to unowned hosts.
 
 ## Notes
 
-- Rate limiting requires Upstash credentials; routes operate without limits
-  if not configured.
+- Rate limiting requires Upstash credentials. Sensitive routes fail closed when
+  limiter state is unavailable; low-risk public/search routes may degrade
+  without a limiter in local development.
 - QStash signing keys are mandatory for webhook verification in production.

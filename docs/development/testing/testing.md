@@ -259,15 +259,15 @@ Standard workflow:
 - `pnpm supabase:bootstrap` (or `pnpm supabase:start` + `pnpm supabase:db:reset`)
 - For deterministic data that covers more routes and UI surfaces:
   - `pnpm supabase:reset:dev` (for local UI dev)
-- Copy values from `pnpm supabase:status` into `.env.local` (see [Supabase runbook](../runbooks/supabase.md#environment-variables-local))
+- Copy values from `pnpm supabase:status` into `.env.local` (see [Supabase runbook](../../runbooks/supabase.md#environment-variables-local))
 - For local sign-up confirmation, use Inbucket/Mailpit at `http://localhost:54324`
-  (see [Supabase runbook: Inbucket/Mailpit](../runbooks/supabase.md#local-auth-email-confirmations-inbucket--mailpit))
+  (see [Supabase runbook: Inbucket/Mailpit](../../runbooks/supabase.md#local-auth-email-confirmations-inbucket--mailpit))
 
 > Note: the default `pnpm test:e2e:*` Playwright config uses `scripts/e2e-webserver.mjs`, which starts a mock Supabase Auth server on `http://127.0.0.1:54329` and does not require local Supabase. Use local Supabase when you want to validate real DB/RLS/RAG/attachments behavior end-to-end.
 
 ### WSL storage proxy workaround
 
-See [Supabase runbook: WSL storage proxy workaround](../runbooks/supabase.md#wsl-storage-proxy-workaround).
+See [Supabase runbook: WSL storage proxy workaround](../../runbooks/supabase.md#wsl-storage-proxy-workaround).
 
 ### Submission testing
 
@@ -360,8 +360,11 @@ pnpm test:changed                       # only changed files
 
 ## CI / Quality Gates
 
-- Pre-commit: `pnpm biome:check`, `pnpm type-check`, `pnpm test:affected`
-- CI: `pnpm test:ci`, `pnpm test:coverage`, `test:coverage:shard`
+- Local before commit: `pnpm biome:fix`, `pnpm type-check`, `pnpm test:affected`
+- PR CI: Biome, TypeScript, architecture guardrails, secrets checks, build,
+  affected Vitest coverage, and `pnpm test:e2e:critical` for UI/runtime changes.
+- Deploy smoke: `pnpm deploy:check-env` before build and
+  `pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"` before promotion.
 
 > **Tip:** Run `pnpm biome:fix` locally to auto-fix lint issues before committing.
 
@@ -421,5 +424,5 @@ Keep tests under ~3s/file; profile slow cases with `vitest run --project=<name> 
 - Auth store: `src/stores/auth/__tests__/auth-store.test.ts`
 - Trip card: `src/components/trip-card/__tests__/trip-card.test.tsx`
 - Chat handler: `src/app/api/chat/__tests__/_handler.test.ts`
-- Search page: `src/app/(dashboard)/search/__tests__/page.test.tsx`
-- Server actions: `src/app/(dashboard)/search/activities/actions.test.ts`
+- Search page: `src/app/(app)/dashboard/search/__tests__/page.test.tsx`
+- Server actions: `src/app/(app)/dashboard/search/activities/__tests__/actions.test.ts`

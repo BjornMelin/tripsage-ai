@@ -189,7 +189,7 @@ const onSubmit = form.handleSubmitSafe(async (data) => {
 
 ## Schema Organization
 
-Form schemas should be co-located with domain schemas. See [Form Schema Patterns](./zod-schema-guide.md#form-schema-patterns) for schema design examples that pair with these hooks.
+Form schemas should be co-located with domain schemas. See [Form Schema Patterns](../standards/zod-schema-guide.md#form-schema-patterns) for schema design examples that pair with these hooks.
 
 ```typescript
 // @schemas/trips.ts
@@ -208,7 +208,7 @@ export type TripFormData = z.infer<typeof tripFormSchema>;
 
 ## Testing Forms
 
-See [Testing Guide - Forms Section](./testing.md#forms) for:
+See [Testing Guide - Forms Section](../testing/testing.md#forms) for:
 
 - Validation error testing
 - Submission testing
