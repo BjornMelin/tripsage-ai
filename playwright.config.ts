@@ -58,6 +58,11 @@ export default defineConfig({
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54329",
       NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED ?? "1",
       PORT: `${e2ePort}`,
+      QSTASH_CURRENT_SIGNING_KEY:
+        process.env.QSTASH_CURRENT_SIGNING_KEY ??
+        "e2e-qstash-current-signing-key-local",
+      QSTASH_NEXT_SIGNING_KEY:
+        process.env.QSTASH_NEXT_SIGNING_KEY ?? "e2e-qstash-next-signing-key-local",
     },
     reuseExistingServer: false,
     timeout: 120_000,
