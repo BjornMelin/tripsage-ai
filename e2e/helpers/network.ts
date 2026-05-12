@@ -7,6 +7,7 @@ type JsonFulfillOptions = {
   status?: number;
 };
 
+/** Fulfill a Playwright route with a JSON response and stable defaults. */
 export async function fulfillJson(
   route: Route,
   body: unknown,
@@ -20,6 +21,7 @@ export async function fulfillJson(
   });
 }
 
+/** Register a JSON route mock, optionally scoped to one HTTP method. */
 export async function mockJsonRoute(
   page: Page,
   url: string,
@@ -43,6 +45,7 @@ function streamEvent(payload: unknown): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+/** Build an AI SDK UI-message text stream fixture for chat E2E tests. */
 export function buildTextDeltaStream(text: string): string {
   return [
     streamEvent({ messageId: "assistant-1", type: "start" }),
@@ -54,6 +57,7 @@ export function buildTextDeltaStream(text: string): string {
   ].join("");
 }
 
+/** Fulfill a Playwright route with an AI SDK UI-message text stream. */
 export async function fulfillTextStream(route: Route, text: string): Promise<void> {
   await route.fulfill({
     body: buildTextDeltaStream(text),
@@ -63,6 +67,7 @@ export async function fulfillTextStream(route: Route, text: string): Promise<voi
   });
 }
 
+/** Register a text stream route mock and expose whether it was called. */
 export async function mockTextStreamRoute<T>(
   page: Page,
   url: string,

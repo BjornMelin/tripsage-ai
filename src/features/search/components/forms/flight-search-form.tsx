@@ -504,10 +504,11 @@ export function FlightSearchForm({
                             size="sm"
                             aria-pressed={field.value === value}
                             onClick={() => {
-                              field.onChange(value);
-                              setTimeout(() => {
-                                form.trigger().catch(() => undefined);
-                              }, 0);
+                              form.setValue("tripType", value, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              });
                             }}
                             className="capitalize"
                             disabled={state.isSubmitting}
