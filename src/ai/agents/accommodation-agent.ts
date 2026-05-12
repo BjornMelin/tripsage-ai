@@ -13,13 +13,11 @@ import {
 import type { AccommodationSearchRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
-import type { ChatMessage } from "@/lib/tokens/budget";
-import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildAccommodationPrompt } from "@/prompts/agents";
 
 import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
-import { extractAgentParameters } from "./types";
+import { extractAgentParameters, prepareSchemaPrompt } from "./types";
 
 /** Schema version for accommodation stay responses. */
 const STAY_SCHEMA_VERSION = "stay.v1";
@@ -59,20 +57,14 @@ export function createAccommodationAgent(
     guests: input.guests,
   });
 
-  // Token budgeting: clamp max output tokens based on prompt length
-  const userPrompt = `Find stays and summarize. Always return JSON with schemaVersion="${STAY_SCHEMA_VERSION}" and sources[]. Parameters: ${JSON.stringify(
-    input
-  )}`;
-  const schemaMessage: ChatMessage = { content: userPrompt, role: "user" };
-  const clampMessages: ChatMessage[] = [
-    { content: instructions, role: "system" },
-    schemaMessage,
-  ];
-  const { maxOutputTokens } = clampMaxTokens(
-    clampMessages,
-    params.maxOutputTokens,
-    deps.modelId
-  );
+  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+    instructions,
+    maxOutputTokens: params.maxOutputTokens,
+    modelId: deps.modelId,
+    userPrompt: `Find stays and summarize. Always return JSON with schemaVersion="${STAY_SCHEMA_VERSION}" and sources[]. Parameters: ${JSON.stringify(
+      input
+    )}`,
+  });
 
   return createTripSageAgent<typeof ACCOMMODATION_TOOLS>(deps, {
     agentType: "accommodationSearch",
@@ -80,8 +72,6 @@ export function createAccommodationAgent(
     instructions,
     maxOutputTokens,
     name: "Accommodation Search Agent",
-    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
-    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for accommodation workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1 (steps 0-2): Search for accommodations

@@ -14,13 +14,11 @@ import {
 import type { BudgetPlanRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
-import type { ChatMessage } from "@/lib/tokens/budget";
-import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildBudgetPrompt } from "@/prompts/agents";
 
 import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
-import { extractAgentParameters } from "./types";
+import { extractAgentParameters, prepareSchemaPrompt } from "./types";
 
 /**
  * Tools available to the budget planning agent with built-in
@@ -64,20 +62,14 @@ export function createBudgetAgent(
   const params = extractAgentParameters(config);
   const instructions = buildBudgetPrompt(input);
 
-  // Token budgeting: clamp max output tokens based on prompt length
-  const userPrompt = `Generate a budget plan and summarize. Always return JSON with schemaVersion="budget.v1" and allocations[]. Parameters: ${JSON.stringify(
-    input
-  )}`;
-  const schemaMessage: ChatMessage = { content: userPrompt, role: "user" };
-  const clampMessages: ChatMessage[] = [
-    { content: instructions, role: "system" },
-    schemaMessage,
-  ];
-  const { maxOutputTokens } = clampMaxTokens(
-    clampMessages,
-    params.maxOutputTokens,
-    deps.modelId
-  );
+  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+    instructions,
+    maxOutputTokens: params.maxOutputTokens,
+    modelId: deps.modelId,
+    userPrompt: `Generate a budget plan and summarize. Always return JSON with schemaVersion="budget.v1" and allocations[]. Parameters: ${JSON.stringify(
+      input
+    )}`,
+  });
 
   return createTripSageAgent<typeof BUDGET_TOOLS>(deps, {
     agentType: "budgetPlanning",
@@ -85,8 +77,6 @@ export function createBudgetAgent(
     instructions,
     maxOutputTokens,
     name: "Budget Planning Agent",
-    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
-    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for budget workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1 (steps 0-3): Research destination costs and advisories

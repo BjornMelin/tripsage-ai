@@ -16,13 +16,11 @@ import {
 import type { DestinationResearchRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
-import type { ChatMessage } from "@/lib/tokens/budget";
-import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildDestinationPrompt } from "@/prompts/agents";
 
 import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
-import { extractAgentParameters } from "./types";
+import { extractAgentParameters, prepareSchemaPrompt } from "./types";
 
 /**
  * Tools available to the destination research agent with built-in
@@ -69,20 +67,14 @@ export function createDestinationAgent(
   const params = extractAgentParameters(config);
   const instructions = buildDestinationPrompt(input);
 
-  // Token budgeting: clamp max output tokens based on prompt length
-  const userPrompt = `Research destination and summarize. Always return JSON with schemaVersion="dest.v1" and sources[]. Parameters: ${JSON.stringify(
-    input
-  )}`;
-  const schemaMessage: ChatMessage = { content: userPrompt, role: "user" };
-  const clampMessages: ChatMessage[] = [
-    { content: instructions, role: "system" },
-    schemaMessage,
-  ];
-  const { maxOutputTokens } = clampMaxTokens(
-    clampMessages,
-    params.maxOutputTokens,
-    deps.modelId
-  );
+  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+    instructions,
+    maxOutputTokens: params.maxOutputTokens,
+    modelId: deps.modelId,
+    userPrompt: `Research destination and summarize. Always return JSON with schemaVersion="dest.v1" and sources[]. Parameters: ${JSON.stringify(
+      input
+    )}`,
+  });
 
   // Destination research may need more steps for gathering
   const stepLimit = Math.max(params.stepLimit, 15);
@@ -95,8 +87,6 @@ export function createDestinationAgent(
     instructions,
     maxOutputTokens,
     name: "Destination Research Agent",
-    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
-    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for destination research workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1: Initial search and POI context

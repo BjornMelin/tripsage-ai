@@ -2,30 +2,9 @@
  * @fileoverview Central model defaults for AI SDK provider resolution.
  */
 
-/** Canonical model profiles with direct/Gateway ids and token ceilings. */
-export const MODEL_PROFILES = {
-  planning: {
-    directModelId: "gpt-5.5",
-    gatewayModelId: "openai/gpt-5.5",
-    maxContextTokens: 1_050_000,
-    maxOutputTokens: 128_000,
-  },
-  standard: {
-    directModelId: "gpt-5.4-mini",
-    gatewayModelId: "openai/gpt-5.4-mini",
-    maxContextTokens: 400_000,
-    maxOutputTokens: 128_000,
-  },
-  utility: {
-    directModelId: "gpt-5.4-nano",
-    gatewayModelId: "openai/gpt-5.4-nano",
-    maxContextTokens: 400_000,
-    maxOutputTokens: 128_000,
-  },
-} as const;
+import { MODEL_PROFILES, type ModelProfileId } from "@/lib/tokens/limits";
 
-/** Supported model profile identifiers. */
-export type ModelProfileId = keyof typeof MODEL_PROFILES;
+export { MODEL_PROFILES, type ModelProfileId };
 
 /** Default profile used for cost-conscious app-owned generation. */
 export const DEFAULT_MODEL_PROFILE_ID = "standard" satisfies ModelProfileId;

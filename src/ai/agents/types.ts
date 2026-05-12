@@ -21,7 +21,7 @@ import type {
 } from "ai";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import type { ChatMessage } from "@/lib/tokens/budget";
+import { type ChatMessage, clampMaxTokens } from "@/lib/tokens/budget";
 
 // Re-export AI SDK types for downstream consumers
 export type {
@@ -412,4 +412,35 @@ export function extractAgentParameters(config: AgentConfig): AgentParameters {
         : 0.3,
     topP: "topP" in params && typeof params.topP === "number" ? params.topP : undefined,
   };
+}
+
+/** Prompt message and token budget derived from an agent schema instruction. */
+export interface AgentPromptSetup {
+  /** User message that asks the model for the schema-versioned payload. */
+  schemaMessage: ChatMessage;
+
+  /** Safe output budget after applying prompt length and model context limits. */
+  maxOutputTokens: number;
+}
+
+/** Builds the common schema prompt and clamps output tokens for travel agents. */
+export function prepareSchemaPrompt(options: {
+  contextMessages?: ChatMessage[];
+  instructions: string;
+  maxOutputTokens: number;
+  modelId: string;
+  userPrompt: string;
+}): AgentPromptSetup {
+  const schemaMessage: ChatMessage = { content: options.userPrompt, role: "user" };
+  const { maxOutputTokens } = clampMaxTokens(
+    [
+      { content: options.instructions, role: "system" },
+      schemaMessage,
+      ...(options.contextMessages ?? []),
+    ],
+    options.maxOutputTokens,
+    options.modelId
+  );
+
+  return { maxOutputTokens, schemaMessage };
 }
