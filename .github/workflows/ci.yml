@@ -299,19 +299,19 @@ jobs:
       - name: Run sharded coverage (api+ui)
         env:
           CI: '1'
+          VITEST_COVERAGE_SKIP_THRESHOLDS: '1'
         run: >-
           pnpm vitest run --coverage
-          --pool=threads --reporter=blob --outputFile=.vitest/shard-${{ matrix.shard }}.json
+          --pool=threads --reporter=blob
           --shard=${{ matrix.shard }}/${{ matrix.total }}
 
       - name: Upload shard artifacts
         uses: actions/upload-artifact@v7.0.1
         with:
           name: vitest-reports-${{ matrix.shard }}
-          path: |
-            .vitest
-            coverage
-          if-no-files-found: warn
+          path: .vitest-reports/*.json
+          if-no-files-found: error
+          include-hidden-files: true
 
   frontend-coverage-merge:
     name: Frontend Coverage (merge)
@@ -334,13 +334,14 @@ jobs:
       - name: Download shard artifacts
         uses: actions/download-artifact@v8.0.1
         with:
-          path: .vitest-merged
+          path: .vitest-reports
+          pattern: vitest-reports-*
+          merge-multiple: true
 
       - name: Merge reports
         run: |
-          mkdir -p .vitest
-          find .vitest-merged -type f -name "*.json" -exec cp {} .vitest/ \;
-          pnpm vitest run --merge-reports
+          pnpm vitest run --merge-reports .vitest-reports --coverage
+          node scripts/check-coverage-critical.mjs
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7.0.1

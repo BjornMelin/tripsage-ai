@@ -32,7 +32,7 @@
     "test:upstash:smoke": "UPSTASH_SMOKE=1 vitest run --project=integration src/__tests__/contracts/upstash.smoke.integration.test.ts",
     "test:changed": "vitest run --changed",
     "test:affected": "vitest run --changed --passWithNoTests && git diff -z --name-only HEAD -- 'src/**/*.ts' 'src/**/*.tsx' ':!**/*.test.ts' ':!**/*.test.tsx' | xargs -0 -r vitest related --run --passWithNoTests",
-    "test:coverage:shard": "vitest run --coverage.enabled --coverage.provider=v8 --reporter=blob --shard=$VITEST_SHARD",
+    "test:coverage:shard": "VITEST_COVERAGE_SKIP_THRESHOLDS=1 vitest run --coverage.enabled --coverage.provider=v8 --reporter=blob --shard=$VITEST_SHARD",
     "test:merge": "vitest --merge-reports",
     "test:e2e": "playwright test",
     "test:e2e:critical": "playwright test --project=chromium e2e/critical-flows.spec.ts",
