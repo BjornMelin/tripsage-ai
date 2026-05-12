@@ -1,3 +1,10 @@
+## [1.33.6](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.5...v1.33.6) (2026-05-12)
+
+### Bug Fixes
+
+* **docs:** address verified review findings ([38db92e](https://github.com/BjornMelin/tripsage-ai/commit/38db92e16078cac85953be290bb161e080d92480))
+* **docs:** avoid tag stripping in link checker ([38b07b0](https://github.com/BjornMelin/tripsage-ai/commit/38b07b0be21fa3a6f4c7303abc7cf3eebffaaf8b))
+
 ## [1.33.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.4...v1.33.5) (2026-05-11)
 
 ### Performance Improvements
