@@ -67,7 +67,7 @@ export function createDestinationAgent(
   const params = extractAgentParameters(config);
   const instructions = buildDestinationPrompt(input);
 
-  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -83,7 +83,7 @@ export function createDestinationAgent(
 
   return createTripSageAgent<typeof DESTINATION_TOOLS>(deps, {
     agentType: "destinationResearch",
-    defaultMessages: [schemaMessage],
+    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Destination Research Agent",

@@ -4,6 +4,7 @@
 
 import { MODEL_PROFILES, type ModelProfileId } from "@/lib/tokens/limits";
 
+/** Re-export canonical model profile definitions and profile id type for provider defaults. */
 export { MODEL_PROFILES, type ModelProfileId };
 
 /** Default profile used for cost-conscious app-owned generation. */

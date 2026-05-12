@@ -46,7 +46,7 @@ function collectMarkdownFiles(targets) {
 }
 
 function stripCodeFences(markdown) {
-  return markdown.replace(/```[\s\S]*?```/gu, "");
+  return markdown.replace(/```[\s\S]*?```/gu, "").replace(/~~~[\s\S]*?~~~/gu, "");
 }
 
 function extractMarkdownLinks(markdown) {
@@ -90,7 +90,7 @@ function headingToAnchor(heading) {
 }
 
 function collectAnchors(filePath) {
-  const markdown = fs.readFileSync(filePath, "utf8");
+  const markdown = stripCodeFences(fs.readFileSync(filePath, "utf8"));
   const anchors = new Set();
   const headingPattern = /^#{1,6}\s+(.+)$/gmu;
   const explicitIdPattern = /\{#([^}]+)\}/gu;

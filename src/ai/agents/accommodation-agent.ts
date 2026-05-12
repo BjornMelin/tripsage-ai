@@ -57,7 +57,7 @@ export function createAccommodationAgent(
     guests: input.guests,
   });
 
-  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -68,7 +68,7 @@ export function createAccommodationAgent(
 
   return createTripSageAgent<typeof ACCOMMODATION_TOOLS>(deps, {
     agentType: "accommodationSearch",
-    defaultMessages: [schemaMessage],
+    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Accommodation Search Agent",

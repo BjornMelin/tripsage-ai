@@ -315,44 +315,46 @@ Intent router agent that analyzes user queries and routes them to the appropriat
 **Authentication**: Required
 **Rate Limit Key**: `agents:router`
 **Content-Type**: `application/json`
-**Response**: `text/event-stream` (SSE)
+**Response**: `application/json`
 
 ### Request Body
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `message` | string | Yes | User message or query to be analyzed and routed |
-| `conversationId` | string | No | Conversation ID for context continuity |
-| `context` | object | No | Additional context {location: string, previousIntent: string, sessionData: object} |
-| `allowedAgents` | array | No | Restrict routing to specific agents: `flights`, `accommodations`, `destinations`, `itineraries`, `budget`, `memory` |
-| `returnRoutingInfo` | boolean | No | Include routing decision metadata in response (default: false) |
 
 ### Response
 
-`200 OK` - SSE stream with routed agent response
+`200 OK` - JSON intent-classification result
 
 The response includes:
 
 - Identified intent and selected agent
-- Streamed response from the specialized agent
-- Optional routing metadata (if `returnRoutingInfo: true`)
+- Confidence score from `0` to `1`
+- Optional reasoning from the router model
+
+```json
+{
+  "agent": "flightSearch",
+  "confidence": 0.91,
+  "reasoning": "The user asked for flight options."
+}
+```
 
 ### Errors
 
-- `400` - Invalid request parameters (missing message, invalid allowedAgents values, empty message)
+- `400` - Invalid request parameters (missing or empty message)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
 ### Example
 
 ```bash
-curl -N -X POST "http://localhost:3000/api/agents/router" \
+curl -X POST "http://localhost:3000/api/agents/router" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "Find me cheap flights to Tokyo next month",
-    "conversationId": "conv-456",
-    "returnRoutingInfo": true
+    "message": "Find me cheap flights to Tokyo next month"
   }'
 ```
 

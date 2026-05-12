@@ -1,7 +1,8 @@
 # ADR-0023: Adopt AI SDK v6 Foundations (Next.js App Router)
 
 **Version**: 1.0.0
-**Status**: Accepted; current runtime superseded by ADR-0031 and ADR-0066
+**Status**: Superseded
+**Superseded By**: [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md), [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md)
 **Date**: 2025-11-01
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router

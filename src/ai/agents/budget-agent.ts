@@ -62,7 +62,7 @@ export function createBudgetAgent(
   const params = extractAgentParameters(config);
   const instructions = buildBudgetPrompt(input);
 
-  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -73,7 +73,7 @@ export function createBudgetAgent(
 
   return createTripSageAgent<typeof BUDGET_TOOLS>(deps, {
     agentType: "budgetPlanning",
-    defaultMessages: [schemaMessage],
+    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Budget Planning Agent",

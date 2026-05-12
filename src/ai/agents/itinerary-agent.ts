@@ -69,7 +69,7 @@ export function createItineraryAgent(
   const params = extractAgentParameters(config);
   const instructions = buildItineraryPrompt(input);
 
-  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -113,7 +113,7 @@ export function createItineraryAgent(
 
   return createTripSageAgent<typeof BASE_ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",
-    defaultMessages: [schemaMessage],
+    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Itinerary Planning Agent",

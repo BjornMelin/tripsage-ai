@@ -71,7 +71,7 @@ export function createFlightAgent(
   const params = extractAgentParameters(config);
   const instructions = buildFlightPrompt(input);
 
-  const { maxOutputTokens, schemaMessage } = prepareSchemaPrompt({
+  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
     contextMessages,
     instructions,
     maxOutputTokens: params.maxOutputTokens,
@@ -83,7 +83,7 @@ export function createFlightAgent(
 
   return createTripSageAgent<typeof FLIGHT_TOOLS>(deps, {
     agentType: "flightSearch",
-    defaultMessages: [schemaMessage],
+    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Flight Search Agent",
