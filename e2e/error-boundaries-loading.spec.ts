@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
-import { fulfillJson } from "./helpers/network";
+import { mockJsonRoute } from "./helpers/network";
 
 type DashboardApiBody = {
   activeTrips: number;
@@ -29,10 +29,12 @@ async function mockDashboardApi(
 ): Promise<void> {
   const { delayMs = 800, bodyOverrides } = options;
 
-  await page.route("**/api/dashboard**", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-    await fulfillJson(route, { ...defaultDashboardApiBody, ...bodyOverrides });
-  });
+  await mockJsonRoute(
+    page,
+    "**/api/dashboard**",
+    { ...defaultDashboardApiBody, ...bodyOverrides },
+    { delayMs }
+  );
 }
 
 test.describe("Loading States", () => {

@@ -33,6 +33,18 @@ function RenderWithQueryClient(ui: React.ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
+async function RenderFlightSearchForm(
+  props: Partial<
+    Omit<
+      React.ComponentProps<typeof import("../flight-search-form").FlightSearchForm>,
+      "onSearch"
+    >
+  > = {}
+) {
+  const { FlightSearchForm } = await import("../flight-search-form");
+  return RenderWithQueryClient(<FlightSearchForm {...props} onSearch={MockOnSearch} />);
+}
+
 function GetTextInput(name: string): HTMLInputElement {
   return screen.getByRole("textbox", { name }) as HTMLInputElement;
 }
@@ -52,8 +64,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("renders the form correctly (aligned with current UI)", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     // Title and trip type buttons
     expect(screen.getByText("Find Flights")).toBeInTheDocument();
@@ -79,8 +90,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("handles form submission with valid data", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     // Fill in required fields matching current placeholders/labels
     fireEvent.change(GetTextInput("From"), {
@@ -120,8 +130,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("enables one-way submissions without requiring return date", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     fireEvent.click(screen.getByRole("button", { name: "One Way" }));
     fireEvent.change(GetTextInput("From"), {
@@ -150,8 +159,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("keeps placeholders intact when autocomplete-like selections occur", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     const originInput = GetTextInput("From");
     const destinationInput = GetTextInput("To");
@@ -168,8 +176,7 @@ describe("FlightSearchForm", () => {
   });
 
   it("fills destination when selecting a popular destination chip", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     const destinationChip = await screen.findByText("New York");
     fireEvent.click(destinationChip);
@@ -178,7 +185,6 @@ describe("FlightSearchForm", () => {
   });
 
   it("normalizes legacy passenger fields when selecting a recent search", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
     MockSearchHistory.recentFlight = [
       {
         id: "recent-legacy-1",
@@ -198,7 +204,7 @@ describe("FlightSearchForm", () => {
       },
     ];
 
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     const recentButton = await screen.findByRole("button", { name: /SFO.*LHR/ });
     fireEvent.click(recentButton);
@@ -219,7 +225,6 @@ describe("FlightSearchForm", () => {
   });
 
   it("prefers nested passengers when selecting a recent search", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
     MockSearchHistory.recentFlight = [
       {
         id: "recent-passengers-1",
@@ -236,7 +241,7 @@ describe("FlightSearchForm", () => {
       },
     ];
 
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     const recentButton = await screen.findByRole("button", { name: /SFO.*LHR/ });
     fireEvent.click(recentButton);
@@ -254,7 +259,6 @@ describe("FlightSearchForm", () => {
   });
 
   it("does not render recent quick-select items when stored params are invalid", async () => {
-    const { FlightSearchForm } = await import("../flight-search-form");
     MockSearchHistory.recentFlight = [
       {
         id: "recent-invalid-1",
@@ -264,7 +268,7 @@ describe("FlightSearchForm", () => {
       },
     ];
 
-    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+    await RenderFlightSearchForm();
 
     expect(screen.queryByText(/Recent searches/i)).not.toBeInTheDocument();
   });

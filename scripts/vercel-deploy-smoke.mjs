@@ -10,6 +10,29 @@ const JOB_ROUTES = [
   "/api/jobs/notify-collaborators",
   "/api/jobs/rag-index",
 ];
+const POST_GUARD_CHECKS = [
+  {
+    body: { apiKey: "sk-smoke-placeholder", service: "openai" },
+    label: "protected BYOK route",
+    name: "byok_route_guard",
+    path: "/api/keys/validate",
+  },
+  {
+    body: {
+      chatId: "chat-smoke-placeholder",
+      files: [
+        {
+          contentType: "application/pdf",
+          originalName: "itinerary.pdf",
+          size: 1024,
+        },
+      ],
+    },
+    label: "protected attachment upload route",
+    name: "attachment_upload_route_guard",
+    path: "/api/chat/attachments",
+  },
+];
 const RETRY_DELAY_MS = 1_000;
 const REQUEST_ATTEMPTS = 3;
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -178,33 +201,6 @@ function checkByokHealth(baseUrl, byokHealthKey) {
   });
 }
 
-function checkByokGuard(baseUrl) {
-  return checkPostGuard(
-    baseUrl,
-    "/api/keys/validate",
-    { apiKey: "sk-smoke-placeholder", service: "openai" },
-    "protected BYOK route"
-  );
-}
-
-function checkAttachmentUploadGuard(baseUrl) {
-  return checkPostGuard(
-    baseUrl,
-    "/api/chat/attachments",
-    {
-      chatId: "chat-smoke-placeholder",
-      files: [
-        {
-          contentType: "application/pdf",
-          originalName: "itinerary.pdf",
-          size: 1024,
-        },
-      ],
-    },
-    "protected attachment upload route"
-  );
-}
-
 async function checkQstashRoutes(baseUrl) {
   const routeResponses = await requestAll(baseUrl, JOB_ROUTES, jsonPost({}));
 
@@ -247,9 +243,12 @@ const checks = await Promise.all([
   runCheck("health_endpoint", () => checkHealth(baseUrl)),
   runCheck("auth_session_guard", () => checkUnauthenticatedAuth(baseUrl)),
   runCheck("authenticated_redirect_shell", () => checkLoginShell(baseUrl)),
-  runCheck("byok_route_guard", () => checkByokGuard(baseUrl)),
+  ...POST_GUARD_CHECKS.map((check) =>
+    runCheck(check.name, () =>
+      checkPostGuard(baseUrl, check.path, check.body, check.label)
+    )
+  ),
   runCheck("byok_health_endpoint", () => checkByokHealth(baseUrl, byokHealthKey)),
-  runCheck("attachment_upload_route_guard", () => checkAttachmentUploadGuard(baseUrl)),
   runCheck("qstash_job_route_guards", () => checkQstashRoutes(baseUrl)),
 ]);
 

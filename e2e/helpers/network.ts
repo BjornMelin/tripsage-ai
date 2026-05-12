@@ -1,7 +1,9 @@
-import type { Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 
 type JsonFulfillOptions = {
+  delayMs?: number;
   headers?: Record<string, string>;
+  method?: string;
   status?: number;
 };
 
@@ -15,6 +17,25 @@ export async function fulfillJson(
     contentType: "application/json",
     headers: options.headers,
     status: options.status ?? 200,
+  });
+}
+
+export async function mockJsonRoute(
+  page: Page,
+  url: string,
+  body: unknown,
+  options?: JsonFulfillOptions
+): Promise<void> {
+  await page.route(url, async (route) => {
+    if (options?.method && route.request().method() !== options.method) {
+      await route.continue();
+      return;
+    }
+
+    if (options?.delayMs) {
+      await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+    }
+    await fulfillJson(route, body, options);
   });
 }
 
@@ -40,4 +61,25 @@ export async function fulfillTextStream(route: Route, text: string): Promise<voi
     headers: { "x-vercel-ai-ui-message-stream": "v1" },
     status: 200,
   });
+}
+
+export async function mockTextStreamRoute<T>(
+  page: Page,
+  url: string,
+  text: string,
+  onBody?: (body: T) => void
+): Promise<() => boolean> {
+  let handled = false;
+
+  await page.route(url, async (route) => {
+    handled = true;
+    try {
+      onBody?.(route.request().postDataJSON() as T);
+    } catch {
+      onBody?.({} as T);
+    }
+    await fulfillTextStream(route, text);
+  });
+
+  return () => handled;
 }

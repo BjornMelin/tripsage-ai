@@ -1,12 +1,39 @@
 import { expect, type Page, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
-import { fulfillJson } from "./helpers/network";
+import { fulfillJson, mockJsonRoute } from "./helpers/network";
 
 const JOB_ROUTES = [
   "/api/jobs/attachments-ingest",
   "/api/jobs/memory-sync",
   "/api/jobs/notify-collaborators",
   "/api/jobs/rag-index",
+] as const;
+
+const GUARDED_POST_ROUTES = [
+  {
+    body: { apiKey: "sk-smoke-placeholder", service: "openai" },
+    label: "BYOK validation guard",
+    path: "/api/keys/validate",
+  },
+  {
+    body: {
+      chatId: "chat-critical-smoke",
+      files: [
+        {
+          contentType: "application/pdf",
+          originalName: "itinerary.pdf",
+          size: 1024,
+        },
+      ],
+    },
+    label: "attachment upload guard",
+    path: "/api/chat/attachments",
+  },
+  ...JOB_ROUTES.map((path) => ({
+    body: {},
+    label: `${path} unsigned QStash guard`,
+    path,
+  })),
 ] as const;
 
 function dateInputDaysFromNow(days: number): string {
@@ -20,19 +47,14 @@ async function mockCriticalProviderRoutes(page: Page): Promise<{
 }> {
   let flightSearchRequests = 0;
 
-  await page.route("**/api/flights/popular-routes", async (route) => {
-    await fulfillJson(route, [
-      { date: "Jun 18", destination: "LAX", origin: "SFO", price: 188 },
-      { date: "Jul 4", destination: "JFK", origin: "DEN", price: 244 },
-    ]);
-  });
-
-  await page.route("**/api/flights/popular-destinations", async (route) => {
-    await fulfillJson(route, [
-      { code: "LAX", country: "US", name: "Los Angeles", savings: "$89" },
-      { code: "JFK", country: "US", name: "New York", savings: "$127" },
-    ]);
-  });
+  await mockJsonRoute(page, "**/api/flights/popular-routes", [
+    { date: "Jun 18", destination: "LAX", origin: "SFO", price: 188 },
+    { date: "Jul 4", destination: "JFK", origin: "DEN", price: 244 },
+  ]);
+  await mockJsonRoute(page, "**/api/flights/popular-destinations", [
+    { code: "LAX", country: "US", name: "Los Angeles", savings: "$89" },
+    { code: "JFK", country: "US", name: "New York", savings: "$127" },
+  ]);
 
   await page.route("**/api/flights/search", async (route) => {
     flightSearchRequests += 1;
@@ -57,25 +79,10 @@ async function mockCriticalProviderRoutes(page: Page): Promise<{
     });
   });
 
-  await page.route("**/api/calendar/status", async (route) => {
-    await fulfillJson(route, { connected: false });
-  });
-
-  await page.route("**/api/calendar/events**", async (route) => {
-    await fulfillJson(route, { items: [] });
-  });
-
-  await page.route("**/api/keys", async (route) => {
-    if (route.request().method() === "GET") {
-      await fulfillJson(route, []);
-      return;
-    }
-    await route.continue();
-  });
-
-  await page.route("**/api/user-settings", async (route) => {
-    await fulfillJson(route, { allowGatewayFallback: true });
-  });
+  await mockJsonRoute(page, "**/api/calendar/status", { connected: false });
+  await mockJsonRoute(page, "**/api/calendar/events**", { items: [] });
+  await mockJsonRoute(page, "**/api/keys", [], { method: "GET" });
+  await mockJsonRoute(page, "**/api/user-settings", { allowGatewayFallback: true });
 
   return {
     flightSearchRequests: () => flightSearchRequests,
@@ -101,33 +108,12 @@ test.describe("Critical production flows", () => {
     const auth = await request.get("/auth/me", { maxRedirects: 0 });
     expect(auth.status()).toBe(401);
 
-    const byokValidation = await request.post("/api/keys/validate", {
-      data: { apiKey: "sk-smoke-placeholder", service: "openai" },
-      maxRedirects: 0,
-    });
-    expect(byokValidation.status()).toBe(401);
-
-    const attachmentUpload = await request.post("/api/chat/attachments", {
-      data: {
-        chatId: "chat-critical-smoke",
-        files: [
-          {
-            contentType: "application/pdf",
-            originalName: "itinerary.pdf",
-            size: 1024,
-          },
-        ],
-      },
-      maxRedirects: 0,
-    });
-    expect(attachmentUpload.status()).toBe(401);
-
-    for (const route of JOB_ROUTES) {
-      const response = await request.post(route, {
-        data: {},
+    for (const route of GUARDED_POST_ROUTES) {
+      const response = await request.post(route.path, {
+        data: route.body,
         maxRedirects: 0,
       });
-      expect(response.status(), `${route} unsigned QStash guard`).toBe(401);
+      expect(response.status(), route.label).toBe(401);
     }
 
     const byokHealth = await request.get("/api/health/byok", { maxRedirects: 0 });
