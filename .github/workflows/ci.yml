@@ -309,8 +309,9 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: vitest-reports-${{ matrix.shard }}
-          path: .vitest-reports/*
-          if-no-files-found: warn
+          path: .vitest-reports/*.json
+          if-no-files-found: error
+          include-hidden-files: true
 
   frontend-coverage-merge:
     name: Frontend Coverage (merge)
