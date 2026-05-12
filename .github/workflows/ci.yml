@@ -150,6 +150,25 @@ jobs:
           VITEST_POOL: threads
         run: pnpm test:affected
 
+      - name: Determine if critical E2E needed
+        id: critical_e2e
+        run: |
+          base_ref="${{ github.event.pull_request.base.ref || 'main' }}"
+          git fetch --no-tags origin "$base_ref"
+          if git diff --name-only "origin/${base_ref}...HEAD" | grep -Eq '^(e2e/|playwright\.config\.ts|scripts/e2e-webserver\.mjs|src/(app|components|features|hooks|lib|server)/.*|package\.json|pnpm-lock\.yaml)$'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Playwright Chromium (critical E2E)
+        if: steps.critical_e2e.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Critical E2E smoke (chromium)
+        if: steps.critical_e2e.outputs.run == 'true'
+        run: pnpm test:e2e:critical
+
       - name: Determine if prod CSP check needed
         id: prod_csp
         run: |
