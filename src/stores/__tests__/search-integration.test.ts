@@ -1,7 +1,8 @@
 /** @vitest-environment jsdom */
 
-import type { Flight } from "@schemas/search";
+import type { Flight, FlightSearchParams } from "@schemas/search";
 import { act, renderHook } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
@@ -10,6 +11,7 @@ import { useSearchFiltersStore } from "@/features/search/store/search-filters-st
 import { useSearchParamsStore } from "@/features/search/store/search-params-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { server } from "@/test/msw/server";
 import { AllTheProviders } from "@/test/test-utils";
 
 describe("Search Store Integration", () => {
@@ -308,6 +310,52 @@ describe("Search Store Integration", () => {
       expect(summary.resultCount).toBe(0);
       expect(summary.hasFilters).toBe(false);
       expect(summary.filterCount).toBe(0);
+    });
+
+    it("should execute provided flight params without validating stale defaults", async () => {
+      let capturedBody: unknown = null;
+      server.use(
+        http.post("/api/flights/search", async ({ request }) => {
+          capturedBody = await request.json();
+          return HttpResponse.json({
+            itineraries: [],
+            provider: "E2E",
+          });
+        })
+      );
+
+      const params: FlightSearchParams = {
+        adults: 1,
+        cabinClass: "economy",
+        children: 0,
+        departureDate: "2027-06-01",
+        destination: "LAX",
+        directOnly: false,
+        infants: 0,
+        origin: "SFO",
+      };
+      const { result } = renderHook(() => useSearchOrchestration(), { wrapper });
+
+      act(() => {
+        result.current.initializeSearch("flight");
+      });
+
+      let searchId: string | null = null;
+      await act(async () => {
+        searchId = await result.current.executeSearch(params);
+      });
+
+      expect(searchId).toEqual(expect.any(String));
+      expect(capturedBody).toMatchObject({
+        departureDate: "2027-06-01",
+        destination: "LAX",
+        origin: "SFO",
+      });
+      expect(useSearchParamsStore.getState().flightParams).toMatchObject({
+        departureDate: "2027-06-01",
+        destination: "LAX",
+        origin: "SFO",
+      });
     });
   });
 

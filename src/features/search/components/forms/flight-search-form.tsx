@@ -281,7 +281,6 @@ export function FlightSearchForm({
           }}
           submitLabel="Search Flights"
           loadingLabel="Searching flights…"
-          disableSubmitWhenInvalid
           className="space-y-6"
           popularItems={popularItems}
           popularLabel="Popular destinations"
@@ -354,27 +353,36 @@ export function FlightSearchForm({
                 name="tripType"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex gap-2">
-                      {(["round-trip", "one-way", "multi-city"] as const).map(
-                        (type) => (
-                          <Button
-                            key={type}
-                            type="button"
-                            variant={field.value === type ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => field.onChange(type)}
-                            className="capitalize"
-                            disabled={state.isSubmitting}
-                          >
-                            {type === "round-trip"
-                              ? "Round Trip"
-                              : type === "one-way"
-                                ? "One Way"
-                                : "Multi-City"}
-                          </Button>
-                        )
-                      )}
-                    </div>
+                    <fieldset>
+                      <legend className="sr-only">Trip type</legend>
+                      <div className="flex gap-2">
+                        {(["round-trip", "one-way", "multi-city"] as const).map(
+                          (type) => (
+                            <Button
+                              key={type}
+                              type="button"
+                              variant={field.value === type ? "default" : "outline"}
+                              size="sm"
+                              aria-pressed={field.value === type}
+                              onClick={() => {
+                                field.onChange(type);
+                                setTimeout(() => {
+                                  form.trigger().catch(() => undefined);
+                                }, 0);
+                              }}
+                              className="capitalize"
+                              disabled={state.isSubmitting}
+                            >
+                              {type === "round-trip"
+                                ? "Round Trip"
+                                : type === "one-way"
+                                  ? "One Way"
+                                  : "Multi-City"}
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </fieldset>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -388,19 +396,20 @@ export function FlightSearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">From</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPinIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
+                        <div className="relative">
+                          <MapPinIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                          />
+                          <FormControl>
                             <Input
+                              aria-label="From"
                               placeholder="Departure city or airport…"
                               className="pl-10"
                               {...field}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -426,19 +435,20 @@ export function FlightSearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">To</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPinIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
+                        <div className="relative">
+                          <MapPinIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                          />
+                          <FormControl>
                             <Input
+                              aria-label="To"
                               placeholder="Destination city or airport…"
                               className="pl-10"
                               {...field}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -452,20 +462,21 @@ export function FlightSearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Departure</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <CalendarIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
+                        <div className="relative">
+                          <CalendarIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                          />
+                          <FormControl>
                             <Input
+                              aria-label="Departure"
                               type="date"
                               className="pl-10"
                               {...field}
                               value={dateInputValue(field.value)}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -478,20 +489,21 @@ export function FlightSearchForm({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm font-medium">Return</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <CalendarIcon
-                                aria-hidden="true"
-                                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                              />
+                          <div className="relative">
+                            <CalendarIcon
+                              aria-hidden="true"
+                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                            />
+                            <FormControl>
                               <Input
+                                aria-label="Return"
                                 type="date"
                                 className="pl-10"
                                 {...field}
                                 value={dateInputValue(field.value)}
                               />
-                            </div>
-                          </FormControl>
+                            </FormControl>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -506,31 +518,31 @@ export function FlightSearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Adults</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <UsersIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
-                            <Select
-                              value={field.value.toString()}
-                              onValueChange={(value) =>
-                                field.onChange(Number.parseInt(value, 10))
-                              }
-                            >
-                              <SelectTrigger className="pl-10">
+                        <div className="relative">
+                          <UsersIcon
+                            aria-hidden="true"
+                            className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                          />
+                          <Select
+                            value={field.value.toString()}
+                            onValueChange={(value) =>
+                              field.onChange(Number.parseInt(value, 10))
+                            }
+                          >
+                            <FormControl>
+                              <SelectTrigger aria-label="Adults" className="pl-10">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                                  <SelectItem key={num} value={num.toString()}>
-                                    {num} {num === 1 ? "Adult" : "Adults"}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </FormControl>
+                            </FormControl>
+                            <SelectContent>
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                                <SelectItem key={num} value={num.toString()}>
+                                  {num} {num === 1 ? "Adult" : "Adults"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -544,25 +556,25 @@ export function FlightSearchForm({
                         <FormLabel className="text-sm font-medium">
                           Children (2-11)
                         </FormLabel>
-                        <FormControl>
-                          <Select
-                            value={field.value.toString()}
-                            onValueChange={(value) =>
-                              field.onChange(Number.parseInt(value, 10))
-                            }
-                          >
-                            <SelectTrigger>
+                        <Select
+                          value={field.value.toString()}
+                          onValueChange={(value) =>
+                            field.onChange(Number.parseInt(value, 10))
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger aria-label="Children (2-11)">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                                <SelectItem key={num} value={num.toString()}>
-                                  {num} {num === 1 ? "Child" : "Children"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
+                          </FormControl>
+                          <SelectContent>
+                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {num} {num === 1 ? "Child" : "Children"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -574,21 +586,21 @@ export function FlightSearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Class</FormLabel>
-                        <FormControl>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger aria-label="Class">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="economy">Economy</SelectItem>
-                              <SelectItem value="premium_economy">
-                                Premium Economy
-                              </SelectItem>
-                              <SelectItem value="business">Business</SelectItem>
-                              <SelectItem value="first">First Class</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="economy">Economy</SelectItem>
+                            <SelectItem value="premium_economy">
+                              Premium Economy
+                            </SelectItem>
+                            <SelectItem value="business">Business</SelectItem>
+                            <SelectItem value="first">First Class</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -305,6 +305,13 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
         throw new Error("No search parameters available");
       }
 
+      if (params) {
+        const loaded = await loadParamsFromTemplate(params, currentSearchType);
+        if (!loaded) {
+          throw new Error("Invalid search parameters");
+        }
+      }
+
       // Validate parameters
       const isValid = await validateCurrentParams();
       if (!isValid) {
@@ -377,6 +384,7 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
     [
       currentSearchType,
       deriveCurrentParams,
+      loadParamsFromTemplate,
       validateCurrentParams,
       startSearch,
       addRecentSearch,

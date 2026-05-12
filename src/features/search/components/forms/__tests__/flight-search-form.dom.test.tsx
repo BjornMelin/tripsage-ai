@@ -33,6 +33,14 @@ function RenderWithQueryClient(ui: React.ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
+function GetTextInput(name: string): HTMLInputElement {
+  return screen.getByRole("textbox", { name }) as HTMLInputElement;
+}
+
+function GetDateInput(name: string): HTMLInputElement {
+  return screen.getByLabelText(name) as HTMLInputElement;
+}
+
 describe("FlightSearchForm", () => {
   beforeEach(() => {
     // Clear mock calls between tests
@@ -75,23 +83,16 @@ describe("FlightSearchForm", () => {
     RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
     // Fill in required fields matching current placeholders/labels
-    fireEvent.change(screen.getByPlaceholderText("Departure city or airport"), {
+    fireEvent.change(GetTextInput("From"), {
       target: { value: "New York" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Destination city or airport"), {
+    fireEvent.change(GetTextInput("To"), {
       target: { value: "London" },
     });
-
-    // Date inputs (type=date) are not directly label-associated due to wrapper structure;
-    // select by role order within the form.
-    const container = document.body;
-    const dateInputs = Array.from(
-      container.querySelectorAll('input[type="date"]')
-    ) as HTMLInputElement[];
-    const [departureDateInput, returnDateInput] = dateInputs;
-
-    fireEvent.change(departureDateInput, { target: { value: "2099-08-15" } });
-    fireEvent.change(returnDateInput, { target: { value: "2099-08-25" } });
+    fireEvent.change(GetDateInput("Departure"), {
+      target: { value: "2099-08-15" },
+    });
+    fireEvent.change(GetDateInput("Return"), { target: { value: "2099-08-25" } });
 
     // Submit the form (ensure form submit event is dispatched)
     const submitBtn = screen.getByText("Search Flights");
@@ -118,16 +119,42 @@ describe("FlightSearchForm", () => {
     });
   });
 
+  it("enables one-way submissions without requiring return date", async () => {
+    const { FlightSearchForm } = await import("../flight-search-form");
+    RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "One Way" }));
+    fireEvent.change(GetTextInput("From"), {
+      target: { value: "San Francisco" },
+    });
+    fireEvent.change(GetTextInput("To"), {
+      target: { value: "Los Angeles" },
+    });
+    fireEvent.change(GetDateInput("Departure"), {
+      target: { value: "2099-08-15" },
+    });
+
+    const submitBtn = screen.getByRole("button", { name: "Search Flights" });
+    await waitFor(() => expect(submitBtn).not.toBeDisabled());
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => expect(MockOnSearch).toHaveBeenCalledTimes(1));
+    expect(MockOnSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: "Los Angeles",
+        origin: "San Francisco",
+        returnDate: undefined,
+        tripType: "one-way",
+      })
+    );
+  });
+
   it("keeps placeholders intact when autocomplete-like selections occur", async () => {
     const { FlightSearchForm } = await import("../flight-search-form");
     RenderWithQueryClient(<FlightSearchForm onSearch={MockOnSearch} />);
 
-    const originInput = screen.getByPlaceholderText(
-      "Departure city or airport"
-    ) as HTMLInputElement;
-    const destinationInput = screen.getByPlaceholderText(
-      "Destination city or airport"
-    ) as HTMLInputElement;
+    const originInput = GetTextInput("From");
+    const destinationInput = GetTextInput("To");
 
     fireEvent.change(originInput, {
       target: { value: "San Francisco International (SFO)" },
@@ -136,8 +163,8 @@ describe("FlightSearchForm", () => {
       target: { value: "Heathrow (LHR)" },
     });
 
-    expect(originInput.placeholder).toBe("Departure city or airport");
-    expect(destinationInput.placeholder).toBe("Destination city or airport");
+    expect(originInput.placeholder).toBe("Departure city or airport…");
+    expect(destinationInput.placeholder).toBe("Destination city or airport…");
   });
 
   it("fills destination when selecting a popular destination chip", async () => {
@@ -147,11 +174,7 @@ describe("FlightSearchForm", () => {
     const destinationChip = await screen.findByText("New York");
     fireEvent.click(destinationChip);
 
-    const destinationInput = screen.getByPlaceholderText(
-      "Destination city or airport"
-    ) as HTMLInputElement;
-
-    await waitFor(() => expect(destinationInput.value).toBe("NYC"));
+    await waitFor(() => expect(GetTextInput("To").value).toBe("NYC"));
   });
 
   it("normalizes legacy passenger fields when selecting a recent search", async () => {
