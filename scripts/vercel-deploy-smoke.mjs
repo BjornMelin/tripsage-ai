@@ -53,6 +53,11 @@ function normalizeBaseUrl(raw) {
   }
   const value = /^[a-z][a-z\d+\-.]*:/i.test(raw) ? raw : `https://${raw}`;
   const url = new URL(value);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(
+      `Deployment URL must use http or https. Received protocol: ${url.protocol}`
+    );
+  }
   url.pathname = "/";
   url.search = "";
   url.hash = "";

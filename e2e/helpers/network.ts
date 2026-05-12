@@ -7,7 +7,15 @@ type JsonFulfillOptions = {
   status?: number;
 };
 
-/** Fulfill a Playwright route with a JSON response and stable defaults. */
+/**
+ * Fulfill a Playwright route with a JSON response and stable defaults.
+ *
+ * @param route - Playwright route to fulfill.
+ * @param body - JSON-serializable response body.
+ * @param options - Optional response status, headers, delay, and method metadata.
+ * @returns Promise that resolves after the route is fulfilled.
+ * @see https://playwright.dev/docs/api/class-route#route-fulfill
+ */
 export async function fulfillJson(
   route: Route,
   body: unknown,
@@ -21,7 +29,16 @@ export async function fulfillJson(
   });
 }
 
-/** Register a JSON route mock, optionally scoped to one HTTP method. */
+/**
+ * Register a JSON route mock, optionally scoped to one HTTP method.
+ *
+ * @param page - Playwright page that owns the route handler.
+ * @param url - URL pattern accepted by `page.route`.
+ * @param body - JSON-serializable response body.
+ * @param options - Optional response status, headers, delay, and method filter.
+ * @returns Promise that resolves after the route is registered.
+ * @see https://playwright.dev/docs/network#handle-requests
+ */
 export async function mockJsonRoute(
   page: Page,
   url: string,
@@ -45,7 +62,13 @@ function streamEvent(payload: unknown): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
-/** Build an AI SDK UI-message text stream fixture for chat E2E tests. */
+/**
+ * Build an AI SDK UI-message text stream fixture for chat E2E tests.
+ *
+ * @param text - Assistant text delta to emit in the stream.
+ * @returns Serialized server-sent event stream payload.
+ * @see https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol
+ */
 export function buildTextDeltaStream(text: string): string {
   return [
     streamEvent({ messageId: "assistant-1", type: "start" }),
@@ -57,7 +80,14 @@ export function buildTextDeltaStream(text: string): string {
   ].join("");
 }
 
-/** Fulfill a Playwright route with an AI SDK UI-message text stream. */
+/**
+ * Fulfill a Playwright route with an AI SDK UI-message text stream.
+ *
+ * @param route - Playwright route to fulfill.
+ * @param text - Assistant text delta to emit in the stream.
+ * @returns Promise that resolves after the route is fulfilled.
+ * @see https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol
+ */
 export async function fulfillTextStream(route: Route, text: string): Promise<void> {
   await route.fulfill({
     body: buildTextDeltaStream(text),
@@ -67,7 +97,25 @@ export async function fulfillTextStream(route: Route, text: string): Promise<voi
   });
 }
 
-/** Register a text stream route mock and expose whether it was called. */
+function readPostDataJson<T>(route: Route): T {
+  try {
+    return route.request().postDataJSON() as T;
+  } catch {
+    return {} as T;
+  }
+}
+
+/**
+ * Register a text stream route mock and expose whether it was called.
+ *
+ * @typeParam T - Expected JSON request body shape.
+ * @param page - Playwright page that owns the route handler.
+ * @param url - URL pattern accepted by `page.route`.
+ * @param text - Assistant text delta to emit in the stream.
+ * @param onBody - Optional assertion callback for the parsed request body.
+ * @returns Function that reports whether the route handled at least one request.
+ * @see https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol
+ */
 export async function mockTextStreamRoute<T>(
   page: Page,
   url: string,
@@ -78,11 +126,7 @@ export async function mockTextStreamRoute<T>(
 
   await page.route(url, async (route) => {
     handled = true;
-    try {
-      onBody?.(route.request().postDataJSON() as T);
-    } catch {
-      onBody?.({} as T);
-    }
+    onBody?.(readPostDataJson<T>(route));
     await fulfillTextStream(route, text);
   });
 
