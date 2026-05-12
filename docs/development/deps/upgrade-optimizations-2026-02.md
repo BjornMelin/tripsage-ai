@@ -1,6 +1,6 @@
 # Dependency Upgrade Optimizations (2026-02)
 
-This repo upgraded to the latest compatible dependency set (Next.js 16 / React 19 / TypeScript 5.9 / Zod v4) and adds lightweight “guardrails” to prevent regressions into deprecated or contract-violating patterns.
+This repo upgraded to the latest compatible dependency set (Next.js 16 / React 19 / TypeScript 6 / Zod v4) and adds lightweight “guardrails” to prevent regressions into deprecated or contract-violating patterns.
 
 ## Guardrail Scripts
 

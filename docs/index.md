@@ -13,7 +13,7 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 
 - **[API Reference](api/api-reference.md)** - Complete REST API
   documentation with examples
-- **[Authentication](api/api-reference.md#authentication)** - JWT and API key authentication
+- **[Authentication](api/api-reference.md#auth)** - Supabase SSR cookie authentication and BYOK key management
 - **[Error Codes](api/error-codes.md)** - Error handling reference
 - **[Realtime API](api/realtime-api.md)** - Supabase Realtime integration
 
@@ -66,11 +66,11 @@ setup steps and verification commands.
 
 ### For Developers
 
-- **REST API**: Complete HTTP API with OpenAPI specification
+- **Route Handlers**: Next.js API route handlers with a maintained route catalog
 - **Real-Time Updates**: Supabase Realtime for live collaboration features
-- **Authentication**: JWT tokens and API keys with Supabase integration
+- **Authentication**: Supabase SSR cookies plus server-side BYOK provider keys
 - **Rate Limiting**: Built-in rate limiting with Redis-backed counters
-- **Type Safety**: Full TypeScript support with generated client SDKs
+- **Type Safety**: Full TypeScript support with shared Zod v4 schemas
 
 ### For Operators
 
@@ -79,7 +79,7 @@ setup steps and verification commands.
   OpenTelemetry
 - **Security**: Row Level Security, encryption, and comprehensive audit
   logging
-- **Scalability**: Horizontal scaling with load balancers and caching layers
+- **Scalability**: Vercel Functions, Supabase managed services, and Upstash HTTP caching/rate limits
 
 ## Architecture Overview
 

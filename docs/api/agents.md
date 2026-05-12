@@ -1,10 +1,10 @@
 # AI Agents
 
-All agent endpoints return Server-Sent Events (SSE) streams using AI SDK v6 UI message format. Responses are streamed in real-time.
+Agent workflow endpoints return Server-Sent Events (SSE) streams using AI SDK v6 UI message format. `/api/agents/router` is the exception: it returns a JSON intent-classification result.
 
 ## Streaming Overview
 
-Agent endpoints use Server-Sent Events (SSE) for streaming responses. The stream contains AI SDK v6 UI messages that can be consumed using `ReadableStream`/`EventSource` in JavaScript or an SSE-capable library in other languages.
+Agent workflow endpoints use Server-Sent Events (SSE) for streaming responses. The stream contains AI SDK v6 UI messages that can be consumed using `ReadableStream` or `EventSource` in JavaScript.
 
 **Authentication Note**: All agent endpoints require authentication. Use the `sb-access-token` cookie (Supabase default cookie name) or pass the JWT token via `Authorization: Bearer <token>` header.
 
@@ -33,32 +33,6 @@ while (true) {
   const chunk = decoder.decode(value);
   // Process SSE messages
 }
-```
-
-### Python Example
-
-**Note**: This example requires the external `sseclient-py` library. Install it with: `pip install sseclient-py`
-
-Alternatively, you can use standard library with manual SSE parsing using `requests` and `urllib`.
-
-```python
-import requests
-import sseclient
-
-response = requests.post(
-    "http://localhost:3000/api/agents/flights",
-    cookies={"sb-access-token": jwt_token},
-    json={
-        "origin": "JFK",
-        "destination": "CDG",
-        "departureDate": "2025-07-01"
-    },
-    stream=True
-)
-
-client = sseclient.SSEClient(response)
-for event in client.events():
-    print(event.data)
 ```
 
 ---
@@ -341,44 +315,46 @@ Intent router agent that analyzes user queries and routes them to the appropriat
 **Authentication**: Required
 **Rate Limit Key**: `agents:router`
 **Content-Type**: `application/json`
-**Response**: `text/event-stream` (SSE)
+**Response**: `application/json`
 
 ### Request Body
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `message` | string | Yes | User message or query to be analyzed and routed |
-| `conversationId` | string | No | Conversation ID for context continuity |
-| `context` | object | No | Additional context {location: string, previousIntent: string, sessionData: object} |
-| `allowedAgents` | array | No | Restrict routing to specific agents: `flights`, `accommodations`, `destinations`, `itineraries`, `budget`, `memory` |
-| `returnRoutingInfo` | boolean | No | Include routing decision metadata in response (default: false) |
 
 ### Response
 
-`200 OK` - SSE stream with routed agent response
+`200 OK` - JSON intent-classification result
 
 The response includes:
 
 - Identified intent and selected agent
-- Streamed response from the specialized agent
-- Optional routing metadata (if `returnRoutingInfo: true`)
+- Confidence score from `0` to `1`
+- Optional reasoning from the router model
+
+```json
+{
+  "agent": "flightSearch",
+  "confidence": 0.91,
+  "reasoning": "The user asked for flight options."
+}
+```
 
 ### Errors
 
-- `400` - Invalid request parameters (missing message, invalid allowedAgents values, empty message)
+- `400` - Invalid request parameters (missing or empty message)
 - `401` - Not authenticated
 - `429` - Rate limit exceeded
 
 ### Example
 
 ```bash
-curl -N -X POST "http://localhost:3000/api/agents/router" \
+curl -X POST "http://localhost:3000/api/agents/router" \
   --cookie "sb-access-token=$JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "Find me cheap flights to Tokyo next month",
-    "conversationId": "conv-456",
-    "returnRoutingInfo": true
+    "message": "Find me cheap flights to Tokyo next month"
   }'
 ```
 

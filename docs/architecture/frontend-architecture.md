@@ -5,7 +5,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 ## Platform Overview
 
 - Next.js `^16.1.3` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
-- TypeScript `^5.9.3`, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
+- TypeScript 6, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
 - AI SDK v6 is the only LLM transport (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson)).
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.

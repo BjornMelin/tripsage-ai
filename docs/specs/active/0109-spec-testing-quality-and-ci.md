@@ -26,11 +26,15 @@ Coverage:
 
 ## CI requirements
 
-- Typecheck, lint (Biome), unit tests, e2e smoke.
-- Separate workflows:
-  - CI (PR)
-  - Security (scheduled + PR)
-  - Vercel Preview (PR)
+- PR CI runs Biome, TypeScript, architecture guardrails, secrets checks, build,
+  affected Vitest coverage, and critical Playwright E2E when UI/runtime files
+  change.
+- Production deploy validation runs separately through the Vercel CLI deploy
+  workflow and `scripts/vercel-deploy-smoke.mjs`.
+- The active workflows are:
+  - CI (`.github/workflows/ci.yml`)
+  - Deploy (`.github/workflows/deploy.yml`)
+  - Release (`.github/workflows/release.yml`)
 
 ## Dependency hygiene (Knip)
 
@@ -50,6 +54,7 @@ Recommended stages:
   - `pnpm biome:fix`
   - `pnpm type-check`
   - `pnpm test:affected`
+  - `pnpm test:e2e:critical` when changing user-visible flows
   - `pnpm check:zod-v4`
   - `pnpm check:api-route-errors`
   - `pnpm deps:audit`
@@ -57,11 +62,16 @@ Recommended stages:
   - run `pnpm biome:fix` and fail if it introduces diffs (`git diff --exit-code`)
   - run `pnpm type-check`
   - run `pnpm test:affected`
+  - run `pnpm test:e2e:critical` for app/runtime changes
   - run `pnpm check:zod-v4` (diff-based)
   - run `pnpm check:api-route-errors` (diff-based)
   - run `pnpm deps:audit`
 - Main branch / merge CI:
   - run the full suite (`pnpm test:ci`) + E2E (`pnpm test:e2e` or `pnpm test:e2e:chromium`)
+- Deployment smoke:
+  - run `pnpm deploy:check-env`
+  - run `pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"`
+  - run `pnpm test:smoke:live -- --url "$DEPLOYMENT_URL"` for operator live-smoke lanes
 
 ## References
 

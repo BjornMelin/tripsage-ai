@@ -16,13 +16,11 @@ import { wrapToolsWithUserId } from "@ai/tools/server/injection";
 import type { ItineraryPlanRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type { ToolSet } from "ai";
-import type { ChatMessage } from "@/lib/tokens/budget";
-import { clampMaxTokens } from "@/lib/tokens/budget";
 import { buildItineraryPrompt } from "@/prompts/agents";
 
 import { createTripSageAgent } from "./agent-factory";
 import type { AgentDependencies, TripSageAgentResult } from "./types";
-import { extractAgentParameters } from "./types";
+import { extractAgentParameters, prepareSchemaPrompt } from "./types";
 
 /**
  * Base tools available to the itinerary planning agent.
@@ -71,20 +69,14 @@ export function createItineraryAgent(
   const params = extractAgentParameters(config);
   const instructions = buildItineraryPrompt(input);
 
-  // Token budgeting: clamp max output tokens based on prompt length
-  const userPrompt = `Generate itinerary plan and summarize. Always return JSON with schemaVersion="itin.v1" and days[]. Parameters: ${JSON.stringify(
-    input
-  )}`;
-  const schemaMessage: ChatMessage = { content: userPrompt, role: "user" };
-  const clampMessages: ChatMessage[] = [
-    { content: instructions, role: "system" },
-    schemaMessage,
-  ];
-  const { maxOutputTokens } = clampMaxTokens(
-    clampMessages,
-    params.maxOutputTokens,
-    deps.modelId
-  );
+  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
+    instructions,
+    maxOutputTokens: params.maxOutputTokens,
+    modelId: deps.modelId,
+    userPrompt: `Generate itinerary plan and summarize. Always return JSON with schemaVersion="itin.v1" and days[]. Parameters: ${JSON.stringify(
+      input
+    )}`,
+  });
 
   // Itinerary planning may need more steps for comprehensive plans
   const stepLimit = Math.max(params.stepLimit, 15);
@@ -121,12 +113,10 @@ export function createItineraryAgent(
 
   return createTripSageAgent<typeof BASE_ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",
-    defaultMessages: [schemaMessage],
+    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Itinerary Planning Agent",
-    // Optional: for JSON-only structured output, set `output: Output.object({ schema: ... })`
-    // on the agent config (ToolLoopAgentSettings.output).
     // Phased tool selection for itinerary workflow
     prepareStep: ({ stepNumber }) => {
       // Phase 1: Research destination

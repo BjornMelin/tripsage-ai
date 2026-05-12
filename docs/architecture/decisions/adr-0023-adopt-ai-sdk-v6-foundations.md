@@ -1,7 +1,8 @@
 # ADR-0023: Adopt AI SDK v6 Foundations (Next.js App Router)
 
 **Version**: 1.0.0
-**Status**: Accepted
+**Status**: Superseded
+**Superseded By**: [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md), [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md)
 **Date**: 2025-11-01
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router
@@ -14,8 +15,14 @@
 ## Decision
 
 - Adopt Vercel AI SDK v6 patterns with a demo streaming route and minimal AI Elements UI, keeping secrets server-only and avoiding bespoke streaming code.
-- Implement a demo route at `src/app/api/_health/stream/route.ts` returning a UI Message Stream response.
-- Add AI Elements components (`conversation`, `message`, `prompt-input`) via the CLI and compose a placeholder page at `src/app/ai-demo/page.tsx`.
+- Implement a demo route returning a UI Message Stream response.
+- Add AI Elements components (`conversation`, `message`, `prompt-input`) via the CLI and compose a placeholder page.
+
+## Current Runtime Note
+
+The current AI SDK v6 runtime is owned by ADR-0031 and ADR-0066. Active paths are
+`src/app/api/ai/stream/route.ts`, `src/app/api/chat/_handler.ts`, and
+`src/app/(marketing)/ai-demo/page.tsx`.
 
 ## Options Considered
 

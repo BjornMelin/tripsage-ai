@@ -6,7 +6,7 @@
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router
 **Related ADRs**: [ADR-0023](adr-0023-adopt-ai-sdk-v6-foundations.md)
-**Related Specs**: [SPEC-0008](spec-ai-sdk-v6-foundations.md)
+**Related Specs**: [SPEC-0008](../../specs/archive/0008-spec-ai-sdk-v6-foundations.md)
 
 ## Context
 

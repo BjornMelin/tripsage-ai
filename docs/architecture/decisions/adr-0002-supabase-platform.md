@@ -95,7 +95,7 @@ Amazon's managed PostgreSQL and authentication services.
 
 ## References
 
-- [Authentication Research Report](../10_RESEARCH/auth/authentication-research-report-2025.md)
-- [Supabase Auth Implementation PRD](../10_RESEARCH/auth/supabase-auth-implementation-prd.md)
-- [Database Architecture](../03_ARCHITECTURE/DATABASE_ARCHITECTURE.md)
-- [Supabase Production Setup Guide](../01_GETTING_STARTED/SUPABASE_PRODUCTION_SETUP.md)
+- [Supabase operations runbook](../../runbooks/supabase.md)
+- [ADR-0014: Migrate Supabase Auth to Supabase SSR](adr-0014-migrate-supabase-auth-to-supabase-ssr-and-deprecate-auth-helpers-react.md)
+- [ADR-0065: Supabase SSR Auth and RLS-First Data Access](adr-0065-supabase-ssr-auth-and-rls-first-data-access.md)
+- [System overview](../system-overview.md)

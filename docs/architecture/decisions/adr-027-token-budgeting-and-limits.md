@@ -6,7 +6,7 @@
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router
 **Related ADRs**: [ADR-0023](adr-0023-adopt-ai-sdk-v6-foundations.md)
-**Related Specs**: [SPEC-0008](spec-ai-sdk-v6-foundations.md)
+**Related Specs**: [SPEC-0008](../../specs/archive/0008-spec-ai-sdk-v6-foundations.md)
 
 ## Context
 
@@ -30,7 +30,7 @@ We are migrating to AI SDK v6 and must enforce safe token budgets across provide
 
 - Simpler, low-maintenance client utilities with clear fallbacks.
 - Deterministic clamping behavior and test coverage.
-- Python-side estimation remains until the Python routes are fully decommissioned (tracked for later removal per migration plan).
+- Token budgeting is owned by the TypeScript runtime.
 
 ## Implementation
 
@@ -47,4 +47,3 @@ We are migrating to AI SDK v6 and must enforce safe token budgets across provide
 ## Follow-ups
 
 - Prefer provider usage metadata in all AI routes; expand when the SDK exposes streaming usage uniformly.
-- Remove Python-side token estimation upon final migration of routes to TS utilities.

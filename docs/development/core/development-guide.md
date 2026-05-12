@@ -12,7 +12,7 @@ TripSage development patterns and architecture overview. This document provides 
 | --- | --- | --- |
 | **Framework** | Next.js 16 | Server route handlers, React Server Components |
 | **React** | React 19 | UI with concurrent features |
-| **Language** | TypeScript 5.9.x | Strict mode, full type safety |
+| **Language** | TypeScript 6 | Strict mode, full type safety |
 | **AI** | AI SDK v6 (`ai` package version from `package.json`) | `streamText`, `generateText` + `Output.object`, tool calling |
 | **Database** | Supabase PostgreSQL | RLS, pgvector, Realtime |
 | **Cache** | Upstash Redis | HTTP REST API, rate limiting |

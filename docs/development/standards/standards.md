@@ -322,7 +322,7 @@ Do not persist computed fields — configure `persist` with `partialize` to omit
 - Rarely-accessed values (compute on-demand with `useMemo`)
 - Values dependent on React props/context
 
-**Performance**: Compute functions run on every state update. Keep them O(1) or O(n) with small n. See [Zustand Computed Middleware Guide](./zustand-computed-middleware.md) for detailed patterns, examples, and performance considerations.
+**Performance**: Compute functions run on every state update. Keep them O(1) or O(n) with small n. See [Zustand Computed Middleware Guide](../frontend/zustand-computed-middleware.md) for detailed patterns, examples, and performance considerations.
 
 ## Performance
 

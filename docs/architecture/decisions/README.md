@@ -4,7 +4,8 @@ This directory contains Architecture Decision Records (ADRs) for the TripSage
 project. ADRs document significant architectural decisions made during the
 project's development.
 
-The canonical index is this `README.md`.
+The canonical concise index is [`index.md`](index.md). This README keeps the
+historical decision log and ADR process notes.
 
 ## What is an ADR?
 
@@ -83,6 +84,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0070](adr-0070-stripe-webhook-verification-and-idempotency.md) | Stripe webhook verification and idempotency (Next.js Route Handlers) | Accepted | 2026-01-19 |
 | [ADR-0071](adr-0071-unknown-errors-and-client-error-boundaries.md) | Unknown thrown values and client error boundary policy | Accepted | 2026-01-19 |
 | [ADR-0072](adr-0072-2026-01-19-dependency-upgrade-batch.md) | Dependency upgrade batch (2026-01-19) | Accepted | 2026-01-19 |
+| [ADR-0073](adr-0073-streamdown-v2-markdown-renderer.md) | Streamdown v2 canonical markdown renderer (security profiles + plugins) | Accepted | 2026-01-19 |
 
 ## Superseded ADRs
 

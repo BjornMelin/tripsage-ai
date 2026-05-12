@@ -96,6 +96,9 @@ jobs:
       - name: Fail if Biome introduced diffs
         run: git diff --exit-code
 
+      - name: Validate active documentation links
+        run: pnpm docs:check
+
       - name: TypeScript type check
         run: pnpm type-check
 

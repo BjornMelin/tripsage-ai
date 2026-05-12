@@ -262,7 +262,7 @@ export async function riskyAction(data: unknown) {
 
 ## Testing Server Actions
 
-See [Testing Guide - Server Actions Section](./testing.md#server-actions) for:
+See [Testing Guide - Server Actions Section](../testing/testing.md#server-actions) for:
 
 - Mocking `createServerSupabase`
 - Mocking `next/navigation`

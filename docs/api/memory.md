@@ -1,305 +1,84 @@
 # Memory
 
-User memory, context, and conversation history management.
+User memory, context, preference, stats, and insight routes. All memory routes
+require Supabase SSR authentication, and `{userId}` path parameters must match
+the authenticated user.
 
-## `POST /api/memory/conversations`
+## Routes
 
-Add conversation memory.
+| Endpoint | Method | Rate limit key | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/memory/conversations` | POST | `memory:conversations` | Store one conversation memory entry |
+| `/api/memory/search` | POST | `memory:search` | Search memory context |
+| `/api/memory/context/{userId}` | GET | `memory:context` | Fetch recent memory context |
+| `/api/memory/stats/{userId}` | GET | `memory:stats` | Fetch memory counts and storage estimates |
+| `/api/memory/insights/{userId}` | GET | `memory:insights` | Generate or fetch cached AI memory insights |
+| `/api/memory/preferences/{userId}` | POST | `memory:preferences` | Persist preference entries as user memory |
+| `/api/memory/user/{userId}` | DELETE | `memory:delete` | Delete all memories for the authenticated user |
 
-**Authentication**: Required  
-**Rate Limit Key**: `memory:conversations`
+## Add Conversation Memory
 
-### Request Body
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `messages` | array | Yes | Array of message objects with `role` (system/user/assistant) and `content` (string) |
-| `context` | object | No | Additional context data (metadata, tags, etc.) |
-| `sessionId` | string | No | Optional session identifier for grouping conversations |
-| `metadata` | object | No | Custom metadata key-value pairs |
-
-### Response
+```bash
+curl -X POST "http://localhost:3000/api/memory/conversations" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"category":"conversation_context","content":"Prefers nonstop morning flights."}'
+```
 
 `200 OK`
 
 ```json
 {
-  "id": "memory-uuid-123",
-  "createdAt": "2025-01-20T15:30:00Z",
-  "messagesCount": 5,
-  "result": {
-    "summary": "Conversation summary",
-    "keyTopics": ["topic1", "topic2"]
-  }
+  "createdAt": "2026-05-11T19:00:00.000Z",
+  "id": "memory-uuid"
 }
 ```
 
-### Errors
+## Search Memories
 
-- `400` - Invalid request
-- `401` - Not authenticated
-- `429` - Rate limit exceeded
-
----
-
-## `POST /api/memory/search`
-
-Search memories.
-
-**Authentication**: Required  
-**Rate Limit Key**: `memory:search`
-
-### Request Body
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `query` | string | Yes | Search query |
-| `limit` | number | No | Maximum results (Minimum: 1, Maximum: 100, Default: 10) |
-
-### Response
-
-`200 OK` - Returns search results
-
-```json
-{
-  "results": [
-    {
-      "id": "memory-123",
-      "relevance": 0.95,
-      "content": "Memory content text"
-    },
-    {
-      "id": "memory-456",
-      "relevance": 0.87,
-      "content": "Another memory entry"
-    }
-  ],
-  "count": 2
-}
+```bash
+curl -X POST "http://localhost:3000/api/memory/search" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"morning flights","limit":10,"similarityThreshold":0.2}'
 ```
-
-### Errors
-
-- `400` - Invalid request
-- `401` - Not authenticated
-- `429` - Rate limit exceeded
-
----
-
-## `GET /api/memory/user/{userId}`
-
-Get user memory data.
-
-**Authentication**: Required
-**Rate Limit Key**: `memory:read`
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `userId` | string | Yes | User ID |
-
-### Response
-
-`200 OK` - Returns user memory data
-
-```json
-{
-  "id": "memory-123",
-  "userId": "user-uuid-456",
-  "content": "User memory content",
-  "createdAt": "2025-01-15T10:00:00Z",
-  "updatedAt": "2025-01-20T15:30:00Z"
-}
-```
-
-### Errors
-
-- `401` - Not authenticated
-- `403` - Cannot access other user's memory
-- `429` - Rate limit exceeded
-
----
-
-## `DELETE /api/memory/user/{userId}`
-
-Delete all memories for a user.
-
-**Authentication**: Required  
-**Rate Limit Key**: `memory:delete`
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `userId` | string | Yes | User ID |
-
-### Response
 
 `200 OK`
 
 ```json
 {
-  "deleted": true
+  "success": true,
+  "memories": [],
+  "searchMetadata": {
+    "queryProcessed": "morning flights",
+    "searchTimeMs": 12,
+    "similarityThresholdUsed": 0.2
+  },
+  "totalFound": 0
 }
 ```
 
-### Errors
+## User-Scoped Reads and Writes
 
-- `401` - Not authenticated
-- `403` - Cannot delete other user's memory
-- `429` - Rate limit exceeded
+```bash
+curl "http://localhost:3000/api/memory/context/$USER_ID" \
+  --cookie "sb-access-token=$JWT"
 
----
+curl -X POST "http://localhost:3000/api/memory/preferences/$USER_ID" \
+  --cookie "sb-access-token=$JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"preferences":{"seat":"aisle","pace":"slow"}}'
 
-## `GET /api/memory/context/{userId}`
-
-Get memory context for a user.
-
-**Authentication**: Required  
-**Rate Limit Key**: `memory:context`
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `userId` | string | Yes | User ID |
-
-### Response
-
-`200 OK`
-
-```json
-{
-  "context": [
-    {
-      "key": "user_preferences",
-      "type": "preferences",
-      "value": {"theme": "dark", "language": "en"}
-    },
-    {
-      "key": "recent_trips",
-      "type": "history",
-      "value": ["trip-1", "trip-2"]
-    }
-  ]
-}
+curl -X DELETE "http://localhost:3000/api/memory/user/$USER_ID" \
+  --cookie "sb-access-token=$JWT"
 ```
 
-Note: Context array contents are user-defined. The structure above shows representative objects with `key`, `type`, and `value` fields.
+## Errors
 
-### Errors
-
+- `400` - Invalid request or invalid authenticated user id
 - `401` - Not authenticated
-- `403` - Cannot access other user's context
+- `403` - `{userId}` does not match the authenticated user
+- `404` - Unknown memory intent
+- `405` - Method not supported for the selected memory intent
 - `429` - Rate limit exceeded
-
----
-
-## `GET /api/memory/stats/{userId}`
-
-Get memory statistics for a user.
-
-**Authentication**: Required  
-**Rate Limit Key**: `memory:stats`
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `userId` | string | Yes | User ID |
-
-### Response
-
-`200 OK` - Returns memory statistics
-
-```json
-{
-  "totalMemories": 42,
-  "totalConversations": 15,
-  "memorySize": 256000,
-  "lastAccessedAt": "2025-01-20T15:30:00Z",
-  "createdAt": "2024-12-01T10:00:00Z"
-}
-```
-
-### Errors
-
-- `401` - Not authenticated
-- `403` - Cannot access other user's stats
-- `429` - Rate limit exceeded
-
----
-
-## `GET /api/memory/preferences/{userId}`
-
-Get memory preferences for a user.
-
-**Authentication**: Required  
-**Rate Limit Key**: `memory:preferences`
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `userId` | string | Yes | User ID |
-
-### Response
-
-`200 OK` - Returns memory preferences
-
-```json
-{
-  "autoSave": true,
-  "retention": 90,
-  "privacy": "private",
-  "sharing": false,
-  "notifications": true
-}
-```
-
-### Errors
-
-- `401` - Not authenticated
-- `403` - Cannot access other user's preferences
-- `429` - Rate limit exceeded
-
----
-
-## `GET /api/memory/insights/{userId}`
-
-Get memory insights for a user.
-
-**Authentication**: Required  
-**Rate Limit Key**: `memory:insights`
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
-| `userId` | string | Yes | User ID |
-
-### Response
-
-`200 OK` - Returns memory insights
-
-```json
-{
-  "insights": [
-    {
-      "summary": "User frequently asks about travel recommendations",
-      "score": 0.92
-    },
-    {
-      "summary": "Strong preference for budget-conscious trips",
-      "score": 0.87
-    }
-  ]
-}
-```
-
-### Errors
-
-- `401` - Not authenticated
-- `403` - Cannot access other user's insights
-- `429` - Rate limit exceeded
+- `500` - Memory tool, cache, or persistence failure

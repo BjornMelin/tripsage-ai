@@ -8,7 +8,7 @@ Use `providerOptions.gateway` in `streamText`/`generateText` calls when the reso
 
 ## Model Policy
 
-Model defaults are centralized in `src/ai/models/defaults.ts`.
+Model profiles and token ceilings are centralized in `src/lib/tokens/limits.ts`; `src/ai/models/defaults.ts` owns the default profile selections and re-exports the profile table for provider code.
 
 - `standard`: `openai/gpt-5.4-mini` via Gateway, `gpt-5.4-mini` for direct OpenAI.
 - `planning`: `openai/gpt-5.5` via Gateway, `gpt-5.5` for direct OpenAI.

@@ -124,4 +124,6 @@ If migrating to Edge runtime in the future, consider:
 
 ## Rollback
 
-Because this is a pre-deploy full cutover, rollback means redeploying the prior build artifacts (no flag flip). If you still run legacy backends in parallel, route traffic at the edge to legacy endpoints as needed.
+Rollback uses the Vercel deployment rollback flow in
+[Deployment Runbook: Vercel + Supabase + Upstash](../runbooks/deployment-vercel.md#rollback).
+After rollback, rerun the required smoke checks against the restored deployment.

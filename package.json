@@ -55,6 +55,7 @@
     "supabase:typegen": "pnpm dlx supabase@2.72.8 gen types --lang typescript --local --schema auth --schema public --schema memories --schema storage > src/lib/supabase/database.types.ts",
     "deploy:check-env": "node scripts/verify-production-env.mjs",
     "deploy:smoke": "node scripts/vercel-deploy-smoke.mjs",
+    "docs:check": "node scripts/check-doc-links.mjs",
     "test:smoke:live": "node scripts/vercel-deploy-smoke.mjs",
     "ops": "tsx scripts/ops.ts",
     "test:analyze": "pnpm ops test analyze failures",

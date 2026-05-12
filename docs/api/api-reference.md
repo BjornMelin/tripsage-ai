@@ -30,17 +30,6 @@ export async function getTripSuggestions(jwt: string) {
 }
 ```
 
-Python
-
-```python
-import requests
-BASE = "http://localhost:3000/api"
-cookies = {"sb-access-token": "<jwt>"}
-resp = requests.get(f"{BASE}/trips/suggestions?limit=5", cookies=cookies)
-resp.raise_for_status()
-suggestions = resp.json()
-```
-
 cURL
 
 ```bash
@@ -92,7 +81,7 @@ Example (details)
 curl "$BASE/places/details/ChIJN1t_tDeuEmsRUsoyG83frY4"
 ```
 
-### Agents (AI SDK v6, SSE stream, Auth)
+### Agents (AI SDK v6, Auth)
 
 - `POST /agents/flights` — Streaming flight search.
 - `POST /agents/accommodations` — Streaming accommodation search.
@@ -100,7 +89,7 @@ curl "$BASE/places/details/ChIJN1t_tDeuEmsRUsoyG83frY4"
 - `POST /agents/itineraries` — Itinerary agent.
 - `POST /agents/budget` — Budget planning agent.
 - `POST /agents/memory` — Memory update agent.
-- `POST /agents/router` — Intent router.
+- `POST /agents/router` — JSON intent classification router.
 
 Streaming example (TS)
 
@@ -119,8 +108,6 @@ const res = await fetch(`${base}/agents/flights`, {
 });
 // res.body is a ReadableStream (SSE UI message stream)
 ```
-
-Python (SSE) tip: use `sseclient-py` with `requests` streaming.
 
 ### Chat
 
@@ -237,7 +224,7 @@ Response: `204` on success.
 
 ## Streaming notes
 
-Endpoints under `/agents/*` and `/chat/stream` return SSE UI message streams. Use `ReadableStream`/`EventSource` on JS; Python clients should use an SSE-capable library (e.g., `sseclient-py`).
+Endpoints under `/agents/*` except `/agents/router`, plus `/chat`, return SSE UI message streams. Use `ReadableStream` or `EventSource` in JavaScript clients. `/agents/router` returns JSON.
 
 ---
 
@@ -251,4 +238,4 @@ Endpoints under `/agents/*` and `/chat/stream` return SSE UI message streams. Us
 
 ## Maintenance
 
-This reference mirrors the current handlers in `src/app/api/**`. Update alongside route or schema changes; reuse the trip TS/Python/cURL snippets as patterns for other JSON POST/GET routes. Streaming endpoints follow the same auth and error conventions but return SSE instead of JSON bodies.
+This reference mirrors the current handlers in `src/app/api/**`. Update alongside route or schema changes; reuse the TypeScript and cURL snippets as patterns for other JSON POST/GET routes. Streaming endpoints follow the same auth and error conventions but return SSE instead of JSON bodies.

@@ -29,7 +29,7 @@ implementation details.
 - API specifications and endpoints → See
   [`docs/api/`](../api/)
 - Configuration and setup guides → See
-  [`docs/configuration/`](../configuration/)
+  [Development Guide](../development/core/development-guide.md)
 
 ## Architecture Documents
 
@@ -43,10 +43,7 @@ implementation details.
 
 ### Database & Storage Architecture
 
-- **[Database Architecture](database/)** - Supabase PostgreSQL design, schema patterns, and data models
-  - **[Supabase Schema](database/supabase-schema.md)** - Canonical database schema and migration strategy
-  - **[Supabase Integration](database/supabase-integration.md)** - Authentication, SSR patterns, and client configurations
-  - **[Supabase Operations](database/supabase-operations.md)** - Webhooks, real-time features, and operational patterns
+- **[Database Architecture](database.md)** - Supabase PostgreSQL, Auth, Vault, Realtime, and migration strategy
 - **[Storage Architecture](storage-architecture.md)** - File storage,
   bucket organization, and security patterns
 
@@ -106,56 +103,32 @@ Next.js 16 application with App Router and React 19. See
 [Frontend Architecture](frontend-architecture.md) for detailed
 structure, AI SDK v6 integration, and component organization.
 
-#### `tests/`
+#### Tests
 
-Test suite with 90%+ coverage:
-
-- `unit/` - Unit tests for individual components
-- `integration/` - Service integration tests
-- `e2e/` - End-to-end Playwright tests
-- `performance/` - Performance and load tests
-- `security/` - Security and compliance tests
+Tests live next to the code they exercise under `src/**/__tests__` plus
+Playwright specs in `e2e/`. See
+[Testing Guide](../development/testing/testing.md) for the current Vitest,
+Playwright, critical-flow, and live-smoke lanes.
 
 ## Related Documentation
 
-- **[Database Operations](../operations/database/)** - Database operations and Supabase configuration
+- **[Database Operations](../operations/runbooks/database-ops.md)** - Database operations and Supabase configuration
 - **[Development Guide](../development/core/development-guide.md)** - Implementation details, code
   examples, testing
 - **[API Documentation](../api/)** - REST specifications and Supabase
   Realtime guide
-- **[Testing Guide](../../tests/README.md)** - Test organization and best
+- **[Testing Guide](../development/testing/testing.md)** - Test organization and best
   practices
 - **[Deployment](../operations/)** - Infrastructure, monitoring, and
   operations
 
-## Architecture Metrics
+## Current Baseline
 
-Current architecture metrics:
-
-| Metric                 | Target        | Achieved        | Technology             |
-| ---------------------- | ------------- | --------------- | ---------------------- |
-| Cache Performance      | <10ms latency | **Edge/Global** | Upstash Redis          |
-| Concurrent Connections | 1000+         | **1500+**       | Supabase Realtime      |
-| API Response Time      | <100ms        | **<50ms**       | Next.js Route Handlers |
-| Database Connections   | 500+          | **1000+**       | Supabase PostgreSQL    |
-| Storage Cost Reduction | 50%           | **80%**         | Unified Architecture   |
-
-## Architecture Evolution
-
-### Current Phase (June 2025)
-
-- Unified Supabase architecture implementation
-- Upstash Redis serverless caching
-- Supabase Realtime communication
-- Service consolidation and SDK migration
-- Consumer-aware API design
-
-### Next Phase (Q3-Q4 2025)
-
-- Multi-region deployment architecture
-- Monitoring and observability
-- Security and compliance patterns
-- Mobile application architecture
+- Next.js 16 + React 19 application at repository root.
+- Supabase SSR/Auth/Vault/Realtime and pgvector as the data plane.
+- Upstash Redis/QStash/Ratelimit as the cache, rate-limit, and job plane.
+- AI SDK v6 with Vercel AI Gateway and BYOK provider resolution.
+- Vercel CLI prebuilt deploys with smoke-before-promote.
 
 ---
 

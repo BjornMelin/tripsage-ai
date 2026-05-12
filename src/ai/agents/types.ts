@@ -21,7 +21,7 @@ import type {
 } from "ai";
 import type { TypedServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import type { ChatMessage } from "@/lib/tokens/budget";
+import { type ChatMessage, clampMaxTokens } from "@/lib/tokens/budget";
 
 // Re-export AI SDK types for downstream consumers
 export type {
@@ -412,4 +412,46 @@ export function extractAgentParameters(config: AgentConfig): AgentParameters {
         : 0.3,
     topP: "topP" in params && typeof params.topP === "number" ? params.topP : undefined,
   };
+}
+
+/** Prompt message and token budget derived from an agent schema instruction. */
+export interface AgentPromptSetup {
+  /** User message that asks the model for the schema-versioned payload. */
+  schemaMessage: ChatMessage;
+
+  /** Messages sent as the agent's default UI messages. */
+  defaultMessages: ChatMessage[];
+
+  /** Safe output budget after applying prompt length and model context limits. */
+  maxOutputTokens: number;
+}
+
+/**
+ * Builds the shared schema prompt message and computes a safe output token budget.
+ *
+ * @param options - Prompt and model-budget inputs.
+ * @param options.contextMessages - Optional context messages to append after the schema prompt.
+ * @param options.instructions - System instructions used for token-budget estimation.
+ * @param options.maxOutputTokens - Desired output-token budget before clamping.
+ * @param options.modelId - Model identifier used to resolve the context window.
+ * @param options.userPrompt - User prompt that asks for the schema-versioned payload.
+ * @returns The schema prompt, default messages, and clamped output-token budget.
+ * @see ADR-0039 frontend agent modernization.
+ */
+export function prepareSchemaPrompt(options: {
+  contextMessages?: ChatMessage[];
+  instructions: string;
+  maxOutputTokens: number;
+  modelId: string;
+  userPrompt: string;
+}): AgentPromptSetup {
+  const schemaMessage: ChatMessage = { content: options.userPrompt, role: "user" };
+  const defaultMessages = [schemaMessage, ...(options.contextMessages ?? [])];
+  const { maxOutputTokens } = clampMaxTokens(
+    [{ content: options.instructions, role: "system" }, ...defaultMessages],
+    options.maxOutputTokens,
+    options.modelId
+  );
+
+  return { defaultMessages, maxOutputTokens, schemaMessage };
 }

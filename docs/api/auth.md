@@ -99,15 +99,3 @@ const response = await fetch("http://localhost:3000/api/auth/login", {
 });
 const { accessToken, user } = await response.json();
 ```
-
-#### Python
-
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:3000/api/auth/login",
-    json={"email": "user@example.com", "password": "securepass123"}
-)
-data = response.json()
-```
