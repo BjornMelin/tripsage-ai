@@ -83,7 +83,7 @@ function headingToAnchor(heading) {
     .trim()
     .toLowerCase()
     .replace(/`([^`]+)`/gu, "$1")
-    .replace(/<[^>]+>/gu, "")
+    .replace(/[<>]/gu, "")
     .replace(/[^\p{Letter}\p{Number}\s_-]/gu, "")
     .trim()
     .replace(/\s/gu, "-");
