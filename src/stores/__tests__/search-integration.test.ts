@@ -2,7 +2,6 @@
 
 import type { Flight, FlightSearchParams } from "@schemas/search";
 import { act, renderHook } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
 import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
@@ -11,6 +10,7 @@ import { useSearchFiltersStore } from "@/features/search/store/search-filters-st
 import { useSearchParamsStore } from "@/features/search/store/search-params-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { createFlightSearchHandler } from "@/test/msw/handlers/api-routes";
 import { server } from "@/test/msw/server";
 import { AllTheProviders } from "@/test/test-utils";
 
@@ -315,12 +315,10 @@ describe("Search Store Integration", () => {
     it("should execute provided flight params without validating stale defaults", async () => {
       let capturedBody: unknown = null;
       server.use(
-        http.post("/api/flights/search", async ({ request }) => {
-          capturedBody = await request.json();
-          return HttpResponse.json({
-            itineraries: [],
-            provider: "E2E",
-          });
+        createFlightSearchHandler({
+          onRequest: (body) => {
+            capturedBody = body;
+          },
         })
       );
 

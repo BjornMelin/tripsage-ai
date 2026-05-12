@@ -27,6 +27,11 @@ const POPULAR_DESTINATIONS_RESPONSE = [
   { code: "SFO", name: "San Francisco", savings: "$112" },
 ];
 
+const FLIGHT_SEARCH_RESPONSE = {
+  itineraries: [],
+  provider: "E2E",
+};
+
 // ===== HANDLER FACTORY =====
 
 function createHandler<T extends JsonBodyType>(
@@ -36,6 +41,25 @@ function createHandler<T extends JsonBodyType>(
 ): ReturnType<typeof http.get>[] {
   const handler = () => HttpResponse.json(response);
   return [http[method](path, handler)];
+}
+
+/**
+ * Create a flight search route handler with optional request-body capture.
+ *
+ * @param options - Optional request observer and response override.
+ * @returns MSW handler for `POST /api/flights/search`.
+ */
+export function createFlightSearchHandler(
+  options: {
+    onRequest?: (body: unknown) => void | Promise<void>;
+    response?: JsonBodyType;
+  } = {}
+): ReturnType<typeof http.post> {
+  return http.post("/api/flights/search", async ({ request }) => {
+    const body = await request.json().catch(() => null);
+    await options.onRequest?.(body);
+    return HttpResponse.json(options.response ?? FLIGHT_SEARCH_RESPONSE);
+  });
 }
 
 // ===== HANDLERS =====
@@ -55,6 +79,9 @@ export const apiRouteHandlers = [
 
   // POST /api/activities/search
   ...createHandler("post", "/api/activities/search", ACTIVITIES_SEARCH_RESPONSE),
+
+  // POST /api/flights/search
+  createFlightSearchHandler(),
 
   // GET /api/ping
   ...createHandler("get", "/api/ping", { ok: true }),

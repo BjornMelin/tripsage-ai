@@ -112,7 +112,7 @@ function readPostDataJson<T>(route: Route): T {
  * @param page - Playwright page that owns the route handler.
  * @param url - URL pattern accepted by `page.route`.
  * @param text - Assistant text delta to emit in the stream.
- * @param onBody - Optional assertion callback for the parsed request body.
+ * @param onBody - Optional sync or async assertion callback for the parsed request body.
  * @returns Function that reports whether the route handled at least one request.
  * @see https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol
  */
@@ -120,13 +120,13 @@ export async function mockTextStreamRoute<T>(
   page: Page,
   url: string,
   text: string,
-  onBody?: (body: T) => void
+  onBody?: (body: T) => void | Promise<void>
 ): Promise<() => boolean> {
   let handled = false;
 
   await page.route(url, async (route) => {
     handled = true;
-    onBody?.(readPostDataJson<T>(route));
+    await onBody?.(readPostDataJson<T>(route));
     await fulfillTextStream(route, text);
   });
 

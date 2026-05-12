@@ -36,6 +36,7 @@ const POST_GUARD_CHECKS = [
 const RETRY_DELAY_MS = 1_000;
 const REQUEST_ATTEMPTS = 3;
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const RETRYABLE_METHODS = new Set(["GET", "HEAD"]);
 
 function readArg(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -70,6 +71,8 @@ function delay(ms) {
 
 async function request(baseUrl, path, init = {}) {
   let lastError;
+  const method = (init.method ?? "GET").toUpperCase();
+  const canRetry = RETRYABLE_METHODS.has(method);
 
   for (let attempt = 1; attempt <= REQUEST_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
@@ -80,12 +83,12 @@ async function request(baseUrl, path, init = {}) {
         signal: controller.signal,
         ...init,
       });
-      if (response.status < 500 || attempt === REQUEST_ATTEMPTS) {
+      if (!canRetry || response.status < 500 || attempt === REQUEST_ATTEMPTS) {
         return response;
       }
     } catch (error) {
       lastError = error;
-      if (attempt === REQUEST_ATTEMPTS) {
+      if (!canRetry || attempt === REQUEST_ATTEMPTS) {
         throw error;
       }
     } finally {

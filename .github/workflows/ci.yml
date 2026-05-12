@@ -197,7 +197,7 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed_files.outputs.files }}
         run: |
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(src/proxy\.ts|src/app/layout\.tsx|src/instrumentation-client\.ts|playwright\.prod\.config\.ts|scripts/e2e-webserver-prod\.mjs|package\.json|pnpm-lock\.yaml|next\.config\.ts)$'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(src/proxy\.ts|src/app/layout\.tsx|src/instrumentation-client\.ts|e2e/csp-nonce\.spec\.ts|playwright\.prod\.config\.ts|scripts/e2e-webserver-prod\.mjs|package\.json|pnpm-lock\.yaml|next\.config\.ts)$'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
