@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+import { fulfillJson } from "./helpers/network";
 
 test.describe("Calendar Integration", () => {
   test.beforeEach(async ({ page }) => {
@@ -7,19 +8,11 @@ test.describe("Calendar Integration", () => {
     await resetTestAuth(page);
     await authenticateAsTestUser(page);
     await page.route("**/api/calendar/status", async (route) => {
-      await route.fulfill({
-        body: JSON.stringify({ connected: false }),
-        contentType: "application/json",
-        status: 200,
-      });
+      await fulfillJson(route, { connected: false });
     });
 
     await page.route("**/api/calendar/events**", async (route) => {
-      await route.fulfill({
-        body: JSON.stringify({ items: [] }),
-        contentType: "application/json",
-        status: 200,
-      });
+      await fulfillJson(route, { items: [] });
     });
     await page.goto("/dashboard/calendar", { waitUntil: "load" });
     await expect(page.getByText("Calendar Not Connected")).toBeVisible({

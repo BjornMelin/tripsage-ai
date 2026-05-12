@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+import { fulfillJson, fulfillTextStream } from "./helpers/network";
 
 /** Expected shape of captured request body from chat stream API. */
 type ChatStreamBody = {
@@ -24,11 +25,7 @@ test.describe("Budget and Memory Agents", () => {
         return;
       }
 
-      await route.fulfill({
-        body: JSON.stringify({ id: "session-1" }),
-        contentType: "application/json",
-        status: 201,
-      });
+      await fulfillJson(route, { id: "session-1" }, { status: 201 });
     });
   });
 
@@ -57,12 +54,7 @@ test.describe("Budget and Memory Agents", () => {
         tips: ["Book early for better rates"],
       });
 
-      await route.fulfill({
-        body: `data: ${JSON.stringify({ messageId: "assistant-1", type: "start" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\ndata: ${JSON.stringify({ delta: text, id: "text-1", type: "text-delta" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\ndata: ${JSON.stringify({ finishReason: "stop", type: "finish" })}\n\ndata: [DONE]\n\n`,
-        contentType: "text/event-stream",
-        headers: { "x-vercel-ai-ui-message-stream": "v1" },
-        status: 200,
-      });
+      await fulfillTextStream(route, text);
     });
 
     const textarea = page.locator('textarea[aria-label="Chat prompt"]');
@@ -93,12 +85,7 @@ test.describe("Budget and Memory Agents", () => {
       })();
       capturedBody = body;
 
-      await route.fulfill({
-        body: `data: ${JSON.stringify({ messageId: "assistant-1", type: "start" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\ndata: ${JSON.stringify({ delta: "Memory stored successfully.", id: "text-1", type: "text-delta" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\ndata: ${JSON.stringify({ finishReason: "stop", type: "finish" })}\n\ndata: [DONE]\n\n`,
-        contentType: "text/event-stream",
-        headers: { "x-vercel-ai-ui-message-stream": "v1" },
-        status: 200,
-      });
+      await fulfillTextStream(route, "Memory stored successfully.");
     });
 
     // Send a message that triggers memory update
