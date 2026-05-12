@@ -15,12 +15,14 @@ import {
   ArrowRightIcon,
   CalendarIcon,
   ClockIcon,
+  type LucideIcon,
   MapPinIcon,
   PlaneIcon,
   SparklesIcon,
   UsersIcon,
 } from "lucide-react";
 import { useMemo } from "react";
+import type { Control } from "react-hook-form";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,6 +84,28 @@ const FALLBACK_POPULAR_DESTINATIONS: PopularDestination[] = [
 ];
 
 const POPULAR_DESTINATION_SKELETON_KEYS = ["one", "two", "three", "four"] as const;
+const TRIP_TYPE_OPTIONS = [
+  { label: "Round Trip", value: "round-trip" },
+  { label: "One Way", value: "one-way" },
+  { label: "Multi-City", value: "multi-city" },
+] as const satisfies readonly {
+  label: string;
+  value: FlightSearchFormData["tripType"];
+}[];
+const ADULT_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+const CHILD_COUNTS = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const;
+const CABIN_CLASS_OPTIONS = [
+  { label: "Economy", value: "economy" },
+  { label: "Premium Economy", value: "premium_economy" },
+  { label: "Business", value: "business" },
+  { label: "First Class", value: "first" },
+] as const satisfies readonly {
+  label: string;
+  value: FlightSearchFormData["cabinClass"];
+}[];
+
+type FlightFormControl = Control<FlightSearchFormValues>;
+type IconInputFieldName = "origin" | "destination" | "departureDate" | "returnDate";
 
 interface FlightSearchFormProps {
   onSearch: (params: FlightSearchParams) => Promise<void>;
@@ -89,6 +113,122 @@ interface FlightSearchFormProps {
   className?: string;
   showSmartBundles?: boolean;
   initialParams?: Partial<FlightSearchParams>;
+}
+
+function IconInputField({
+  control,
+  formatValue,
+  icon: Icon,
+  label,
+  name,
+  placeholder,
+  type,
+}: {
+  control: FlightFormControl;
+  formatValue?: (value: unknown) => string;
+  icon: LucideIcon;
+  label: string;
+  name: IconInputFieldName;
+  placeholder?: string;
+  type?: "date";
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-sm font-medium">{label}</FormLabel>
+          <div className="relative">
+            <Icon
+              aria-hidden="true"
+              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+            />
+            <FormControl>
+              <Input
+                aria-label={label}
+                placeholder={placeholder}
+                type={type}
+                className="pl-10"
+                {...field}
+                value={
+                  formatValue
+                    ? formatValue(field.value)
+                    : typeof field.value === "string"
+                      ? field.value
+                      : ""
+                }
+              />
+            </FormControl>
+          </div>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function NumberSelectField({
+  control,
+  icon: Icon,
+  label,
+  name,
+  plural,
+  singular,
+  values,
+}: {
+  control: FlightFormControl;
+  icon?: LucideIcon;
+  label: string;
+  name: "passengers.adults" | "passengers.children";
+  plural: string;
+  singular: string;
+  values: readonly number[];
+}) {
+  const select = (
+    <SelectContent>
+      {values.map((num) => (
+        <SelectItem key={num} value={num.toString()}>
+          {num} {num === 1 ? singular : plural}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  );
+
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-sm font-medium">{label}</FormLabel>
+          <div className={Icon ? "relative" : undefined}>
+            {Icon && (
+              <Icon
+                aria-hidden="true"
+                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+              />
+            )}
+            <Select
+              value={field.value.toString()}
+              onValueChange={(value) => field.onChange(Number.parseInt(value, 10))}
+            >
+              <FormControl>
+                <SelectTrigger
+                  aria-label={label}
+                  className={Icon ? "pl-10" : undefined}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+              </FormControl>
+              {select}
+            </Select>
+          </div>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
 
 /** Flight search form with validation and popular destination shortcuts. */
@@ -281,7 +421,6 @@ export function FlightSearchForm({
           }}
           submitLabel="Search Flights"
           loadingLabel="Searching flights…"
-          disableSubmitWhenInvalid
           className="space-y-6"
           popularItems={popularItems}
           popularLabel="Popular destinations"
@@ -354,27 +493,31 @@ export function FlightSearchForm({
                 name="tripType"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex gap-2">
-                      {(["round-trip", "one-way", "multi-city"] as const).map(
-                        (type) => (
+                    <fieldset>
+                      <legend className="sr-only">Trip type</legend>
+                      <div className="flex gap-2">
+                        {TRIP_TYPE_OPTIONS.map(({ label, value }) => (
                           <Button
-                            key={type}
+                            key={value}
                             type="button"
-                            variant={field.value === type ? "default" : "outline"}
+                            variant={field.value === value ? "default" : "outline"}
                             size="sm"
-                            onClick={() => field.onChange(type)}
+                            aria-pressed={field.value === value}
+                            onClick={() => {
+                              form.setValue("tripType", value, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              });
+                            }}
                             className="capitalize"
                             disabled={state.isSubmitting}
                           >
-                            {type === "round-trip"
-                              ? "Round Trip"
-                              : type === "one-way"
-                                ? "One Way"
-                                : "Multi-City"}
+                            {label}
                           </Button>
-                        )
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    </fieldset>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -382,28 +525,12 @@ export function FlightSearchForm({
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 relative">
-                  <FormField
+                  <IconInputField
                     control={form.control}
                     name="origin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">From</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPinIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
-                            <Input
-                              placeholder="Departure city or airport…"
-                              className="pl-10"
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="From"
+                    icon={MapPinIcon}
+                    placeholder="Departure city or airport…"
                   />
 
                   <div className="hidden md:flex absolute left-1/2 top-8 transform -translate-x-1/2 z-10">
@@ -420,152 +547,55 @@ export function FlightSearchForm({
                     </Button>
                   </div>
 
-                  <FormField
+                  <IconInputField
                     control={form.control}
                     name="destination"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">To</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPinIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
-                            <Input
-                              placeholder="Destination city or airport…"
-                              className="pl-10"
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="To"
+                    icon={MapPinIcon}
+                    placeholder="Destination city or airport…"
                   />
                 </div>
 
                 <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
+                  <IconInputField
                     control={form.control}
                     name="departureDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">Departure</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <CalendarIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
-                            <Input
-                              type="date"
-                              className="pl-10"
-                              {...field}
-                              value={dateInputValue(field.value)}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="Departure"
+                    icon={CalendarIcon}
+                    type="date"
+                    formatValue={dateInputValue}
                   />
 
                   {isRoundTrip && (
-                    <FormField
+                    <IconInputField
                       control={form.control}
                       name="returnDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium">Return</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <CalendarIcon
-                                aria-hidden="true"
-                                className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                              />
-                              <Input
-                                type="date"
-                                className="pl-10"
-                                {...field}
-                                value={dateInputValue(field.value)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      label="Return"
+                      icon={CalendarIcon}
+                      type="date"
+                      formatValue={dateInputValue}
                     />
                   )}
                 </div>
 
                 <div className="lg:col-span-2 space-y-4">
-                  <FormField
+                  <NumberSelectField
                     control={form.control}
                     name="passengers.adults"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">Adults</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <UsersIcon
-                              aria-hidden="true"
-                              className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
-                            />
-                            <Select
-                              value={field.value.toString()}
-                              onValueChange={(value) =>
-                                field.onChange(Number.parseInt(value, 10))
-                              }
-                            >
-                              <SelectTrigger className="pl-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                                  <SelectItem key={num} value={num.toString()}>
-                                    {num} {num === 1 ? "Adult" : "Adults"}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="Adults"
+                    icon={UsersIcon}
+                    values={ADULT_COUNTS}
+                    singular="Adult"
+                    plural="Adults"
                   />
 
-                  <FormField
+                  <NumberSelectField
                     control={form.control}
                     name="passengers.children"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          Children (2-11)
-                        </FormLabel>
-                        <FormControl>
-                          <Select
-                            value={field.value.toString()}
-                            onValueChange={(value) =>
-                              field.onChange(Number.parseInt(value, 10))
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                                <SelectItem key={num} value={num.toString()}>
-                                  {num} {num === 1 ? "Child" : "Children"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    label="Children (2-11)"
+                    values={CHILD_COUNTS}
+                    singular="Child"
+                    plural="Children"
                   />
 
                   <FormField
@@ -574,21 +604,20 @@ export function FlightSearchForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium">Class</FormLabel>
-                        <FormControl>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger aria-label="Class">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="economy">Economy</SelectItem>
-                              <SelectItem value="premium_economy">
-                                Premium Economy
+                          </FormControl>
+                          <SelectContent>
+                            {CABIN_CLASS_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
                               </SelectItem>
-                              <SelectItem value="business">Business</SelectItem>
-                              <SelectItem value="first">First Class</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

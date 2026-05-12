@@ -16,8 +16,8 @@ Authoritative testing reference for TripSage frontend.
 
 - Projects in `vitest.config.ts`: `schemas`, `integration`, `api`, `component`, `unit`.
 - Environment directive (mandatory first line):
-  - `/** @vitest-environment jsdom */` — React, DOM, browser hooks
-  - `/** @vitest-environment node */` — API routes, server utilities
+  - `/** @vitest-environment jsdom */` - React, DOM, browser hooks
+  - `/** @vitest-environment node */` - API routes, server utilities
 - Commands: `pnpm test`, `pnpm test:affected`, `pnpm test -- --project=<name>`, `pnpm test:coverage`.
   - `test:affected` runs tests related to changed files (e.g., `pnpm test:affected -- --base=main` for post-commit verification).
 
@@ -369,11 +369,14 @@ pnpm test:changed                       # only changed files
 
 - Config: `playwright.config.ts`; specs in `e2e/`
 - Commands:
+  - `pnpm test:e2e:critical` (lean Chromium PR gate for deployment guards, search, calendar, and BYOK shells)
   - `pnpm test:e2e:chromium` (recommended local default)
   - `pnpm test:e2e` (all configured browsers)
   - `pnpm exec playwright test --project=chromium --headed` (use `pnpm exec` for Playwright CLI flags; avoid `pnpm test:* -- <flags>`)
 - Fresh machine setup: `pnpm exec playwright install chromium` (Linux deps: `pnpm exec playwright install-deps chromium`)
 - Reserve for flows requiring real browser execution.
+- The critical suite uses `scripts/e2e-webserver.mjs` with mocked Supabase Auth and deterministic provider routes. Keep live provider credentials out of normal PR E2E.
+- Live deployment smoke is opt-in with `LIVE_SMOKE_URL=https://preview.example.vercel.app pnpm test:smoke:live`. Set `LIVE_SMOKE_BYOK_HEALTHCHECK_KEY` only when operator BYOK health should be checked; otherwise that check is reported as skipped.
 
 ## Performance and Anti-Patterns
 

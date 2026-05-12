@@ -43,6 +43,8 @@ export default defineConfig({
     env: {
       ...process.env,
       E2E: process.env.E2E ?? "1",
+      MFA_BACKUP_CODE_PEPPER:
+        process.env.MFA_BACKUP_CODE_PEPPER ?? "e2e-mfa-backup-code-pepper",
       NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? baseURL,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? baseURL,
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ?? baseURL,
@@ -56,6 +58,11 @@ export default defineConfig({
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54329",
       NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED ?? "1",
       PORT: `${e2ePort}`,
+      QSTASH_CURRENT_SIGNING_KEY:
+        process.env.QSTASH_CURRENT_SIGNING_KEY ??
+        "e2e-qstash-current-signing-key-local",
+      QSTASH_NEXT_SIGNING_KEY:
+        process.env.QSTASH_NEXT_SIGNING_KEY ?? "e2e-qstash-next-signing-key-local",
     },
     reuseExistingServer: false,
     timeout: 120_000,

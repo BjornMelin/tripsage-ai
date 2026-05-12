@@ -37,6 +37,10 @@ export default defineConfig({
       NODE_ENV: "production",
       PORT: `${e2ePort}`,
       // Required-by-schema production secrets (test-only dummy values).
+      HMAC_SECRET: "test-hmac-secret-placeholder-32chars-minimum!!",
+      MFA_BACKUP_CODE_PEPPER: "test-mfa-backup-code-placeholder-pepper",
+      QSTASH_CURRENT_SIGNING_KEY: "test-qstash-current-signing-key-placeholder",
+      QSTASH_NEXT_SIGNING_KEY: "test-qstash-next-signing-key-placeholder",
       SUPABASE_JWT_SECRET: "placeholder-supabase-jwt-secret-32chars-minimum!!",
       TELEMETRY_HASH_SECRET: "test-telemetry-hash-placeholder-32chars-minimum!!",
     },

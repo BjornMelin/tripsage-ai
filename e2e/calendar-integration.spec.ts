@@ -1,26 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+import { mockJsonRoute } from "./helpers/network";
 
 test.describe("Calendar Integration", () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to calendar page with timeout
     await resetTestAuth(page);
     await authenticateAsTestUser(page);
-    await page.route("**/api/calendar/status", async (route) => {
-      await route.fulfill({
-        body: JSON.stringify({ connected: false }),
-        contentType: "application/json",
-        status: 200,
-      });
-    });
-
-    await page.route("**/api/calendar/events**", async (route) => {
-      await route.fulfill({
-        body: JSON.stringify({ items: [] }),
-        contentType: "application/json",
-        status: 200,
-      });
-    });
+    await mockJsonRoute(page, "**/api/calendar/status", { connected: false });
+    await mockJsonRoute(page, "**/api/calendar/events**", { items: [] });
     await page.goto("/dashboard/calendar", { waitUntil: "load" });
     await expect(page.getByText("Calendar Not Connected")).toBeVisible({
       timeout: 15000,

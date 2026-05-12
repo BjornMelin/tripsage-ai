@@ -10,8 +10,33 @@ const JOB_ROUTES = [
   "/api/jobs/notify-collaborators",
   "/api/jobs/rag-index",
 ];
+const POST_GUARD_CHECKS = [
+  {
+    body: { apiKey: "sk-smoke-placeholder", service: "openai" },
+    label: "protected BYOK route",
+    name: "byok_route_guard",
+    path: "/api/keys/validate",
+  },
+  {
+    body: {
+      chatId: "chat-smoke-placeholder",
+      files: [
+        {
+          contentType: "application/pdf",
+          originalName: "itinerary.pdf",
+          size: 1024,
+        },
+      ],
+    },
+    label: "protected attachment upload route",
+    name: "attachment_upload_route_guard",
+    path: "/api/chat/attachments",
+  },
+];
 const RETRY_DELAY_MS = 1_000;
 const REQUEST_ATTEMPTS = 3;
+const JSON_HEADERS = { "Content-Type": "application/json" };
+const RETRYABLE_METHODS = new Set(["GET", "HEAD"]);
 
 function readArg(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -23,9 +48,17 @@ function readArg(name, fallback) {
 
 function normalizeBaseUrl(raw) {
   if (!raw) {
-    throw new Error("Missing --url");
+    throw new Error(
+      "Missing deployment URL. Pass --url or set LIVE_SMOKE_URL, DEPLOYMENT_URL, or VERCEL_URL."
+    );
   }
-  const url = new URL(raw);
+  const value = /^[a-z][a-z\d+\-.]*:/i.test(raw) ? raw : `https://${raw}`;
+  const url = new URL(value);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(
+      `Deployment URL must use http or https. Received protocol: ${url.protocol}`
+    );
+  }
   url.pathname = "/";
   url.search = "";
   url.hash = "";
@@ -38,6 +71,8 @@ function delay(ms) {
 
 async function request(baseUrl, path, init = {}) {
   let lastError;
+  const method = (init.method ?? "GET").toUpperCase();
+  const canRetry = RETRYABLE_METHODS.has(method);
 
   for (let attempt = 1; attempt <= REQUEST_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
@@ -48,12 +83,12 @@ async function request(baseUrl, path, init = {}) {
         signal: controller.signal,
         ...init,
       });
-      if (response.status < 500 || attempt === REQUEST_ATTEMPTS) {
+      if (!canRetry || response.status < 500 || attempt === REQUEST_ATTEMPTS) {
         return response;
       }
     } catch (error) {
       lastError = error;
-      if (attempt === REQUEST_ATTEMPTS) {
+      if (!canRetry || attempt === REQUEST_ATTEMPTS) {
         throw error;
       }
     } finally {
@@ -75,6 +110,30 @@ function requestAll(baseUrl, paths, init) {
   );
 }
 
+function jsonPost(body) {
+  return {
+    body: JSON.stringify(body),
+    headers: JSON_HEADERS,
+    method: "POST",
+    redirect: "manual",
+  };
+}
+
+function assertStatus(response, label, expectedStatus) {
+  if (response.status !== expectedStatus) {
+    throw new Error(
+      `Expected ${label} to return ${expectedStatus}, got ${response.status}`
+    );
+  }
+  return { status: response.status };
+}
+
+function assertNoStore(path, cacheControl) {
+  if (!cacheControl.toLowerCase().includes("no-store")) {
+    throw new Error(`Expected ${path} Cache-Control no-store, got ${cacheControl}`);
+  }
+}
+
 function passed(name, details = {}) {
   return { details, name, status: "passed" };
 }
@@ -88,100 +147,116 @@ function failed(name, error, details = {}) {
   };
 }
 
-async function checkAppShell(baseUrl) {
-  const response = await request(baseUrl, "/");
+function skipped(name, details = {}) {
+  return { details, name, status: "skipped" };
+}
+
+async function checkHtmlShell(baseUrl, path, label) {
+  const response = await request(baseUrl, path);
   const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok || !contentType.includes("text/html")) {
     throw new Error(
-      `Expected HTML 2xx response, got ${response.status} ${contentType}`.trim()
+      `Expected ${label} HTML 2xx response, got ${response.status} ${contentType}`.trim()
     );
   }
   return { contentType, status: response.status };
 }
 
-async function checkHealth(baseUrl) {
-  const response = await request(baseUrl, "/api/health");
+async function checkJsonHealth(baseUrl, path, init) {
+  const response = await request(baseUrl, path, init);
   const cacheControl = response.headers.get("cache-control") ?? "";
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.status !== "ok") {
-    throw new Error(`Expected /api/health ok, got ${response.status}`);
+    throw new Error(`Expected ${path} ok, got ${response.status}`);
   }
-  if (!cacheControl.toLowerCase().includes("no-store")) {
-    throw new Error(`Expected /api/health Cache-Control no-store, got ${cacheControl}`);
-  }
+  assertNoStore(path, cacheControl);
   return { cacheControl, status: response.status };
+}
+
+function checkAppShell(baseUrl) {
+  return checkHtmlShell(baseUrl, "/", "app shell");
+}
+
+function checkHealth(baseUrl) {
+  return checkJsonHealth(baseUrl, "/api/health");
 }
 
 async function checkUnauthenticatedAuth(baseUrl) {
   const response = await request(baseUrl, "/auth/me", { redirect: "manual" });
-  if (response.status !== 401) {
-    throw new Error(`Expected /auth/me to return 401, got ${response.status}`);
-  }
-  return { status: response.status };
+  return assertStatus(response, "/auth/me", 401);
 }
 
-async function checkLoginShell(baseUrl) {
-  const response = await request(baseUrl, "/login?next=%2Fdashboard");
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!response.ok || !contentType.includes("text/html")) {
-    throw new Error(
-      `Expected login HTML 2xx response, got ${response.status} ${contentType}`.trim()
-    );
-  }
-  return { contentType, status: response.status };
+function checkLoginShell(baseUrl) {
+  return checkHtmlShell(baseUrl, "/login?next=%2Fdashboard", "login");
 }
 
-async function checkByokGuard(baseUrl) {
-  const response = await request(baseUrl, "/api/keys/validate", {
-    body: JSON.stringify({ apiKey: "sk-smoke-placeholder", service: "openai" }),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
+async function checkPostGuard(baseUrl, path, body, label) {
+  const response = await request(baseUrl, path, jsonPost(body));
+  return assertStatus(response, label, 401);
+}
+
+function checkByokHealth(baseUrl, byokHealthKey) {
+  if (!byokHealthKey) {
+    return skipped("byok_health_endpoint", {
+      reason:
+        "BYOK health key not provided; set LIVE_SMOKE_BYOK_HEALTHCHECK_KEY to enable.",
+    });
+  }
+
+  return checkJsonHealth(baseUrl, "/api/health/byok", {
+    headers: { "x-internal-key": byokHealthKey },
     redirect: "manual",
   });
-  if (response.status !== 401) {
-    throw new Error(
-      `Expected protected BYOK route to return auth guard 401, got ${response.status}`
-    );
-  }
-  return { status: response.status };
 }
 
 async function checkQstashRoutes(baseUrl) {
-  const routeResponses = await requestAll(baseUrl, JOB_ROUTES, {
-    body: "{}",
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-    redirect: "manual",
-  });
+  const routeResponses = await requestAll(baseUrl, JOB_ROUTES, jsonPost({}));
 
   return {
     routes: routeResponses.map(({ path, response }) => {
-      if (response.status !== 401) {
-        throw new Error(
-          `${path} expected unsigned QStash request to return 401, got ${response.status}`
-        );
-      }
-      return { path, status: response.status };
+      return {
+        path,
+        ...assertStatus(response, `${path} unsigned QStash request`, 401),
+      };
     }),
   };
 }
 
 async function runCheck(name, fn) {
   try {
-    return passed(name, await fn());
+    const result = await fn();
+    if (result?.status === "skipped") return result;
+    return passed(name, result);
   } catch (error) {
     return failed(name, error);
   }
 }
 
-const baseUrl = normalizeBaseUrl(readArg("--url"));
-const environment = readArg("--environment", "production");
+const baseUrl = normalizeBaseUrl(
+  readArg(
+    "--url",
+    process.env.LIVE_SMOKE_URL ?? process.env.DEPLOYMENT_URL ?? process.env.VERCEL_URL
+  )
+);
+const environment = readArg(
+  "--environment",
+  process.env.LIVE_SMOKE_ENVIRONMENT ?? "production"
+);
+const byokHealthKey = readArg(
+  "--byok-health-key",
+  process.env.LIVE_SMOKE_BYOK_HEALTHCHECK_KEY ?? process.env.BYOK_HEALTHCHECK_KEY
+);
 const checks = await Promise.all([
   runCheck("app_shell", () => checkAppShell(baseUrl)),
   runCheck("health_endpoint", () => checkHealth(baseUrl)),
   runCheck("auth_session_guard", () => checkUnauthenticatedAuth(baseUrl)),
   runCheck("authenticated_redirect_shell", () => checkLoginShell(baseUrl)),
-  runCheck("byok_route_guard", () => checkByokGuard(baseUrl)),
+  ...POST_GUARD_CHECKS.map((check) =>
+    runCheck(check.name, () =>
+      checkPostGuard(baseUrl, check.path, check.body, check.label)
+    )
+  ),
+  runCheck("byok_health_endpoint", () => checkByokHealth(baseUrl, byokHealthKey)),
   runCheck("qstash_job_route_guards", () => checkQstashRoutes(baseUrl)),
 ]);
 

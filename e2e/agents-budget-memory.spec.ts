@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { authenticateAsTestUser, resetTestAuth } from "./helpers/auth";
+import { mockJsonRoute, mockTextStreamRoute } from "./helpers/network";
 
 /** Expected shape of captured request body from chat stream API. */
 type ChatStreamBody = {
@@ -16,38 +17,23 @@ test.describe("Budget and Memory Agents", () => {
     await resetTestAuth(page);
     await authenticateAsTestUser(page);
     await page.goto("/chat");
-
-    await page.route("**/api/chat/sessions", async (route) => {
-      const request = route.request();
-      if (request.method() !== "POST") {
-        await route.continue();
-        return;
-      }
-
-      await route.fulfill({
-        body: JSON.stringify({ id: "session-1" }),
-        contentType: "application/json",
+    await mockJsonRoute(
+      page,
+      "**/api/chat/sessions",
+      { id: "session-1" },
+      {
+        method: "POST",
         status: 201,
-      });
-    });
+      }
+    );
   });
 
   test("budget agent displays chart", async ({ page }) => {
-    let handled = false;
     let capturedBody: ChatStreamBody | null = null;
-    await page.route("**/api/chat", async (route) => {
-      const request = route.request();
-      handled = true;
-      const body = (() => {
-        try {
-          return request.postDataJSON() as ChatStreamBody;
-        } catch {
-          return {} as ChatStreamBody;
-        }
-      })();
-      capturedBody = body;
-
-      const text = JSON.stringify({
+    const handled = await mockTextStreamRoute<ChatStreamBody>(
+      page,
+      "**/api/chat",
+      JSON.stringify({
         allocations: [
           { amount: 500, category: "Flights", rationale: "Round trip" },
           { amount: 800, category: "Accommodation", rationale: "5 nights" },
@@ -55,21 +41,17 @@ test.describe("Budget and Memory Agents", () => {
         currency: "USD",
         schemaVersion: "budget.v1",
         tips: ["Book early for better rates"],
-      });
-
-      await route.fulfill({
-        body: `data: ${JSON.stringify({ messageId: "assistant-1", type: "start" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\ndata: ${JSON.stringify({ delta: text, id: "text-1", type: "text-delta" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\ndata: ${JSON.stringify({ finishReason: "stop", type: "finish" })}\n\ndata: [DONE]\n\n`,
-        contentType: "text/event-stream",
-        headers: { "x-vercel-ai-ui-message-stream": "v1" },
-        status: 200,
-      });
-    });
+      }),
+      (body) => {
+        capturedBody = body;
+      }
+    );
 
     const textarea = page.locator('textarea[aria-label="Chat prompt"]');
     await textarea.fill("Plan a budget for Paris for 5 days");
     await textarea.press("Enter");
 
-    await expect.poll(() => handled, { timeout: 10000 }).toBe(true);
+    await expect.poll(handled, { timeout: 10000 }).toBe(true);
     expect(capturedBody).toMatchObject({ message: expect.any(Object) });
 
     // Wait for budget chart to appear
@@ -79,34 +61,22 @@ test.describe("Budget and Memory Agents", () => {
   });
 
   test("memory agent confirms write", async ({ page }) => {
-    let handled = false;
     let capturedBody: ChatStreamBody | null = null;
-    await page.route("**/api/chat", async (route) => {
-      const request = route.request();
-      handled = true;
-      const body = (() => {
-        try {
-          return request.postDataJSON() as ChatStreamBody;
-        } catch {
-          return {} as ChatStreamBody;
-        }
-      })();
-      capturedBody = body;
-
-      await route.fulfill({
-        body: `data: ${JSON.stringify({ messageId: "assistant-1", type: "start" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\ndata: ${JSON.stringify({ delta: "Memory stored successfully.", id: "text-1", type: "text-delta" })}\n\ndata: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\ndata: ${JSON.stringify({ finishReason: "stop", type: "finish" })}\n\ndata: [DONE]\n\n`,
-        contentType: "text/event-stream",
-        headers: { "x-vercel-ai-ui-message-stream": "v1" },
-        status: 200,
-      });
-    });
+    const handled = await mockTextStreamRoute<ChatStreamBody>(
+      page,
+      "**/api/chat",
+      "Memory stored successfully.",
+      (body) => {
+        capturedBody = body;
+      }
+    );
 
     // Send a message that triggers memory update
     const textarea = page.locator('textarea[aria-label="Chat prompt"]');
     await textarea.fill("Remember that I prefer window seats");
     await textarea.press("Enter");
 
-    await expect.poll(() => handled, { timeout: 10000 }).toBe(true);
+    await expect.poll(handled, { timeout: 10000 }).toBe(true);
     expect(capturedBody).toMatchObject({ message: expect.any(Object) });
 
     // Wait for confirmation message
