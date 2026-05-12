@@ -1,3 +1,10 @@
+## [1.33.7](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.6...v1.33.7) (2026-05-12)
+
+### Bug Fixes
+
+* **ci:** enforce coverage after shard merge ([9fd0902](https://github.com/BjornMelin/tripsage-ai/commit/9fd0902e323579b03c48fd87039159ce982d5b7b))
+* **ci:** upload vitest shard reports ([e6095d9](https://github.com/BjornMelin/tripsage-ai/commit/e6095d9ab288d290763d52c14b15df64e5764ec6))
+
 ## [1.33.6](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.5...v1.33.6) (2026-05-12)
 
 ### Bug Fixes
