@@ -18,7 +18,10 @@ import {
   useSearchFiltersStore,
 } from "@/features/search/store/search-filters-store";
 import { useSearchHistoryStore } from "@/features/search/store/search-history";
-import { useSearchParamsStore } from "@/features/search/store/search-params-store";
+import {
+  selectCurrentParamsFrom,
+  useSearchParamsStore,
+} from "@/features/search/store/search-params-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import {
@@ -299,7 +302,7 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
       if (signal?.aborted) return null;
 
       // Use provided params or derive from state
-      const searchParams = params || deriveCurrentParams();
+      let searchParams = params || deriveCurrentParams();
 
       if (!searchParams) {
         throw new Error("No search parameters available");
@@ -309,6 +312,10 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
         const loaded = await loadParamsFromTemplate(params, currentSearchType);
         if (!loaded) {
           throw new Error("Invalid search parameters");
+        }
+        searchParams = selectCurrentParamsFrom(useSearchParamsStore.getState());
+        if (!searchParams) {
+          throw new Error("No search parameters available");
         }
       }
 

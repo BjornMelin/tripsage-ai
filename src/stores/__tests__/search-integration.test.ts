@@ -325,13 +325,8 @@ describe("Search Store Integration", () => {
       );
 
       const params: FlightSearchParams = {
-        adults: 1,
-        cabinClass: "economy",
-        children: 0,
         departureDate: "2027-06-01",
         destination: "LAX",
-        directOnly: false,
-        infants: 0,
         origin: "SFO",
       };
       const { result } = renderHook(() => useSearchOrchestration(), { wrapper });
@@ -347,8 +342,13 @@ describe("Search Store Integration", () => {
 
       expect(searchId).toEqual(expect.any(String));
       expect(capturedBody).toMatchObject({
+        adults: 1,
+        cabinClass: "economy",
+        children: 0,
         departureDate: "2027-06-01",
         destination: "LAX",
+        directOnly: false,
+        infants: 0,
         origin: "SFO",
       });
       expect(useSearchParamsStore.getState().flightParams).toMatchObject({
