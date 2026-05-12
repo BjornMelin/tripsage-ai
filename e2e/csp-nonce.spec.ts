@@ -42,6 +42,10 @@ async function extractInlineScriptHashes(page: Page): Promise<string[]> {
   );
 }
 
+const NON_BLOCKING_CSP_DIAGNOSTICS = [
+  /The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy\./i,
+] as const;
+
 test("CSP allows production scripts via nonce, hashes, or public inline compatibility", async ({
   page,
 }) => {
@@ -92,10 +96,11 @@ test("CSP allows production scripts via nonce, hashes, or public inline compatib
   }
 
   // Guard against runtime breakage: if CSP blocks scripts, browsers emit console errors.
-  const cspViolations = consoleMessages.filter((text) =>
-    /content security policy|violates the following content security policy|refused to (load|execute)/i.test(
-      text
-    )
+  const cspViolations = consoleMessages.filter(
+    (text) =>
+      /content security policy|violates the following content security policy|refused to (load|execute)/i.test(
+        text
+      ) && !NON_BLOCKING_CSP_DIAGNOSTICS.some((pattern) => pattern.test(text))
   );
   expect(cspViolations).toEqual([]);
 });
