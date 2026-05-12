@@ -123,9 +123,9 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
             <Skeleton className="h-5 w-5 rounded" />
             <Skeleton className="h-6 w-48" />
           </CardTitle>
-          <CardDescription>
+          <div className="text-sm text-muted-foreground">
             <Skeleton className="h-4 w-64" />
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-4 w-full" />
