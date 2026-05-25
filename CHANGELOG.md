@@ -1,3 +1,9 @@
+## [1.34.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.4...v1.34.5) (2026-05-25)
+
+### Bug Fixes
+
+* **chat:** harden error handling ([#781](https://github.com/BjornMelin/tripsage-ai/issues/781)) ([05cd287](https://github.com/BjornMelin/tripsage-ai/commit/05cd2879a69555cd751979ded8cf23a453e29458))
+
 ## [1.34.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.3...v1.34.4) (2026-05-25)
 
 ### Bug Fixes
