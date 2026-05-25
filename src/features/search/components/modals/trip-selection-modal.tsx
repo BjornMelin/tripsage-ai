@@ -22,6 +22,28 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const TRIP_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+  year: "numeric",
+});
+
+const FORMAT_TRIP_START_DATE = (value: string): string => {
+  const dateParts = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  const date = dateParts
+    ? new Date(
+        Date.UTC(Number(dateParts[1]), Number(dateParts[2]) - 1, Number(dateParts[3]))
+      )
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return TRIP_DATE_FORMATTER.format(date);
+};
+
 interface TripSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -143,7 +165,7 @@ function TripSelectionModalContent({
                     {trip.startDate && (
                       <div className="flex items-center text-sm text-muted-foreground gap-2">
                         <CalendarIcon aria-hidden="true" className="h-3 w-3" />
-                        <span>{new Date(trip.startDate).toLocaleDateString()}</span>
+                        <span>{FORMAT_TRIP_START_DATE(trip.startDate)}</span>
                       </div>
                     )}
                   </Label>

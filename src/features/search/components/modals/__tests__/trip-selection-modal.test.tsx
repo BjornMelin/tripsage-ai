@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import type { Activity } from "@schemas/search";
 import type { UiTrip } from "@schemas/trips";
 import { render, screen } from "@testing-library/react";
@@ -76,6 +78,7 @@ describe("TripSelectionModal", () => {
     const { props, user } = RenderTripSelectionModal();
     const addButton = screen.getByRole("button", { name: "Add to Trip" });
 
+    expect(screen.getByText("Jun 1, 2026")).toBeInTheDocument();
     expect(addButton).toBeDisabled();
 
     await user.click(GetTripLabel("Paris Spring"));
