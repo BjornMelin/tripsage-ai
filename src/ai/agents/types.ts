@@ -259,18 +259,19 @@ export interface AgentExecutionMeta {
  *
  * @example
  * ```typescript
+ * const lifecycleEvents: Array<Record<string, unknown>> = [];
  * const result = streamText({
  *   model: provider.model,
  *   messages,
  *   tools: myTools,
  *   onInputStart: ({ toolName, toolCallId }) => {
- *     console.log(`Tool ${toolName} input starting...`);
+ *     lifecycleEvents.push({ kind: "start", toolCallId, toolName });
  *   },
  *   onInputDelta: ({ toolName, inputTextDelta }) => {
- *     console.log(`Tool ${toolName} input delta: ${inputTextDelta}`);
+ *     lifecycleEvents.push({ inputTextDelta, kind: "delta", toolName });
  *   },
  *   onInputAvailable: ({ toolName, input }) => {
- *     console.log(`Tool ${toolName} input ready:`, input);
+ *     lifecycleEvents.push({ input, kind: "available", toolName });
  *   },
  * });
  * ```

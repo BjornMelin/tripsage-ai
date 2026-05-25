@@ -127,7 +127,7 @@ export type TripSageToolRegistry = typeof toolRegistry;
  * ```typescript
  * const toolCall: TripSageToolCall = step.toolCalls[0];
  * if (toolCall.toolName === 'searchFlights') {
- *   console.log(toolCall.args.origin); // Type-safe access
+ *   const origin = toolCall.args.origin; // Type-safe access
  * }
  * ```
  */
@@ -142,7 +142,7 @@ export type TripSageToolCall = TypedToolCall<TripSageToolRegistry>;
  * ```typescript
  * const toolResult: TripSageToolResult = step.toolResults[0];
  * if (toolResult.toolName === 'searchFlights') {
- *   console.log(toolResult.result.flights); // Type-safe access
+ *   const flights = toolResult.result.flights; // Type-safe access
  * }
  * ```
  */
