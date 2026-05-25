@@ -5,7 +5,7 @@
 "use client";
 
 import { createEventRequestSchema } from "@schemas/calendar";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,12 +15,28 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { nowIso } from "@/lib/security/random";
 
 const EVENT_FORM_SCHEMA = createEventRequestSchema.extend({
   calendarId: z.string().default("primary"),
 });
 
 type EventFormData = z.infer<typeof EVENT_FORM_SCHEMA>;
+const DEFAULT_EVENT_DURATION_MS = 60 * 60 * 1000;
+
+const BUILD_DEFAULT_EVENT_TIMES = (
+  currentIso: string = nowIso()
+): Pick<EventFormData, "end" | "start"> => {
+  const startDateTime = new Date(currentIso);
+  return {
+    end: {
+      dateTime: new Date(startDateTime.getTime() + DEFAULT_EVENT_DURATION_MS),
+    },
+    start: {
+      dateTime: startDateTime,
+    },
+  };
+};
 
 /**
  * Props for CalendarEventForm component.
@@ -49,6 +65,15 @@ export function CalendarEventForm({
 }: CalendarEventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const defaultValues = useMemo(() => {
+    const defaultTimes = BUILD_DEFAULT_EVENT_TIMES();
+    return {
+      calendarId: "primary",
+      ...initialData,
+      end: initialData?.end ?? defaultTimes.end,
+      start: initialData?.start ?? defaultTimes.start,
+    };
+  }, [initialData]);
 
   const {
     register,
@@ -58,16 +83,7 @@ export function CalendarEventForm({
     setValue,
     reset,
   } = useZodForm({
-    defaultValues: {
-      calendarId: "primary",
-      ...initialData,
-      end: initialData?.end || {
-        dateTime: new Date(Date.now() + 60 * 60 * 1000), // Default 1 hour
-      },
-      start: initialData?.start || {
-        dateTime: new Date(),
-      },
-    },
+    defaultValues,
     mode: "onChange",
     schema: EVENT_FORM_SCHEMA,
   });
@@ -165,7 +181,7 @@ export function CalendarEventForm({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="start">Start</Label>
               <Input

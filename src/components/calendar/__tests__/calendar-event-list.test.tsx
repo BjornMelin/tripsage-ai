@@ -1,15 +1,23 @@
 /** @vitest-environment jsdom */
 
 import { delay, HttpResponse, http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CalendarEventList } from "@/components/calendar/calendar-event-list";
 import { server } from "@/test/msw/server";
 import { render, screen, within } from "@/test/test-utils";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
+const { mockRecordClientErrorOnActiveSpan } = vi.hoisted(() => ({
+  mockRecordClientErrorOnActiveSpan: vi.fn(),
+}));
+
 vi.mock("@/hooks/use-current-user-id", () => ({
   useCurrentUserId: () => "user-123",
+}));
+
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: mockRecordClientErrorOnActiveSpan,
 }));
 
 describe("CalendarEventList", () => {
@@ -19,6 +27,10 @@ describe("CalendarEventList", () => {
       http.get("/api/calendar/events", handler)
     );
   };
+
+  beforeEach(() => {
+    mockRecordClientErrorOnActiveSpan.mockReset();
+  });
 
   it("renders events returned by API", async () => {
     const handler = () =>
@@ -59,6 +71,10 @@ describe("CalendarEventList", () => {
 
     expect(await screen.findByText(/failed to load events/i)).toBeInTheDocument();
     expect(screen.getByText(/invalid calendar events response/i)).toBeInTheDocument();
+    expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(expect.any(Error), {
+      action: "parseEvents",
+      context: "CalendarEventList",
+    });
   });
 
   it('shows "No events found in this time range" for empty items', async () => {
@@ -119,6 +135,29 @@ describe("CalendarEventList", () => {
     render(<CalendarEventList />);
 
     expect(await screen.findByText("Minimal Event")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /view in google calendar/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render unsafe calendar event links", async () => {
+    useEventsHandlers(() =>
+      HttpResponse.json({
+        items: [
+          {
+            end: { dateTime: "2025-12-12T11:00:00.000Z" },
+            htmlLink: "javascript:alert(1)",
+            id: "event-unsafe-link",
+            start: { dateTime: "2025-12-12T10:00:00.000Z" },
+            summary: "Unsafe Link Event",
+          },
+        ],
+      })
+    );
+
+    render(<CalendarEventList />);
+
+    expect(await screen.findByText("Unsafe Link Event")).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /view in google calendar/i })
     ).not.toBeInTheDocument();

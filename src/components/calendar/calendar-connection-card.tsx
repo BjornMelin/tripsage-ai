@@ -34,6 +34,17 @@ export interface CalendarConnectionCardProps {
   className?: string;
 }
 
+function ReportCalendarStatusLoadError(error: Error): void {
+  try {
+    recordClientErrorOnActiveSpan(error, {
+      action: "loadCalendarStatus",
+      context: "CalendarConnectionCard",
+    });
+  } catch {
+    // Keep calendar status UI resilient even if telemetry is unavailable.
+  }
+}
+
 /**
  * CalendarConnectionCard component.
  *
@@ -87,17 +98,7 @@ export function CalendarConnectionCard({ className }: CalendarConnectionCardProp
       }
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
-      try {
-        recordClientErrorOnActiveSpan(err instanceof Error ? err : new Error(message), {
-          action: "loadCalendarStatus",
-          context: "CalendarConnectionCard",
-        });
-      } catch (telemetryError) {
-        // Swallow telemetry errors to avoid breaking component
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to record telemetry error:", telemetryError);
-        }
-      }
+      ReportCalendarStatusLoadError(err instanceof Error ? err : new Error(message));
     } finally {
       if (!abortController.signal.aborted) {
         setIsLoading(false);

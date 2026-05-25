@@ -12,6 +12,15 @@ import { CalendarEventList } from "@/components/calendar/calendar-event-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { nowIso } from "@/lib/security/random";
+
+function getCalendarEventWindow(): { nextWeek: Date; now: Date } {
+  const start = DateUtils.startOf(new Date(nowIso()), "day");
+  return {
+    nextWeek: DateUtils.add(start, 7, "days"),
+    now: start,
+  };
+}
 
 /**
  * Renders the calendar integration dashboard with connection status, events,
@@ -23,13 +32,7 @@ export default function CalendarPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("status");
-  const timeWindow = useMemo(() => {
-    const start = DateUtils.startOf(new Date(), "day");
-    return {
-      nextWeek: DateUtils.add(start, 7, "days"),
-      now: start,
-    };
-  }, []);
+  const timeWindow = useMemo(getCalendarEventWindow, []);
 
   return (
     <div className="space-y-6">
