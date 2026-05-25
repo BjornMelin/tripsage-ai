@@ -62,21 +62,21 @@ describe("getCachedJson", () => {
     expect(mockRedisGet).toHaveBeenCalledWith("missing-key");
   });
 
-  it("parses and returns valid JSON data", async () => {
+  it("returns SDK-deserialized cache data", async () => {
     const testData = { name: "test", value: 123 };
-    mockRedisGet.mockResolvedValue(JSON.stringify(testData));
+    mockRedisGet.mockResolvedValue(testData);
 
     const result = await getCachedJson<typeof testData>("valid-key");
 
     expect(result).toEqual(testData);
   });
 
-  it("returns null for invalid JSON", async () => {
-    mockRedisGet.mockResolvedValue("not valid json {");
+  it("returns string cache values from SDK deserialization", async () => {
+    mockRedisGet.mockResolvedValue("just a string");
 
-    const result = await getCachedJson("invalid-json-key");
+    const result = await getCachedJson<string>("string-key");
 
-    expect(result).toBeNull();
+    expect(result).toBe("just a string");
   });
 
   it("returns null when Redis throws", async () => {
@@ -93,7 +93,7 @@ describe("getCachedJson", () => {
       date: "2025-01-01T00:00:00Z",
       nested: { deep: { value: "test" } },
     };
-    mockRedisGet.mockResolvedValue(JSON.stringify(complexData));
+    mockRedisGet.mockResolvedValue(complexData);
 
     const result = await getCachedJson<typeof complexData>("complex-key");
 
@@ -125,22 +125,19 @@ describe("getCachedJsonSafe", () => {
 
   it("returns hit status with data for valid JSON", async () => {
     const testData = { id: 1, name: "test" };
-    mockRedisGet.mockResolvedValue(JSON.stringify(testData));
+    mockRedisGet.mockResolvedValue(testData);
 
     const result = await getCachedJsonSafe<typeof testData>("valid-key");
 
     expect(result).toEqual({ data: testData, status: "hit" });
   });
 
-  it("returns invalid status for malformed JSON", async () => {
+  it("returns hit status for string values when no schema is provided", async () => {
     mockRedisGet.mockResolvedValue("invalid json {{");
 
-    const result = await getCachedJsonSafe("bad-json-key");
+    const result = await getCachedJsonSafe<string>("string-key");
 
-    expect(result).toEqual({
-      raw: "invalid json {{",
-      status: "invalid",
-    });
+    expect(result).toEqual({ data: "invalid json {{", status: "hit" });
   });
 
   it("returns unavailable status when Redis throws", async () => {
@@ -157,7 +154,7 @@ describe("getCachedJsonSafe", () => {
       name: z.string(),
     });
     const validData = { id: 1, name: "test" };
-    mockRedisGet.mockResolvedValue(JSON.stringify(validData));
+    mockRedisGet.mockResolvedValue(validData);
 
     const result = await getCachedJsonSafe("schema-key", schema);
 
@@ -170,7 +167,7 @@ describe("getCachedJsonSafe", () => {
       name: z.string(),
     });
     const invalidData = { id: "not-a-number", name: 123 };
-    mockRedisGet.mockResolvedValue(JSON.stringify(invalidData));
+    mockRedisGet.mockResolvedValue(invalidData);
 
     const result = await getCachedJsonSafe("invalid-schema-key", schema);
 
@@ -202,12 +199,12 @@ describe("setCachedJson", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("sets JSON-stringified value without TTL", async () => {
+  it("sets values directly without TTL", async () => {
     const testData = { name: "test", value: 42 };
 
     await setCachedJson("no-ttl-key", testData);
 
-    expect(mockRedisSet).toHaveBeenCalledWith("no-ttl-key", JSON.stringify(testData));
+    expect(mockRedisSet).toHaveBeenCalledWith("no-ttl-key", testData);
   });
 
   it("sets value with TTL when ttlSeconds is positive", async () => {
@@ -215,7 +212,7 @@ describe("setCachedJson", () => {
 
     await setCachedJson("ttl-key", testData, 300);
 
-    expect(mockRedisSet).toHaveBeenCalledWith("ttl-key", JSON.stringify(testData), {
+    expect(mockRedisSet).toHaveBeenCalledWith("ttl-key", testData, {
       ex: 300,
     });
   });
@@ -225,7 +222,7 @@ describe("setCachedJson", () => {
 
     await setCachedJson("zero-ttl-key", testData, 0);
 
-    expect(mockRedisSet).toHaveBeenCalledWith("zero-ttl-key", JSON.stringify(testData));
+    expect(mockRedisSet).toHaveBeenCalledWith("zero-ttl-key", testData);
   });
 
   it("ignores TTL when ttlSeconds is negative", async () => {
@@ -233,10 +230,7 @@ describe("setCachedJson", () => {
 
     await setCachedJson("negative-ttl-key", testData, -100);
 
-    expect(mockRedisSet).toHaveBeenCalledWith(
-      "negative-ttl-key",
-      JSON.stringify(testData)
-    );
+    expect(mockRedisSet).toHaveBeenCalledWith("negative-ttl-key", testData);
   });
 
   it("handles arrays", async () => {
@@ -244,16 +238,13 @@ describe("setCachedJson", () => {
 
     await setCachedJson("array-key", arrayData);
 
-    expect(mockRedisSet).toHaveBeenCalledWith("array-key", JSON.stringify(arrayData));
+    expect(mockRedisSet).toHaveBeenCalledWith("array-key", arrayData);
   });
 
   it("handles primitive values", async () => {
     await setCachedJson("string-key", "just a string");
 
-    expect(mockRedisSet).toHaveBeenCalledWith(
-      "string-key",
-      JSON.stringify("just a string")
-    );
+    expect(mockRedisSet).toHaveBeenCalledWith("string-key", "just a string");
   });
 });
 

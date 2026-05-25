@@ -6,7 +6,7 @@ import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 const ratelimit = createRatelimitMock();
 
-describe("RatelimitMock", () => {
+describe("Ratelimit mock module", () => {
   beforeEach(() => {
     ratelimit.__reset();
   });

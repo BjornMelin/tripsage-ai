@@ -59,9 +59,9 @@ export type CacheResult<T> =
 /**
  * Retrieves a cached JSON value from Upstash Redis.
  *
- * Deserializes the stored JSON string back to the specified type.
+ * Uses the Upstash Redis SDK's automatic deserialization for cached values.
  * Returns `null` if Redis is unavailable, key doesn't exist, or
- * deserialization fails.
+ * retrieval fails.
  *
  * @typeParam T - Expected type of the cached value.
  * @param key - Redis key to fetch.
@@ -93,29 +93,20 @@ export function getCachedJson<T>(
         return null;
       }
 
-      // We store JSON strings via JSON.stringify(), so we need to parse them manually.
-      // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
-      let raw: string | null;
+      let cached: T | null;
       try {
-        raw = await redis.get<string>(key);
+        cached = await redis.get<T>(key);
       } catch (error) {
         captureCacheErrorOnSpan(span, error);
         return null;
       }
-      if (raw === null) {
+      if (cached === null) {
         span.setAttribute("cache.hit", false);
         return null;
       }
 
-      try {
-        span.setAttribute("cache.hit", true);
-        return JSON.parse(raw) as T;
-      } catch {
-        // Invalid JSON - return null to indicate cache miss/invalid data
-        span.setAttribute("cache.hit", false);
-        span.setAttribute("cache.parse_error", true);
-        return null;
-      }
+      span.setAttribute("cache.hit", true);
+      return cached;
     }
   );
 }
@@ -167,51 +158,50 @@ export function getCachedJsonSafe<T>(
         return { status: "unavailable" as const };
       }
 
-      // We store JSON strings via JSON.stringify(), so we need to parse them manually.
-      // Upstash Redis only auto-deserializes when storing objects directly, not pre-stringified JSON.
-      let raw: string | null;
+      let cached: unknown;
       try {
-        raw = await redis.get<string>(key);
+        cached = await redis.get<unknown>(key);
       } catch (error) {
         captureCacheErrorOnSpan(span, error);
         return { status: "unavailable" as const };
       }
-      if (raw === null) {
+      if (cached === null) {
         span.setAttribute("cache.status", "miss");
         return { status: "miss" as const };
       }
 
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        // Invalid JSON - return invalid status with raw string
-        span.setAttribute("cache.status", "invalid");
-        return { raw, status: "invalid" as const };
-      }
-
       if (schema) {
-        const result = schema.safeParse(parsed);
+        const result = schema.safeParse(cached);
         if (!result.success) {
           span.setAttribute("cache.status", "invalid");
           span.setAttribute("cache.validation_failed", true);
-          return { raw: parsed, status: "invalid" as const };
+          return { raw: cached, status: "invalid" as const };
         }
         span.setAttribute("cache.status", "hit");
         return { data: result.data, status: "hit" as const };
       }
 
       span.setAttribute("cache.status", "hit");
-      return { data: parsed as T, status: "hit" as const };
+      return { data: cached as T, status: "hit" as const };
     }
   );
+}
+
+function estimateSerializedLength(value: unknown): number {
+  try {
+    const serialized =
+      typeof value === "string" ? value : (JSON.stringify(value) ?? "");
+    return serialized.length;
+  } catch {
+    return 0;
+  }
 }
 
 /**
  * Stores a JSON value in Upstash Redis with optional TTL.
  *
- * Serializes the value to JSON before storage. If `ttlSeconds` is
- * provided and positive, sets an expiration on the key.
+ * Relies on the Upstash Redis SDK to serialize JavaScript values. If
+ * `ttlSeconds` is provided and positive, sets an expiration on the key.
  *
  * @param key - Redis key to store the value under.
  * @param value - Value to serialize and cache (must be JSON-serializable).
@@ -250,14 +240,13 @@ export function setCachedJson(
         return;
       }
 
-      const payload = JSON.stringify(value);
-      span.setAttribute("cache.value_bytes", payload.length);
+      span.setAttribute("cache.value_bytes", estimateSerializedLength(value));
       try {
         if (ttlSeconds && ttlSeconds > 0) {
-          await redis.set(key, payload, { ex: ttlSeconds });
+          await redis.set(key, value, { ex: ttlSeconds });
           return;
         }
-        await redis.set(key, payload);
+        await redis.set(key, value);
       } catch (error) {
         captureCacheErrorOnSpan(span, error);
       }

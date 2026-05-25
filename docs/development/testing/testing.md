@@ -127,7 +127,7 @@ Organize handlers by domain; compose with `composeHandlers`. Cover success + err
 
 - **Unit:** `setupUpstashMocks()` from `@/test/upstash/redis-mock`; call `redis.__reset()` and `ratelimit.__reset()` in `beforeEach`.
 - **HTTP:** `@/test/msw/handlers/upstash.ts` for pipeline/ratelimit/QStash.
-- **Emulator:** `UPSTASH_USE_EMULATOR=1` + `UPSTASH_REDIS_REST_URL` (Redis REST emulator; `UPSTASH_EMULATOR_URL` is a legacy alias) + `UPSTASH_QSTASH_DEV_URL`; helper in `@/test/upstash/emulator.ts`.
+- **Emulator:** `UPSTASH_USE_EMULATOR=1` + `UPSTASH_REDIS_REST_URL` (Redis REST emulator) + `UPSTASH_QSTASH_DEV_URL`; helper in `@/test/upstash/emulator.ts`.
 - **Smoke:** `pnpm test:upstash:smoke` with `UPSTASH_SMOKE=1`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`, and a disposable `UPSTASH_QSTASH_SMOKE_TARGET_URL`.
 
 ## AI SDK v6 Tests
