@@ -1,3 +1,9 @@
+## [1.33.8](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.7...v1.33.8) (2026-05-25)
+
+### Bug Fixes
+
+* **url:** remove client origin fallback console warning ([8063126](https://github.com/BjornMelin/tripsage-ai/commit/8063126c3521922f1a921e09848b08eb5098ccbb))
+
 ## [1.33.7](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.6...v1.33.7) (2026-05-12)
 
 ### Bug Fixes
