@@ -1,3 +1,9 @@
+## [1.34.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.2...v1.34.3) (2026-05-25)
+
+### Bug Fixes
+
+* **ai:** harden rendered link safety ([#778](https://github.com/BjornMelin/tripsage-ai/issues/778)) ([3d74096](https://github.com/BjornMelin/tripsage-ai/commit/3d74096f3a6acaf04c291738081b56593df6eb0d))
+
 ## [1.34.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.1...v1.34.2) (2026-05-25)
 
 ### Bug Fixes
