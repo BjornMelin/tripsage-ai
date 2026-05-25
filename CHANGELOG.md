@@ -1,3 +1,13 @@
+## [1.34.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.11...v1.34.0) (2026-05-25)
+
+### ⚠ BREAKING CHANGES
+
+* **ai:** normalize Firecrawl search contracts (#774)
+
+### Bug Fixes
+
+* **ai:** normalize Firecrawl search contracts ([#774](https://github.com/BjornMelin/tripsage-ai/issues/774)) ([b758104](https://github.com/BjornMelin/tripsage-ai/commit/b758104aa9803ed638e0a4bf451ea77c184543cf))
+
 ## [1.33.11](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.10...v1.33.11) (2026-05-25)
 
 ### Bug Fixes
