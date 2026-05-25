@@ -8,7 +8,7 @@ const REQUIRED_PUBLIC_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
 } as const;
 
-function LoadClientOrigin() {
+function loadClientOrigin() {
   return import("../client-origin");
 }
 
@@ -22,7 +22,7 @@ describe("client-origin", () => {
         NEXT_PUBLIC_SITE_URL: "https://site.example.com",
       },
       async () => {
-        const { getClientOrigin } = await LoadClientOrigin();
+        const { getClientOrigin } = await loadClientOrigin();
         expect(getClientOrigin()).toBe("https://site.example.com");
       }
     );
@@ -37,7 +37,7 @@ describe("client-origin", () => {
         NEXT_PUBLIC_SITE_URL: undefined,
       },
       async () => {
-        const { getClientOrigin } = await LoadClientOrigin();
+        const { getClientOrigin } = await loadClientOrigin();
         expect(getClientOrigin()).toBe("https://base.example.com");
       }
     );
@@ -50,7 +50,7 @@ describe("client-origin", () => {
         NEXT_PUBLIC_SITE_URL: undefined,
       },
       async () => {
-        const { getClientOrigin } = await LoadClientOrigin();
+        const { getClientOrigin } = await loadClientOrigin();
         expect(getClientOrigin()).toBe("https://app.example.com");
       }
     );
@@ -63,14 +63,21 @@ describe("client-origin", () => {
         NEXT_PUBLIC_APP_URL: undefined,
         NEXT_PUBLIC_BASE_URL: undefined,
         NEXT_PUBLIC_SITE_URL: undefined,
+        NODE_ENV: "development",
       },
       async () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-        const { getClientOrigin } = await LoadClientOrigin();
+        vi.stubGlobal("window", { location: {} });
 
-        expect(getClientOrigin()).toBe("http://localhost:3000");
-        expect(warnSpy).not.toHaveBeenCalled();
-        warnSpy.mockRestore();
+        try {
+          const { getClientOrigin } = await loadClientOrigin();
+
+          expect(getClientOrigin()).toBe("http://localhost:3000");
+          expect(warnSpy).not.toHaveBeenCalled();
+        } finally {
+          warnSpy.mockRestore();
+          vi.unstubAllGlobals();
+        }
       }
     );
   });
@@ -84,7 +91,7 @@ describe("client-origin", () => {
         NEXT_PUBLIC_SITE_URL: "https://site.example.com",
       },
       async () => {
-        const { toClientAbsoluteUrl } = await LoadClientOrigin();
+        const { toClientAbsoluteUrl } = await loadClientOrigin();
 
         expect(toClientAbsoluteUrl("/dashboard")).toBe(
           "https://site.example.com/dashboard"
