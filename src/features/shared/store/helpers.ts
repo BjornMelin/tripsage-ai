@@ -28,7 +28,9 @@ export const getCurrentTimestamp = (): string => nowIso();
  */
 export const isExpired = (timestamp: string | null): boolean => {
   if (!timestamp) return true;
-  return getCurrentEpochMs() >= Date.parse(timestamp);
+  const target = Date.parse(timestamp);
+  if (Number.isNaN(target)) return true;
+  return getCurrentEpochMs() >= target;
 };
 
 /**
@@ -40,6 +42,7 @@ export const timeUntil = (timestamp: string | null): number => {
   if (!timestamp) return 0;
   const now = getCurrentEpochMs();
   const target = Date.parse(timestamp);
+  if (Number.isNaN(target)) return 0;
   return Math.max(0, target - now);
 };
 

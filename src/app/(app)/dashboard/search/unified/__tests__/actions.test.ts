@@ -134,6 +134,58 @@ describe("searchHotelsAction", () => {
     );
   });
 
+  it("derives checkout from a partial check-in date", async () => {
+    mockSearch.mockResolvedValue({ listings: [] });
+
+    await searchHotelsAction({
+      ...validParams,
+      checkIn: "2025-06-10",
+      checkOut: undefined,
+    });
+
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkin: "2025-06-10",
+        checkout: "2025-06-11",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("derives checkin from a partial checkout date", async () => {
+    mockSearch.mockResolvedValue({ listings: [] });
+
+    await searchHotelsAction({
+      ...validParams,
+      checkIn: undefined,
+      checkOut: "2025-06-10",
+    });
+
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkin: "2025-06-09",
+        checkout: "2025-06-10",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("rejects checkout dates that are not after checkin", async () => {
+    const result = await searchHotelsAction({
+      ...validParams,
+      checkIn: "2025-06-10",
+      checkOut: "2025-06-10",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(mockSearch).not.toHaveBeenCalled();
+    if (!result.ok) {
+      expect(result.error.fieldErrors?.checkOut).toContain(
+        "Check-out date must be after check-in date"
+      );
+    }
+  });
+
   it("limits results to 10 hotels", async () => {
     const manyListings = Array.from({ length: 15 }, (_, i) => ({
       id: `hotel-${i}`,
@@ -260,26 +312,7 @@ describe("searchHotelsAction", () => {
     expect(result.data[0].pricing.pricePerNight).toBe(100); // 400 / 4 nights
   });
 
-  it("handles same-day check-in/check-out as 1 night minimum", async () => {
-    const listing = {
-      id: "hotel-1",
-      name: "Test Hotel",
-      rooms: [
-        {
-          rates: [
-            {
-              price: {
-                currency: "USD",
-                total: "100",
-              },
-            },
-          ],
-        },
-      ],
-    };
-    mockSearch.mockResolvedValue({ listings: [listing] });
-
-    // Same day check-in and check-out results in 0 diff, should use 1 night minimum
+  it("rejects same-day check-in/check-out before searching", async () => {
     const paramsWithSameDay = {
       ...validParams,
       checkIn: "2025-06-01",
@@ -288,13 +321,8 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(paramsWithSameDay);
 
-    // Math.ceil(0) = 0, but Math.max(1, 0) = 1 night minimum
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      throw new Error("Expected ok result");
-    }
-
-    expect(result.data[0].pricing.pricePerNight).toBe(100);
+    expect(result.ok).toBe(false);
+    expect(mockSearch).not.toHaveBeenCalled();
   });
 
   it("returns a fallback result when listing validation fails", async () => {

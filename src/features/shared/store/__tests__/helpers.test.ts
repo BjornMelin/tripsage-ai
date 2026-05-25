@@ -11,6 +11,8 @@ describe("shared store helpers", () => {
       vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
       expect(isExpired(null)).toBe(true);
+      expect(isExpired("not-a-date")).toBe(true);
+      expect(isExpired("")).toBe(true);
       expect(isExpired("2026-02-03T04:05:05.999Z")).toBe(true);
       expect(isExpired("2026-02-03T04:05:06.000Z")).toBe(true);
       expect(isExpired("2026-02-03T04:05:06.001Z")).toBe(false);
@@ -23,6 +25,8 @@ describe("shared store helpers", () => {
       vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
       expect(timeUntil(null)).toBe(0);
+      expect(timeUntil("not-a-date")).toBe(0);
+      expect(timeUntil("")).toBe(0);
       expect(timeUntil("2026-02-03T04:05:05.999Z")).toBe(0);
       expect(timeUntil("2026-02-03T04:05:06.250Z")).toBe(250);
     })

@@ -14,6 +14,8 @@ const MS_PER_DAY = 86_400_000;
  *
  * Keeps search-history retention and analytics aligned with the centralized
  * secure timestamp source.
+ *
+ * @returns Current search-history date derived from the centralized timestamp.
  */
 export const getCurrentSearchHistoryDate = (): Date => new Date(nowIso());
 
