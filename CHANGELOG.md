@@ -1,3 +1,9 @@
+## [1.34.7](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.6...v1.34.7) (2026-05-25)
+
+### Bug Fixes
+
+* **search:** centralize runtime timestamps ([#782](https://github.com/BjornMelin/tripsage-ai/issues/782)) ([e787983](https://github.com/BjornMelin/tripsage-ai/commit/e787983c930ee16bf9568946ac29b41b2a3fe5fb))
+
 ## [1.34.6](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.5...v1.34.6) (2026-05-25)
 
 ### Bug Fixes
