@@ -1,3 +1,9 @@
+## [1.34.6](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.5...v1.34.6) (2026-05-25)
+
+### Bug Fixes
+
+* **memory:** stabilize runtime timestamps ([#780](https://github.com/BjornMelin/tripsage-ai/issues/780)) ([b130e57](https://github.com/BjornMelin/tripsage-ai/commit/b130e5731808cdf1727158d712d9892e3c00d484))
+
 ## [1.34.5](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.4...v1.34.5) (2026-05-25)
 
 ### Bug Fixes
