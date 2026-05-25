@@ -1,3 +1,9 @@
+## [1.34.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.0...v1.34.1) (2026-05-25)
+
+### Bug Fixes
+
+* **cache:** use Upstash SDK serialization ([#775](https://github.com/BjornMelin/tripsage-ai/issues/775)) ([a8b8358](https://github.com/BjornMelin/tripsage-ai/commit/a8b83584d0ebbe904b2243c061c1207d653a41e1))
+
 ## [1.34.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.11...v1.34.0) (2026-05-25)
 
 ### ⚠ BREAKING CHANGES
