@@ -91,7 +91,8 @@ function InputGroupAddon({
       className={cn(InputGroupAddonVariants({ align }), className)}
       role="group"
       onMouseDown={(e) => {
-        if ((e.target as HTMLElement).closest("button")) {
+        const target = e.target;
+        if (!(target instanceof Element) || target.closest("button")) {
           return;
         }
         e.preventDefault();
