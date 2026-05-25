@@ -7,6 +7,7 @@
 import type { StaticImageData } from "next/image";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import {
   buildImageProxyUrl,
   isAbsoluteHttpUrl,
@@ -55,6 +56,22 @@ function ReportMissingDimensions({
   }
 }
 
+function MissingDimensionsFallback({
+  fallback,
+  hasHeight,
+  hasWidth,
+}: {
+  fallback?: ReactNode;
+  hasHeight: boolean;
+  hasWidth: boolean;
+}) {
+  useEffect(() => {
+    ReportMissingDimensions({ hasHeight, hasWidth });
+  }, [hasHeight, hasWidth]);
+
+  return fallback ?? DEFAULT_FALLBACK;
+}
+
 /**
  * Renders a Next.js Image using the proxy for remote URLs with a fallback.
  *
@@ -89,8 +106,13 @@ export function ProxiedImage({
   }
 
   if (!fill && (width == null || height == null)) {
-    ReportMissingDimensions({ hasHeight: height != null, hasWidth: width != null });
-    return fallback ?? DEFAULT_FALLBACK;
+    return (
+      <MissingDimensionsFallback
+        fallback={fallback}
+        hasHeight={height != null}
+        hasWidth={width != null}
+      />
+    );
   }
 
   if (fill) {
