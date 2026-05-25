@@ -3,17 +3,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ActivityComparisonModal } from "../activity-comparison-modal";
 
-// Mock Lucide icons
-vi.mock("lucide-react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("lucide-react")>();
-  return {
-    ...actual,
-    MapPin: () => <div data-testid="map-pin-icon" />,
-    Star: () => <div data-testid="star-icon" />,
-    X: () => <div data-testid="x-icon" />,
-  };
-});
-
 // Mock Next.js Image
 vi.mock("next/image", () => ({
   default: (props: { alt: string }) => (
