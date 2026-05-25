@@ -76,7 +76,7 @@ function normalizeActivitiesClientError(
   if (error instanceof Error) {
     return error;
   }
-  return new Error(error ? String(error) : fallbackMessage);
+  return new Error(getErrorMessage(error) || fallbackMessage);
 }
 
 /** Activity search client component props. */
