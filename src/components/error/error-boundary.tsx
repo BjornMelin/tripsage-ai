@@ -80,10 +80,6 @@ export function ErrorBoundary({
           level,
         })
       );
-
-      if (process.env.NODE_ENV === "development") {
-        console.error("ErrorBoundary caught error:", normalized);
-      }
     },
     [level, onError]
   );

@@ -10,6 +10,23 @@ import { getBotIdProtectRules } from "@/config/botid-protect";
 declare global {
   var tripsageBotIdClientInitialized: boolean | undefined;
   var tripsageBotIdClientInitFailed: boolean | undefined;
+  var tripsageBotIdClientInitError: Error | undefined;
+}
+
+/**
+ * Consumes the most recent BotID client initialization failure.
+ *
+ * @returns The last initialization Error or null if no failure is pending.
+ */
+export function consumeBotIdClientInitFailure(): Error | null {
+  if (!globalThis.tripsageBotIdClientInitFailed) return null;
+
+  const error =
+    globalThis.tripsageBotIdClientInitError ??
+    new Error("BotID client initialization failed");
+  globalThis.tripsageBotIdClientInitFailed = undefined;
+  globalThis.tripsageBotIdClientInitError = undefined;
+  return error;
 }
 
 export function ensureBotIdClientInitialized(): void {
@@ -35,10 +52,10 @@ export function ensureBotIdClientInitialized(): void {
     }
   } catch (error) {
     // BotID client init failed; server-side verification remains enforced.
+    const exception =
+      error instanceof Error ? error : new Error("BotID client initialization failed");
     globalThis.tripsageBotIdClientInitFailed = true;
+    globalThis.tripsageBotIdClientInitError = exception;
     globalThis.tripsageBotIdClientInitialized = false;
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[BotID] Client initialization failed:", error);
-    }
   }
 }

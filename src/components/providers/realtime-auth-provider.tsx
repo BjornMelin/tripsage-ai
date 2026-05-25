@@ -5,6 +5,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 /**
  * Keeps Supabase Realtime authorized with the latest access token, reacting to
@@ -17,6 +18,17 @@ export function RealtimeAuthProvider(): null {
     let isMounted = true;
     let cleanupSubscription: (() => void) | null = null;
     let cleanupClientAuth: (() => void) | null = null;
+
+    const normalizeRealtimeAuthError = (error: unknown): Error => {
+      return error instanceof Error ? error : new Error(String(error));
+    };
+
+    const reportRealtimeAuthError = (error: unknown, action: string): void => {
+      recordClientErrorOnActiveSpan(normalizeRealtimeAuthError(error), {
+        action,
+        context: "RealtimeAuthProvider",
+      });
+    };
 
     // biome-ignore lint/style/useNamingConvention: Not a React hook
     async function initializeRealtimeAuthHandler(): Promise<void> {
@@ -49,17 +61,13 @@ export function RealtimeAuthProvider(): null {
         supabase.realtime.setAuth(token ?? "");
       } catch (error: unknown) {
         // Allow UI to operate; realtime auth will refresh when a valid token exists.
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to get initial session:", error);
-        }
+        reportRealtimeAuthError(error, "getInitialSession");
       }
     }
 
     initializeRealtimeAuthHandler().catch((error: unknown) => {
       // Allow UI to operate; realtime auth will refresh when a valid token exists.
-      if (process.env.NODE_ENV === "development") {
-        console.error("initializeRealtimeAuthHandler failed:", error);
-      }
+      reportRealtimeAuthError(error, "initialize");
     });
 
     return () => {

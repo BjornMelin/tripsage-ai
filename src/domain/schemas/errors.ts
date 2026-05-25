@@ -62,6 +62,8 @@ export type ErrorReport = z.infer<typeof errorReportSchema>;
  */
 export interface ErrorFallbackProps {
   error: unknown;
+  onGoHome?: () => void;
+  onReload?: () => void;
   reset?: () => void;
   retry?: () => void;
 }

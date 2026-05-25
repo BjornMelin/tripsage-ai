@@ -21,7 +21,7 @@ interface StoreLogDetails {
  * Client-side logger for Zustand stores.
  *
  * Records errors to the active OTEL span when available.
- * Falls back to no-op in production for non-errors.
+ * Non-error store events are no-ops; use explicit telemetry for durable diagnostics.
  *
  * @param options - Configuration options including store name
  * @returns Logger object with error, warn, and info methods
@@ -47,47 +47,23 @@ export function createStoreLogger(options: StoreLogOptions) {
     },
 
     /**
-     * Log an info message. Development-only logging.
+     * Ignore non-error informational store events.
      *
      * @param message - Info message
      * @param details - Additional context
      */
-    info(message: string, details?: StoreLogDetails) {
-      if (process.env.NODE_ENV === "development") {
-        try {
-          if (details === undefined) {
-            console.log(`[${storeName}] ${message}`);
-          } else {
-            const safeDetails =
-              typeof details === "object" ? JSON.stringify(details) : String(details);
-            console.log(`[${storeName}] ${message}`, safeDetails);
-          }
-        } catch {
-          // Ignore stringification errors
-        }
-      }
+    info(_message: string, _details?: StoreLogDetails) {
+      // Non-error store events should not emit raw browser console diagnostics.
     },
 
     /**
-     * Log a warning. Development-only logging.
+     * Ignore non-error warning store events.
      *
      * @param message - Warning message
      * @param details - Additional context
      */
-    warn(message: string, details?: StoreLogDetails) {
-      if (process.env.NODE_ENV === "development") {
-        try {
-          if (details === undefined) {
-            console.warn(`[${storeName}] ${message}`);
-          } else {
-            const safeDetails =
-              typeof details === "object" ? JSON.stringify(details) : String(details);
-            console.warn(`[${storeName}] ${message}`, safeDetails);
-          }
-        } catch {
-          // Ignore stringification errors
-        }
-      }
+    warn(_message: string, _details?: StoreLogDetails) {
+      // Non-error store events should not emit raw browser console diagnostics.
     },
   };
 }

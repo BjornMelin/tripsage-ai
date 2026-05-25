@@ -6,11 +6,7 @@
 
 import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
-import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
-import { getSessionId } from "@/lib/client/session";
-import { getUserIdFromUserStore } from "@/lib/client/user-store";
-import { errorService } from "@/lib/error-service";
-import { fireAndForget } from "@/lib/utils";
+import { reportRouteErrorBoundaryError } from "@/lib/telemetry/route-error-boundary";
 
 /**
  * Global error boundary for the app.
@@ -25,19 +21,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    const normalized = normalizeThrownError(error);
-    // Report the critical error
-    const errorReport = errorService.createErrorReport(normalized, undefined, {
-      sessionId: getSessionId(),
-      userId: getUserIdFromUserStore(),
+    reportRouteErrorBoundaryError(error, {
+      context: "GlobalErrorBoundary",
     });
-
-    fireAndForget(errorService.reportError(errorReport));
-
-    // Log critical error in development (production uses errorService only)
-    if (process.env.NODE_ENV === "development") {
-      console.error("CRITICAL: Global error boundary caught error:", normalized);
-    }
   }, [error]);
 
   return (

@@ -6,12 +6,18 @@ import { errorService } from "@/lib/error-service";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
+const TelemetrySpy = vi.hoisted(() => vi.fn());
+
 // Mock the error service
 vi.mock("@/lib/error-service", () => ({
   errorService: {
     createErrorReport: vi.fn(),
     reportError: vi.fn(),
   },
+}));
+
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: TelemetrySpy,
 }));
 
 // Console spy refs (setup in beforeEach to ensure fresh spies per test)
@@ -45,6 +51,7 @@ describe("ErrorBoundary", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    TelemetrySpy.mockClear();
 
     // Setup fresh console spies for each test
     ConsoleSpy = {
@@ -101,6 +108,7 @@ describe("ErrorBoundary", () => {
 
       expect(errorService.createErrorReport).not.toHaveBeenCalled();
       expect(errorService.reportError).not.toHaveBeenCalled();
+      expect(TelemetrySpy).not.toHaveBeenCalled();
     });
   });
 
@@ -130,7 +138,14 @@ describe("ErrorBoundary", () => {
           sessionId: expect.any(String),
         })
       );
-      expect(errorService.reportError).toHaveBeenCalled();
+      expect(errorService.reportError).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          action: "render",
+          componentStack: expect.any(String),
+          context: "ErrorBoundary",
+        })
+      );
     });
 
     it("should call custom onError callback", () => {
@@ -150,20 +165,20 @@ describe("ErrorBoundary", () => {
       );
     });
 
-    it("should log errors in development mode", () => {
-      const originalEnv = process.env.NODE_ENV;
-      vi.stubEnv("NODE_ENV", "development");
-
+    it("should pass span metadata through error reporting when an error occurs", () => {
       renderWithProviders(
-        <ErrorBoundary>
+        <ErrorBoundary level="component">
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      expect(ConsoleSpy.error).toHaveBeenCalled();
-      // Group logging may be suppressed in some environments; ensure at least one dev log occurred.
-
-      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+      expect(errorService.reportError).toHaveBeenCalledWith(expect.any(Object), {
+        action: "render",
+        componentStack: expect.any(String),
+        context: "ErrorBoundary",
+        level: "component",
+      });
+      expect(TelemetrySpy).not.toHaveBeenCalled();
     });
   });
 

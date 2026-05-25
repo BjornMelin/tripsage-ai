@@ -4,6 +4,8 @@
 
 "use client";
 
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+
 export type ClipboardCopyResult =
   | { ok: true; method: "clipboard" | "fallback" }
   | {
@@ -11,6 +13,18 @@ export type ClipboardCopyResult =
       reason: "permission-denied" | "insecure-context" | "unavailable" | "failed";
       error?: unknown;
     };
+
+function toClipboardError(error: unknown): Error {
+  return error instanceof Error ? error : new Error("Clipboard copy failed");
+}
+
+function reportClipboardCopyFailure(error: unknown): void {
+  recordClientErrorOnActiveSpan(toClipboardError(error), {
+    action: "copyTextToClipboard",
+    context: "clipboard",
+    reason: "failed",
+  });
+}
 
 function copyTextWithExecCommand(text: string): boolean {
   if (typeof document === "undefined") return false;
@@ -121,8 +135,8 @@ export async function copyToClipboardWithToast(
       break;
     case "failed":
       toast({ ...msgs.failed, variant: "destructive" });
-      if (process.env.NODE_ENV === "development" && result.error) {
-        console.error("Clipboard copy failed:", result.error);
+      if (result.error) {
+        reportClipboardCopyFailure(result.error);
       }
       break;
     default: {

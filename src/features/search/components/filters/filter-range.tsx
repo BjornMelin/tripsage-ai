@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 export interface FilterRangeProps {
   /** Unique identifier for the filter */
@@ -33,6 +34,36 @@ export interface FilterRangeProps {
 
 /** Default value formatter */
 const DEFAULT_FORMAT_VALUE = (value: number) => value.toLocaleString();
+
+function ReportInvalidFilterRangeConfig({
+  filterId,
+  max,
+  min,
+  step,
+}: {
+  filterId: string;
+  max: number;
+  min: number;
+  step: number;
+}): void {
+  try {
+    recordClientErrorOnActiveSpan(
+      new Error(
+        "Invalid FilterRange props: min must be less than max and step must be positive."
+      ),
+      {
+        action: "validateConfig",
+        context: "FilterRange",
+        filterId,
+        max,
+        min,
+        step,
+      }
+    );
+  } catch {
+    // Preserve the existing null-render fallback if telemetry is unavailable.
+  }
+}
 
 /**
  * Range filter component with dual-thumb slider.
@@ -106,12 +137,12 @@ export function FilterRange({
     [filterId, onChange]
   );
 
+  useEffect(() => {
+    if (!hasInvalidConfig) return;
+    ReportInvalidFilterRangeConfig({ filterId, max, min, step });
+  }, [filterId, hasInvalidConfig, max, min, step]);
+
   if (hasInvalidConfig) {
-    if (process.env.NODE_ENV === "development") {
-      console.error(
-        `Invalid FilterRange props for "${filterId}": min (${min}) must be < max (${max}), and step (${step}) must be > 0`
-      );
-    }
     return null;
   }
 
