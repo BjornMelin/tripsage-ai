@@ -7,11 +7,13 @@
 import type { StaticImageData } from "next/image";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import {
   buildImageProxyUrl,
   isAbsoluteHttpUrl,
   normalizeNextImageSrc,
 } from "@/lib/images/image-proxy";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 const DEFAULT_FALLBACK = (
   <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
@@ -30,6 +32,44 @@ export interface ProxiedImageProps {
   height?: number;
   preload?: boolean;
   fallback?: ReactNode;
+}
+
+function ReportMissingDimensions({
+  hasHeight,
+  hasWidth,
+}: {
+  hasHeight: boolean;
+  hasWidth: boolean;
+}): void {
+  try {
+    recordClientErrorOnActiveSpan(
+      new Error("ProxiedImage requires width and height when fill is false."),
+      {
+        action: "validateDimensions",
+        context: "ProxiedImage",
+        hasHeight,
+        hasWidth,
+      }
+    );
+  } catch {
+    // Preserve image fallback rendering if telemetry is unavailable.
+  }
+}
+
+function MissingDimensionsFallback({
+  fallback,
+  hasHeight,
+  hasWidth,
+}: {
+  fallback?: ReactNode;
+  hasHeight: boolean;
+  hasWidth: boolean;
+}) {
+  useEffect(() => {
+    ReportMissingDimensions({ hasHeight, hasWidth });
+  }, [hasHeight, hasWidth]);
+
+  return fallback ?? DEFAULT_FALLBACK;
 }
 
 /**
@@ -66,14 +106,13 @@ export function ProxiedImage({
   }
 
   if (!fill && (width == null || height == null)) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("ProxiedImage requires width and height when fill is false.", {
-        alt,
-        height,
-        width,
-      });
-    }
-    return fallback ?? DEFAULT_FALLBACK;
+    return (
+      <MissingDimensionsFallback
+        fallback={fallback}
+        hasHeight={height != null}
+        hasWidth={width != null}
+      />
+    );
   }
 
   if (fill) {
