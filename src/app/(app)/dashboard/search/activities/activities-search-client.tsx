@@ -63,6 +63,12 @@ const ACTIVITY_COLORS = {
 
 const EMPTY_ACTIVITIES: Activity[] = [];
 
+/**
+ * Converts thrown values from client activity flows into displayable Error objects.
+ *
+ * @param error - The value caught by the caller.
+ * @param fallbackMessage - Message used when the thrown value is empty.
+ */
 function normalizeActivitiesClientError(
   error: unknown,
   fallbackMessage: string
@@ -108,12 +114,10 @@ export default function ActivitiesSearchClient({
   const [pendingAddFromComparison, setPendingAddFromComparison] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const didInitFromUrlParams = useRef(false);
-  const { addItem, removeItem, clearByType, hasItem } = useComparisonStore((state) => ({
-    addItem: state.addItem,
-    clearByType: state.clearByType,
-    hasItem: state.hasItem,
-    removeItem: state.removeItem,
-  }));
+  const addItem = useComparisonStore((state) => state.addItem);
+  const clearByType = useComparisonStore((state) => state.clearByType);
+  const hasItem = useComparisonStore((state) => state.hasItem);
+  const removeItem = useComparisonStore((state) => state.removeItem);
   const activityComparisonItems = useComparisonStore((state) =>
     state.getItemsByType("activity")
   );

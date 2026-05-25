@@ -45,6 +45,7 @@ const MOCK_TRIPS: UiTrip[] = [
   },
 ];
 
+/** Renders the modal with default props and user-event helpers. */
 function RenderTripSelectionModal(
   overrides: Partial<Parameters<typeof TripSelectionModal>[0]> = {}
 ) {
@@ -65,6 +66,7 @@ function RenderTripSelectionModal(
   };
 }
 
+/** Finds the clickable label for a trip name in the modal list. */
 function GetTripLabel(name: string): HTMLLabelElement {
   const label = screen.getByText(name).closest("label");
   if (!(label instanceof HTMLLabelElement)) {

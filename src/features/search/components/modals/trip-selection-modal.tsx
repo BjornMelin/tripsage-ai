@@ -29,6 +29,11 @@ const TRIP_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+/**
+ * Formats date-only trip starts without shifting the displayed day by local timezone.
+ *
+ * @param value - ISO date or datetime string from the trip summary.
+ */
 const FORMAT_TRIP_START_DATE = (value: string): string => {
   const dateParts = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   const date = dateParts
@@ -93,6 +98,11 @@ export function TripSelectionModal({
 
 type TripSelectionModalContentProps = Omit<TripSelectionModalProps, "isOpen">;
 
+/**
+ * Stateful dialog body that resets selection when React remounts it for a new trip flow.
+ *
+ * @param props - Component props without the open state owned by the parent dialog.
+ */
 function TripSelectionModalContent({
   onClose,
   activity,
