@@ -21,6 +21,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-group"
+      role="group"
       className={cn(
         "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none",
         "h-9 min-w-0 has-[>textarea]:h-auto",
@@ -74,9 +75,9 @@ const InputGroupAddonVariants = cva(
 /**
  * Addon region placed inline or in block areas of the input group.
  *
- * @param className Optional extra classes.
- * @param align Alignment of the addon within the group.
- * @returns A div that forwards clicks to focus the input.
+ * @param className - Optional extra classes.
+ * @param align - Alignment of the addon within the group.
+ * @returns A grouped addon region that forwards mouse focus to the input.
  */
 function InputGroupAddon({
   className,
@@ -88,22 +89,16 @@ function InputGroupAddon({
       data-slot="input-group-addon"
       data-align={align}
       className={cn(InputGroupAddonVariants({ align }), className)}
-      role="button"
-      tabIndex={0}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button")) {
+      role="group"
+      onMouseDown={(e) => {
+        const target = e.target;
+        if (!(target instanceof Element) || target.closest("button")) {
           return;
         }
-        e.currentTarget.parentElement?.querySelector("input")?.focus();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if ((e.target as HTMLElement).closest("button")) {
-            return;
-          }
-          e.currentTarget.parentElement?.querySelector("input")?.focus();
-        }
+        e.preventDefault();
+        e.currentTarget.parentElement
+          ?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
+          ?.focus();
       }}
       {...props}
     />
