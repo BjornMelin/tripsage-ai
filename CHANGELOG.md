@@ -1,3 +1,9 @@
+## [1.33.11](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.10...v1.33.11) (2026-05-25)
+
+### Bug Fixes
+
+* **client:** route diagnostics through telemetry ([#773](https://github.com/BjornMelin/tripsage-ai/issues/773)) ([7474063](https://github.com/BjornMelin/tripsage-ai/commit/7474063885ce52d03a96ca07c3822d1b8c8c2595))
+
 ## [1.33.10](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.9...v1.33.10) (2026-05-25)
 
 ### Bug Fixes
