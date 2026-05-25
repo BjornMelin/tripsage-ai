@@ -18,6 +18,12 @@ interface RouteErrorBoundaryReportOptions {
 /**
  * Reports an App Router route-level boundary error to durable error reporting
  * and the currently active client span.
+ *
+ * @param error - Error value thrown by the route-level boundary.
+ * @param options - Route boundary reporting options.
+ * @param options.context - Telemetry context name for the boundary.
+ * @param options.includeUserId - Whether to include the current user ID.
+ * @returns Nothing.
  */
 export function reportRouteErrorBoundaryError(
   error: unknown,
