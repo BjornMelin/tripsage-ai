@@ -13,10 +13,8 @@ export type WebSearchParams = {
   categories?: string[];
   tbs?: string;
   location?: string;
+  country?: string;
   timeoutMs?: number;
-  // UNVERIFIED forward-compat fields
-  region?: string;
-  freshness?: string;
   userId?: string;
 };
 
@@ -75,8 +73,14 @@ export const webSearchInputSchema = z.strictObject({
     .array(z.union([z.enum(["github", "research", "pdf"]), z.string()]))
     .nullable()
     .describe("Search categories to filter results"),
+  country: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/, { error: "country must be a two-letter code" })
+    .transform((value) => value.toUpperCase())
+    .nullable()
+    .describe("Two-letter country code for geo-targeted search"),
   fresh: z.boolean().default(false).describe("Whether to prioritize fresh results"),
-  freshness: z.string().nullable().describe("Time-based freshness filter"), // UNVERIFIED
   limit: z
     .number()
     .int()
@@ -90,7 +94,6 @@ export const webSearchInputSchema = z.strictObject({
     .nullable()
     .describe("Geographic location for localized search"),
   query: z.string().min(2).max(256).describe("Search query string"),
-  region: z.string().nullable().describe("Region code for search"), // UNVERIFIED
   scrapeOptions: z
     .strictObject({
       formats: z

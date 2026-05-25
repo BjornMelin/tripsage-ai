@@ -18,12 +18,11 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 type WebSearchToolInput = {
   categories: string[] | null;
+  country: string | null;
   fresh: boolean;
-  freshness: string | null;
   limit: number;
   location: string | null;
   query: string;
-  region: string | null;
   scrapeOptions: {
     formats: Array<"markdown" | "html" | "links" | "screenshot"> | null;
     parsers: string[] | null;
@@ -89,12 +88,11 @@ export function createWebSearchFallback(
     const executed = execute(
       {
         categories: null,
+        country: null,
         fresh: false,
-        freshness: null,
         limit,
         location: null,
         query,
-        region: null,
         scrapeOptions: null,
         sources: ["web"],
         tbs: null,

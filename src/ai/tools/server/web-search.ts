@@ -14,7 +14,10 @@ import {
   isToolError,
   TOOL_ERROR_CODES,
 } from "@ai/tools/server/errors";
-import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
+import {
+  extractFirecrawlSearchResults,
+  normalizeWebSearchResults,
+} from "@ai/tools/server/web-search-normalize";
 import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
@@ -39,7 +42,7 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
   description:
     "Search the web via Firecrawl v2.5 and return normalized results. " +
     "Supports sources (web/news/images), categories (github/research/pdf), " +
-    "time filters (tbs), location, and optional content scraping.",
+    "time filters (tbs), location/country targeting, and optional content scraping.",
   execute: async (params, callOptions) => runWebSearch(params, callOptions),
   guardrails: {
     cache: {
@@ -75,6 +78,7 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
           ? params.categories.length
           : 0,
         fresh: Boolean(params.fresh),
+        hasCountry: Boolean(params.country),
         hasLocation: Boolean(params.location),
         hasTbs: Boolean(params.tbs),
         limit: params.limit,
@@ -118,11 +122,10 @@ async function runWebSearch(
           };
     const requestParams = {
       categories: params.categories ?? undefined,
-      freshness: params.freshness ?? undefined,
+      country: params.country ?? undefined,
       limit: params.limit,
       location: params.location ?? undefined,
       query: params.query,
-      region: params.region ?? undefined,
       scrapeOptions,
       sources: params.sources ?? undefined,
       tbs: params.tbs ?? undefined,
@@ -149,8 +152,7 @@ async function runWebSearch(
     if (!response.ok) {
       await handleHttpError(response);
     }
-    const data = await response.json();
-    const rawResults = Array.isArray(data.results) ? data.results : [];
+    const rawResults = extractFirecrawlSearchResults(await response.json());
     const normalized = normalizeWebSearchResults(rawResults);
     return WEB_SEARCH_OUTPUT_SCHEMA.parse({
       fromCache: false,
@@ -210,11 +212,10 @@ function getTimeout(timeoutMs?: number): number {
 function buildCacheKeySuffix(params: WebSearchInput): string {
   const cacheParams: Record<string, unknown> = {
     categories: params.categories,
-    freshness: params.freshness,
+    country: params.country,
     limit: params.limit,
     location: params.location,
     query: params.query.trim().toLowerCase(),
-    region: params.region,
     sources: params.sources,
     tbs: params.tbs,
     timeoutMs: params.timeoutMs,
@@ -244,10 +245,9 @@ function buildRequestBody(params: {
   categories?: string[];
   tbs?: string;
   location?: string;
+  country?: string;
   timeoutMs?: number;
   scrapeOptions?: ScrapeOptions;
-  region?: string | undefined;
-  freshness?: string | undefined;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     query: params.query,
@@ -267,11 +267,8 @@ function buildRequestBody(params: {
   if (params.location) {
     body.location = params.location;
   }
-  if (params.region) {
-    body.region = params.region;
-  }
-  if (params.freshness) {
-    body.freshness = params.freshness;
+  if (params.country) {
+    body.country = params.country;
   }
   if (params.timeoutMs) {
     body.timeout = params.timeoutMs;

@@ -243,7 +243,7 @@ describe("getCurrentWeather", () => {
       const execute = await getWeatherExecute();
       server.use(
         http.get("https://api.openweathermap.org/data/2.5/weather", () => {
-          throw new Error("Network error");
+          return HttpResponse.error();
         })
       );
 

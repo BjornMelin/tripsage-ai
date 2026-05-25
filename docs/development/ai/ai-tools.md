@@ -327,7 +327,7 @@ export const myTool = createAiTool({
 
 ## Testing Tools
 
-Tools should be tested through AI SDK patterns. See `src/ai/lib/tool-factory.test.ts` for examples:
+Tools should be tested through AI SDK patterns. See `src/ai/lib/__tests__/tool-factory.test.ts` for examples:
 
 ```typescript
 import type { ToolExecutionOptions } from "ai";
@@ -347,7 +347,7 @@ test("tool caches results", async () => {
 
 **Test setup:**
 
-- Mock Upstash Redis using `setupUpstashMocks()` from `@/test/setup/upstash`
+- Mock Upstash Redis using `setupUpstashMocks()` from `@/test/upstash/redis-mock`
 - Use MSW handlers from `@/test/msw/handlers/upstash` for rate-limiting
 - Stub telemetry spans with `vi.mock("@/lib/telemetry/span")`
 
@@ -366,6 +366,22 @@ All tools are exported from `src/ai/tools/index.ts`. The `toolRegistry` object p
 | `getActivityDetails` | Activity details by Place ID | `server/activities.ts` |
 | `searchPlaces` | Places search (canonical) | `server/places.ts` |
 | `searchPlaceDetails` | Place details (canonical) | `server/places.ts` |
+
+#### Firecrawl Search Contract
+
+`webSearch` and `webSearchBatch` normalize Firecrawl v2 search responses into
+TripSage's stable output shape: `{ fromCache, results, tookMs }`.
+Provider-specific response details stay inside `server/web-search.ts` and
+`server/web-search-normalize.ts`.
+
+- Request fields: `query`, `limit`, `sources`, `categories`, `tbs`,
+  `location`, `country`, `timeoutMs`, and optional `scrapeOptions`.
+- Geo-targeting: use `country` for two-letter country codes and `location` for
+  a human-readable place. Do not add undocumented aliases such as `region`.
+- Time filtering: use Firecrawl's `tbs` values; do not add separate freshness
+  fields.
+- Response mapping: Firecrawl v2 `data.web`, `data.news`, and `data.images`
+  arrays are flattened and sanitized into TripSage `results`.
 
 ### Travel Planning
 
@@ -468,6 +484,9 @@ Tool errors use standardized codes from `@ai/tools/server/errors.ts`. Use `creat
 
 ```typescript
 import { createToolError, isToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("ai.tools.example");
 
 // Throwing errors
 if (!apiKey) {
@@ -487,7 +506,7 @@ try {
 } catch (error) {
   if (isToolError(error)) {
     // Handle known tool error
-    console.log(`Tool error: ${error.code}`);
+    logger.warn("tool_error", { code: error.code });
   }
   throw error;
 }
@@ -513,6 +532,7 @@ See [Activities Developer Guide](../frontend/activities.md) for a complete imple
 ## Source Files
 
 - Tool Factory: `src/ai/lib/tool-factory.ts`
+- Tool Factory tests: `src/ai/lib/__tests__/tool-factory.test.ts`
 - Tool Registry: `src/ai/tools/index.ts`
 - Error Codes: `src/ai/tools/server/errors.ts`
 - AI SDK v6 Documentation: <https://sdk.vercel.ai/docs>

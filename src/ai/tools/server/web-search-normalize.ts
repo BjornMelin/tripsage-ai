@@ -5,6 +5,39 @@
 import type { WebSearchSource } from "@ai/tools/schemas/web-search";
 import { sanitizeForPrompt } from "@/lib/security/prompt-sanitizer";
 
+const FIRECRAWL_SEARCH_SOURCE_KEYS = ["web", "news", "images"] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Extracts result arrays from Firecrawl search payloads.
+ *
+ * Firecrawl v2 returns results under `data.web`, `data.news`, and `data.images`.
+ * Older local tests and adapters may still return a flat `results` array, so this
+ * keeps that legacy shape readable while normalizing the documented v2 shape.
+ */
+export function extractFirecrawlSearchResults(payload: unknown): unknown[] {
+  if (!isRecord(payload)) {
+    return [];
+  }
+
+  if (Array.isArray(payload.results)) {
+    return payload.results;
+  }
+
+  const data = payload.data;
+  if (!isRecord(data)) {
+    return [];
+  }
+
+  return FIRECRAWL_SEARCH_SOURCE_KEYS.flatMap((key) => {
+    const value = data[key];
+    return Array.isArray(value) ? value : [];
+  });
+}
+
 /**
  * Normalizes a single search result item to match the strict schema.
  *
@@ -41,10 +74,14 @@ export function normalizeWebSearchResult(item: unknown): WebSearchSource | null 
   // SECURITY: Sanitize snippet to prevent injection via search results
   if (typeof record.snippet === "string") {
     normalized.snippet = sanitizeForPrompt(record.snippet, 500);
+  } else if (typeof record.description === "string") {
+    normalized.snippet = sanitizeForPrompt(record.description, 500);
   }
 
   if (typeof record.publishedAt === "string") {
     normalized.publishedAt = record.publishedAt;
+  } else if (typeof record.date === "string") {
+    normalized.publishedAt = record.date;
   }
 
   return normalized;

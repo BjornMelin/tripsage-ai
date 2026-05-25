@@ -10,6 +10,13 @@ export const webSearchBatchInputSchema = z.strictObject({
     .array(z.string())
     .nullable()
     .describe("Search categories to filter results"),
+  country: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/, { error: "country must be a two-letter code" })
+    .transform((value) => value.toUpperCase())
+    .nullable()
+    .describe("Two-letter country code for geo-targeted search"),
   fresh: z
     .boolean()
     .default(false)
