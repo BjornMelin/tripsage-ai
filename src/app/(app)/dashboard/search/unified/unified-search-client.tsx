@@ -54,6 +54,7 @@ import {
 import { getErrorMessage } from "@/lib/api/error-types";
 import type { Result, ResultError } from "@/lib/result";
 import { ROUTES } from "@/lib/routes";
+import { nowIso } from "@/lib/security/random";
 import { statusVariants } from "@/lib/variants/status";
 
 interface UnifiedSearchClientProps {
@@ -65,6 +66,10 @@ interface UnifiedSearchClientProps {
     params: HotelSearchFormData,
     signal?: AbortSignal
   ) => Promise<Result<HotelResult[], ResultError>>;
+}
+
+function getCurrentRefreshDate(): Date {
+  return new Date(nowIso());
 }
 
 export default function UnifiedSearchClient({
@@ -99,7 +104,7 @@ export default function UnifiedSearchClient({
       const results = await onSearchFlights(params, controller.signal);
       if (controller.signal.aborted) return;
       setFlightResults(results);
-      setLastUpdated(new Date());
+      setLastUpdated(getCurrentRefreshDate());
       setShowResults(true);
     } catch (error) {
       if (controller.signal.aborted || isAbortError(error)) {
@@ -130,7 +135,7 @@ export default function UnifiedSearchClient({
     setFlightResults(mocks.MOCK_FLIGHT_RESULTS.map((result) => ({ ...result })));
     setHotelResults(mocks.MOCK_HOTEL_RESULTS.map((result) => ({ ...result })));
     setErrorMessage(null);
-    setLastUpdated(new Date());
+    setLastUpdated(getCurrentRefreshDate());
     setShowResults(true);
   };
 
@@ -156,7 +161,7 @@ export default function UnifiedSearchClient({
       }
 
       setHotelResults(results.data);
-      setLastUpdated(new Date());
+      setLastUpdated(getCurrentRefreshDate());
       setShowResults(true);
     } catch (error) {
       if (controller.signal.aborted || isAbortError(error)) {

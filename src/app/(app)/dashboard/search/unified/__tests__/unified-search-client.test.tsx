@@ -14,9 +14,18 @@ import { MOCK_HOTEL_RESULTS } from "@/mocks/unified-search-mocks";
 import UnifiedSearchClient from "../unified-search-client";
 
 const mockToast = vi.hoisted(() => vi.fn());
+const formatDistanceToNowSpy = vi.hoisted(() => vi.fn(() => "centralized time ago"));
 
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
+}));
+
+vi.mock("@/lib/security/random", () => ({
+  nowIso: vi.fn(() => "2025-05-20T12:00:00.000Z"),
+}));
+
+vi.mock("date-fns", () => ({
+  formatDistanceToNow: formatDistanceToNowSpy,
 }));
 
 vi.mock("@/components/layouts/search-layout", () => ({
@@ -168,6 +177,11 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
+function hasNormalizedTextContent(expectedText: string) {
+  return (_content: string, element: Element | null): boolean =>
+    element?.textContent?.replace(/\s+/g, " ").trim() === expectedText;
+}
+
 describe("UnifiedSearchClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -213,5 +227,33 @@ describe("UnifiedSearchClient", () => {
 
     expect(screen.getByText("Latest Hotel")).toBeInTheDocument();
     expect(screen.queryByText("Stale Hotel")).not.toBeInTheDocument();
+  });
+
+  it("renders hotel result refresh time from the centralized clock", async () => {
+    const onSearchHotels = vi
+      .fn<
+        (
+          params: HotelSearchFormData,
+          signal?: AbortSignal
+        ) => Promise<HotelSearchResult>
+      >()
+      .mockResolvedValue({
+        data: [{ ...MOCK_HOTEL_RESULTS[0], name: "Clocked Hotel" }],
+        ok: true,
+      });
+
+    render(<UnifiedSearchClient onSearchHotels={onSearchHotels} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Hotels" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run Hotel Search" }));
+
+    await waitFor(() => expect(screen.getByText("Clocked Hotel")).toBeInTheDocument());
+    expect(
+      screen.getByText(hasNormalizedTextContent("Updated centralized time ago"))
+    ).toBeInTheDocument();
+    expect(formatDistanceToNowSpy).toHaveBeenCalledWith(
+      new Date("2025-05-20T12:00:00.000Z"),
+      { addSuffix: true }
+    );
   });
 });

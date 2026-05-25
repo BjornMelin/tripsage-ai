@@ -333,10 +333,15 @@ describe("Search Store Integration", () => {
         result.current.initializeSearch("flight");
       });
 
+      const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(1_234_567);
       let searchId: string | null = null;
-      await act(async () => {
-        searchId = await result.current.executeSearch(params);
-      });
+      try {
+        await act(async () => {
+          searchId = await result.current.executeSearch(params);
+        });
+      } finally {
+        dateNowSpy.mockRestore();
+      }
 
       expect(searchId).toEqual(expect.any(String));
       expect(capturedBody).toMatchObject({
@@ -354,6 +359,13 @@ describe("Search Store Integration", () => {
         destination: "LAX",
         origin: "SFO",
       });
+      expect(dateNowSpy).not.toHaveBeenCalled();
+      expect(useSearchResultsStore.getState().metrics?.searchDuration).toEqual(
+        expect.any(Number)
+      );
+      expect(
+        useSearchResultsStore.getState().metrics?.searchDuration
+      ).toBeGreaterThanOrEqual(0);
     });
   });
 

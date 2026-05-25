@@ -4,6 +4,10 @@
 
 import { nowIso, secureId } from "@/lib/security/random";
 
+function getCurrentEpochMs(currentIso = nowIso()): number {
+  return Date.parse(currentIso);
+}
+
 /**
  * Generate cryptographically secure ID.
  * @param length Desired length of the ID (default 12)
@@ -24,7 +28,9 @@ export const getCurrentTimestamp = (): string => nowIso();
  */
 export const isExpired = (timestamp: string | null): boolean => {
   if (!timestamp) return true;
-  return new Date() >= new Date(timestamp);
+  const target = Date.parse(timestamp);
+  if (Number.isNaN(target)) return true;
+  return getCurrentEpochMs() >= target;
 };
 
 /**
@@ -34,8 +40,9 @@ export const isExpired = (timestamp: string | null): boolean => {
  */
 export const timeUntil = (timestamp: string | null): number => {
   if (!timestamp) return 0;
-  const now = Date.now();
-  const target = new Date(timestamp).getTime();
+  const now = getCurrentEpochMs();
+  const target = Date.parse(timestamp);
+  if (Number.isNaN(target)) return 0;
   return Math.max(0, target - now);
 };
 

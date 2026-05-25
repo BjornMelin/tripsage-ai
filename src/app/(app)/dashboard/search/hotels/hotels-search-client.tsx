@@ -59,6 +59,7 @@ import { mapAccommodationToHotelResult } from "./hotel-mapping";
 import { HotelsEmptyState } from "./hotels-empty-state";
 import {
   DEFAULT_POPULAR_DESTINATIONS,
+  getPopularDestinationsCacheTimestampMs,
   mapPopularDestinationsFromApiResponse,
   type PopularDestinationProps,
   readCachedPopularDestinations,
@@ -105,7 +106,10 @@ export default function HotelsSearchClient({
   }, [initializeSearch]);
 
   useEffect(() => {
-    const cached = readCachedPopularDestinations(window.sessionStorage, Date.now());
+    const cached = readCachedPopularDestinations(
+      window.sessionStorage,
+      getPopularDestinationsCacheTimestampMs()
+    );
     if (cached) {
       setPopularDestinations(cached);
       return;
@@ -124,7 +128,11 @@ export default function HotelsSearchClient({
 
         if (!controller.signal.aborted && mapped.length > 0) {
           setPopularDestinations(mapped);
-          writeCachedPopularDestinations(window.sessionStorage, Date.now(), mapped);
+          writeCachedPopularDestinations(
+            window.sessionStorage,
+            getPopularDestinationsCacheTimestampMs(),
+            mapped
+          );
         }
       } catch (error) {
         if (controller.signal.aborted || isAbortError(error)) {

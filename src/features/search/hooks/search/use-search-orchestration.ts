@@ -23,6 +23,7 @@ import {
   useSearchParamsStore,
 } from "@/features/search/store/search-params-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
+import { nowIso } from "@/lib/security/random";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
 import {
   getEmptyResults,
@@ -334,7 +335,7 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
       );
 
       try {
-        const startTime = Date.now();
+        const startTime = performance.now();
 
         // Add to recent searches (will update resultsCount after search completes)
         addRecentSearch(currentSearchType, searchParams, {
@@ -356,7 +357,7 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
 
         updateSearchProgress(searchId, 75);
 
-        const searchDuration = Date.now() - startTime;
+        const searchDuration = performance.now() - startTime;
         const totalResults = Object.values(results)
           .filter(Array.isArray)
           .reduce((sum, arr) => sum + arr.length, 0);
@@ -380,7 +381,7 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
         const errorDetails = {
           code: "SEARCH_FAILED",
           message: error instanceof Error ? error.message : "Search failed",
-          occurredAt: new Date().toISOString(),
+          occurredAt: nowIso(),
           retryable: true,
         };
 

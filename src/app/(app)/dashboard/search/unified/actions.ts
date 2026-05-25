@@ -16,7 +16,6 @@ import {
   type SearchAccommodationParams,
   searchAccommodationParamsSchema,
 } from "@schemas/search";
-import { format } from "date-fns";
 import { createAccommodationPersistence } from "@/lib/accommodations/persistence";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
 import { bumpTag, versionedKey } from "@/lib/cache/tags";
@@ -32,13 +31,64 @@ import {
   type ResultError,
   zodErrorToFieldErrors,
 } from "@/lib/result";
-import { secureUuid } from "@/lib/security/random";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const MAX_SEARCH_RESULTS = 10;
 const logger = createServerLogger("search.unified.actions");
+const MS_PER_DAY = 86_400_000;
+
+type HotelSearchActionParams = Omit<HotelSearchFormData, "checkIn" | "checkOut"> &
+  Partial<Pick<HotelSearchFormData, "checkIn" | "checkOut">>;
+
+function getDefaultHotelSearchDates(): { checkIn: string; checkOut: string } {
+  const checkIn = nowIso().slice(0, 10);
+
+  return {
+    checkIn,
+    checkOut: addDaysToDateString(checkIn, 1),
+  };
+}
+
+function addDaysToDateString(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00.000Z`) + days * MS_PER_DAY)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function parseDateStringUtcMs(date: string): number {
+  return Date.parse(`${date}T00:00:00.000Z`);
+}
+
+function resolveHotelSearchDates(
+  params: Pick<SearchAccommodationParams, "checkIn" | "checkOut">
+): Result<{ checkIn: string; checkOut: string }, ResultError> {
+  const defaults = getDefaultHotelSearchDates();
+  const checkIn = params.checkIn;
+  const checkOut = params.checkOut;
+
+  if (!checkIn && !checkOut) return ok(defaults);
+
+  const resolvedCheckIn =
+    checkIn ?? addDaysToDateString(checkOut ?? defaults.checkOut, -1);
+  const resolvedCheckOut = checkOut ?? addDaysToDateString(resolvedCheckIn, 1);
+  const checkInMs = parseDateStringUtcMs(resolvedCheckIn);
+  const checkOutMs = parseDateStringUtcMs(resolvedCheckOut);
+
+  if (Number.isNaN(checkInMs) || Number.isNaN(checkOutMs) || checkOutMs <= checkInMs) {
+    return err({
+      error: "invalid_request",
+      fieldErrors: {
+        checkOut: ["Check-out date must be after check-in date"],
+      },
+      reason: "Invalid hotel search date range",
+    });
+  }
+
+  return ok({ checkIn: resolvedCheckIn, checkOut: resolvedCheckOut });
+}
 
 /** Build photo URL. */
 function buildPhotoUrl(photoName?: string): string | undefined {
@@ -59,7 +109,7 @@ function buildPhotoUrl(photoName?: string): string | undefined {
  * @returns Array of hotel results.
  */
 export async function searchHotelsAction(
-  params: HotelSearchFormData
+  params: HotelSearchActionParams
 ): Promise<Result<HotelResult[], ResultError>> {
   // Map component params to schema format
   const schemaParams: SearchAccommodationParams = {
@@ -112,13 +162,11 @@ export async function searchHotelsAction(
     versionedKey,
     withTelemetrySpan,
   });
-  const today = new Date();
-  const todayIso = format(today, "yyyy-MM-dd");
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const tomorrowIso = format(tomorrow, "yyyy-MM-dd");
-  const effectiveCheckIn = validatedParams.checkIn ?? todayIso;
-  const effectiveCheckOut = validatedParams.checkOut ?? tomorrowIso;
+  const dateResolution = resolveHotelSearchDates(validatedParams);
+  if (!dateResolution.ok) return dateResolution;
+
+  const { checkIn: effectiveCheckIn, checkOut: effectiveCheckOut } =
+    dateResolution.data;
   let searchResult: Awaited<ReturnType<typeof service.search>>;
   try {
     searchResult = await withTelemetrySpan(

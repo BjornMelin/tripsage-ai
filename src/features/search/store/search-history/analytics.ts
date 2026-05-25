@@ -3,7 +3,7 @@
  */
 
 import type { StateCreator } from "zustand";
-import { computeSearchAnalytics } from "./analytics-utils";
+import { computeSearchAnalytics, getCurrentSearchHistoryDate } from "./analytics-utils";
 import type { AnalyticsSlice, SearchHistoryState } from "./types";
 
 export const createAnalyticsSlice: StateCreator<
@@ -37,9 +37,10 @@ export const createAnalyticsSlice: StateCreator<
   getSearchTrends: (searchType, days = 30) => {
     const { recentSearches } = get();
     const trends: Array<{ date: string; count: number }> = [];
+    const baseDate = getCurrentSearchHistoryDate();
 
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
+      const date = new Date(baseDate.getTime());
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split("T")[0];
 

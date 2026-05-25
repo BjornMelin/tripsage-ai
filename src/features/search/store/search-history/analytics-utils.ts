@@ -4,9 +4,20 @@
 
 import type { SearchType } from "@schemas/search";
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
+import { nowIso } from "@/lib/security/random";
 import type { SearchAnalytics } from "./types";
 
 const MS_PER_DAY = 86_400_000;
+
+/**
+ * Get the current date through the repository timestamp helper.
+ *
+ * Keeps search-history retention and analytics aligned with the centralized
+ * secure timestamp source.
+ *
+ * @returns Current search-history date derived from the centralized timestamp.
+ */
+export const getCurrentSearchHistoryDate = (): Date => new Date(nowIso());
 
 /**
  * Creates a record with all search types as keys, initialized with the provided factory
@@ -47,13 +58,13 @@ const getDestinationLabel = (search: SearchHistoryItem): string | null => {
  * Dates are normalized to UTC and returned as `YYYY-MM-DD` strings.
  *
  * @param searchesByDay - Map keyed by `YYYY-MM-DD` with daily counts.
- * @param now - Reference time (defaults to `new Date()`).
+ * @param now - Reference time (defaults to the current secure timestamp helper).
  * @param days - Number of days to include (defaults to `30`).
  * @returns Array of `{ date, count }` entries ordered oldest → newest.
  */
 export const buildSearchTrends = (
   searchesByDay: Map<string, number>,
-  now: Date = new Date(),
+  now: Date = getCurrentSearchHistoryDate(),
   days: number = 30
 ): Array<{ date: string; count: number }> => {
   const baseUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -76,14 +87,14 @@ export const buildSearchTrends = (
  *
  * @param recentSearches - Array of recent search history items to analyze.
  * @param savedSearches - Array of validated saved searches to analyze.
- * @param now - Reference time (defaults to `new Date()`).
+ * @param now - Reference time (defaults to the current secure timestamp helper).
  * @param days - Number of days to include in search trends (defaults to `30`).
  * @returns Comprehensive analytics object with aggregations, trends, and top items.
  */
 export const computeSearchAnalytics = (
   recentSearches: SearchHistoryItem[],
   savedSearches: ValidatedSavedSearch[],
-  now: Date = new Date(),
+  now: Date = getCurrentSearchHistoryDate(),
   days: number = 30
 ): SearchAnalytics => {
   const totalSearches = recentSearches.length;

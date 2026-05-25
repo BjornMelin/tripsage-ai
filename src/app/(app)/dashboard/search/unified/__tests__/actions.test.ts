@@ -14,6 +14,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 // Mock secure UUID
 vi.mock("@/lib/security/random", () => ({
+  nowIso: vi.fn(() => "2025-05-20T12:00:00.000Z"),
   secureUuid: vi.fn(() => "mock-uuid-123"),
 }));
 
@@ -108,6 +109,81 @@ describe("searchHotelsAction", () => {
       expect.any(Object),
       expect.any(Function)
     );
+  });
+
+  it("uses centralized clock defaults when dates are omitted", async () => {
+    mockSearch.mockResolvedValue({ listings: [] });
+
+    await searchHotelsAction({
+      adults: validParams.adults,
+      amenities: validParams.amenities,
+      children: validParams.children,
+      currency: validParams.currency,
+      location: validParams.location,
+      priceRange: validParams.priceRange,
+      rating: validParams.rating,
+      rooms: validParams.rooms,
+    });
+
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkin: "2025-05-20",
+        checkout: "2025-05-21",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("derives checkout from a partial check-in date", async () => {
+    mockSearch.mockResolvedValue({ listings: [] });
+
+    await searchHotelsAction({
+      ...validParams,
+      checkIn: "2025-06-10",
+      checkOut: undefined,
+    });
+
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkin: "2025-06-10",
+        checkout: "2025-06-11",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("derives checkin from a partial checkout date", async () => {
+    mockSearch.mockResolvedValue({ listings: [] });
+
+    await searchHotelsAction({
+      ...validParams,
+      checkIn: undefined,
+      checkOut: "2025-06-10",
+    });
+
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkin: "2025-06-09",
+        checkout: "2025-06-10",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("rejects checkout dates that are not after checkin", async () => {
+    const result = await searchHotelsAction({
+      ...validParams,
+      checkIn: "2025-06-10",
+      checkOut: "2025-06-10",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(mockSearch).not.toHaveBeenCalled();
+    if (!result.ok) {
+      expect(result.error.fieldErrors?.checkOut).toContain(
+        "Check-out date must be after check-in date"
+      );
+    }
   });
 
   it("limits results to 10 hotels", async () => {
@@ -236,26 +312,7 @@ describe("searchHotelsAction", () => {
     expect(result.data[0].pricing.pricePerNight).toBe(100); // 400 / 4 nights
   });
 
-  it("handles same-day check-in/check-out as 1 night minimum", async () => {
-    const listing = {
-      id: "hotel-1",
-      name: "Test Hotel",
-      rooms: [
-        {
-          rates: [
-            {
-              price: {
-                currency: "USD",
-                total: "100",
-              },
-            },
-          ],
-        },
-      ],
-    };
-    mockSearch.mockResolvedValue({ listings: [listing] });
-
-    // Same day check-in and check-out results in 0 diff, should use 1 night minimum
+  it("rejects same-day check-in/check-out before searching", async () => {
     const paramsWithSameDay = {
       ...validParams,
       checkIn: "2025-06-01",
@@ -264,13 +321,8 @@ describe("searchHotelsAction", () => {
 
     const result = await searchHotelsAction(paramsWithSameDay);
 
-    // Math.ceil(0) = 0, but Math.max(1, 0) = 1 night minimum
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      throw new Error("Expected ok result");
-    }
-
-    expect(result.data[0].pricing.pricePerNight).toBe(100);
+    expect(result.ok).toBe(false);
+    expect(mockSearch).not.toHaveBeenCalled();
   });
 
   it("returns a fallback result when listing validation fails", async () => {
