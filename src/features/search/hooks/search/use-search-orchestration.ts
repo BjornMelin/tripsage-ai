@@ -562,6 +562,3 @@ export function useSearchOrchestration(): UseSearchOrchestrationResult {
     ]
   );
 }
-
-// Re-export the hook as useSearchStore for backward compatibility
-export { useSearchOrchestration as useSearchStore };

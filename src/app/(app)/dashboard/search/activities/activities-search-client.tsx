@@ -42,6 +42,7 @@ import { useSearchResultsStore } from "@/features/search/store/search-results-st
 import { openActivityBooking } from "@/lib/activities/booking";
 import { getErrorMessage } from "@/lib/api/error-types";
 import type { Result, ResultError } from "@/lib/result";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 import { ActivitiesSelectionDialog } from "./activities-selection-dialog";
 import { isActivity, partitionActivitiesByFallback } from "./activity-results";
@@ -59,6 +60,16 @@ const ACTIVITY_COLORS = {
   aiSuggestionIcon: "text-highlight",
   successIcon: "text-success",
 } as const;
+
+function normalizeActivitiesClientError(
+  error: unknown,
+  fallbackMessage: string
+): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error(error ? String(error) : fallbackMessage);
+}
 
 /** Activity search client component props. */
 interface ActivitiesSearchClientProps {
@@ -216,17 +227,16 @@ export default function ActivitiesSearchClient({
       setTrips(fetchedTrips.data);
       setIsTripModalOpen(true);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : error
-            ? String(error)
-            : "Failed to load trips.";
-      if (process.env.NODE_ENV === "development") {
-        console.error("Failed to load trips:", error);
-      }
+      const normalizedError = normalizeActivitiesClientError(
+        error,
+        "Failed to load trips."
+      );
+      recordClientErrorOnActiveSpan(normalizedError, {
+        action: "loadTrips",
+        context: "ActivitiesSearchClient",
+      });
       toast({
-        description: message || "Failed to load trips.",
+        description: normalizedError.message || "Failed to load trips.",
         title: "Error",
         variant: "destructive",
       });

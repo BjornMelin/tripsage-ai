@@ -8,7 +8,7 @@ import type { Activity } from "@schemas/search";
 import type { UiTrip } from "@schemas/trips";
 import { CalendarIcon, MapPinIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,6 +53,31 @@ export function TripSelectionModal({
   onAddToTrip,
   isAdding,
 }: TripSelectionModalProps) {
+  const resetKey = `${isOpen ? "open" : "closed"}:${activity.id}`;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <TripSelectionModalContent
+        key={resetKey}
+        activity={activity}
+        trips={trips}
+        onAddToTrip={onAddToTrip}
+        onClose={onClose}
+        isAdding={isAdding}
+      />
+    </Dialog>
+  );
+}
+
+type TripSelectionModalContentProps = Omit<TripSelectionModalProps, "isOpen">;
+
+function TripSelectionModalContent({
+  onClose,
+  activity,
+  trips,
+  onAddToTrip,
+  isAdding,
+}: TripSelectionModalContentProps) {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   const handleClose = () => {
@@ -66,85 +91,76 @@ export function TripSelectionModal({
     }
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset selection when modal or activity changes
-  useEffect(() => {
-    setSelectedTripId(null);
-  }, [activity.id, isOpen]);
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add to Trip</DialogTitle>
-          <DialogDescription>
-            Choose a trip to add "{activity.name}" to.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          {trips.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
-              No active or planning trips found.
-              <br />
-              <Button variant="link" className="mt-2" asChild>
-                <Link href="/trips" onClick={onClose}>
-                  Create a new trip
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <ScrollArea className="h-[300px] pr-4">
-              <RadioGroup
-                value={selectedTripId ?? ""}
-                onValueChange={(value) =>
-                  setSelectedTripId(value === "" ? null : value)
-                }
-                className="space-y-4"
-              >
-                {trips.map((trip) => (
-                  <div
-                    key={trip.id}
-                    className={`flex items-start space-x-3 space-y-0 rounded-md border p-4 transition-colors ${
-                      selectedTripId === trip.id
-                        ? "border-primary bg-accent"
-                        : "hover:bg-accent/50"
-                    }`}
+    <DialogContent className="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>Add to Trip</DialogTitle>
+        <DialogDescription>
+          Choose a trip to add "{activity.name}" to.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        {trips.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            No active or planning trips found.
+            <br />
+            <Button variant="link" className="mt-2" asChild>
+              <Link href="/trips" onClick={onClose}>
+                Create a new trip
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <ScrollArea className="h-[300px] pr-4">
+            <RadioGroup
+              value={selectedTripId ?? ""}
+              onValueChange={(value) => setSelectedTripId(value === "" ? null : value)}
+              className="space-y-4"
+            >
+              {trips.map((trip) => (
+                <div
+                  key={trip.id}
+                  className={`flex items-start space-x-3 space-y-0 rounded-md border p-4 transition-colors ${
+                    selectedTripId === trip.id
+                      ? "border-primary bg-accent"
+                      : "hover:bg-accent/50"
+                  }`}
+                >
+                  <RadioGroupItem
+                    value={trip.id}
+                    id={`trip-${trip.id}`}
+                    className="mt-1 cursor-pointer"
+                  />
+                  <Label
+                    htmlFor={`trip-${trip.id}`}
+                    className="flex-1 cursor-pointer grid gap-1.5"
                   >
-                    <RadioGroupItem
-                      value={trip.id}
-                      id={`trip-${trip.id}`}
-                      className="mt-1 cursor-pointer"
-                    />
-                    <Label
-                      htmlFor={`trip-${trip.id}`}
-                      className="flex-1 cursor-pointer grid gap-1.5"
-                    >
-                      <span className="font-semibold text-base">{trip.title}</span>
+                    <span className="font-semibold text-base">{trip.title}</span>
+                    <div className="flex items-center text-sm text-muted-foreground gap-2">
+                      <MapPinIcon aria-hidden="true" className="h-3 w-3" />
+                      <span>{trip.destination}</span>
+                    </div>
+                    {trip.startDate && (
                       <div className="flex items-center text-sm text-muted-foreground gap-2">
-                        <MapPinIcon aria-hidden="true" className="h-3 w-3" />
-                        <span>{trip.destination}</span>
+                        <CalendarIcon aria-hidden="true" className="h-3 w-3" />
+                        <span>{new Date(trip.startDate).toLocaleDateString()}</span>
                       </div>
-                      {trip.startDate && (
-                        <div className="flex items-center text-sm text-muted-foreground gap-2">
-                          <CalendarIcon aria-hidden="true" className="h-3 w-3" />
-                          <span>{new Date(trip.startDate).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </ScrollArea>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isAdding}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirm} disabled={!selectedTripId || isAdding}>
-            {isAdding ? "Adding…" : "Add to Trip"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+                    )}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </ScrollArea>
+        )}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={handleClose} disabled={isAdding}>
+          Cancel
+        </Button>
+        <Button onClick={handleConfirm} disabled={!selectedTripId || isAdding}>
+          {isAdding ? "Adding…" : "Add to Trip"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   );
 }

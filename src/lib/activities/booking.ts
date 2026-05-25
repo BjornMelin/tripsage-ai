@@ -4,6 +4,7 @@
 
 import type { Activity } from "@schemas/search";
 import { getClientOrigin } from "@/lib/url/client-origin";
+import { safeHref } from "@/lib/url/safe-href";
 
 /** Structured attributes carried with booking telemetry events. */
 type TelemetryAttributes = Record<string, string | number | boolean>;
@@ -331,10 +332,11 @@ export function openActivityBooking(activity: ActivityWithMetadata): boolean {
     return false;
   }
 
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+  const href = safeHref(url);
+  if (!href || (!href.startsWith("http://") && !href.startsWith("https://"))) {
     return false;
   }
 
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.open(href, "_blank", "noopener,noreferrer");
   return true;
 }
