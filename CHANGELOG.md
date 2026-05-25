@@ -1,3 +1,9 @@
+## [1.33.9](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.8...v1.33.9) (2026-05-25)
+
+### Bug Fixes
+
+* **ui:** keep input group addons out of button navigation ([#771](https://github.com/BjornMelin/tripsage-ai/issues/771)) ([7ee7318](https://github.com/BjornMelin/tripsage-ai/commit/7ee7318620079b5e94077ca6e56b9dd2d3446b1c))
+
 ## [1.33.8](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.7...v1.33.8) (2026-05-25)
 
 ### Bug Fixes
