@@ -82,7 +82,26 @@ describe("webSearch", () => {
     server.use(
       http.post("https://api.firecrawl.dev/v2/search", async ({ request }) => {
         receivedBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ results: [{ url: "https://x" }] });
+        return HttpResponse.json({
+          data: {
+            news: [
+              {
+                date: "2026-05-01",
+                snippet: "News summary",
+                title: "News",
+                url: "https://news.example.com",
+              },
+            ],
+            web: [
+              {
+                description: "Web summary",
+                title: "Example",
+                url: "https://x",
+              },
+            ],
+          },
+          success: true,
+        });
       })
     );
 
@@ -94,12 +113,11 @@ describe("webSearch", () => {
     const out = await execute(
       {
         categories: null,
+        country: "US",
         fresh: true,
-        freshness: null,
         limit: 2,
         location: null,
         query: "test",
-        region: null,
         scrapeOptions: null,
         sources: null,
         tbs: null,
@@ -122,12 +140,15 @@ describe("webSearch", () => {
 
     expect(Array.isArray(outAny.results)).toBe(true);
     expect(outAny.results[0].url).toBe("https://x");
+    expect(outAny.results[0].snippet).toBe("Web summary");
+    expect(outAny.results[1].publishedAt).toBe("2026-05-01");
     expect(outAny.fromCache).toBe(false);
     expect(typeof outAny.tookMs).toBe("number");
     expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
     expect(withTelemetrySpan).toHaveBeenCalled();
     expect(receivedBody).toBeDefined();
     expect(receivedBody).toMatchObject({
+      country: "US",
       limit: 2,
       query: "test",
     });
@@ -148,12 +169,11 @@ describe("webSearch", () => {
       execute(
         {
           categories: null,
+          country: null,
           fresh: false,
-          freshness: null,
           limit: 5,
           location: null,
           query: "test",
-          region: null,
           scrapeOptions: null,
           sources: null,
           tbs: null,

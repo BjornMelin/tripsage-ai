@@ -83,6 +83,7 @@ describe("webSearchBatch", () => {
     }
     const out = await exec(
       {
+        country: "de",
         limit: 2,
         queries: ["q1"],
       },
@@ -103,14 +104,29 @@ describe("webSearchBatch", () => {
     expect(outAny.results[0].query).toBe("q1");
     expect(outAny.results[0].ok).toBe(true);
     expect(outAny.results[0].value?.results[0]?.url).toBe("https://example.com");
+    expect(webSearchExecuteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ country: "DE", query: "q1" }),
+      mockContext
+    );
   });
 
   test("falls back to direct HTTP when webSearch throws an unexpected error", async () => {
     webSearchExecuteMock.mockRejectedValueOnce(new Error("boom"));
+    let receivedBody: Record<string, unknown> | undefined;
     server.use(
-      http.post("https://api.firecrawl.dev/v2/search", () => {
+      http.post("https://api.firecrawl.dev/v2/search", async ({ request }) => {
+        receivedBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({
-          results: [{ title: "Fallback", url: "https://fallback.example.com" }],
+          data: {
+            web: [
+              {
+                description: "Fallback summary",
+                title: "Fallback",
+                url: "https://fallback.example.com",
+              },
+            ],
+          },
+          success: true,
         });
       })
     );
@@ -125,6 +141,7 @@ describe("webSearchBatch", () => {
 
     const out = await exec(
       {
+        country: "DE",
         limit: 1,
         queries: ["q1"],
       },
@@ -147,6 +164,11 @@ describe("webSearchBatch", () => {
     expect(outAny.results[0].value?.results[0]?.url).toBe(
       "https://fallback.example.com"
     );
+    expect(outAny.results[0].value?.results[0]?.snippet).toBe("Fallback summary");
+    expect(receivedBody).toMatchObject({
+      country: "DE",
+      query: "q1",
+    });
   });
 });
 

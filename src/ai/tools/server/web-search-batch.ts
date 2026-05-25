@@ -15,9 +15,12 @@ import {
   webSearchBatchInputSchema,
 } from "@ai/tools/schemas/web-search-batch";
 import { createToolError, TOOL_ERROR_CODES } from "@ai/tools/server/errors";
-import { normalizeWebSearchResults } from "@ai/tools/server/web-search-normalize";
+import {
+  extractFirecrawlSearchResults,
+  normalizeWebSearchResults,
+} from "@ai/tools/server/web-search-normalize";
 import type { ToolExecutionOptions } from "ai";
-import { z } from "zod";
+import type { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
 import { checkUpstashRateLimit } from "@/lib/ratelimit/upstash";
@@ -123,12 +126,11 @@ export const webSearchBatch = createAiTool({
       try {
         const params = webSearchInputSchema.parse({
           categories: rest.categories ?? null,
+          country: rest.country ?? null,
           fresh: rest.fresh ?? false,
-          freshness: null,
           limit: rest.limit ?? 5,
           location: rest.location ?? null,
           query: q,
-          region: null,
           scrapeOptions: rest.scrapeOptions ?? null,
           sources: rest.sources ?? null,
           tbs: rest.tbs ?? null,
@@ -194,6 +196,7 @@ export const webSearchBatch = createAiTool({
               query: q,
             };
             if (rest.categories != null) body.categories = rest.categories;
+            if (rest.country != null) body.country = rest.country;
             if (rest.location != null) body.location = rest.location;
             if (rest.scrapeOptions != null) body.scrapeOptions = rest.scrapeOptions;
             if (rest.sources != null) body.sources = rest.sources;
@@ -241,28 +244,7 @@ export const webSearchBatch = createAiTool({
                 }
               );
             }
-            const firecrawlResponseSchema = z.object({
-              results: z
-                .array(
-                  z.object({
-                    publishedAt: z.string().optional(),
-                    snippet: z.string().optional(),
-                    title: z.string().optional(),
-                    url: z.string(),
-                  })
-                )
-                .optional(),
-            });
-            const parsedResponse = firecrawlResponseSchema.safeParse(await res.json());
-            if (!parsedResponse.success) {
-              webSearchBatchLogger.error("fallback_response_invalid", {
-                error: parsedResponse.error.message,
-                queryLength: q.length,
-              });
-            }
-            const data = parsedResponse.success ? parsedResponse.data : { results: [] };
-            // Normalize fallback HTTP response to ensure strict schema compliance
-            const rawResults = Array.isArray(data.results) ? data.results : [];
+            const rawResults = extractFirecrawlSearchResults(await res.json());
             const normalizedResults = normalizeWebSearchResults(rawResults);
             const validatedValue = {
               fromCache: false,
@@ -327,6 +309,7 @@ export const webSearchBatch = createAiTool({
       attributes: (params) => ({
         count: params.queries.length,
         fresh: Boolean(params.fresh),
+        hasCountry: Boolean(params.country),
       }),
     },
   },
