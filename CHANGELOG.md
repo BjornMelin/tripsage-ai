@@ -1,3 +1,9 @@
+## [1.34.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.1...v1.34.2) (2026-05-25)
+
+### Bug Fixes
+
+* **activities:** harden search client flow ([#776](https://github.com/BjornMelin/tripsage-ai/issues/776)) ([652c995](https://github.com/BjornMelin/tripsage-ai/commit/652c995af2856542f6765a0724269ed599bd3823))
+
 ## [1.34.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.0...v1.34.1) (2026-05-25)
 
 ### Bug Fixes
