@@ -80,6 +80,14 @@ async function importRoute() {
   return mod.POST;
 }
 
+function mockPerformanceNowSequence(values: number[]) {
+  const nowSpy = vi.spyOn(performance, "now");
+  for (const value of values) {
+    nowSpy.mockReturnValueOnce(value);
+  }
+  return nowSpy;
+}
+
 describe("/api/memory/search route", () => {
   const userId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
@@ -106,6 +114,7 @@ describe("/api/memory/search route", () => {
   });
 
   it("returns schema-compliant search results", async () => {
+    const nowSpy = mockPerformanceNowSequence([20.25, 33.75]);
     const post = await importRoute();
 
     const context: MemoryContextResponse[] = [
@@ -141,25 +150,30 @@ describe("/api/memory/search route", () => {
       url: "http://localhost/api/memory/search",
     });
 
-    const res = await post(req, createRouteParamsContext({ intent: "search" }));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as SearchMemoriesResponse;
+    try {
+      const res = await post(req, createRouteParamsContext({ intent: "search" }));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as SearchMemoriesResponse;
 
-    expect(body.success).toBe(true);
-    expect(body.totalFound).toBe(1);
-    expect(body.searchMetadata.queryProcessed).toBe("paris");
-    expect(body.memories[0]?.similarityScore).toBeGreaterThanOrEqual(0);
-    expect(body.memories[0]?.relevanceReason).toContain("Matched");
-    expect(body.memories[0]?.memory.userId).toBe(userId);
-    expect(body.memories[0]?.memory.content).toContain("Paris");
+      expect(body.success).toBe(true);
+      expect(body.totalFound).toBe(1);
+      expect(body.searchMetadata.queryProcessed).toBe("paris");
+      expect(body.searchMetadata.searchTimeMs).toBe(13.5);
+      expect(body.memories[0]?.similarityScore).toBeGreaterThanOrEqual(0);
+      expect(body.memories[0]?.relevanceReason).toContain("Matched");
+      expect(body.memories[0]?.memory.userId).toBe(userId);
+      expect(body.memories[0]?.memory.content).toContain("Paris");
 
-    expect(mockHandleMemoryIntent).toHaveBeenCalledWith({
-      limit: 10,
-      query: "paris",
-      sessionId: "",
-      type: "fetchContext",
-      userId,
-    });
+      expect(mockHandleMemoryIntent).toHaveBeenCalledWith({
+        limit: 10,
+        query: "paris",
+        sessionId: "",
+        type: "fetchContext",
+        userId,
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
   }, 15_000);
 
   it("filters by similarityThreshold when provided", async () => {

@@ -57,7 +57,7 @@ const postSearch = withApiGuards({
       });
     }
 
-    const startMs = Date.now();
+    const startMs = performance.now();
     const logger = createServerLogger("memory.search", {
       redactKeys: ["error", "userId"],
     });
@@ -169,7 +169,7 @@ const postSearch = withApiGuards({
           memories,
           searchMetadata: {
             queryProcessed: processedQuery,
-            searchTimeMs: Date.now() - startMs,
+            searchTimeMs: performance.now() - startMs,
             similarityThresholdUsed,
           },
           success: true,

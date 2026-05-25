@@ -123,7 +123,7 @@ const getStats = withApiGuards({
     const contextItems = memoryResult.context ?? [];
 
     return NextResponse.json({
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: nowIso(),
       memoryTypes: {
         conversation_context: contextItems.length,
         other: 0,

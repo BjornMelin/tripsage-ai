@@ -17,7 +17,7 @@ import type {
 } from "@schemas/memory";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { type ApiError, handleApiError } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
 
@@ -30,7 +30,7 @@ import { cacheTimes, staleTimes } from "@/lib/query/config";
 export function useMemoryContext(userId: string, enabled = true) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useQuery<MemoryContextResponse, AppError>({
+  return useQuery<MemoryContextResponse, ApiError>({
     enabled: enabled && !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
@@ -54,7 +54,7 @@ export function useMemoryContext(userId: string, enabled = true) {
 export function useSearchMemories() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useMutation<SearchMemoriesResponse, AppError, SearchMemoriesRequest>({
+  return useMutation<SearchMemoriesResponse, ApiError, SearchMemoriesRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<SearchMemoriesResponse>(
@@ -81,7 +81,7 @@ export function useSearchMemories() {
 export function useUpdatePreferences(userId: string) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useMutation<UpdatePreferencesResponse, AppError, UpdatePreferencesRequest>({
+  return useMutation<UpdatePreferencesResponse, ApiError, UpdatePreferencesRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<UpdatePreferencesResponse>(
@@ -109,7 +109,7 @@ export function useUpdatePreferences(userId: string) {
 export function useMemoryInsights(userId: string, enabled = true) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useQuery<MemoryInsightsResponse, AppError>({
+  return useQuery<MemoryInsightsResponse, ApiError>({
     enabled: enabled && !!userId,
     gcTime: cacheTimes.extended,
     queryFn: async () => {
@@ -135,7 +135,7 @@ export function useAddConversationMemory() {
 
   return useMutation<
     AddConversationMemoryResponse,
-    AppError,
+    ApiError,
     AddConversationMemoryRequest
   >({
     mutationFn: async (variables) => {
@@ -164,7 +164,7 @@ export function useAddConversationMemory() {
 export function useDeleteUserMemories(userId: string) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useMutation<DeleteUserMemoriesResponse, AppError, void>({
+  return useMutation<DeleteUserMemoriesResponse, ApiError, void>({
     mutationFn: async () => {
       try {
         return await makeAuthenticatedRequest<DeleteUserMemoriesResponse>(
@@ -197,7 +197,7 @@ export function useMemoryStats(userId: string, enabled = true) {
       storageSize: number;
       totalMemories: number;
     },
-    AppError
+    ApiError
   >({
     enabled: enabled && !!userId,
     gcTime: cacheTimes.extended,
