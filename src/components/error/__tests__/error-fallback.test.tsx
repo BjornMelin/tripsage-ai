@@ -23,6 +23,8 @@ describe("Error Fallback Components", () => {
   const mockError = new Error("Test error message") as Error & {
     digest?: string;
   };
+  const mockGoHome = vi.fn();
+  const mockReload = vi.fn();
   const mockReset = vi.fn();
   const mockRetry = vi.fn();
 
@@ -102,24 +104,30 @@ describe("Error Fallback Components", () => {
       expect(mockRetry).toHaveBeenCalledTimes(1);
     });
 
-    /** Test that the reload page button is handled without throwing */
+    /** Test that the reload page button invokes the recovery action */
     it("should handle reload page button", () => {
-      render(<ErrorFallback error={mockError} reset={mockReset} />);
+      render(
+        <ErrorFallback error={mockError} onReload={mockReload} reset={mockReset} />
+      );
 
       const reloadButton = screen.getByRole("button", { name: /reload page/i });
       expect(reloadButton).toBeInTheDocument();
 
-      expect(() => fireEvent.click(reloadButton)).not.toThrow();
+      fireEvent.click(reloadButton);
+      expect(mockReload).toHaveBeenCalledTimes(1);
     });
 
-    /** Test that the go home button is handled */
+    /** Test that the go home button invokes the recovery action */
     it("should handle go home button", () => {
-      render(<ErrorFallback error={mockError} reset={mockReset} />);
+      render(
+        <ErrorFallback error={mockError} onGoHome={mockGoHome} reset={mockReset} />
+      );
 
       const homeButton = screen.getByRole("button", { name: /go home/i });
       expect(homeButton).toBeInTheDocument();
 
-      expect(() => fireEvent.click(homeButton)).not.toThrow();
+      fireEvent.click(homeButton);
+      expect(mockGoHome).toHaveBeenCalledTimes(1);
     });
 
     /** Test that no buttons are rendered when no functions are provided */
@@ -207,14 +215,17 @@ describe("Error Fallback Components", () => {
 
     /** Test that the go to dashboard button is rendered */
     it("should render go to dashboard button", () => {
-      render(<PageErrorFallback error={mockError} reset={mockReset} />);
+      render(
+        <PageErrorFallback error={mockError} onGoHome={mockGoHome} reset={mockReset} />
+      );
 
       const dashboardButton = screen.getByRole("button", {
         name: /go to dashboard/i,
       });
       expect(dashboardButton).toBeInTheDocument();
 
-      expect(() => fireEvent.click(dashboardButton)).not.toThrow();
+      fireEvent.click(dashboardButton);
+      expect(mockGoHome).toHaveBeenCalledTimes(1);
     });
 
     /** Test that the error stack is shown in development mode */

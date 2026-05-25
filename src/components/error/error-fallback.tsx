@@ -20,15 +20,29 @@ import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 /**
  * Default error fallback component for error boundaries
  */
-export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
+export function ErrorFallback({
+  error,
+  onGoHome,
+  onReload,
+  reset,
+  retry,
+}: ErrorFallbackProps) {
   const isDev = process.env.NODE_ENV === "development";
   const normalized = normalizeThrownError(error);
 
   const handleGoHome = () => {
+    if (onGoHome) {
+      onGoHome();
+      return;
+    }
     window.location.href = "/";
   };
 
   const handleReload = () => {
+    if (onReload) {
+      onReload();
+      return;
+    }
     window.location.reload();
   };
 
@@ -128,8 +142,16 @@ export function MinimalErrorFallback({ error: _error, reset }: ErrorFallbackProp
 /**
  * Page-level error fallback
  */
-export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
+export function PageErrorFallback({ error, onGoHome, reset }: ErrorFallbackProps) {
   const normalized = normalizeThrownError(error);
+  const handleGoHome = () => {
+    if (onGoHome) {
+      onGoHome();
+      return;
+    }
+    window.location.href = "/";
+  };
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-2xl mx-auto text-center space-y-6">
@@ -149,13 +171,7 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
               Try Again
             </Button>
           )}
-          <Button
-            onClick={() => {
-              window.location.href = "/";
-            }}
-            variant="outline"
-            size="lg"
-          >
+          <Button onClick={handleGoHome} variant="outline" size="lg">
             <HomeIcon aria-hidden="true" className="mr-2 h-5 w-5" />
             Go to Dashboard
           </Button>

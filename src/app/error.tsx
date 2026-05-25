@@ -7,11 +7,7 @@
 import { useEffect } from "react";
 import { PageErrorFallback } from "@/components/error/error-fallback";
 import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
-import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
-import { getSessionId } from "@/lib/client/session";
-import { getUserIdFromUserStore } from "@/lib/client/user-store";
-import { errorService } from "@/lib/error-service";
-import { fireAndForget } from "@/lib/utils";
+import { reportRouteErrorBoundaryError } from "@/lib/telemetry/route-error-boundary";
 
 /**
  * Root-level error boundary for the app directory
@@ -25,19 +21,9 @@ export default function RootErrorBoundary({
   reset: () => void;
 }) {
   useEffect(() => {
-    const normalized = normalizeThrownError(error);
-    // Report the error
-    const errorReport = errorService.createErrorReport(normalized, undefined, {
-      sessionId: getSessionId(),
-      userId: getUserIdFromUserStore(),
+    reportRouteErrorBoundaryError(error, {
+      context: "RootErrorBoundary",
     });
-
-    fireAndForget(errorService.reportError(errorReport));
-
-    // Log error in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Root error boundary caught error:", normalized);
-    }
   }, [error]);
 
   return (

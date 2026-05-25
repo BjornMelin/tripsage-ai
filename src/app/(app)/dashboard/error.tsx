@@ -6,11 +6,7 @@
 
 import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
-import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
-import { getSessionId } from "@/lib/client/session";
-import { getUserIdFromUserStore } from "@/lib/client/user-store";
-import { errorService } from "@/lib/error-service";
-import { fireAndForget } from "@/lib/utils";
+import { reportRouteErrorBoundaryError } from "@/lib/telemetry/route-error-boundary";
 
 /**
  * Dashboard-level error boundary
@@ -24,19 +20,9 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    const normalized = normalizeThrownError(error);
-    // Report the dashboard error
-    const errorReport = errorService.createErrorReport(normalized, undefined, {
-      sessionId: getSessionId(),
-      userId: getUserIdFromUserStore(),
+    reportRouteErrorBoundaryError(error, {
+      context: "DashboardErrorBoundary",
     });
-
-    fireAndForget(errorService.reportError(errorReport));
-
-    // Log error in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Dashboard error boundary caught error:", normalized);
-    }
   }, [error]);
 
   return <ErrorFallback error={error} reset={reset} />;

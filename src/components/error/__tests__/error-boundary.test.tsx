@@ -6,12 +6,18 @@ import { errorService } from "@/lib/error-service";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { ErrorBoundary, WithErrorBoundary } from "../error-boundary";
 
+const TelemetrySpy = vi.hoisted(() => vi.fn());
+
 // Mock the error service
 vi.mock("@/lib/error-service", () => ({
   errorService: {
     createErrorReport: vi.fn(),
     reportError: vi.fn(),
   },
+}));
+
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: TelemetrySpy,
 }));
 
 // Console spy refs (setup in beforeEach to ensure fresh spies per test)
@@ -45,6 +51,7 @@ describe("ErrorBoundary", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    TelemetrySpy.mockClear();
 
     // Setup fresh console spies for each test
     ConsoleSpy = {
@@ -150,20 +157,19 @@ describe("ErrorBoundary", () => {
       );
     });
 
-    it("should log errors in development mode", () => {
-      const originalEnv = process.env.NODE_ENV;
-      vi.stubEnv("NODE_ENV", "development");
-
+    it("should record client telemetry when an error occurs", () => {
       renderWithProviders(
-        <ErrorBoundary>
+        <ErrorBoundary level="component">
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      expect(ConsoleSpy.error).toHaveBeenCalled();
-      // Group logging may be suppressed in some environments; ensure at least one dev log occurred.
-
-      vi.stubEnv("NODE_ENV", originalEnv ?? "test");
+      expect(TelemetrySpy).toHaveBeenCalledWith(expect.any(Error), {
+        action: "render",
+        componentStack: expect.any(String),
+        context: "ErrorBoundary",
+        level: "component",
+      });
     });
   });
 
