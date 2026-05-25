@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { safeHref } from "@/lib/url/safe-href";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -60,27 +61,30 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
           <div className="mb-4">
             <div className="mb-2 text-sm font-medium">Top Attractions</div>
             <div className="space-y-2">
-              {attractions.slice(0, 5).map((attraction: DestinationItem) => (
-                <div
-                  key={attraction.title ?? attraction.url ?? String(attraction)}
-                  className="text-xs"
-                >
-                  <div className="font-medium">{attraction.title}</div>
-                  {attraction.description ? (
-                    <div className="opacity-80">{attraction.description}</div>
-                  ) : null}
-                  {attraction.url ? (
-                    <a
-                      href={attraction.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 block underline"
-                    >
-                      Learn more
-                    </a>
-                  ) : null}
-                </div>
-              ))}
+              {attractions.slice(0, 5).map((attraction: DestinationItem) => {
+                const href = safeHref(attraction.url);
+                return (
+                  <div
+                    key={attraction.title ?? attraction.url ?? String(attraction)}
+                    className="text-xs"
+                  >
+                    <div className="font-medium">{attraction.title}</div>
+                    {attraction.description ? (
+                      <div className="opacity-80">{attraction.description}</div>
+                    ) : null}
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 block underline"
+                      >
+                        Learn more
+                      </a>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : null}

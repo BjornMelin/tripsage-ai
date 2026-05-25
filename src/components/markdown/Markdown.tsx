@@ -18,6 +18,7 @@ import {
 import type { Pluggable, PluggableList, Plugin } from "unified";
 import { z } from "zod";
 import { getClientOrigin } from "@/lib/url/client-origin";
+import { safeHref } from "@/lib/url/safe-href";
 import { cn } from "@/lib/utils";
 
 /** Security profile controlling allowed content sources and sanitization strictness. */
@@ -267,18 +268,23 @@ function TripSageMarkdownLink({
   className,
   href,
   node: _node,
+  rel: _rel,
+  target: _target,
   ...rest
 }: MarkdownLinkProps) {
   const isIncomplete = href === "streamdown:incomplete-link";
+  const safe = isIncomplete ? undefined : safeHref(href);
+  const safeLinkProps = safe
+    ? { href: safe, rel: "noopener noreferrer", target: "_blank" }
+    : {};
+
   return (
     <a
       {...rest}
+      {...safeLinkProps}
       className={cn("wrap-anywhere font-medium text-primary underline", className)}
       data-incomplete={isIncomplete}
       data-streamdown="link"
-      href={href}
-      rel="noopener noreferrer"
-      target="_blank"
     >
       {children}
     </a>

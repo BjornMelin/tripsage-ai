@@ -20,6 +20,8 @@ import {
   InputGroupButton,
   InputGroupTextarea,
 } from "@/components/ui/input-group";
+import { getErrorMessage } from "@/lib/api/error-types";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,7 +37,10 @@ export type PromptInputMessage = {
 /**
  * Props for the PromptInput form wrapper.
  */
-export type PromptInputProps = Omit<HTMLAttributes<HTMLFormElement>, "onSubmit"> & {
+export type PromptInputProps = Omit<
+  HTMLAttributes<HTMLFormElement>,
+  "onError" | "onSubmit"
+> & {
   /** Submit handler for the prompt input. */
   onSubmit: (
     message: PromptInputMessage,
@@ -44,6 +49,23 @@ export type PromptInputProps = Omit<HTMLAttributes<HTMLFormElement>, "onSubmit">
   /** Optional error handler for submission failures or validation errors. */
   onError?: (error: Error) => void;
 };
+
+function NormalizePromptInputError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(getErrorMessage(error));
+}
+
+function ReportPromptInputError(
+  error: unknown,
+  action: "submit" | "validate",
+  onError: PromptInputProps["onError"]
+) {
+  const normalized = NormalizePromptInputError(error);
+  recordClientErrorOnActiveSpan(normalized, {
+    action,
+    context: "PromptInput",
+  });
+  onError?.(normalized);
+}
 
 /**
  * Form wrapper that provides consistent layout via `InputGroup`.
@@ -66,11 +88,11 @@ export const PromptInput = ({
 
     // Validate non-empty message before submission
     if (trimmed.length === 0) {
-      const error = new Error("Cannot submit empty message");
-      if (process.env.NODE_ENV === "development") {
-        console.error("PromptInput validation error:", error);
-      }
-      onError?.(error);
+      ReportPromptInputError(
+        new Error("Cannot submit empty message"),
+        "validate",
+        onError
+      );
       return;
     }
 
@@ -83,20 +105,13 @@ export const PromptInput = ({
             form.reset();
           })
           .catch((error) => {
-            if (process.env.NODE_ENV === "development") {
-              console.error("PromptInput submission error:", error);
-            }
-            onError?.(error instanceof Error ? error : new Error(String(error)));
+            ReportPromptInputError(error, "submit", onError);
           });
       } else {
         form.reset();
       }
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      if (process.env.NODE_ENV === "development") {
-        console.error("PromptInput submission error:", err);
-      }
-      onError?.(err);
+      ReportPromptInputError(error, "submit", onError);
     }
   };
 

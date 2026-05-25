@@ -30,6 +30,7 @@ import {
 } from "@/components/ai-elements/sources";
 import { StayCard } from "@/components/ai-elements/stay-card";
 import { Tool } from "@/components/ai-elements/tool";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { parseSchemaCard } from "@/lib/ui/parse-schema-card";
 import { safeHref } from "@/lib/url/safe-href";
 
@@ -66,6 +67,22 @@ function AsRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function ReportInvalidStepStartPart(step: unknown): void {
+  recordClientErrorOnActiveSpan(
+    new Error("Invalid step-start part: expected step to be a positive integer."),
+    {
+      action: "parseStepStartPart",
+      context: "ChatMessageItem",
+      step:
+        typeof step === "number" ||
+        typeof step === "string" ||
+        typeof step === "boolean"
+          ? step
+          : undefined,
+    }
+  );
+}
+
 // biome-ignore lint/style/useNamingConvention: Type guard helper for discriminated parts
 function isSourceUrlPart(value: unknown): value is SourceUrlPart {
   if (typeof value !== "object" || value === null) return false;
@@ -84,10 +101,8 @@ function isStepStartPart(value: unknown): value is StepStartPart {
     step === undefined ||
     (typeof step === "number" && Number.isInteger(step) && step > 0);
 
-  if (!valid && process.env.NODE_ENV === "development") {
-    console.warn("Invalid step-start part: expected step to be a positive integer.", {
-      step,
-    });
+  if (!valid) {
+    ReportInvalidStepStartPart(step);
   }
 
   return valid;
@@ -98,8 +113,8 @@ const REDACT_KEYS = new Set(["apikey", "token", "secret", "password", "id"]);
 const MAX_STRING_LENGTH = 200;
 const MAX_DEPTH = 2;
 
-/** Allowlist of safe MIME types for data URLs */
-const SAFE_MIME_TYPES = new Set([
+/** Allowlist of MIME types safe to display as attachment metadata. */
+const DISPLAY_MIME_TYPES = new Set([
   "image/png",
   "image/jpeg",
   "image/jpg",
@@ -112,6 +127,14 @@ const SAFE_MIME_TYPES = new Set([
   "audio/wav",
   "application/pdf",
 ]);
+const INLINE_IMAGE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/webp",
+]);
+const ALLOWED_IMAGE_URL_PROTOCOLS = new Set(["http:", "https:"]);
 
 const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
 
@@ -130,7 +153,7 @@ function isValidBase64(value: string): boolean {
 /**
  * Validates and normalizes a MIME type string.
  * Returns the MIME type if it's in the allowlist, otherwise returns a safe default.
- * Only explicit MIME types in SAFE_MIME_TYPES are allowed to prevent XSS vectors.
+ * Only explicit MIME types in DISPLAY_MIME_TYPES are allowed to prevent XSS vectors.
  */
 // biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
 function validateMimeType(mimeType?: string): string {
@@ -139,12 +162,27 @@ function validateMimeType(mimeType?: string): string {
   }
 
   const normalized = mimeType.toLowerCase().trim();
-  if (SAFE_MIME_TYPES.has(normalized)) {
+  if (DISPLAY_MIME_TYPES.has(normalized)) {
     return normalized;
   }
 
   // Default to safe fallback for unknown types
   return "application/octet-stream";
+}
+
+// biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
+function safeInlineImageSrc(raw?: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.startsWith("//")) return null;
+  if (trimmed.startsWith("/")) return trimmed;
+
+  try {
+    const url = new URL(trimmed);
+    return ALLOWED_IMAGE_URL_PROTOCOLS.has(url.protocol) ? trimmed : null;
+  } catch {
+    return null;
+  }
 }
 
 // biome-ignore lint/style/useNamingConvention: Internal utility function, not a React component
@@ -581,14 +619,14 @@ export function ChatMessageItem({
               const data =
                 typeof filePart.data === "string" ? filePart.data : undefined;
               const url = typeof filePart.url === "string" ? filePart.url : undefined;
+              const canRenderInlineImage = INLINE_IMAGE_MIME_TYPES.has(mimeType);
               const fileUrl =
-                url ??
-                (data && isValidBase64(data)
+                canRenderInlineImage && data && isValidBase64(data)
                   ? `data:${mimeType};base64,${data}`
-                  : null);
+                  : safeInlineImageSrc(url);
 
               // Render images inline
-              if (mimeType.startsWith("image/") && fileUrl) {
+              if (canRenderInlineImage && fileUrl) {
                 const width =
                   typeof filePart.width === "number" && filePart.width > 0
                     ? filePart.width
