@@ -1,3 +1,9 @@
+## [1.34.4](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.3...v1.34.4) (2026-05-25)
+
+### Bug Fixes
+
+* **calendar:** harden client event UI ([#779](https://github.com/BjornMelin/tripsage-ai/issues/779)) ([f0062e3](https://github.com/BjornMelin/tripsage-ai/commit/f0062e36a16623936115bd5233d7eddff4cd470b))
+
 ## [1.34.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.2...v1.34.3) (2026-05-25)
 
 ### Bug Fixes
