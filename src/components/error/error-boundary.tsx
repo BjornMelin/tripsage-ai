@@ -15,7 +15,6 @@ import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
 import { getUserIdFromUserStore } from "@/lib/client/user-store";
 import { errorService } from "@/lib/error-service";
-import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { fireAndForget } from "@/lib/utils";
 import { ErrorFallback } from "./error-fallback";
 
@@ -46,19 +45,6 @@ function GetFallbackComponent(
   retry?: () => void;
 }> {
   return fallback ?? ErrorFallback;
-}
-
-function RecordClientTelemetry(
-  error: Error,
-  info: ErrorInfo,
-  level: ErrorBoundaryProps["level"]
-): void {
-  recordClientErrorOnActiveSpan(error, {
-    action: "render",
-    componentStack: info.componentStack,
-    context: COMPONENT_CONTEXT,
-    level,
-  });
 }
 
 export function ErrorBoundary({
@@ -94,8 +80,6 @@ export function ErrorBoundary({
           level,
         })
       );
-
-      RecordClientTelemetry(normalized, schemaInfo, level);
     },
     [level, onError]
   );

@@ -18,7 +18,7 @@ import {
 import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 
 /**
- * Default error fallback component for error boundaries
+ * Default error fallback component for error boundaries.
  */
 export function ErrorFallback({
   error,
@@ -140,7 +140,7 @@ export function MinimalErrorFallback({ error: _error, reset }: ErrorFallbackProp
 }
 
 /**
- * Page-level error fallback
+ * Page-level error fallback.
  */
 export function PageErrorFallback({ error, onGoHome, reset }: ErrorFallbackProps) {
   const normalized = normalizeThrownError(error);

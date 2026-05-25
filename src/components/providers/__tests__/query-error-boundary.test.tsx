@@ -44,6 +44,10 @@ const RecoveringQueryComponent = () => {
   return <div>{data}</div>;
 };
 
+/**
+ * Detects expected React error-boundary diagnostics by requiring both an
+ * expected ApiError and boundary-related console text.
+ */
 function IsExpectedBoundaryDiagnostic(args: unknown[]): boolean {
   const hasExpectedError = args.some(
     (arg) =>

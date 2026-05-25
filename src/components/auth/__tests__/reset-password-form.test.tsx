@@ -65,7 +65,39 @@ describe("ResetPasswordForm", () => {
           action: "parseResetResponse",
           context: "ResetPasswordForm",
           issueCount: expect.any(Number),
+          reason: "schema",
           status: 500,
+        }
+      );
+    });
+  });
+
+  it("reports non-JSON responses through telemetry and aborts processing", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("not json", {
+        headers: { "content-type": "text/plain" },
+        status: 502,
+        statusText: "Bad Gateway",
+      })
+    );
+
+    render(<ResetPasswordForm />);
+
+    fireEvent.change(screen.getByLabelText("Email Address"), {
+      target: { value: "traveler@example.com" },
+    });
+    fireEvent.submit(GetResetPasswordForm());
+
+    expect(await screen.findByText("Failed to send reset email")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(
+        expect.any(Error),
+        {
+          action: "parseResetResponse",
+          context: "ResetPasswordForm",
+          issueCount: 1,
+          reason: "json",
+          status: 502,
         }
       );
     });

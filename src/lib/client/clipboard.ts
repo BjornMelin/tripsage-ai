@@ -14,12 +14,12 @@ export type ClipboardCopyResult =
       error?: unknown;
     };
 
-function ToClipboardError(error: unknown): Error {
+function toClipboardError(error: unknown): Error {
   return error instanceof Error ? error : new Error("Clipboard copy failed");
 }
 
-function ReportClipboardCopyFailure(error: unknown): void {
-  recordClientErrorOnActiveSpan(ToClipboardError(error), {
+function reportClipboardCopyFailure(error: unknown): void {
+  recordClientErrorOnActiveSpan(toClipboardError(error), {
     action: "copyTextToClipboard",
     context: "clipboard",
     reason: "failed",
@@ -136,7 +136,7 @@ export async function copyToClipboardWithToast(
     case "failed":
       toast({ ...msgs.failed, variant: "destructive" });
       if (result.error) {
-        ReportClipboardCopyFailure(result.error);
+        reportClipboardCopyFailure(result.error);
       }
       break;
     default: {

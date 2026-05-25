@@ -58,23 +58,27 @@ import { errorService as mockErrorService } from "@/lib/error-service";
 const mockedErrorService = vi.mocked(mockErrorService);
 
 const WAIT_OPTIONS = { interval: 10, timeout: 1000 } as const;
-const globalErrorRoots = new Set<Root>();
+const globalErrorRoots = new Map<Root, HTMLElement>();
 
 function renderGlobalError(error: unknown, reset: () => void) {
-  const root = createRoot(document);
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
 
   act(() => {
     root.render(<GlobalError error={error} reset={reset} />);
   });
 
-  globalErrorRoots.add(root);
+  globalErrorRoots.set(root, container);
 
   return {
+    container,
     unmount: () => {
       if (!globalErrorRoots.delete(root)) return;
       act(() => {
         root.unmount();
       });
+      container.remove();
     },
   };
 }
@@ -90,7 +94,9 @@ async function waitForTelemetry() {
   const [error, errorInfo, metadata] = await waitForMockCall(
     mockedErrorService.createErrorReport
   );
-  const [reportPayload] = await waitForMockCall(mockedErrorService.reportError);
+  const [reportPayload, spanMetadata] = await waitForMockCall(
+    mockedErrorService.reportError
+  );
 
   return {
     create: {
@@ -99,6 +105,7 @@ async function waitForTelemetry() {
       metadata,
     },
     reported: reportPayload as ErrorReport,
+    spanMetadata,
   };
 }
 
@@ -134,10 +141,11 @@ describe("Next.js Error Boundaries Integration", () => {
   });
 
   afterEach(() => {
-    for (const root of globalErrorRoots) {
+    for (const [root, container] of globalErrorRoots) {
       act(() => {
         root.unmount();
       });
+      container.remove();
     }
     globalErrorRoots.clear();
   });
@@ -165,7 +173,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report error on mount", async () => {
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      const { create, reported } = await waitForTelemetry();
+      const { create, reported, spanMetadata } = await waitForTelemetry();
 
       expect(create.metadata).toEqual(
         expect.objectContaining({
@@ -177,10 +185,11 @@ describe("Next.js Error Boundaries Integration", () => {
           sessionId: "test_session_id",
         })
       );
-      expect(TELEMETRY_SPY).toHaveBeenCalledWith(expect.any(Error), {
+      expect(spanMetadata).toEqual({
         action: "render",
         context: "RootErrorBoundary",
       });
+      expect(TELEMETRY_SPY).not.toHaveBeenCalled();
     });
 
     // Removed brittle NODE_ENV mutation; rely on behavior assertions only.
@@ -208,26 +217,27 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should render minimal global error UI", () => {
-      renderGlobalError(mockError, mockReset);
+      const globalError = renderGlobalError(mockError, mockReset);
 
-      expect(document.documentElement).toHaveAttribute("lang", "en");
+      expect(globalError.container).toBeInstanceOf(HTMLElement);
       expect(screen.getByText("Application Error")).toBeInTheDocument();
     });
 
     it("should report critical error", async () => {
       renderGlobalError(mockError, mockReset);
 
-      const { reported } = await waitForTelemetry();
+      const { reported, spanMetadata } = await waitForTelemetry();
 
       expect(reported).toEqual(
         expect.objectContaining({
           sessionId: "test_session_id",
         })
       );
-      expect(TELEMETRY_SPY).toHaveBeenCalledWith(expect.any(Error), {
+      expect(spanMetadata).toEqual({
         action: "render",
         context: "GlobalErrorBoundary",
       });
+      expect(TELEMETRY_SPY).not.toHaveBeenCalled();
     });
 
     // Removed brittle NODE_ENV-dependent logging assertion.
@@ -248,7 +258,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report dashboard error", async () => {
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-      const { create, reported } = await waitForTelemetry();
+      const { create, reported, spanMetadata } = await waitForTelemetry();
 
       expect(create.metadata).toEqual(
         expect.objectContaining({
@@ -260,10 +270,11 @@ describe("Next.js Error Boundaries Integration", () => {
           sessionId: "test_session_id",
         })
       );
-      expect(TELEMETRY_SPY).toHaveBeenCalledWith(expect.any(Error), {
+      expect(spanMetadata).toEqual({
         action: "render",
         context: "DashboardErrorBoundary",
       });
+      expect(TELEMETRY_SPY).not.toHaveBeenCalled();
     });
 
     // Removed brittle NODE_ENV mutation; implicit assertions elsewhere cover logging.
@@ -279,7 +290,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report auth error without user ID", async () => {
       render(<AuthError error={mockError} reset={mockReset} />);
 
-      const { create, reported } = await waitForTelemetry();
+      const { create, reported, spanMetadata } = await waitForTelemetry();
 
       expect(create.metadata).toEqual(
         expect.objectContaining({
@@ -288,10 +299,11 @@ describe("Next.js Error Boundaries Integration", () => {
       );
       expect(create.metadata?.userId).toBeUndefined();
       expect(reported.userId).toBeUndefined();
-      expect(TELEMETRY_SPY).toHaveBeenCalledWith(expect.any(Error), {
+      expect(spanMetadata).toEqual({
         action: "render",
         context: "AuthErrorBoundary",
       });
+      expect(TELEMETRY_SPY).not.toHaveBeenCalled();
     });
 
     // Logging behavior is environment dependent; skip direct console assertions here.

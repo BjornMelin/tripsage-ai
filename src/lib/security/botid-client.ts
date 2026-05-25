@@ -13,6 +13,11 @@ declare global {
   var tripsageBotIdClientInitError: Error | undefined;
 }
 
+/**
+ * Consumes the most recent BotID client initialization failure.
+ *
+ * @returns The last initialization Error or null if no failure is pending.
+ */
 export function consumeBotIdClientInitFailure(): Error | null {
   if (!globalThis.tripsageBotIdClientInitFailed) return null;
 

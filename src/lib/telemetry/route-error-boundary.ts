@@ -9,7 +9,6 @@ import { getSessionId } from "@/lib/client/session";
 import { getUserIdFromUserStore } from "@/lib/client/user-store";
 import { errorService } from "@/lib/error-service";
 import { fireAndForget } from "@/lib/utils";
-import { recordClientErrorOnActiveSpan } from "./client-errors";
 
 interface RouteErrorBoundaryReportOptions {
   context: string;
@@ -31,9 +30,10 @@ export function reportRouteErrorBoundaryError(
   };
   const errorReport = errorService.createErrorReport(normalized, undefined, metadata);
 
-  fireAndForget(errorService.reportError(errorReport));
-  recordClientErrorOnActiveSpan(normalized, {
-    action: "render",
-    context,
-  });
+  fireAndForget(
+    errorService.reportError(errorReport, {
+      action: "render",
+      context,
+    })
+  );
 }

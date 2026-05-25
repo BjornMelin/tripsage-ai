@@ -108,6 +108,7 @@ describe("ErrorBoundary", () => {
 
       expect(errorService.createErrorReport).not.toHaveBeenCalled();
       expect(errorService.reportError).not.toHaveBeenCalled();
+      expect(TelemetrySpy).not.toHaveBeenCalled();
     });
   });
 
@@ -137,7 +138,14 @@ describe("ErrorBoundary", () => {
           sessionId: expect.any(String),
         })
       );
-      expect(errorService.reportError).toHaveBeenCalled();
+      expect(errorService.reportError).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          action: "render",
+          componentStack: expect.any(String),
+          context: "ErrorBoundary",
+        })
+      );
     });
 
     it("should call custom onError callback", () => {
@@ -157,19 +165,20 @@ describe("ErrorBoundary", () => {
       );
     });
 
-    it("should record client telemetry when an error occurs", () => {
+    it("should pass span metadata through error reporting when an error occurs", () => {
       renderWithProviders(
         <ErrorBoundary level="component">
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      expect(TelemetrySpy).toHaveBeenCalledWith(expect.any(Error), {
+      expect(errorService.reportError).toHaveBeenCalledWith(expect.any(Object), {
         action: "render",
         componentStack: expect.any(String),
         context: "ErrorBoundary",
         level: "component",
       });
+      expect(TelemetrySpy).not.toHaveBeenCalled();
     });
   });
 
