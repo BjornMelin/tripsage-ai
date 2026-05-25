@@ -1,18 +1,26 @@
 /** @vitest-environment jsdom */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { ChatClient } from "../chat-client";
 
-const mockChatState = {
-  error: new Error(
-    JSON.stringify({
-      error: "rate_limit_unavailable",
-      reason: "Rate limiting unavailable",
-    })
-  ),
-  status: "error" as const,
-};
+const { mockChatState, mockRecordClientErrorOnActiveSpan, mockSendMessage } =
+  vi.hoisted(() => ({
+    mockChatState: {
+      error: new Error(
+        JSON.stringify({
+          error: "rate_limit_unavailable",
+          reason: "Rate limiting unavailable",
+        })
+      ) as Error | null,
+      status: "error" as "error" | "ready",
+    },
+    mockRecordClientErrorOnActiveSpan: vi.fn(),
+    mockSendMessage: vi.fn(),
+  }));
 
 vi.mock("@ai-sdk/react", () => ({
   useChat: () => {
@@ -21,7 +29,7 @@ vi.mock("@ai-sdk/react", () => ({
       error: mockChatState.error,
       messages: [],
       regenerate: noop,
-      sendMessage: noop,
+      sendMessage: mockSendMessage,
       status: mockChatState.status,
       stop: noop,
     };
@@ -35,6 +43,10 @@ vi.mock("@/components/ai-elements/response", () => ({
   ),
 }));
 
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: mockRecordClientErrorOnActiveSpan,
+}));
+
 describe("ChatClient error messaging", () => {
   beforeEach(() => {
     mockChatState.error = new Error(
@@ -44,6 +56,13 @@ describe("ChatClient error messaging", () => {
       })
     );
     mockChatState.status = "error";
+    mockRecordClientErrorOnActiveSpan.mockReset();
+    mockSendMessage.mockReset();
+    mockSendMessage.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("maps rate limit errors to a friendly message", () => {
@@ -71,5 +90,56 @@ describe("ChatClient error messaging", () => {
         "AI provider is not configured yet. Add an API key in settings to enable chat."
       )
     ).toBeInTheDocument();
+  });
+
+  it("reports session creation failures through telemetry and still sends the message", async () => {
+    server.use(http.post("/api/chat/sessions", () => HttpResponse.error()));
+    mockChatState.error = null;
+    mockChatState.status = "ready";
+
+    render(<ChatClient />);
+
+    fireEvent.change(screen.getByLabelText("Chat prompt"), {
+      target: { value: "Plan a trip" },
+    });
+    fireEvent.submit(
+      screen.getByLabelText("Chat prompt").closest("form") as HTMLFormElement
+    );
+
+    await waitFor(() => {
+      expect(mockSendMessage).toHaveBeenCalledWith({ text: "Plan a trip" }, undefined);
+    });
+    expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(expect.any(Error), {
+      action: "createSession",
+      context: "ChatClient",
+    });
+  });
+
+  it("reports message submission failures through telemetry", async () => {
+    const submitError = new Error("submit failed");
+    server.use(
+      http.post("/api/chat/sessions", () =>
+        HttpResponse.json({ id: "session-1" }, { status: 201 })
+      )
+    );
+    mockChatState.error = null;
+    mockChatState.status = "ready";
+    mockSendMessage.mockRejectedValueOnce(submitError);
+
+    render(<ChatClient />);
+
+    fireEvent.change(screen.getByLabelText("Chat prompt"), {
+      target: { value: "Find flights" },
+    });
+    fireEvent.submit(
+      screen.getByLabelText("Chat prompt").closest("form") as HTMLFormElement
+    );
+
+    await waitFor(() => {
+      expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(submitError, {
+        action: "submitMessage",
+        context: "ChatClient",
+      });
+    });
   });
 });

@@ -106,6 +106,10 @@ export interface ChatPayload {
   abortSignal?: AbortSignal;
 }
 
+function getClockNow(clock: ChatDeps["clock"]): number {
+  return clock?.now?.() ?? performance.now();
+}
+
 // Local schemas for AI SDK callback payloads; they differ from domain schemas
 // in @schemas/chat that represent persisted entities.
 const toolCallSchema = z.looseObject({
@@ -894,7 +898,7 @@ export async function handleChat(
   deps: ChatDeps,
   payload: ChatPayload
 ): Promise<Response> {
-  const startedAt = deps.clock?.now?.() ?? Date.now();
+  const startedAt = getClockNow(deps.clock);
   const requestId = secureUuid();
 
   const userId = payload.userId.trim();
@@ -1058,7 +1062,7 @@ export async function handleChat(
   const lastMessageId =
     latestUserMessage?.id ?? visibleHistory.at(-1)?.uiMessageId ?? "none";
   const memoryCacheKey = `${userId}:${sessionId}:${lastMessageId}`;
-  const cacheNow = deps.clock?.now?.() ?? Date.now();
+  const cacheNow = getClockNow(deps.clock);
   memorySummary = deps.memorySummaryCache?.get(memoryCacheKey, cacheNow);
   if (!memorySummary) {
     try {
@@ -1207,7 +1211,7 @@ export async function handleChat(
         messages: modelMessages,
         model: provider.model,
         onFinish: async ({ finishReason, text, totalUsage }) => {
-          const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
+          const durationMs = getClockNow(deps.clock) - startedAt;
 
           deps.logger?.info?.("chat:finish", {
             durationMs,
@@ -1460,7 +1464,7 @@ export async function handleChat(
     onFinish: async ({ finishReason, isAborted, responseMessage }) => {
       if (!isAborted) return;
 
-      const durationMs = (deps.clock?.now?.() ?? Date.now()) - startedAt;
+      const durationMs = getClockNow(deps.clock) - startedAt;
       const text = getTextFromUiMessage(responseMessage);
       const metadataResult = chatMessageMetadataSchema.safeParse(
         responseMessage.metadata
