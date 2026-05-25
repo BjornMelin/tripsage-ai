@@ -4,183 +4,93 @@ This document describes the intentional pattern differences in search hooks and 
 
 ## Overview
 
-The TripSage search domain uses three distinct hook patterns, each optimized for different use cases:
+The TripSage search domain uses three distinct client patterns, each optimized for different use cases:
 
-| Pattern | Hook | Best For |
-|---------|------|----------|
-| React Query Integration | `useAccommodationSearch` | Store-integrated searches with caching |
-| Self-Contained State | `useActivitySearch` | Searches with custom metadata |
-| External API Integration | `useDestinationSearch` | Third-party APIs via BFF routes (`/api/places/**`) |
+| Pattern | Surface | Best For |
+|---------|---------|----------|
+| Route-backed orchestration | `useSearchOrchestration` | Flight, hotel, and activity searches through API routes and Zustand stores |
+| Server action validation + client execution | `submitActivitySearch` + `ActivitiesSearchClient` | Page flows that need server-side validation before client fetch/store updates |
+| External API integration | `useDestinationSearch` | Third-party APIs via BFF routes (`/api/places/**`) |
 
-## Pattern 1: React Query Integration
+## Pattern 1: Route-Backed Orchestration
 
-**Example:** `useAccommodationSearch`
+**Example:** `useSearchOrchestration`
 
 **Characteristics:**
 
-- Uses `useMutation` for search operations
-- Uses `useQuery` for suggestions with stale time caching
-- Integrates with `search-params-store` and `search-results-store`
-- Tracks search lifecycle in Zustand stores
+- Initializes the active search type across params and filters stores.
+- Executes route-backed searches through `SEARCH_ENDPOINTS`.
+- Maps route responses into `SearchResults`.
+- Tracks search lifecycle, metrics, errors, history, and retry state in Zustand stores.
 
 **Dependencies:**
 
-- `@tanstack/react-query`
 - `search-params-store`
+- `search-filters-store`
 - `search-results-store`
+- `search-history-store`
 
 **Use when:**
 
-- Search results should be cached
-- Need integration with centralized store state
-- Want automatic retry and error handling from React Query
-- Building a primary search flow
+- Building route-backed flight, hotel, or activity pages.
+- Results need to participate in global search state, filters, history, retry, or saved-search flows.
+- The route response needs mapping into the shared `SearchResults` shape.
 
 **Code pattern:**
 
 ```typescript
-// Example simplified for clarity; imports (React, React Query, apiClient) omitted.
-// AccommodationSearchResponse below is a sample response contract—replace with your real type.
-type AccommodationSearchResponse = { results: Accommodation[] };
-type AccommodationSuggestion = { id: string; name: string };
-export function useAccommodationSearch() {
-  const { updateAccommodationParams } = useSearchParamsStore();
-  const { startSearch, setSearchResults, setSearchError, completeSearch } =
-    useSearchResultsStore();
-  const currentSearchIdRef = useRef<string | null>(null);
-  const getSuggestions = useQuery({
-    queryKey: ["accommodation-suggestions"],
-    // Replace with your suggestions endpoint/client
-    queryFn: () => apiClient.get<AccommodationSuggestion[]>("/accommodations/suggestions"),
-    staleTime: 5 * 60 * 1000,
-  });
+const { initializeSearch, executeSearch, isSearching } = useSearchOrchestration();
 
-  const searchMutation = useMutation({
-    mutationFn: async (params: SearchAccommodationParams) => {
-      const response = await apiClient.post<AccommodationSearchResponse>(
-        "/accommodations/search",
-        params
-      );
-      return response;
-    },
-    onMutate: (params) => {
-      // Track in store
-      currentSearchIdRef.current = startSearch("accommodation", { ...params });
-    },
-  });
+useEffect(() => {
+  initializeSearch("activity");
+}, [initializeSearch]);
 
-  // Handle success/error in useEffect to update stores
-  useEffect(() => {
-    if (searchMutation.data && currentSearchIdRef.current) {
-      setSearchResults(currentSearchIdRef.current, {
-        accommodations: searchMutation.data.results,
-      });
-      completeSearch(currentSearchIdRef.current);
-    } else if (searchMutation.error && currentSearchIdRef.current) {
-      setSearchError(currentSearchIdRef.current, searchMutation.error);
-      completeSearch(currentSearchIdRef.current);
-    }
-  }, [
-    searchMutation.data,
-    searchMutation.error,
-    setSearchResults,
-    setSearchError,
-    completeSearch,
-  ]);
-
-  return {
-    isSearching: searchMutation.isPending,
-    search: searchMutation.mutate,
-    searchAsync: searchMutation.mutateAsync,
-    searchError: searchMutation.error,
-    suggestions: getSuggestions.data,
-    updateParams: updateAccommodationParams,
-  };
+async function handleSearch(params: ActivitySearchParams, signal?: AbortSignal) {
+  await executeSearch(params, signal);
 }
 ```
 
-## Pattern 2: Self-Contained State
+## Pattern 2: Server Action Validation + Client Execution
 
-**Example:** `useActivitySearch`
+**Example:** activity search page flow
 
 **Characteristics:**
 
-- Uses local `useState` for all state management
-- Provides custom metadata beyond results (source, cached flag)
-- Direct fetch calls without React Query
-- More control over state transitions
+- Uses a Server Action for validation and telemetry.
+- Executes the route-backed search on the client through `useSearchOrchestration`.
+- Uses an `AbortController` to cancel stale requests.
+- Keeps page-local UI state, such as selected activity and trip-selection modal state, inside the page client component.
 
 **Dependencies:**
 
-- React `useState`, `useCallback`
-- No external state library required
+- `src/app/(app)/dashboard/search/activities/actions.ts`
+- `src/app/(app)/dashboard/search/activities/activities-search-client.tsx`
+- `useSearchOrchestration`
+- `useAbortableSearchTask`
 
 **Use when:**
 
-- Need custom metadata tracking (e.g., data source, cache status)
-- Search is self-contained and doesn't need global coordination
-- Want simpler state management without query library
-- Building secondary or specialized search flows
+- Search params need server-side validation or telemetry before execution.
+- The page needs route-backed results plus page-specific UI state.
+- The flow must prevent stale in-flight searches from updating the UI.
 
 **Code pattern:**
 
 ```typescript
-export function useActivitySearch(): UseActivitySearchResult {
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState<Error | null>(null);
-  const [results, setResults] = useState<Activity[] | null>(null);
-  const [searchMetadata, setSearchMetadata] = useState<Metadata | null>(null);
+const { executeSearch } = useSearchOrchestration();
+const { clearSearchController, startSearchController } = useAbortableSearchTask();
 
-  const searchActivities = useCallback(async (params: ActivitySearchParams) => {
-    setIsSearching(true);
-    setSearchError(null);
+const handleSearch = useCallback(async (params: ActivitySearchParams) => {
+  const controller = startSearchController();
+  try {
+    const normalizedParams = await onSubmitServer(params);
+    if (controller.signal.aborted || !normalizedParams.ok) return;
 
-    try {
-      const response = await fetch("/api/activities/search", {
-        body: JSON.stringify(params),
-        method: "POST",
-      });
-
-      const data = await response.json();
-      setResults(data.activities);
-      setSearchMetadata(data.metadata);
-    } catch (error) {
-      setSearchError(error as Error);
-      setResults(null);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  const resetSearch = useCallback(() => {
-    setIsSearching(false);
-    setSearchError(null);
-    setResults(null);
-    setSearchMetadata(null);
-    // Optional: abort any in-flight request here.
-  }, []);
-
-  const saveSearch = useCallback((params: ActivitySearchParams) => {
-    // Persist locally; replace with API call if needed.
-    localStorage.setItem("latest-activity-search", JSON.stringify(params));
-    setSearchMetadata((prev) => ({
-      ...(prev ?? {}),
-      savedAt: new Date().toISOString(),
-      source: "local",
-    }));
-  }, []);
-
-  return {
-    isSearching,
-    searchError,
-    results,
-    searchMetadata,
-    searchActivities,
-    resetSearch,
-    saveSearch,
-    // Add more helpers as needed (e.g., debounce, cache hydration)
-  };
-}
+    await executeSearch(normalizedParams.data, controller.signal);
+  } finally {
+    clearSearchController(controller);
+  }
+}, [clearSearchController, executeSearch, onSubmitServer, startSearchController]);
 ```
 
 ## Pattern 3: External API Integration
@@ -265,21 +175,20 @@ If the same normalization logic is needed in other hooks, extract
 
 ## Decision Guide
 
-### Default to Pattern 1 (React Query)
+### Default to Pattern 1 (Route-Backed Orchestration)
 
 Use for new search types when:
 
 - Building primary search flows
-- Need caching and automatic background refetching
+- Need route-backed execution and shared result mapping
 - Want integration with search history and saved searches
-- Need consistent error handling and retry logic
+- Need consistent error handling, metrics, and retry state
 
-### Use Pattern 2 (Self-Contained) when
+### Use Pattern 2 (Server Action Validation + Client Execution) when
 
-- Metadata tracking is important (source, cache status, timing)
-- Search is specialized and standalone
-- Want full control over state transitions
-- Avoiding React Query dependency for simplicity
+- Server-side validation, auth-aware lookups, or telemetry should happen before client execution.
+- Page-local UI state is larger than the shared search result state.
+- Stale in-flight requests must be explicitly cancelled.
 
 ### Use Pattern 3 (External API) when
 
@@ -298,11 +207,9 @@ Use `SearchFormShell` component for consistent form handling:
 import { SearchFormShell } from "@/features/search/components/common/search-form-shell";
 
 <SearchFormShell
-  schema={flightSearchSchema}
-  defaultValues={{ origin: "", destination: "" }}
+  form={form}
   onSubmit={handleSearch}
   telemetrySpanName="flight.search"
-  popularItems={popularDestinations}
 >
   {(form) => (
     <>
@@ -318,16 +225,23 @@ import { SearchFormShell } from "@/features/search/components/common/search-form
 Use cross-store selectors for unified state access:
 
 ```typescript
+import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
 import {
-  useSearchSummary,
-  useActiveFiltersSummary,
-  useSearchValidation,
-} from "@/stores/selectors/search-selectors";
+  useActiveFilterCount,
+  useHasActiveFilters,
+} from "@/features/search/store/search-filters-store";
+import {
+  useSearchParamsValidation,
+  useSearchType,
+} from "@/features/search/store/search-params-store";
 
 function SearchDashboard() {
-  const { searchType, resultCount, isSearching } = useSearchSummary();
-  const { count: filterCount, hasFilters } = useActiveFiltersSummary();
-  const { isValid, paramsErrors } = useSearchValidation();
+  const { getSearchSummary, isSearching } = useSearchOrchestration();
+  const searchType = useSearchType();
+  const filterCount = useActiveFilterCount();
+  const hasFilters = useHasActiveFilters();
+  const { hasValidParams, validationErrors } = useSearchParamsValidation();
+  const summary = getSearchSummary();
 
   // Unified view of search state from multiple stores
 }

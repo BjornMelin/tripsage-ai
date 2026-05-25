@@ -1,6 +1,6 @@
 # Activities Developer Guide
 
-Activity search and booking via Google Places API (New) with optional AI/web fallback. See SPEC-0030 and ADR-0053 for architecture details.
+Activity search and details via Google Places API (New) with optional AI/web fallback. Partner booking remains deferred; current UI flows support activity discovery, trip saving, and external links. See SPEC-0030 and ADR-0053 for architecture details.
 
 ## Overview
 
@@ -24,9 +24,9 @@ The activities feature provides:
 The `ActivitiesService` is a pure, DI-friendly orchestrator:
 
 ```typescript
-import { getActivitiesService } from "@domain/activities/container";
+import { createActivitiesService } from "@/lib/activities/service-factory";
 
-const service = getActivitiesService();
+const service = createActivitiesService({});
 
 // Search activities
 const result = await service.search(
@@ -115,7 +115,6 @@ const result = await searchActivities.execute({
 
 - `searchActivities` - Search with Google Places + optional AI fallback
 - `getActivityDetails` - Retrieve activity details by Place ID
-- `bookActivity` - Placeholder (deferred - no partner APIs)
 
 **Tool Features:**
 
@@ -175,7 +174,7 @@ const activity: Activity = {
 **Supabase `search_activities` Table:**
 
 - **Primary Results** (Google Places): 24-hour TTL
-- **Fallback Results** (AI/web): 6-hour TTL
+- **Fallback Results** (AI/web): persisted with source metadata under the same search-cache TTL
 - **Cache Key**: Normalized `query_hash` computed from search parameters
 - **Source Tracking**: `source` field distinguishes `googleplaces`, `ai_fallback`, `cached`
 
@@ -199,7 +198,7 @@ const activity: Activity = {
 1. Invoke `webSearch` tool with compact query (`"things to do in {destination}"`)
 2. Normalize web search results into `Activity[]` format
 3. Label as `source = 'ai_fallback'`
-4. Persist with shorter TTL (6 hours)
+4. Persist with fallback metadata and source labels
 5. Return combined results with metadata indicating sources
 
 **Important:** AI fallback results are clearly labeled and should not be used for booking or treated as authoritative.
@@ -224,39 +223,18 @@ const query = buildActivitySearchQuery("Paris", "museums");
 
 Photo names from Places API are returned as identifiers. Full URL resolution can be done via `GET /v1/{photoName}` if needed.
 
-## React Hook
+## Client Page Flow
 
-**File**: `src/hooks/use-activity-search.ts`
+**Files**: `src/app/(app)/dashboard/search/activities/activities-search-client.tsx` and `actions.ts`
 
 ```typescript
-import { useActivitySearch } from "@/hooks/use-activity-search";
+import type { ActivitySearchParams } from "@schemas/search";
 
-function ActivitySearchComponent() {
-  const {
-    searchActivities,
-    isSearching,
-    searchError,
-    results,
-    searchMetadata,
-    resetSearch,
-  } = useActivitySearch();
+async function handleSearch(params: ActivitySearchParams) {
+  const normalizedParams = await onSubmitServer(params);
+  if (!normalizedParams.ok) return;
 
-  const handleSearch = async () => {
-    await searchActivities({
-      destination: "Paris",
-      category: "museums",
-    });
-  };
-
-  return (
-    <div>
-      {isSearching && <p>Searching...</p>}
-      {searchError && <p>Error: {searchError.message}</p>}
-      {results?.map((activity) => (
-        <ActivityCard key={activity.id} activity={activity} />
-      ))}
-    </div>
-  );
+  await executeSearch(normalizedParams.data);
 }
 ```
 
@@ -281,13 +259,13 @@ function ActivitySearchComponent() {
 - Schema validation
 - Error mapping
 
-**Hook Tests**: `src/hooks/__tests__/use-activity-search.test.tsx`
+**Client Tests**: `src/app/(app)/dashboard/search/activities/__tests__/activities-search-client.test.tsx`
 
-- Hook behavior
+- Page search behavior
 - API integration
 - State management
 
-**MSW Handlers**: `src/test/msw/handlers/google-places.ts`
+**MSW Handlers**: `src/test/msw/handlers/google.ts`
 
 - Mock Google Places API responses
 - Activity-specific search responses

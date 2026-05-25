@@ -11,13 +11,14 @@
 
 ## Context
 
-TripSage AI currently has an incomplete activity search feature:
+At decision time, TripSage AI had an incomplete activity search feature. The current implementation now includes:
 
-- UI components exist (`/search/activities` page, `forms/activity-search-form`, `cards/activity-card`)
-- Zod schemas defined (`@schemas/search.ts`: `activitySchema`, `activitySearchParamsSchema`)
-- Database table exists (`search_activities` for durable search caching)
-- Hook placeholder exists (`useActivitySearch` with TODOs)
-- **Missing**: Backend API routes, AI SDK v6 tools, service layer, Google Places integration
+- UI components and page flow (`src/app/(app)/dashboard/search/activities`, `ActivitySearchForm`, `ActivityCard`)
+- Zod schemas defined in `@schemas/search` (`activitySchema`, `activitySearchParamsSchema`)
+- Supabase-backed search caching through the `search_activities` table
+- Backend API routes: `POST /api/activities/search` and `GET /api/activities/[id]`
+- AI SDK v6 tools: `searchActivities` and `getActivityDetails`
+- `ActivitiesService` plus Google Places helpers and guarded web-search fallback
 
 The accommodations feature (ADR-0050) uses Amadeus + Google Places for hotel search. Activities require a different approach:
 
@@ -43,7 +44,7 @@ We will implement activity search and (future) booking using a **hybrid provider
    - New tools in `src/ai/tools/server/activities.ts`:
      - `searchActivities` - wraps the activities service search (Places + cache + optional AI fallback).
      - `getActivityDetails` - wraps Place Details for a given Place ID.
-     - `bookActivity` - reserved for future integration; no partner/approval‑based APIs in scope.
+     - Activity booking remains out of scope for registered tools; no `bookActivity` tool is currently exported.
    - Tools are defined using `createAiTool` (`src/ai/lib/tool-factory.ts`) with Zod v4 input schemas from `@schemas/search.ts` and OTEL guardrails (caching, rate limiting, telemetry).
 
 4. **Service Layer** (`src/domain/activities/service.ts`)
@@ -65,7 +66,7 @@ We will implement activity search and (future) booking using a **hybrid provider
    - Upstash Redis is used **only for rate limiting and existing shared infra**, not as an additional cache layer for this feature to keep KISS/YAGNI.
 
 7. **Stripe integration** (deferred)
-   - Future `bookActivity` implementation may reuse the existing booking payment orchestrator (`src/lib/payments/booking-payment.ts`) but **no partner/approval‑based activity APIs** (Viator/GetYourGuide, etc.) are in scope for this ADR.
+   - A future partner booking implementation may reuse the existing booking payment orchestrator (`src/lib/payments/booking-payment.ts`) but **no partner/approval‑based activity APIs** (Viator/GetYourGuide, etc.) are in scope for this ADR.
 
 ## Options Considered
 
@@ -165,7 +166,7 @@ We adopt a **heuristically gated web search fallback** pattern for this ADR:
 
 ### Positive
 
-- Completes visible feature gap in UI
+- Completes visible feature gap in UI through the activity search page and route-backed results
 - Enables activity search in AI chat via tools
 - Follows established patterns (accommodations/flights) and reuses `createAiTool`, `withApiGuards`, and OTEL spans
 - Leverages existing Google Places integration and geocoding helpers while aligning with Places API (New) usage/billing recommendations (field masks, minimal data)
@@ -180,13 +181,12 @@ We adopt a **heuristically gated web search fallback** pattern for this ADR:
 - Limited real-time availability/pricing data from Places; activity pricing remains approximate
 - Additional Google Places API costs; must be managed via field masks, aggressive caching, and quotas
 - Hybrid fallback path increases complexity (routing logic, instrumentation, testing)
-- Requires implementing new activities service layer and tools from scratch
+- Adds activity-specific service/tool/cache logic that must be maintained alongside Places and web-search contracts
 
 ### Neutral
 
-- Database table already exists; just needs to be populated
-- Schemas already defined; minimal changes needed
-- UI components exist; backend integration needed
+- Database table and schemas are reused as the durable cache and contract boundaries
+- Direct partner booking remains deferred; activity results can still be saved to trips or linked externally
 
 ## References
 
