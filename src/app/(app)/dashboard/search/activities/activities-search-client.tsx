@@ -61,6 +61,8 @@ const ACTIVITY_COLORS = {
   successIcon: "text-success",
 } as const;
 
+const EMPTY_ACTIVITIES: Activity[] = [];
+
 function normalizeActivitiesClientError(
   error: unknown,
   fallbackMessage: string
@@ -96,7 +98,9 @@ export default function ActivitiesSearchClient({
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { initializeSearch, executeSearch, isSearching } = useSearchOrchestration();
   const searchError = useSearchResultsStore((state) => state.error);
-  const activities = useSearchResultsStore((state) => state.results.activities ?? []);
+  const activities = useSearchResultsStore(
+    (state) => state.results.activities ?? EMPTY_ACTIVITIES
+  );
   const searchMetadata = useSearchResultsStore((state) => state.metrics);
   const primaryActionRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
