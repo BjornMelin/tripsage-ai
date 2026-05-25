@@ -138,24 +138,9 @@ export function fireAndForget<T>(
   promise: Promise<T>,
   onError?: (error: unknown) => void
 ): void {
-  const handleRejection = (_error: unknown) => {
+  const handleRejection = (error: unknown) => {
     if (onError) {
-      onError(_error);
-      return;
-    }
-
-    // Warn about missing error handler in development
-    const isClientDev =
-      typeof window !== "undefined" && process.env.NODE_ENV === "development";
-
-    if (isClientDev) {
-      console.warn(
-        "fireAndForget called without onError handler. Errors will be silently suppressed in production.",
-        {
-          error: _error,
-          stack: _error instanceof Error ? _error.stack : undefined,
-        }
-      );
+      onError(error);
     }
 
     // Swallow rejection silently when no handler provided

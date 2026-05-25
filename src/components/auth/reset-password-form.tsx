@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getClientEnv } from "@/lib/env/client";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
 
@@ -45,6 +46,19 @@ interface ResetPasswordFormProps {
 
 const DEFAULT_SUCCESS_MESSAGE =
   "Password reset instructions have been sent to your email";
+
+function ReportResetResponseValidationError(issueCount: number, status: number): void {
+  recordClientErrorOnActiveSpan(
+    new Error("Reset password response validation failed"),
+    {
+      action: "parseResetResponse",
+      context: "ResetPasswordForm",
+      issueCount,
+      status,
+    }
+  );
+}
+
 /**
  * Password reset form component.
  *
@@ -94,10 +108,10 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
       const data = parseResult.success
         ? parseResult.data
         : { error: undefined, message: undefined };
-      if (!parseResult.success && process.env.NODE_ENV === "development") {
-        console.warn(
-          "Reset password response validation failed:",
-          parseResult.error.issues
+      if (!parseResult.success) {
+        ReportResetResponseValidationError(
+          parseResult.error.issues.length,
+          response.status
         );
       }
       if (!response.ok) {

@@ -41,10 +41,5 @@ const AmenityIconMap: Record<string, React.ComponentType<{ className?: string }>
 export function GetAmenityIcon(
   id: string
 ): React.ComponentType<{ className?: string }> | undefined {
-  if (process.env.NODE_ENV === "development" && !AmenityIconMap[id]) {
-    console.warn(
-      `Unknown amenity ID: "${id}". Supported IDs are: ${Object.keys(AmenityIconMap).join(", ")}`
-    );
-  }
   return AmenityIconMap[id];
 }
