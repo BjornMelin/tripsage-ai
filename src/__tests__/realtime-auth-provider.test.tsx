@@ -6,40 +6,56 @@ import { RealtimeAuthProvider } from "@/components/providers/realtime-auth-provi
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { render } from "@/test/test-utils";
 
-/** Mock setAuth function for testing */
-const mockSetAuth = vi.fn();
+const {
+  mockGetBrowserClient,
+  mockGetSession,
+  mockOnAuthStateChange,
+  mockRecordClientErrorOnActiveSpan,
+  mockSetAuth,
+} = vi.hoisted(() => ({
+  mockGetBrowserClient: vi.fn(),
+  mockGetSession: vi.fn(),
+  mockOnAuthStateChange: vi.fn(),
+  mockRecordClientErrorOnActiveSpan: vi.fn(),
+  mockSetAuth: vi.fn(),
+}));
 
-/** Mock getSession function for testing */
-const mockGetSession = vi.fn().mockResolvedValue({
-  data: {
-    session: {
-      access_token: "initial-token",
-      user: { id: "user-id" },
+function setupDefaultSupabaseClientMocks(): void {
+  mockGetSession.mockResolvedValue({
+    data: {
+      session: {
+        access_token: "initial-token",
+        user: { id: "user-id" },
+      },
     },
-  },
-  error: null,
-});
-
-/** Mock onAuthStateChange function for testing */
-const mockOnAuthStateChange = vi
-  .fn()
-  .mockImplementation((_event: AuthChangeEvent, _session: Session | null) => ({
-    data: { subscription: { unsubscribe: vi.fn() } },
-  }));
-
-vi.mock("@/lib/supabase", () => ({
-  getBrowserClient: () => ({
+    error: null,
+  });
+  mockOnAuthStateChange.mockImplementation(
+    (_event: AuthChangeEvent, _session: Session | null) => ({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    })
+  );
+  mockGetBrowserClient.mockReturnValue({
     auth: {
       getSession: mockGetSession,
       onAuthStateChange: mockOnAuthStateChange,
     },
     realtime: { setAuth: mockSetAuth },
-  }),
+  });
+}
+
+vi.mock("@/lib/supabase", () => ({
+  getBrowserClient: mockGetBrowserClient,
+}));
+
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: mockRecordClientErrorOnActiveSpan,
 }));
 
 describe("RealtimeAuthProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setupDefaultSupabaseClientMocks();
   });
 
   afterEach(() => {
@@ -107,5 +123,35 @@ describe("RealtimeAuthProvider", () => {
 
     // Unmount cleanup should call setAuth("") immediately
     expect(mockSetAuth).toHaveBeenCalledWith("");
+  });
+
+  it("reports initial session failures through telemetry", async () => {
+    const sessionError = new Error("session unavailable");
+    mockGetSession.mockRejectedValueOnce(sessionError);
+
+    render(<RealtimeAuthProvider />);
+
+    await vi.waitFor(() => {
+      expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(sessionError, {
+        action: "getInitialSession",
+        context: "RealtimeAuthProvider",
+      });
+    });
+  });
+
+  it("reports initializer failures through telemetry", async () => {
+    const initializeError = new Error("client unavailable");
+    mockGetBrowserClient.mockImplementationOnce(() => {
+      throw initializeError;
+    });
+
+    render(<RealtimeAuthProvider />);
+
+    await vi.waitFor(() => {
+      expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(initializeError, {
+        action: "initialize",
+        context: "RealtimeAuthProvider",
+      });
+    });
   });
 });

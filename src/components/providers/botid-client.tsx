@@ -5,28 +5,36 @@
 "use client";
 
 import { useEffect } from "react";
-import { ensureBotIdClientInitialized } from "@/lib/security/botid-client";
+import {
+  consumeBotIdClientInitFailure,
+  ensureBotIdClientInitialized,
+} from "@/lib/security/botid-client";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+
+function ReportBotIdInitFailure(error: Error, action: string): void {
+  recordClientErrorOnActiveSpan(error, {
+    action,
+    context: "BotIdClientProvider",
+  });
+}
 
 export function BotIdClientProvider() {
   useEffect(() => {
-    if (globalThis.tripsageBotIdClientInitFailed) {
-      globalThis.tripsageBotIdClientInitFailed = undefined;
-      recordClientErrorOnActiveSpan(new Error("BotID early initialization failed"), {
-        action: "instrumentation-client",
-        context: "BotIdClientProvider",
-      });
+    const earlyInitError = consumeBotIdClientInitFailure();
+    if (earlyInitError) {
+      ReportBotIdInitFailure(earlyInitError, "instrumentation-client");
     }
 
     try {
       ensureBotIdClientInitialized();
+      const providerInitError = consumeBotIdClientInitFailure();
+      if (providerInitError) {
+        ReportBotIdInitFailure(providerInitError, "ensureBotIdClientInitialized");
+      }
     } catch (error) {
       const exception =
         error instanceof Error ? error : new Error("BotID initialization failed");
-      recordClientErrorOnActiveSpan(exception, {
-        action: "ensureBotIdClientInitialized",
-        context: "BotIdClientProvider",
-      });
+      ReportBotIdInitFailure(exception, "ensureBotIdClientInitialized");
     }
   }, []);
 

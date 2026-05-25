@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/error-types";
 import {
   renderWithProviders,
@@ -14,6 +15,8 @@ import { QueryErrorBoundary } from "../query-error-boundary";
 
 const TELEMETRY_SPY = vi.hoisted(() => vi.fn());
 let retryAttempts = 0;
+let consoleErrorSpy: MockInstance<typeof console.error>;
+let unexpectedConsoleErrors: unknown[][] = [];
 
 vi.mock("@/lib/telemetry/client-errors", () => ({
   recordClientErrorOnActiveSpan: TELEMETRY_SPY,
@@ -41,11 +44,43 @@ const RecoveringQueryComponent = () => {
   return <div>{data}</div>;
 };
 
+function IsExpectedBoundaryDiagnostic(args: unknown[]): boolean {
+  const hasExpectedError = args.some(
+    (arg) =>
+      arg instanceof ApiError &&
+      ["auth", "boom", "denied", "server"].includes(arg.message)
+  );
+  const hasExpectedBoundaryText = args.some(
+    (arg) =>
+      typeof arg === "string" &&
+      (arg.includes("The above error occurred in the <ThrowingComponent>") ||
+        arg.includes("The above error occurred in the <RecoveringQueryComponent>") ||
+        arg.includes(
+          "React will try to recreate this component tree from scratch using the error boundary"
+        ))
+  );
+
+  return hasExpectedError && hasExpectedBoundaryText;
+}
+
 describe("QueryErrorBoundary", () => {
+  beforeEach(() => {
+    unexpectedConsoleErrors = [];
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation((...args) => {
+      if (IsExpectedBoundaryDiagnostic(args)) return;
+      unexpectedConsoleErrors.push(args);
+    });
+  });
+
   afterEach(() => {
-    TELEMETRY_SPY.mockClear();
-    retryAttempts = 0;
-    resetTestQueryClient();
+    try {
+      expect(unexpectedConsoleErrors).toEqual([]);
+    } finally {
+      consoleErrorSpy.mockRestore();
+      TELEMETRY_SPY.mockClear();
+      retryAttempts = 0;
+      resetTestQueryClient();
+    }
   });
 
   it("records telemetry with retry metadata when an error is thrown", async () => {
