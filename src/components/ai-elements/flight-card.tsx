@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { safeHref } from "@/lib/url/safe-href";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -42,42 +43,45 @@ export function FlightOfferCard({ result, ...props }: FlightOfferCardProps) {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {top.map((itinerary: FlightItinerary) => (
-            <div key={itinerary.id} className="rounded border p-3">
-              <div className="flex items-center justify-between text-sm">
-                <div className="font-medium">
-                  {itinerary.segments[0]?.origin} →{" "}
-                  {itinerary.segments[itinerary.segments.length - 1]?.destination}
+          {top.map((itinerary: FlightItinerary) => {
+            const bookingHref = safeHref(itinerary.bookingUrl);
+            return (
+              <div key={itinerary.id} className="rounded border p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="font-medium">
+                    {itinerary.segments[0]?.origin} →{" "}
+                    {itinerary.segments[itinerary.segments.length - 1]?.destination}
+                  </div>
+                  <div className="font-semibold">
+                    {new Intl.NumberFormat(undefined, {
+                      currency: result.currency,
+                      style: "currency",
+                    }).format(itinerary.price)}
+                  </div>
                 </div>
-                <div className="font-semibold">
-                  {new Intl.NumberFormat(undefined, {
-                    currency: result.currency,
-                    style: "currency",
-                  }).format(itinerary.price)}
+                <div className="mt-1 text-xs opacity-80">
+                  {itinerary.segments
+                    .map(
+                      (segment: FlightSegment) =>
+                        `${segment.origin}→${segment.destination}`
+                    )
+                    .join(" · ")}
                 </div>
+                {bookingHref ? (
+                  <div className="mt-2 text-xs">
+                    <a
+                      href={bookingHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      Book
+                    </a>
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-1 text-xs opacity-80">
-                {itinerary.segments
-                  .map(
-                    (segment: FlightSegment) =>
-                      `${segment.origin}→${segment.destination}`
-                  )
-                  .join(" · ")}
-              </div>
-              {itinerary.bookingUrl ? (
-                <div className="mt-2 text-xs">
-                  <a
-                    href={itinerary.bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    Book
-                  </a>
-                </div>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
         {Array.isArray(result.sources) && result.sources.length > 0 ? (
           <div className="mt-3">

@@ -47,4 +47,46 @@ describe("ChatMessageItem file parts", () => {
 
     expect(img).toHaveStyle({ display: "none" });
   });
+
+  it("does not render inline image for unsafe file URLs", () => {
+    const message = unsafeCast<UIMessage>({
+      id: "m3",
+      parts: [
+        {
+          mimeType: "image/png",
+          name: "Unsafe image",
+          type: "file",
+          url: "javascript:alert(1)",
+        },
+      ],
+      role: "assistant",
+    });
+
+    render(<ChatMessageItem message={message} />);
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("Unsafe image")).toBeInTheDocument();
+    expect(screen.getByText("image/png")).toBeInTheDocument();
+  });
+
+  it("renders SVG file parts as attachments instead of inline images", () => {
+    const message = unsafeCast<UIMessage>({
+      id: "m4",
+      parts: [
+        {
+          data: "PHN2ZyBvbmxvYWQ9ImFsZXJ0KDEpIj48L3N2Zz4=",
+          mimeType: "image/svg+xml",
+          name: "vector.svg",
+          type: "file",
+        },
+      ],
+      role: "assistant",
+    });
+
+    render(<ChatMessageItem message={message} />);
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("vector.svg")).toBeInTheDocument();
+    expect(screen.getByText("image/svg+xml")).toBeInTheDocument();
+  });
 });

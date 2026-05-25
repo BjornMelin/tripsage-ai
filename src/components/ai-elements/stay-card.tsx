@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { safeHref } from "@/lib/url/safe-href";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -39,40 +40,43 @@ export function StayCard({ result, ...props }: StayCardProps) {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {stays.map((stay: Stay) => (
-            <div
-              key={`${stay.name}-${stay.address ?? ""}-${stay.url ?? ""}`}
-              className="rounded border p-3"
-            >
-              <div className="flex items-center justify-between text-sm">
-                <div className="font-medium">{stay.name}</div>
-                {typeof stay.nightlyRate === "number" && stay.currency ? (
-                  <div className="font-semibold">
-                    {new Intl.NumberFormat(undefined, {
-                      currency: stay.currency,
-                      style: "currency",
-                    }).format(stay.nightlyRate)}
-                    <span className="ml-1 text-xs opacity-70">/night</span>
+          {stays.map((stay: Stay) => {
+            const href = safeHref(stay.url);
+            return (
+              <div
+                key={`${stay.name}-${stay.address ?? ""}-${stay.url ?? ""}`}
+                className="rounded border p-3"
+              >
+                <div className="flex items-center justify-between text-sm">
+                  <div className="font-medium">{stay.name}</div>
+                  {typeof stay.nightlyRate === "number" && stay.currency ? (
+                    <div className="font-semibold">
+                      {new Intl.NumberFormat(undefined, {
+                        currency: stay.currency,
+                        style: "currency",
+                      }).format(stay.nightlyRate)}
+                      <span className="ml-1 text-xs opacity-70">/night</span>
+                    </div>
+                  ) : null}
+                </div>
+                {stay.address ? (
+                  <div className="mt-1 text-xs opacity-80">{stay.address}</div>
+                ) : null}
+                {href ? (
+                  <div className="mt-2 text-xs">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      View
+                    </a>
                   </div>
                 ) : null}
               </div>
-              {stay.address ? (
-                <div className="mt-1 text-xs opacity-80">{stay.address}</div>
-              ) : null}
-              {stay.url ? (
-                <div className="mt-2 text-xs">
-                  <a
-                    href={stay.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    View
-                  </a>
-                </div>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
         {Array.isArray(result.sources) && result.sources.length > 0 ? (
           <div className="mt-3">

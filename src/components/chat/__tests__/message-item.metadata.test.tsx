@@ -1,12 +1,24 @@
 /** @vitest-environment jsdom */
 
 import type { UIMessage } from "ai";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatMessageItem } from "@/components/chat/message-item";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { render, screen } from "@/test/test-utils";
 
+const { mockRecordClientErrorOnActiveSpan } = vi.hoisted(() => ({
+  mockRecordClientErrorOnActiveSpan: vi.fn(),
+}));
+
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: mockRecordClientErrorOnActiveSpan,
+}));
+
 describe("ChatMessageItem metadata", () => {
+  beforeEach(() => {
+    mockRecordClientErrorOnActiveSpan.mockReset();
+  });
+
   it("renders finish reason and token usage metadata", () => {
     const message = unsafeCast<UIMessage>({
       id: "m-meta",
@@ -98,5 +110,26 @@ describe("ChatMessageItem metadata", () => {
     expect(screen.queryByText(/Abort:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Finish:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Tokens:/)).not.toBeInTheDocument();
+  });
+
+  it("reports invalid step-start parts through telemetry and skips rendering them", () => {
+    const message = unsafeCast<UIMessage>({
+      id: "m-invalid-step",
+      parts: [
+        { step: 0, type: "step-start" },
+        { text: "Message body still renders", type: "text" },
+      ],
+      role: "assistant",
+    });
+
+    render(<ChatMessageItem message={message} />);
+
+    expect(screen.getByText("Message body still renders")).toBeInTheDocument();
+    expect(screen.queryByText("Step 0")).not.toBeInTheDocument();
+    expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(expect.any(Error), {
+      action: "parseStepStartPart",
+      context: "ChatMessageItem",
+      step: 0,
+    });
   });
 });

@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { safeHref } from "@/lib/url/safe-href";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "./sources";
 
 /**
@@ -63,35 +64,38 @@ export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) 
               </div>
               {Array.isArray(day.activities) && day.activities.length > 0 ? (
                 <div className="mt-2 space-y-2">
-                  {day.activities.map((activity: ItineraryActivity) => (
-                    <div
-                      key={activity.name ?? activity.url ?? String(activity)}
-                      className="rounded border p-2 text-xs"
-                    >
-                      <div className="font-medium">{activity.name}</div>
-                      {activity.time ? (
-                        <div className="mt-1 opacity-70">Time: {activity.time}</div>
-                      ) : null}
-                      {activity.location ? (
-                        <div className="mt-1 opacity-70">
-                          Location: {activity.location}
-                        </div>
-                      ) : null}
-                      {activity.description ? (
-                        <div className="mt-1 opacity-80">{activity.description}</div>
-                      ) : null}
-                      {activity.url ? (
-                        <a
-                          href={activity.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 block underline"
-                        >
-                          Learn more
-                        </a>
-                      ) : null}
-                    </div>
-                  ))}
+                  {day.activities.map((activity: ItineraryActivity) => {
+                    const href = safeHref(activity.url);
+                    return (
+                      <div
+                        key={activity.name ?? activity.url ?? String(activity)}
+                        className="rounded border p-2 text-xs"
+                      >
+                        <div className="font-medium">{activity.name}</div>
+                        {activity.time ? (
+                          <div className="mt-1 opacity-70">Time: {activity.time}</div>
+                        ) : null}
+                        {activity.location ? (
+                          <div className="mt-1 opacity-70">
+                            Location: {activity.location}
+                          </div>
+                        ) : null}
+                        {activity.description ? (
+                          <div className="mt-1 opacity-80">{activity.description}</div>
+                        ) : null}
+                        {href ? (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 block underline"
+                          >
+                            Learn more
+                          </a>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>

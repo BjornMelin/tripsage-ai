@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import type { ComponentProps, ComponentType } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Markdown } from "./Markdown";
@@ -100,5 +101,18 @@ describe("markdown/Markdown", () => {
     const props = getLastProps();
     expect(props.linkSafety).toEqual({ enabled: false });
     expect(typeof (props.components as AnyRecord | undefined)?.a).toBe("function");
+  });
+
+  it("sanitizes hrefs in the final anchor component", () => {
+    render(<Markdown content={"[ok](https://example.com)"} mode="static" />);
+
+    const props = getLastProps();
+    const Anchor = (props.components as { a: ComponentType<ComponentProps<"a">> }).a;
+    render(<Anchor href="javascript:alert(1)">Blocked</Anchor>);
+
+    const anchor = screen.getByText("Blocked");
+    expect(anchor).not.toHaveAttribute("href");
+    expect(anchor).not.toHaveAttribute("target");
+    expect(anchor).not.toHaveAttribute("rel");
   });
 });
