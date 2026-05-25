@@ -40,7 +40,9 @@ describe("createUpstashMemoryAdapter", () => {
 
   it("uses stable idempotency keys for onTurnCommitted sync", async () => {
     const adapter = createUpstashMemoryAdapter();
-    const ctx = { now: () => Date.now() };
+    const bucketNowMs = Date.parse("2026-02-03T04:05:06.000Z");
+    const expectedBucket = Math.floor(bucketNowMs / (5 * 60 * 1000));
+    const ctx = { now: () => bucketNowMs };
 
     const intent = {
       sessionId: "session-123",
@@ -64,7 +66,9 @@ describe("createUpstashMemoryAdapter", () => {
     for (const message of messages) {
       const body = message.body as { idempotencyKey: string; payload: unknown };
       expect(message.url).toBe("https://example.test/api/jobs/memory-sync");
-      expect(body.idempotencyKey).toMatch(/^conv-sync:session-123:turn-1:\d+$/);
+      expect(body.idempotencyKey).toBe(
+        `conv-sync:session-123:turn-1:${expectedBucket}`
+      );
       expect(body.payload).toEqual(
         expect.objectContaining({
           sessionId: "session-123",

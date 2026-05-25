@@ -14,8 +14,15 @@ import type {
   MemoryIntent,
 } from "./types";
 
+const MEMORY_SYNC_TIME_BUCKET_MS = 5 * 60 * 1000;
+
+function getMemorySyncTimeBucket(ctx: MemoryAdapterContext): number {
+  return Math.floor(ctx.now() / MEMORY_SYNC_TIME_BUCKET_MS);
+}
+
 async function handleOnTurnCommitted(
-  intent: Extract<MemoryIntent, { type: "onTurnCommitted" }>
+  intent: Extract<MemoryIntent, { type: "onTurnCommitted" }>,
+  ctx: MemoryAdapterContext
 ): Promise<MemoryAdapterExecutionResult> {
   const messages = [
     {
@@ -32,7 +39,7 @@ async function handleOnTurnCommitted(
 
   try {
     // Use a time-bucketed component so the same turn can be re-processed after a short window.
-    const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000)); // 5-minute buckets
+    const timeBucket = getMemorySyncTimeBucket(ctx);
     const idempotencyKey = `conv-sync:${intent.sessionId}:${intent.turn.id}:${timeBucket}`;
     const result = await tryEnqueueJob(
       "memory-sync",
@@ -146,7 +153,7 @@ export function createUpstashMemoryAdapter(): MemoryAdapter {
       let result: MemoryAdapterExecutionResult = { status: "skipped" };
 
       if (intent.type === "onTurnCommitted") {
-        result = await handleOnTurnCommitted(intent);
+        result = await handleOnTurnCommitted(intent, ctx);
       } else if (intent.type === "syncSession" || intent.type === "backfillSession") {
         result = await handleSyncSession(intent);
       }

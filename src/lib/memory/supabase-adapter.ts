@@ -13,6 +13,7 @@ import {
   TEXT_EMBEDDING_DIMENSIONS,
 } from "@/lib/ai/embeddings/text-embedding-model";
 import { toPgvector } from "@/lib/rag/pgvector";
+import { nowIso } from "@/lib/security/random";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import {
@@ -315,7 +316,7 @@ async function handleOnTurnCommitted(
       supabase,
       "sessions",
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      { last_synced_at: new Date().toISOString() },
+      { last_synced_at: nowIso() },
       (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
       { schema: "memories", select: "id", validate: false }
     );
@@ -345,7 +346,7 @@ async function handleSyncSession(
       supabase,
       "sessions",
       // biome-ignore lint/style/useNamingConvention: database column uses snake_case
-      { last_synced_at: new Date().toISOString() },
+      { last_synced_at: nowIso() },
       (qb) => qb.eq("id", intent.sessionId).eq("user_id", intent.userId),
       { schema: "memories", select: "id", validate: false }
     );

@@ -7,7 +7,7 @@ import type {
   MemoryAdapterExecutionResult,
   MemoryIntent,
   MemoryOrchestratorOptions,
-} from "../orchestrator";
+} from "../types";
 
 // Mock server-only and telemetry before imports
 vi.mock("server-only", () => ({}));

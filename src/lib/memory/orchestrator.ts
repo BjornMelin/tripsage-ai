@@ -18,19 +18,6 @@ import type {
 } from "./types";
 import { createUpstashMemoryAdapter } from "./upstash-adapter";
 
-// Re-export types for backwards compatibility
-export type {
-  MemoryAdapter,
-  MemoryAdapterContext,
-  MemoryAdapterExecutionResult,
-  MemoryAdapterExecutionStatus,
-  MemoryAdapterResult,
-  MemoryIntent,
-  MemoryIntentType,
-  MemoryOrchestratorOptions,
-  MemoryOrchestratorResult,
-} from "./types";
-
 /** Simple PII redaction result. */
 type PiiRedactionResult = {
   hadPii: boolean;
