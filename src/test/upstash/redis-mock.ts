@@ -5,6 +5,8 @@
  * behavior with TTL tracking and pipeline support.
  */
 
+import { createRatelimitMock, type RatelimitMockModule } from "./ratelimit-mock";
+
 type StoredValue = {
   value: string;
   expiresAt?: number;
@@ -434,18 +436,9 @@ function objectFromTuples(args: string[]): Record<string, string> {
   return result;
 }
 
-// Re-export ratelimit mock for convenience
-export {
-  createRatelimitMock,
-  type RatelimitMockModule,
-} from "./ratelimit-mock";
-
-// Lazy import to avoid require() which doesn't work in vitest ESM context
-import { createRatelimitMock as createRl } from "./ratelimit-mock";
-
 export type UpstashMocks = {
   redis: RedisMockModule;
-  ratelimit: import("./ratelimit-mock").RatelimitMockModule;
+  ratelimit: RatelimitMockModule;
 };
 
 /**
@@ -469,6 +462,6 @@ export type UpstashMocks = {
  */
 export function setupUpstashMocks(): UpstashMocks {
   const redis = createRedisMock();
-  const ratelimit = createRl();
+  const ratelimit = createRatelimitMock();
   return { ratelimit, redis };
 }

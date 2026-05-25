@@ -2,9 +2,9 @@
  * @fileoverview Optional Upstash emulator helpers.
  *
  * Reads and validates Upstash emulator config from env vars. No-op unless
- * UPSTASH_USE_EMULATOR=1. When enabled, prefer runtime Redis env
- * (UPSTASH_REDIS_REST_URL) pointed at the emulator; UPSTASH_EMULATOR_URL is
- * accepted as a legacy alias. QStash dev server still uses UPSTASH_QSTASH_DEV_URL
+ * UPSTASH_USE_EMULATOR=1. When enabled, point the runtime Redis env
+ * (UPSTASH_REDIS_REST_URL) at the emulator. QStash dev server still uses
+ * UPSTASH_QSTASH_DEV_URL
  * because production QStash publishes through the managed service endpoint.
  */
 
@@ -19,7 +19,7 @@ export function getEmulatorConfig(): EmulatorConfig {
   return {
     enabled,
     qstashUrl: process.env.UPSTASH_QSTASH_DEV_URL,
-    redisUrl: process.env.UPSTASH_REDIS_REST_URL ?? process.env.UPSTASH_EMULATOR_URL,
+    redisUrl: process.env.UPSTASH_REDIS_REST_URL,
   };
 }
 
@@ -29,7 +29,7 @@ export function startUpstashEmulators(): EmulatorConfig {
 
   if (!config.redisUrl) {
     throw new Error(
-      "UPSTASH_USE_EMULATOR=1 but UPSTASH_REDIS_REST_URL is not set; provide the Redis REST emulator URL (UPSTASH_EMULATOR_URL is accepted as a legacy alias)"
+      "UPSTASH_USE_EMULATOR=1 but UPSTASH_REDIS_REST_URL is not set; provide the Redis REST emulator URL"
     );
   }
 

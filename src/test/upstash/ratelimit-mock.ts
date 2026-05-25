@@ -294,15 +294,3 @@ export function createRatelimitMock(): RatelimitMockModule {
     Ratelimit: RatelimitConstructor,
   };
 }
-
-// Legacy export for backwards compatibility
-// biome-ignore lint/complexity/noStaticOnlyClass: maintains backwards-compatible class API
-export class RatelimitMock {
-  static slidingWindow(limit: number, window: string): LimiterConfig {
-    return { intervalMs: parseWindow(window), limit, type: "sliding" };
-  }
-
-  static fixedWindow(limit: number, window: string): LimiterConfig {
-    return { intervalMs: parseWindow(window), limit, type: "fixed" };
-  }
-}

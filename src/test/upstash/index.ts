@@ -55,7 +55,7 @@ export type {
 export { createQStashMock } from "./qstash-mock";
 export type { RatelimitMockModule } from "./ratelimit-mock";
 // Re-export Ratelimit mock
-export { createRatelimitMock, RatelimitMock } from "./ratelimit-mock";
+export { createRatelimitMock } from "./ratelimit-mock";
 export type {
   RedisMockModule,
   UpstashMemoryStore,

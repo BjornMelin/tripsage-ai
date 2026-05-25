@@ -17,7 +17,7 @@ Recent Vitest runs (`--pool=threads`) exposed brittle, duplicated Upstash mocks 
 We will adopt a three-tier Upstash testing strategy:
 
 1. **Unit-fast tier (default):** Shared in-memory stubs for `@upstash/redis` and `@upstash/ratelimit`, plus centralized MSW handlers for REST/QStash endpoints. Every suite will import the shared helper with a single `reset()` per test; use `vi.doMock` (not `vi.mock`) to stay thread-safe with hoisted evaluation under `--pool=threads`.
-2. **Local integration tier (optional):** Deterministic emulators (`upstash-redis-local` or equivalent REST-compatible server; QStash CLI dev server) started once per Vitest worker to validate HTTP contracts (auth headers, TTL, 429s) without external network. Prefer runtime Redis env names (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) pointed at the emulator; `UPSTASH_EMULATOR_URL` is a legacy Redis alias.
+2. **Local integration tier (optional):** Deterministic emulators (`upstash-redis-local` or equivalent REST-compatible server; QStash CLI dev server) started once per Vitest worker to validate HTTP contracts (auth headers, TTL, 429s) without external network. Use runtime Redis env names (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) pointed at the emulator.
 3. **Live contract smoke (gated):** A tiny serialized suite that hits real Upstash (Redis, Ratelimit, QStash publish) only when `UPSTASH_SMOKE=1` and secrets are present. Use runtime credential names (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`) plus `UPSTASH_QSTASH_SMOKE_TARGET_URL` for the disposable publish destination. Defaults to skipped in CI/PRs.
 
 Decision framework scoring (target ≥9/10 composite):
