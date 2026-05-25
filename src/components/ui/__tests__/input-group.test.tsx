@@ -24,4 +24,24 @@ describe("InputGroup", () => {
 
     expect(document.activeElement).toBe(input);
   });
+
+  it("does not forward focus when the addon target is a nested button", () => {
+    render(
+      <InputGroup>
+        <InputGroupAddon>
+          <button type="button">Action</button>
+        </InputGroupAddon>
+        <InputGroupInput aria-label="Destination" />
+      </InputGroup>
+    );
+
+    const button = screen.getByRole("button", { name: "Action" });
+    const input = screen.getByRole("textbox", { name: "Destination" });
+    button.focus();
+
+    fireEvent.mouseDown(button);
+
+    expect(document.activeElement).not.toBe(input);
+    expect(document.activeElement).toBe(button);
+  });
 });

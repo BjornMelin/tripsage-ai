@@ -75,8 +75,8 @@ const InputGroupAddonVariants = cva(
 /**
  * Addon region placed inline or in block areas of the input group.
  *
- * @param className Optional extra classes.
- * @param align Alignment of the addon within the group.
+ * @param className - Optional extra classes.
+ * @param align - Alignment of the addon within the group.
  * @returns A grouped addon region that forwards mouse focus to the input.
  */
 function InputGroupAddon({
