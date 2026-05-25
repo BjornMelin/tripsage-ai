@@ -12,6 +12,7 @@ import {
   isAbsoluteHttpUrl,
   normalizeNextImageSrc,
 } from "@/lib/images/image-proxy";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 const DEFAULT_FALLBACK = (
   <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
@@ -30,6 +31,28 @@ export interface ProxiedImageProps {
   height?: number;
   preload?: boolean;
   fallback?: ReactNode;
+}
+
+function ReportMissingDimensions({
+  hasHeight,
+  hasWidth,
+}: {
+  hasHeight: boolean;
+  hasWidth: boolean;
+}): void {
+  try {
+    recordClientErrorOnActiveSpan(
+      new Error("ProxiedImage requires width and height when fill is false."),
+      {
+        action: "validateDimensions",
+        context: "ProxiedImage",
+        hasHeight,
+        hasWidth,
+      }
+    );
+  } catch {
+    // Preserve image fallback rendering if telemetry is unavailable.
+  }
 }
 
 /**
@@ -66,13 +89,7 @@ export function ProxiedImage({
   }
 
   if (!fill && (width == null || height == null)) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("ProxiedImage requires width and height when fill is false.", {
-        alt,
-        height,
-        width,
-      });
-    }
+    ReportMissingDimensions({ hasHeight: height != null, hasWidth: width != null });
     return fallback ?? DEFAULT_FALLBACK;
   }
 
