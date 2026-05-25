@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { keys } from "@/lib/keys";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
+import { safeHref } from "@/lib/url/safe-href";
 
 const CalendarEventListItemSchema = z.looseObject({
   description: z.string().max(8192).optional(),
@@ -111,9 +113,10 @@ export function CalendarEventList({
       const json: unknown = await response.json();
       const parsed = CalendarEventsApiResponseSchema.safeParse(json);
       if (!parsed.success) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Calendar events validation error:", parsed.error);
-        }
+        recordClientErrorOnActiveSpan(parsed.error, {
+          action: "parseEvents",
+          context: "CalendarEventList",
+        });
         throw new Error("Invalid calendar events response");
       }
 
@@ -196,6 +199,7 @@ export function CalendarEventList({
                 : event.end?.date
                   ? DateUtils.parse(event.end.date)
                   : null;
+              const eventHref = safeHref(event.htmlLink);
 
               return (
                 <li
@@ -230,16 +234,16 @@ export function CalendarEventList({
                         </div>
                       )}
                     </div>
-                    {event.htmlLink && (
+                    {eventHref ? (
                       <a
-                        href={event.htmlLink}
+                        href={eventHref}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-primary hover:underline"
                       >
                         View in Google Calendar
                       </a>
-                    )}
+                    ) : null}
                   </div>
                 </li>
               );
