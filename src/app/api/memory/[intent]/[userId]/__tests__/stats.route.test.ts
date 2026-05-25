@@ -10,6 +10,7 @@ import {
   createRouteParamsContext,
   getMockCookiesForTest,
 } from "@/test/helpers/route";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
 
 const { afterAllHook: upstashAfterAllHook, beforeEachHook: upstashBeforeEachHook } =
@@ -83,7 +84,7 @@ describe("/api/memory/stats/[userId] route", () => {
       reset: Date.now() + 60_000,
       success: true,
     }));
-    setSupabaseFactoryForTests(async () => supabaseClient as never);
+    setSupabaseFactoryForTests(async () => unsafeCast(supabaseClient));
     supabaseClient.auth.getUser.mockResolvedValue({
       data: { user: { id: userId } },
       error: null,
