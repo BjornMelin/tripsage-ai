@@ -190,6 +190,7 @@ export default defineConfig({
           include: [
             "src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/app/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+            "src/features/**/*.{test,spec}.?(c|m)[jt]sx",
             "src/hooks/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/stores/**/*.{test,spec}.?(c|m)[jt]s?(x)",
             "src/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)",
