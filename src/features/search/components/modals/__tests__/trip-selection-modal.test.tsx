@@ -45,6 +45,13 @@ const MOCK_TRIPS: UiTrip[] = [
   },
 ];
 
+const EXPECTED_TRIP_START_DATE = new Intl.DateTimeFormat(undefined, {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+  year: "numeric",
+}).format(new Date(Date.UTC(2026, 5, 1)));
+
 /** Renders the modal with default props and user-event helpers. */
 function RenderTripSelectionModal(
   overrides: Partial<Parameters<typeof TripSelectionModal>[0]> = {}
@@ -80,7 +87,7 @@ describe("TripSelectionModal", () => {
     const { props, user } = RenderTripSelectionModal();
     const addButton = screen.getByRole("button", { name: "Add to Trip" });
 
-    expect(screen.getByText("Jun 1, 2026")).toBeInTheDocument();
+    expect(screen.getByText(EXPECTED_TRIP_START_DATE)).toBeInTheDocument();
     expect(addButton).toBeDisabled();
 
     await user.click(GetTripLabel("Paris Spring"));

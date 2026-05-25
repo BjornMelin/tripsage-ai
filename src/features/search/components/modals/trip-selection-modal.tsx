@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const TRIP_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+const TRIP_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
   month: "short",
   timeZone: "UTC",
