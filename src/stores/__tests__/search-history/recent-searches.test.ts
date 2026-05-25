@@ -2,13 +2,14 @@
 
 import type { SearchHistoryItem, ValidatedSavedSearch } from "@schemas/stores";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchHistoryStore } from "@/features/search/store/search-history";
 import {
   selectFavoriteSearchesFrom,
   selectRecentSearchesByTypeFrom,
   selectTotalSavedSearchesFrom,
 } from "@/features/search/store/search-history/selectors";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 describe("Search History Store - Initial State and Recent Searches", () => {
   beforeEach(() => {
@@ -285,40 +286,44 @@ describe("Search History Store - Initial State and Recent Searches", () => {
       expect(result.current.recentSearches[0].searchType).toBe("accommodation");
     });
 
-    it("cleans up old searches based on autoCleanupDays", () => {
-      const { result } = renderHook(() => useSearchHistoryStore());
+    it(
+      "cleans up old searches based on autoCleanupDays",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date("2026-02-15T12:00:00.000Z"));
 
-      const oldDate = new Date();
-      oldDate.setDate(oldDate.getDate() - 40); // 40 days ago
-      const recentDate = new Date().toISOString();
+        const { result } = renderHook(() => useSearchHistoryStore());
 
-      const oldSearch: SearchHistoryItem = {
-        id: "old-search",
-        params: { destination: "LAX", origin: "NYC" },
-        searchType: "flight",
-        timestamp: oldDate.toISOString(),
-      };
+        const oldDate = "2026-01-06T12:00:00.000Z";
+        const recentDate = "2026-02-14T12:00:00.000Z";
 
-      const recentSearch: SearchHistoryItem = {
-        id: "recent-search",
-        params: { destination: "Paris" },
-        searchType: "accommodation",
-        timestamp: recentDate,
-      };
+        const oldSearch: SearchHistoryItem = {
+          id: "old-search",
+          params: { destination: "LAX", origin: "NYC" },
+          searchType: "flight",
+          timestamp: oldDate,
+        };
 
-      act(() => {
-        useSearchHistoryStore.setState({
-          autoCleanupDays: 30,
-          recentSearches: [oldSearch, recentSearch],
+        const recentSearch: SearchHistoryItem = {
+          id: "recent-search",
+          params: { destination: "Paris" },
+          searchType: "accommodation",
+          timestamp: recentDate,
+        };
+
+        act(() => {
+          useSearchHistoryStore.setState({
+            autoCleanupDays: 30,
+            recentSearches: [oldSearch, recentSearch],
+          });
         });
-      });
 
-      act(() => {
-        result.current.cleanupOldSearches();
-      });
+        act(() => {
+          result.current.cleanupOldSearches();
+        });
 
-      expect(result.current.recentSearches).toHaveLength(1);
-      expect(result.current.recentSearches[0].id).toBe("recent-search");
-    });
+        expect(result.current.recentSearches).toHaveLength(1);
+        expect(result.current.recentSearches[0].id).toBe("recent-search");
+      })
+    );
   });
 });

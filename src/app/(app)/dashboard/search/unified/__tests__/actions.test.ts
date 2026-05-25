@@ -14,6 +14,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 
 // Mock secure UUID
 vi.mock("@/lib/security/random", () => ({
+  nowIso: vi.fn(() => "2025-05-20T12:00:00.000Z"),
   secureUuid: vi.fn(() => "mock-uuid-123"),
 }));
 
@@ -107,6 +108,29 @@ describe("searchHotelsAction", () => {
       "ui.unified.searchHotels",
       expect.any(Object),
       expect.any(Function)
+    );
+  });
+
+  it("uses centralized clock defaults when dates are omitted", async () => {
+    mockSearch.mockResolvedValue({ listings: [] });
+
+    await searchHotelsAction({
+      adults: validParams.adults,
+      amenities: validParams.amenities,
+      children: validParams.children,
+      currency: validParams.currency,
+      location: validParams.location,
+      priceRange: validParams.priceRange,
+      rating: validParams.rating,
+      rooms: validParams.rooms,
+    });
+
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkin: "2025-05-20",
+        checkout: "2025-05-21",
+      }),
+      expect.any(Object)
     );
   });
 

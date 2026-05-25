@@ -7,6 +7,9 @@ import {
   buildSearchTrends,
   useSearchHistoryStore,
 } from "@/features/search/store/search-history";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
+
+const ANALYTICS_TIMESTAMP = "2026-02-15T12:00:00.000Z";
 
 describe("Search History Store - Settings, Utils, and Analytics", () => {
   beforeEach(() => {
@@ -49,33 +52,34 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       expect(result.current.autoCleanupDays).toBe(60);
     });
 
-    it("applies cleanup when autoCleanupDays is updated", () => {
-      const { result } = renderHook(() => useSearchHistoryStore());
+    it(
+      "applies cleanup when autoCleanupDays is updated",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date("2026-02-15T12:00:00.000Z"));
 
-      // Add an old search
-      const oldDate = new Date();
-      oldDate.setDate(oldDate.getDate() - 40);
+        const { result } = renderHook(() => useSearchHistoryStore());
 
-      const oldSearch: SearchHistoryItem = {
-        id: "old-search",
-        params: {},
-        searchType: "flight",
-        timestamp: oldDate.toISOString(),
-      };
+        const oldSearch: SearchHistoryItem = {
+          id: "old-search",
+          params: {},
+          searchType: "flight",
+          timestamp: "2026-01-06T12:00:00.000Z",
+        };
 
-      act(() => {
-        useSearchHistoryStore.setState({ recentSearches: [oldSearch] });
-      });
+        act(() => {
+          useSearchHistoryStore.setState({ recentSearches: [oldSearch] });
+        });
 
-      expect(result.current.recentSearches).toHaveLength(1);
+        expect(result.current.recentSearches).toHaveLength(1);
 
-      // Update cleanup settings to trigger cleanup
-      act(() => {
-        result.current.updateSettings({ autoCleanupDays: 30 });
-      });
+        // Update cleanup settings to trigger cleanup
+        act(() => {
+          result.current.updateSettings({ autoCleanupDays: 30 });
+        });
 
-      expect(result.current.recentSearches).toHaveLength(0);
-    });
+        expect(result.current.recentSearches).toHaveLength(0);
+      })
+    );
   });
 
   describe("Analytics", () => {
@@ -86,27 +90,27 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
           params: {},
           searchDuration: 1500,
           searchType: "flight",
-          timestamp: new Date().toISOString(),
+          timestamp: ANALYTICS_TIMESTAMP,
         },
         {
           id: "search-2",
           params: {},
           searchDuration: 2000,
           searchType: "accommodation",
-          timestamp: new Date().toISOString(),
+          timestamp: ANALYTICS_TIMESTAMP,
         },
         {
           id: "search-3",
           params: {},
           searchDuration: 1000,
           searchType: "flight",
-          timestamp: new Date().toISOString(),
+          timestamp: ANALYTICS_TIMESTAMP,
         },
       ];
 
       const savedSearches: ValidatedSavedSearch[] = [
         {
-          createdAt: new Date().toISOString(),
+          createdAt: ANALYTICS_TIMESTAMP,
           id: "saved-1",
           isFavorite: false,
           isPublic: false,
@@ -114,7 +118,7 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
           params: {},
           searchType: "flight",
           tags: [],
-          updatedAt: new Date().toISOString(),
+          updatedAt: ANALYTICS_TIMESTAMP,
           usageCount: 10,
         },
       ];
@@ -149,20 +153,20 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
           location: { city: "Paris", country: "France" },
           params: {},
           searchType: "destination",
-          timestamp: new Date().toISOString(),
+          timestamp: ANALYTICS_TIMESTAMP,
         },
         {
           id: "dest-2",
           location: { city: "Paris", country: "France" },
           params: {},
           searchType: "destination",
-          timestamp: new Date().toISOString(),
+          timestamp: ANALYTICS_TIMESTAMP,
         },
         {
           id: "dest-3",
           params: { query: "Tokyo" },
           searchType: "destination",
-          timestamp: new Date().toISOString(),
+          timestamp: ANALYTICS_TIMESTAMP,
         },
       ];
 
@@ -209,16 +213,21 @@ describe("Search History Store - Settings, Utils, and Analytics", () => {
       expect(mostUsed[0].name).toBe("Popular Search");
     });
 
-    it("gets search trends", () => {
-      const { result } = renderHook(() => useSearchHistoryStore());
+    it(
+      "gets search trends",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date(ANALYTICS_TIMESTAMP));
 
-      const trends = result.current.getSearchTrends("flight", 7);
-      expect(trends).toHaveLength(7);
+        const { result } = renderHook(() => useSearchHistoryStore());
 
-      // Today should have 2 flight searches
-      const today = trends[trends.length - 1];
-      expect(today.count).toBe(2);
-    });
+        const trends = result.current.getSearchTrends("flight", 7);
+        expect(trends).toHaveLength(7);
+
+        // Today should have 2 flight searches
+        const today = trends[trends.length - 1];
+        expect(today.count).toBe(2);
+      })
+    );
   });
 
   describe("Utility Actions", () => {

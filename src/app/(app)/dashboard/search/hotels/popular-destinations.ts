@@ -2,6 +2,8 @@
  * @fileoverview Helpers for loading and caching popular hotel destinations.
  */
 
+import { nowIso } from "@/lib/security/random";
+
 export type PopularDestinationProps = {
   destination: string;
   priceFrom: number;
@@ -65,6 +67,10 @@ const POPULAR_DESTINATIONS_BY_CITY = new Map(
 
 export const POPULAR_DESTINATIONS_CACHE_KEY = "hotelsSearch:popularDestinations";
 export const POPULAR_DESTINATIONS_CACHE_TTL_MS = 60 * 60 * 1000;
+
+export function getPopularDestinationsCacheTimestampMs(): number {
+  return Date.parse(nowIso());
+}
 
 export function parseAvgPrice(value: string | undefined): number | null {
   if (!value) return null;

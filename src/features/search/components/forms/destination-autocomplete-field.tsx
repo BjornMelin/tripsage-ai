@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { nowIso } from "@/lib/security/random";
 
 type DestinationSuggestion = {
   placeId: string;
@@ -42,6 +43,10 @@ type DestinationAutocompleteFieldProps = {
 const CACHE_TTL_MS = 2 * 60_000;
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const MAX_CACHE_ENTRIES = 50;
+
+function GetAutocompleteCacheTimestampMs() {
+  return Date.parse(nowIso());
+}
 
 function MapPlaceToSuggestion(place: PlaceSummary): DestinationSuggestion {
   return {
@@ -91,8 +96,9 @@ export function DestinationAutocompleteField({
       const cacheKey = searchQuery.toLowerCase();
       const cached = cacheRef.current.get(cacheKey);
       const limit = form.getValues("limit") ?? 10;
+      const nowMs = GetAutocompleteCacheTimestampMs();
 
-      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      if (cached && nowMs - cached.timestamp < CACHE_TTL_MS) {
         cacheRef.current.delete(cacheKey);
         cacheRef.current.set(cacheKey, cached);
         const filteredCached = filterPlaces(cached.places);
@@ -137,7 +143,10 @@ export function DestinationAutocompleteField({
           throw new Error("Unexpected response from places search.");
         }
         const places = parsedData.data.places;
-        cacheRef.current.set(cacheKey, { places, timestamp: Date.now() });
+        cacheRef.current.set(cacheKey, {
+          places,
+          timestamp: GetAutocompleteCacheTimestampMs(),
+        });
         while (cacheRef.current.size > MAX_CACHE_ENTRIES) {
           const oldestKey = cacheRef.current.keys().next().value;
           if (typeof oldestKey !== "string") break;

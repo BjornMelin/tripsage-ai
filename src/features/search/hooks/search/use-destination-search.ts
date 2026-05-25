@@ -8,6 +8,7 @@ import type { Destination } from "@schemas/search";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
+import { nowIso } from "@/lib/security/random";
 
 /** Parameters for destination search. */
 export interface DestinationSearchParams {
@@ -228,7 +229,7 @@ export function useDestinationSearch(): UseDestinationSearchResult {
           setStoreSearchError(currentSearchIdRef.current, {
             code: "DESTINATION_SEARCH_ERROR",
             message: err.message,
-            occurredAt: new Date().toISOString(),
+            occurredAt: nowIso(),
             retryable: true,
           });
         }

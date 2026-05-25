@@ -1,8 +1,10 @@
 /** @vitest-environment node */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import {
   DEFAULT_POPULAR_DESTINATIONS,
+  getPopularDestinationsCacheTimestampMs,
   mapPopularDestinationsFromApiResponse,
   POPULAR_DESTINATIONS_CACHE_TTL_MS,
   parseAvgPrice,
@@ -39,6 +41,16 @@ class MemoryStorage implements Storage {
 }
 
 describe("popular destinations helpers", () => {
+  it(
+    "derives cache timestamps from the canonical clock helper",
+    withFakeTimers(() => {
+      const fixedNow = new Date("2026-02-03T04:05:06.000Z");
+      vi.setSystemTime(fixedNow);
+
+      expect(getPopularDestinationsCacheTimestampMs()).toBe(fixedNow.getTime());
+    })
+  );
+
   describe("parseAvgPrice", () => {
     it("parses numeric prices and ignores non-numeric values", () => {
       expect(parseAvgPrice(undefined)).toBeNull();

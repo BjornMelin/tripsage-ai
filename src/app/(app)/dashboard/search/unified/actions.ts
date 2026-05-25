@@ -32,13 +32,27 @@ import {
   type ResultError,
   zodErrorToFieldErrors,
 } from "@/lib/result";
-import { secureUuid } from "@/lib/security/random";
+import { nowIso, secureUuid } from "@/lib/security/random";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServerLogger } from "@/lib/telemetry/logger";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const MAX_SEARCH_RESULTS = 10;
 const logger = createServerLogger("search.unified.actions");
+
+type HotelSearchActionParams = Omit<HotelSearchFormData, "checkIn" | "checkOut"> &
+  Partial<Pick<HotelSearchFormData, "checkIn" | "checkOut">>;
+
+function getDefaultHotelSearchDates(): { checkIn: string; checkOut: string } {
+  const today = new Date(nowIso());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  return {
+    checkIn: format(today, "yyyy-MM-dd"),
+    checkOut: format(tomorrow, "yyyy-MM-dd"),
+  };
+}
 
 /** Build photo URL. */
 function buildPhotoUrl(photoName?: string): string | undefined {
@@ -59,7 +73,7 @@ function buildPhotoUrl(photoName?: string): string | undefined {
  * @returns Array of hotel results.
  */
 export async function searchHotelsAction(
-  params: HotelSearchFormData
+  params: HotelSearchActionParams
 ): Promise<Result<HotelResult[], ResultError>> {
   // Map component params to schema format
   const schemaParams: SearchAccommodationParams = {
@@ -112,13 +126,9 @@ export async function searchHotelsAction(
     versionedKey,
     withTelemetrySpan,
   });
-  const today = new Date();
-  const todayIso = format(today, "yyyy-MM-dd");
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const tomorrowIso = format(tomorrow, "yyyy-MM-dd");
-  const effectiveCheckIn = validatedParams.checkIn ?? todayIso;
-  const effectiveCheckOut = validatedParams.checkOut ?? tomorrowIso;
+  const defaultDates = getDefaultHotelSearchDates();
+  const effectiveCheckIn = validatedParams.checkIn ?? defaultDates.checkIn;
+  const effectiveCheckOut = validatedParams.checkOut ?? defaultDates.checkOut;
   let searchResult: Awaited<ReturnType<typeof service.search>>;
   try {
     searchResult = await withTelemetrySpan(

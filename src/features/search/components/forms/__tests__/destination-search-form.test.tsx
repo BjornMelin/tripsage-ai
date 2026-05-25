@@ -89,6 +89,50 @@ describe("DestinationSearchForm", () => {
     expect(input.value).toBe("Paris, France");
   });
 
+  it("reuses fresh autocomplete cache entries for repeated queries", async () => {
+    const requestCounts = new Map<string, number>();
+    vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+
+    server.use(
+      http.post("/api/places/search", async ({ request }) => {
+        const body = (await request.json()) as { textQuery?: string };
+        const textQuery = body.textQuery ?? "";
+        requestCounts.set(textQuery, (requestCounts.get(textQuery) ?? 0) + 1);
+
+        return HttpResponse.json({
+          places: [
+            {
+              formattedAddress: `${textQuery}, Cached Address`,
+              name: textQuery,
+              placeId: `place-${textQuery.toLowerCase()}`,
+              types: ["locality", "country"],
+            },
+          ],
+        });
+      })
+    );
+
+    renderWithProviders(<DestinationSearchForm onSearch={MockOnSearch} />);
+
+    await TriggerAutocomplete("Paris");
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: /Paris/ })).toBeInTheDocument()
+    );
+
+    await TriggerAutocomplete("Rome");
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: /Rome/ })).toBeInTheDocument()
+    );
+
+    await TriggerAutocomplete("Paris");
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: /Paris/ })).toBeInTheDocument()
+    );
+
+    expect(requestCounts.get("Paris")).toBe(1);
+    expect(requestCounts.get("Rome")).toBe(1);
+  });
+
   it("filters suggestions by selected destination types", async () => {
     server.use(
       http.post("/api/places/search", () =>

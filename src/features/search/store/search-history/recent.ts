@@ -7,6 +7,7 @@ import { searchHistoryItemSchema } from "@schemas/stores";
 import type { StateCreator } from "zustand";
 import { generateId, getCurrentTimestamp } from "@/features/shared/store/helpers";
 import { createStoreLogger } from "@/lib/telemetry/store-logger";
+import { getCurrentSearchHistoryDate } from "./analytics-utils";
 import type { RecentSearchesSlice, SearchHistoryState } from "./types";
 
 const logger = createStoreLogger({ storeName: "search-history" });
@@ -79,7 +80,7 @@ export const createRecentSearchesSlice: StateCreator<
 
   cleanupOldSearches: () => {
     const { autoCleanupDays } = get();
-    const cutoffDate = new Date();
+    const cutoffDate = getCurrentSearchHistoryDate();
     cutoffDate.setDate(cutoffDate.getDate() - autoCleanupDays);
 
     set((state) => ({
