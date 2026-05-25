@@ -127,6 +127,7 @@ describe("handleChat", () => {
     getMaybeSingleMock.mockResolvedValue({ data: { id: sessionId }, error: null });
     getManyMock.mockResolvedValue({ count: null, data: [], error: null });
     let messageInsertId = 100;
+    let clockNow = 1_000;
     insertSingleMock.mockImplementation((_client, table: string) => {
       if (table === "chat_messages") {
         messageInsertId += 1;
@@ -139,6 +140,7 @@ describe("handleChat", () => {
 
     await handleChat(
       {
+        clock: { now: () => clockNow },
         resolveProvider: async () => ({
           credentialSource: "user-provider",
           model: createMockModel(),
@@ -217,6 +219,7 @@ describe("handleChat", () => {
       totalUsage: usage,
     });
 
+    clockNow = 1_125;
     await streamOpts.onFinish?.({
       finishReason: undefined,
       isAborted: true,
@@ -238,7 +241,11 @@ describe("handleChat", () => {
     expect(typeof update.content).toBe("string");
     expect(update.content).toContain("partial answer");
     expect(update.metadata).toEqual(
-      expect.objectContaining({ isAborted: true, status: "aborted" })
+      expect.objectContaining({
+        durationMs: 125,
+        isAborted: true,
+        status: "aborted",
+      })
     );
   }, 10000);
 

@@ -36,6 +36,7 @@ import { ChatMessageItem } from "@/components/chat/message-item";
 import { Button } from "@/components/ui/button";
 import { secureId } from "@/lib/security/random";
 import { getBrowserClient } from "@/lib/supabase";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 const STORAGE_BUCKET = "attachments";
 
@@ -86,6 +87,17 @@ function resolveChatErrorMessage(error?: Error): string {
   }
 
   return error.message || CHAT_ERROR_FALLBACK;
+}
+
+function normalizeChatClientError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function reportChatClientError(error: unknown, action: string): void {
+  recordClientErrorOnActiveSpan(normalizeChatClientError(error), {
+    action,
+    context: "ChatClient",
+  });
 }
 
 /**
@@ -211,9 +223,7 @@ export function ChatClient(): ReactElement {
         (err instanceof Error && err.name === "AbortError");
       if (isAbort) return null;
 
-      if (process.env.NODE_ENV === "development") {
-        console.error("Failed to create chat session:", err);
-      }
+      reportChatClientError(err, "createSession");
       return null;
     }
   };
@@ -356,9 +366,7 @@ export function ChatClient(): ReactElement {
         activeSessionId ? { body: { sessionId: activeSessionId } } : undefined
       );
     } catch (err) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Failed to submit chat message:", err);
-      }
+      reportChatClientError(err, "submitMessage");
     } finally {
       if (!controller.signal.aborted) {
         setInput("");

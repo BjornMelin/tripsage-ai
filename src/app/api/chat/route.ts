@@ -151,7 +151,7 @@ export const POST = withApiGuards({
   const adminSupabase = getAdminSupabase();
   return handleChat(
     {
-      clock: { now: () => Date.now() },
+      clock: { now: () => performance.now() },
       config: {
         defaultMaxTokens,
         stepLimit,

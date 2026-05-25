@@ -8,6 +8,7 @@ import {
   mockApiRouteAuthUser,
   resetApiRouteMocks,
 } from "@/test/helpers/api-route";
+import type { ChatDeps, ChatPayload } from "../_handler";
 
 vi.mock("server-only", () => ({}));
 
@@ -19,8 +20,9 @@ vi.mock("botid/server", async () => {
 });
 
 const getAdminSupabaseMock = vi.hoisted(() => vi.fn(() => ({})));
+type HandleChatMock = (deps: ChatDeps, payload: ChatPayload) => Promise<Response>;
 const handleChatMock = vi.hoisted(() =>
-  vi.fn(async () => new Response("ok", { status: 200 }))
+  vi.fn<HandleChatMock>(async () => new Response("ok", { status: 200 }))
 );
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -73,6 +75,15 @@ describe("/api/chat (AI SDK UI stream)", () => {
         userId,
       })
     );
+
+    const deps = handleChatMock.mock.calls[0]?.[0];
+    const performanceNowSpy = vi.spyOn(performance, "now").mockReturnValue(432.5);
+    try {
+      expect(deps.clock?.now()).toBe(432.5);
+      expect(performanceNowSpy).toHaveBeenCalledOnce();
+    } finally {
+      performanceNowSpy.mockRestore();
+    }
   });
 
   it("accepts single-message request shape (message field)", async () => {
