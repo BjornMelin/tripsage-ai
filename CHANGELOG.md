@@ -1,3 +1,9 @@
+## [1.33.10](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.9...v1.33.10) (2026-05-25)
+
+### Bug Fixes
+
+* **ui:** report proxied image dimension errors ([#772](https://github.com/BjornMelin/tripsage-ai/issues/772)) ([81dfddf](https://github.com/BjornMelin/tripsage-ai/commit/81dfddfab63cff7056101d17689bfa0844119104))
+
 ## [1.33.9](https://github.com/BjornMelin/tripsage-ai/compare/v1.33.8...v1.33.9) (2026-05-25)
 
 ### Bug Fixes
