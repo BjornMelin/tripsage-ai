@@ -12,6 +12,8 @@ const VERSION_ID_RANDOM_LENGTH = 8;
  * Keeps the existing `v<epoch_seconds>_<token>` shape while deriving the
  * timestamp through the repo timestamp helper.
  *
+ * @param currentIso - ISO timestamp used to derive the version epoch seconds.
+ * @param token - Random token suffix for collision resistance.
  * @returns Agent configuration version identifier.
  */
 export function createAgentConfigVersionId(

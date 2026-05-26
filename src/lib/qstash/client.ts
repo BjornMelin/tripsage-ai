@@ -221,11 +221,7 @@ export interface EnqueueJobResult {
  *   }
  * );
  * if (result) {
- *   recordTelemetryEvent("qstash.enqueue.scheduled", {
- *     attributes: {
- *       messageId: result.messageId,
- *     },
- *   });
+ *   // Job scheduled successfully; inspect messageId for tracing if needed.
  * }
  * ```
  */

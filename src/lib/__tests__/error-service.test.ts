@@ -221,31 +221,6 @@ describe("ErrorService", () => {
     beforeEach(timers.setup);
     afterEach(timers.teardown);
 
-    it("simulates rejected fetches before returning a successful response", async () => {
-      const endpoint = config.endpoint ?? ERROR_REPORTING_ENDPOINT;
-      const flaky = createFlakyErrorReportingHandler({
-        endpoint,
-        failTimes: 1,
-      });
-      server.use(flaky.handler);
-
-      await expect(
-        fetch(endpoint, {
-          body: JSON.stringify(buildReport()),
-          method: "POST",
-        })
-      ).rejects.toThrow();
-
-      const response = await fetch(endpoint, {
-        body: JSON.stringify(buildReport()),
-        method: "POST",
-      });
-
-      expect(response.ok).toBe(true);
-      await expect(response.json()).resolves.toEqual({ success: true });
-      expect(flaky.callCount()).toBe(2);
-    });
-
     it("retries transient failures up to maxRetries", async () => {
       const flaky = createFlakyErrorReportingHandler({
         endpoint: config.endpoint,

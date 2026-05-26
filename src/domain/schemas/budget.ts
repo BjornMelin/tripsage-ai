@@ -536,6 +536,7 @@ export const safeValidateExpense = (data: unknown) => {
  *
  * @param budget - Budget to analyze
  * @param expenses - Associated expenses for calculation
+ * @param options - Optional calculation controls, including the current date.
  * @returns Comprehensive budget summary with percentages and projections
  *
  * @example
@@ -581,7 +582,10 @@ export const calculateBudgetSummary = (
     const currentTimestampMs = getCurrentBudgetTimestampMs(options.currentDate);
 
     const totalDays = Math.ceil((endTimestampMs - startTimestampMs) / MS_PER_DAY);
-    const daysPassed = Math.ceil((currentTimestampMs - startTimestampMs) / MS_PER_DAY);
+    const daysPassed = Math.max(
+      0,
+      Math.ceil((currentTimestampMs - startTimestampMs) / MS_PER_DAY)
+    );
     daysRemaining = Math.max(0, totalDays - daysPassed);
 
     if (daysPassed > 0) {

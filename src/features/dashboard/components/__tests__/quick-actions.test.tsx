@@ -118,10 +118,9 @@ describe("QuickActions", () => {
 
   it("applies custom colors to action buttons", () => {
     renderWithProviders(<QuickActions />);
+    const links = screen.getAllByRole("link");
     const hasClassName = (className: string) =>
-      Array.from(document.querySelectorAll("[class]")).some((element) =>
-        element.classList.contains(className)
-      );
+      links.some((element) => element.classList.contains(className));
 
     // Check that custom color classes are applied
     expect(hasClassName("bg-info/10")).toBe(true);
