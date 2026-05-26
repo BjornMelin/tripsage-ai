@@ -333,6 +333,28 @@ describe("budget schemas", () => {
         food: 300,
       });
     });
+
+    it("does not over-count remaining days before the budget start date", () => {
+      const summary = calculateBudgetSummary(
+        {
+          categories: [],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          endDate: "2025-06-15",
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          isActive: true,
+          name: "Future Trip",
+          startDate: "2025-06-01",
+          totalAmount: 5000,
+          updatedAt: "2025-05-20T12:00:00Z",
+        },
+        [],
+        { currentDate: "2025-05-25T00:00:00.000Z" }
+      );
+
+      expect(summary.daysRemaining).toBe(14);
+      expect(summary.dailyAverage).toBe(0);
+    });
   });
 
   describe("budgetAlertSchema", () => {

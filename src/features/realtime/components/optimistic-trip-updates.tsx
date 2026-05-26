@@ -122,7 +122,9 @@ function BuildOptimisticTripPatch(
 > | null {
   switch (field) {
     case "budget":
-      return typeof value === "number" ? { budget: value } : null;
+      return typeof value === "number" && Number.isFinite(value)
+        ? { budget: value }
+        : null;
     case "destination":
       return typeof value === "string" ? { destination: value } : null;
     case "end_date":
@@ -132,7 +134,9 @@ function BuildOptimisticTripPatch(
     case "start_date":
       return typeof value === "string" ? { startDate: value } : null;
     case "travelers":
-      return typeof value === "number" ? { travelers: value } : null;
+      return typeof value === "number" && Number.isFinite(value)
+        ? { travelers: value }
+        : null;
     default:
       return null;
   }
@@ -164,6 +168,9 @@ function GetTripValueForUpdateField(
  * Applies a database trip update field to the UI trip shape.
  *
  * Unknown or invalid fields are ignored and reported through client telemetry.
+ *
+ * @param input - Trip update details and previous UI trip state.
+ * @returns Updated UI trip state, or the previous state when the update is invalid.
  */
 export function ApplyTripUpdateToUiTrip(input: {
   field: TripUpdateKey;

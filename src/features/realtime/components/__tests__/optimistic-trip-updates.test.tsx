@@ -74,6 +74,24 @@ describe("applyTripUpdateToUiTrip", () => {
     expect(MOCK_RECORD_CLIENT_ERROR_ON_ACTIVE_SPAN).not.toHaveBeenCalled();
   });
 
+  it("ignores non-finite numeric optimistic updates", () => {
+    const updated = ApplyTripUpdateToUiTrip({
+      field: "budget",
+      prev: BASE_TRIP,
+      tripId: 42,
+      value: Number.NaN,
+    });
+
+    expect(updated).toBe(BASE_TRIP);
+    expect(MOCK_RECORD_CLIENT_ERROR_ON_ACTIVE_SPAN).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        action: "applyOptimisticTripUpdate",
+        field: "budget",
+      })
+    );
+  });
+
   it("ignores unmapped fields and records sanitized telemetry", () => {
     const updated = ApplyTripUpdateToUiTrip({
       field: "description",
