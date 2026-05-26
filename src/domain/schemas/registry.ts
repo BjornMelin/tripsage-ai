@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { nowIso } from "@/lib/security/random";
 
 /**
  * Base primitive schemas with enhanced validation (Zod v4 patterns)
@@ -66,15 +67,50 @@ export const transformSchemas = {
  * Refinement schemas for complex validation
  * Uses Zod v4 .refine() with unified error option
  */
+type DateTimeReference = Date | number | string;
+
+const getDateTimeReferenceMs = (reference: DateTimeReference): number => {
+  const timestampMs =
+    reference instanceof Date
+      ? reference.getTime()
+      : typeof reference === "number"
+        ? reference
+        : Date.parse(reference);
+
+  if (!Number.isFinite(timestampMs)) {
+    throw new Error("Invalid datetime reference");
+  }
+
+  return timestampMs;
+};
+
+/**
+ * Creates an ISO datetime schema that validates values after the supplied reference time.
+ *
+ * @param referenceTime - Optional reference clock. Defaults to the current runtime timestamp.
+ * @returns Zod schema for future ISO datetimes.
+ */
+export const createFutureDateSchema = (referenceTime?: DateTimeReference) =>
+  z.iso.datetime().refine(
+    (date) => {
+      const referenceTimestampMs =
+        referenceTime === undefined
+          ? Date.parse(nowIso())
+          : getDateTimeReferenceMs(referenceTime);
+      return getDateTimeReferenceMs(date) > referenceTimestampMs;
+    },
+    {
+      error: "Date must be in the future",
+    }
+  );
+
 export const refinedSchemas = {
   adultAge: z
     .number()
     .int()
     .min(0)
     .refine((age) => age >= 18, { error: "Must be 18 or older" }),
-  futureDate: z.iso.datetime().refine((date) => new Date(date) > new Date(), {
-    error: "Date must be in the future",
-  }),
+  futureDate: createFutureDateSchema(),
 
   strongPassword: z
     .string()

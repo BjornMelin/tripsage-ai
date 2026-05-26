@@ -91,7 +91,7 @@ describe("Validation Performance", () => {
     });
 
     it.concurrent("should validate future date quickly", () => {
-      const futureDate = new Date(Date.now() + 86400000).toISOString();
+      const futureDate = "2999-01-01T00:00:00Z";
       const start = performance.now();
 
       for (let i = 0; i < iterations; i++) {

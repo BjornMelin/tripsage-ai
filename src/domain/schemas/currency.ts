@@ -6,9 +6,6 @@ import { z } from "zod";
 import { primitiveSchemas } from "./registry";
 import { CURRENCY_CODE_SCHEMA } from "./shared/money";
 
-// Re-export for backwards compatibility
-export { CURRENCY_CODE_SCHEMA };
-
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for currency management
 

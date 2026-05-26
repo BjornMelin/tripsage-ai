@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { nowIso } from "@/lib/security/random";
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA, PHONE_SCHEMA } from "./shared/person";
 import { ISO_DATE_STRING } from "./shared/time";
@@ -12,40 +13,99 @@ import { ISO_DATE_STRING } from "./shared/time";
 
 const CURRENCY_SCHEMA = primitiveSchemas.isoCurrency;
 
+type DateParts = {
+  day: number;
+  month: number;
+  year: number;
+};
+
+type DateOfBirthReference = Date | number | string;
+
+const parseIsoDateParts = (date: string): DateParts | null => {
+  const [yearStr, monthStr, dayStr] = date.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const parsedDate = new Date(year, month - 1, day);
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month - 1 ||
+    parsedDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return { day, month, year };
+};
+
+const calculateAge = (birthDate: DateParts, today: DateParts): number => {
+  const birthdayHasPassed =
+    today.month > birthDate.month ||
+    (today.month === birthDate.month && today.day >= birthDate.day);
+
+  return today.year - birthDate.year - (birthdayHasPassed ? 0 : 1);
+};
+
+const getReferenceDateParts = (reference?: DateOfBirthReference): DateParts => {
+  const today =
+    reference instanceof Date
+      ? new Date(reference.getTime())
+      : new Date(reference ?? nowIso());
+
+  if (!Number.isFinite(today.getTime())) {
+    throw new Error("Invalid date-of-birth reference");
+  }
+
+  return {
+    day: today.getDate(),
+    month: today.getMonth() + 1,
+    year: today.getFullYear(),
+  };
+};
+
 /**
  * Zod schema for personal information form validation.
  * Validates user profile data including name, bio, location, and contact information.
  */
-export const personalInfoFormSchema = z.object({
-  bio: z
-    .string()
-    .max(500, { error: "Bio must be less than 500 characters" })
-    .optional(),
-  currency: CURRENCY_SCHEMA.optional(),
-  dateOfBirth: ISO_DATE_STRING.refine(
-    (date) => {
-      const birthDate = new Date(date);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      return age >= 13 && age <= 120;
-    },
-    { error: "You must be between 13 and 120 years old" }
-  ).optional(),
-  displayName: z
-    .string()
-    .min(1, { error: "Display name is required" })
-    .max(50, { error: "Display name must be less than 50 characters" }),
-  firstName: NAME_SCHEMA,
-  language: z.string().min(2).max(5).optional(),
-  lastName: NAME_SCHEMA,
-  location: z
-    .string()
-    .max(100, { error: "Location must be less than 100 characters" })
-    .optional(),
-  phoneNumber: PHONE_SCHEMA.optional(),
-  timezone: z.string().optional(),
-  website: primitiveSchemas.url.optional().or(z.literal("")),
-});
+export const createPersonalInfoFormSchema = (referenceDate?: DateOfBirthReference) =>
+  z.object({
+    bio: z
+      .string()
+      .max(500, { error: "Bio must be less than 500 characters" })
+      .optional(),
+    currency: CURRENCY_SCHEMA.optional(),
+    dateOfBirth: ISO_DATE_STRING.refine(
+      (date) => {
+        const birthDate = parseIsoDateParts(date);
+        if (!birthDate) return false;
+
+        const age = calculateAge(birthDate, getReferenceDateParts(referenceDate));
+        return age >= 13 && age <= 120;
+      },
+      { error: "You must be between 13 and 120 years old" }
+    ).optional(),
+    displayName: z
+      .string()
+      .min(1, { error: "Display name is required" })
+      .max(50, { error: "Display name must be less than 50 characters" }),
+    firstName: NAME_SCHEMA,
+    language: z.string().min(2).max(5).optional(),
+    lastName: NAME_SCHEMA,
+    location: z
+      .string()
+      .max(100, { error: "Location must be less than 100 characters" })
+      .optional(),
+    phoneNumber: PHONE_SCHEMA.optional(),
+    timezone: z.string().optional(),
+    website: primitiveSchemas.url.optional().or(z.literal("")),
+  });
+
+export const personalInfoFormSchema = createPersonalInfoFormSchema();
 
 /** TypeScript type for personal information form data. */
 export type PersonalInfoFormData = z.infer<typeof personalInfoFormSchema>;

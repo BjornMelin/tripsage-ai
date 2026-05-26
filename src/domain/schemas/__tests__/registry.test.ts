@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import {
+  createFutureDateSchema,
   type Email,
   type IsoDateTime,
   primitiveSchemas,
@@ -274,16 +275,21 @@ describe("transformSchemas", () => {
 
 describe("refinedSchemas", () => {
   describe("futureDate", () => {
-    it.concurrent("should validate future date", () => {
-      const futureDate = new Date(Date.now() + 86400000).toISOString(); // Tomorrow
-      const result = refinedSchemas.futureDate.safeParse(futureDate);
+    it.concurrent("creates deterministic future-date schemas", () => {
+      const schema = createFutureDateSchema("2025-06-01T00:00:00Z");
+      const result = schema.safeParse("2025-06-01T00:00:01Z");
       expect(result.success).toBe(true);
     });
 
-    it.concurrent("should reject past date", () => {
-      const pastDate = new Date(Date.now() - 86400000).toISOString(); // Yesterday
-      const result = refinedSchemas.futureDate.safeParse(pastDate);
+    it.concurrent("rejects values before the deterministic reference date", () => {
+      const schema = createFutureDateSchema("2025-06-01T00:00:00Z");
+      const result = schema.safeParse("2025-05-31T23:59:59Z");
       expect(result.success).toBe(false);
+    });
+
+    it.concurrent("keeps the registry future-date schema available", () => {
+      const result = refinedSchemas.futureDate.safeParse("2999-01-01T00:00:00Z");
+      expect(result.success).toBe(true);
     });
   });
 

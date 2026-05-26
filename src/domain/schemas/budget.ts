@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { nowIso } from "@/lib/security/random";
 import { primitiveSchemas } from "./registry";
 
 // ===== CORE SCHEMAS =====
@@ -452,6 +453,32 @@ export type BudgetState = z.infer<typeof budgetStateSchema>;
 // ===== UTILITY FUNCTIONS =====
 // Validation helpers and business logic functions
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+type BudgetSummaryOptions = {
+  /** Date used for time-based summary calculations. Defaults to the current clock. */
+  currentDate?: Date | number | string;
+};
+
+const getBudgetTimestampMs = (value: Date | number | string): number => {
+  const timestampMs =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : Date.parse(value);
+
+  if (!Number.isFinite(timestampMs)) {
+    throw new Error("Invalid budget summary date");
+  }
+
+  return timestampMs;
+};
+
+const getCurrentBudgetTimestampMs = (
+  currentDate: BudgetSummaryOptions["currentDate"]
+): number => getBudgetTimestampMs(currentDate ?? nowIso());
+
 /**
  * Validates budget data from external sources.
  * Performs comprehensive validation including category allocation checks.
@@ -520,7 +547,8 @@ export const safeValidateExpense = (data: unknown) => {
  */
 export const calculateBudgetSummary = (
   budget: Budget,
-  expenses: Expense[]
+  expenses: Expense[],
+  options: BudgetSummaryOptions = {}
 ): BudgetSummary => {
   const budgetExpenses = expenses.filter((expense) => expense.budgetId === budget.id);
   const totalSpent = budgetExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -547,16 +575,12 @@ export const calculateBudgetSummary = (
   let daysRemaining: number | undefined;
 
   if (budget.startDate && budget.endDate) {
-    const startDate = new Date(budget.startDate);
-    const endDate = new Date(budget.endDate);
-    const today = new Date();
+    const startTimestampMs = getBudgetTimestampMs(budget.startDate);
+    const endTimestampMs = getBudgetTimestampMs(budget.endDate);
+    const currentTimestampMs = getCurrentBudgetTimestampMs(options.currentDate);
 
-    const totalDays = Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const daysPassed = Math.ceil(
-      (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const totalDays = Math.ceil((endTimestampMs - startTimestampMs) / MS_PER_DAY);
+    const daysPassed = Math.ceil((currentTimestampMs - startTimestampMs) / MS_PER_DAY);
     daysRemaining = Math.max(0, totalDays - daysPassed);
 
     if (daysPassed > 0) {
