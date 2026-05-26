@@ -3,7 +3,8 @@
  */
 
 import { z } from "zod";
-import { nowIso } from "@/lib/security/random";
+
+const currentIsoTimestamp = (): string => new Date().toISOString();
 
 /**
  * Base primitive schemas with enhanced validation (Zod v4 patterns)
@@ -95,7 +96,7 @@ export const createFutureDateSchema = (referenceTime?: DateTimeReference) =>
     (date) => {
       const referenceTimestampMs =
         referenceTime === undefined
-          ? Date.parse(nowIso())
+          ? Date.parse(currentIsoTimestamp())
           : getDateTimeReferenceMs(referenceTime);
       return getDateTimeReferenceMs(date) > referenceTimestampMs;
     },
