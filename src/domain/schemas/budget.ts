@@ -3,7 +3,9 @@
  */
 
 import { z } from "zod";
+
 import { primitiveSchemas } from "./registry";
+import { schemaNowIso } from "./shared/runtime-clock";
 
 // ===== CORE SCHEMAS =====
 // Core business logic schemas for budget and expense management
@@ -454,8 +456,6 @@ export type BudgetState = z.infer<typeof budgetStateSchema>;
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-const currentIsoTimestamp = (): string => new Date().toISOString();
-
 type BudgetSummaryOptions = {
   /** Date used for time-based summary calculations. Defaults to the current clock. */
   currentDate?: Date | number | string;
@@ -478,7 +478,7 @@ const getBudgetTimestampMs = (value: Date | number | string): number => {
 
 const getCurrentBudgetTimestampMs = (
   currentDate: BudgetSummaryOptions["currentDate"]
-): number => getBudgetTimestampMs(currentDate ?? currentIsoTimestamp());
+): number => getBudgetTimestampMs(currentDate ?? schemaNowIso());
 
 /**
  * Validates budget data from external sources.

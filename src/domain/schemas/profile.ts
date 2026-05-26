@@ -3,8 +3,10 @@
  */
 
 import { z } from "zod";
+
 import { primitiveSchemas } from "./registry";
 import { EMAIL_SCHEMA, NAME_SCHEMA, PHONE_SCHEMA } from "./shared/person";
+import { schemaNowIso } from "./shared/runtime-clock";
 import { ISO_DATE_STRING } from "./shared/time";
 
 // ===== FORM SCHEMAS =====
@@ -19,8 +21,6 @@ type DateParts = {
 };
 
 type DateOfBirthReference = Date | number | string;
-
-const currentIsoTimestamp = (): string => new Date().toISOString();
 
 const parseIsoDateParts = (date: string): DateParts | null => {
   const [yearStr, monthStr, dayStr] = date.split("-");
@@ -56,7 +56,7 @@ const getReferenceDateParts = (reference?: DateOfBirthReference): DateParts => {
   const today =
     reference instanceof Date
       ? new Date(reference.getTime())
-      : new Date(reference ?? currentIsoTimestamp());
+      : new Date(reference ?? schemaNowIso());
 
   if (!Number.isFinite(today.getTime())) {
     throw new Error("Invalid date-of-birth reference");

@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 
-const currentIsoTimestamp = (): string => new Date().toISOString();
+import { schemaNowIso } from "./shared/runtime-clock";
 
 /**
  * Base primitive schemas with enhanced validation (Zod v4 patterns)
@@ -96,7 +96,7 @@ export const createFutureDateSchema = (referenceTime?: DateTimeReference) =>
     (date) => {
       const referenceTimestampMs =
         referenceTime === undefined
-          ? Date.parse(currentIsoTimestamp())
+          ? Date.parse(schemaNowIso())
           : getDateTimeReferenceMs(referenceTime);
       return getDateTimeReferenceMs(date) > referenceTimestampMs;
     },
