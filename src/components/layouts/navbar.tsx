@@ -39,12 +39,15 @@ export function Navbar() {
             TripSage<span className="text-highlight ml-1">AI</span>
           </Link>
 
-          {/* Desktop navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav
+            aria-label="Primary navigation"
+            className="hidden md:flex items-center gap-6"
+          >
             {NavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={pathname === item.href ? "page" : undefined}
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-primary flex items-center",
                   pathname === item.href ? "text-primary" : "text-muted-foreground"
@@ -60,10 +63,10 @@ export function Navbar() {
         {/* User section */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="hidden md:inline-flex" asChild>
             <Link href={ROUTES.login}>Log in</Link>
           </Button>
-          <Button size="sm" asChild>
+          <Button size="sm" className="hidden md:inline-flex" asChild>
             <Link href={ROUTES.register}>Sign up</Link>
           </Button>
 
@@ -90,12 +93,17 @@ export function Navbar() {
 
       {/* Mobile navigation */}
       {mobileMenuOpen && (
-        <nav id="mobile-navigation" className="md:hidden py-4 border-t">
+        <nav
+          id="mobile-navigation"
+          aria-label="Mobile navigation"
+          className="md:hidden py-4 border-t"
+        >
           <div className="mx-auto flex w-full max-w-6xl flex-col space-y-3 px-4 sm:px-6 lg:px-8">
             {NavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={pathname === item.href ? "page" : undefined}
                 className={cn(
                   "px-2 py-2 text-sm font-medium rounded-md flex items-center",
                   pathname === item.href
@@ -108,6 +116,18 @@ export function Navbar() {
                 {item.name}
               </Link>
             ))}
+            <div className="grid gap-2 border-t pt-3">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={ROUTES.login} onClick={() => setMobileMenuOpen(false)}>
+                  Log in
+                </Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href={ROUTES.register} onClick={() => setMobileMenuOpen(false)}>
+                  Sign up
+                </Link>
+              </Button>
+            </div>
           </div>
         </nav>
       )}
