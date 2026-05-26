@@ -3,9 +3,9 @@
  */
 
 import { z } from "zod";
-import { primitiveSchemas } from "../registry";
 
-const currentIsoTimestamp = (): string => new Date().toISOString();
+import { primitiveSchemas } from "../registry";
+import { schemaNowIso } from "./runtime-clock";
 
 export const ISO_DATE_STRING = z
   .string()
@@ -46,7 +46,7 @@ const getReferenceLocalMidnight = (reference?: LocalDateReference): Date => {
   const now =
     reference instanceof Date
       ? new Date(reference.getTime())
-      : new Date(reference ?? currentIsoTimestamp());
+      : new Date(reference ?? schemaNowIso());
 
   if (!Number.isFinite(now.getTime())) {
     throw new Error("Invalid local date reference");
