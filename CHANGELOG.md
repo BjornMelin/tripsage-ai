@@ -1,3 +1,18 @@
+## [1.36.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.35.0...v1.36.0) (2026-05-26)
+
+### Features
+
+* **security:** add injectable nowIso reference ([02f7d89](https://github.com/BjornMelin/tripsage-ai/commit/02f7d89e1322bc544dd613ac03852703c2f0069d))
+
+### Bug Fixes
+
+* **domain:** keep schemas independent from lib layer ([07d8062](https://github.com/BjornMelin/tripsage-ai/commit/07d806210fed4619f68b769b01a70bfc07419dcf))
+* **http:** distinguish caller abort from fetch timeout ([7d34666](https://github.com/BjornMelin/tripsage-ai/commit/7d346668b3115c6cbe0b075d482da8093f35e7c5))
+* **navbar:** prevent mobile header overflow ([0bc44b9](https://github.com/BjornMelin/tripsage-ai/commit/0bc44b931e128b3f359c836bd7307b1142005141))
+* **package:** update pre-commit hook to use script for secret checks ([c6bc16d](https://github.com/BjornMelin/tripsage-ai/commit/c6bc16d97538dead9b9885eacb0c89f4e00783af))
+* **review:** address PR 786 feedback ([11729c0](https://github.com/BjornMelin/tripsage-ai/commit/11729c09e1a8fcbf9c25b02e290537cf7e108697))
+* **review:** tighten PR 786 follow-up fixes ([bbe1897](https://github.com/BjornMelin/tripsage-ai/commit/bbe189795b882cde510eed416b4bf0a53d56c875))
+
 ## [1.35.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.7...v1.35.0) (2026-05-26)
 
 ### Features
