@@ -16,6 +16,7 @@ const VERSION_ID_RANDOM_LENGTH = 8;
  * `nowIso()`.
  * @param token - Random token string; defaults to an 8-character secure ID.
  * @returns Agent configuration version identifier.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
  */
 export function createAgentConfigVersionId(
   currentIso: string = nowIso(),
