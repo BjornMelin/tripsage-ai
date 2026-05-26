@@ -269,9 +269,10 @@ describe("Error Fallback Components", () => {
       expect(
         screen.queryByRole("button", { name: /try again/i })
       ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /go to dashboard/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /go to dashboard/i })).toHaveAttribute(
+        "href",
+        "/dashboard"
+      );
     });
   });
 
@@ -288,7 +289,11 @@ describe("Error Fallback Components", () => {
       render(<ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />);
 
       const buttons = screen.getAllByRole("button");
-      expect(buttons).toHaveLength(4); // Try Again, Reset, Reload Page, Go Home
+      expect(buttons).toHaveLength(3); // Try Again, Reset, Reload Page
+      expect(screen.getByRole("link", { name: /go home/i })).toHaveAttribute(
+        "href",
+        "/"
+      );
     });
 
     /** Test that the component has accessible button text */
@@ -298,7 +303,10 @@ describe("Error Fallback Components", () => {
       expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /reset/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /reload page/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /go home/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /go home/i })).toHaveAttribute(
+        "href",
+        "/"
+      );
     });
   });
 
