@@ -3,6 +3,7 @@
 import { delay, HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/msw/server";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import { fetchWithRetry, type RetryOptions, retryWithBackoff } from "../retry";
 
 describe("retryWithBackoff", () => {
@@ -291,7 +292,7 @@ describe("fetchWithRetry", () => {
     expect(requests[0].headers.get("content-type")).toContain("application/json");
   });
 
-  it("handles caller abort signal", async () => {
+  it("handles caller abort signal distinctly from timeout", async () => {
     const controller = new AbortController();
     controller.abort();
 
@@ -300,7 +301,90 @@ describe("fetchWithRetry", () => {
         signal: controller.signal,
       })
     ).rejects.toMatchObject({
-      code: "fetch_timeout",
+      code: "fetch_aborted",
+      meta: {
+        attempt: 1,
+      },
+    });
+  });
+
+  it("does not retry caller-aborted requests", async () => {
+    let calls = 0;
+    const controller = new AbortController();
+    server.use(
+      http.get(ApiUrl, async () => {
+        calls += 1;
+        controller.abort();
+        await delay(50);
+        return HttpResponse.json({ data: "late" }, { status: 200 });
+      })
+    );
+
+    await expect(
+      fetchWithRetry(
+        ApiUrl,
+        {
+          signal: controller.signal,
+        },
+        { backoffMs: 1, retries: 3, timeoutMs: 1000 }
+      )
+    ).rejects.toMatchObject({
+      code: "fetch_aborted",
+      meta: {
+        attempt: 1,
+      },
+    });
+
+    expect(calls).toBe(1);
+  });
+
+  it(
+    "clears timeout and abort listener when caller aborts",
+    withFakeTimers(async () => {
+      const controller = new AbortController();
+      server.use(
+        http.get(ApiUrl, async () => {
+          controller.abort();
+          await delay(50);
+          return HttpResponse.json({ data: "late" }, { status: 200 });
+        })
+      );
+
+      const pendingRequest = fetchWithRetry(
+        ApiUrl,
+        {
+          signal: controller.signal,
+        },
+        { retries: 0, timeoutMs: 1000 }
+      );
+      pendingRequest.catch(() => undefined);
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      await expect(pendingRequest).rejects.toMatchObject({
+        code: "fetch_aborted",
+      });
+      expect(vi.getTimerCount()).toBe(0);
+    })
+  );
+
+  it("handles pre-aborted caller signals without retrying", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      fetchWithRetry(
+        ApiUrl,
+        {
+          signal: controller.signal,
+        },
+        { backoffMs: 1, retries: 3 }
+      )
+    ).rejects.toMatchObject({
+      code: "fetch_aborted",
+      meta: {
+        attempt: 1,
+      },
     });
   });
 });

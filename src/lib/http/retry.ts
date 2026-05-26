@@ -140,8 +140,9 @@ export type FetchRetryOptions = {
  * @param init - Fetch options (RequestInit).
  * @param options - Retry and timeout options.
  * @returns The Response object on success.
- * @throws {Error} Error with `code` property set to "fetch_timeout" or "fetch_failed",
- *   and `meta` property containing attempt details.
+ * @throws {Error} Error with `code` property set to "fetch_timeout",
+ *   "fetch_aborted", or "fetch_failed", and `meta` property containing attempt
+ *   details.
  */
 export function fetchWithRetry(
   url: string,
@@ -157,36 +158,47 @@ export function fetchWithRetry(
       const controller = new AbortController();
       // Propagate caller aborts to our controller
       let onCallerAbort: (() => void) | undefined;
+      let abortedByCaller = init.signal?.aborted ?? false;
+      let abortedByTimeout = false;
       if (init.signal) {
         if (init.signal.aborted) {
           controller.abort();
         } else {
-          onCallerAbort = () => controller.abort();
+          onCallerAbort = () => {
+            abortedByCaller = true;
+            controller.abort();
+          };
           init.signal.addEventListener("abort", onCallerAbort, { once: true });
         }
       }
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const timeoutId = setTimeout(() => {
+        abortedByTimeout = true;
+        controller.abort();
+      }, timeoutMs);
       try {
-        const res = await fetch(url, {
+        return await fetch(url, {
           ...init,
           signal: controller.signal,
         });
-        clearTimeout(timeoutId);
-        if (init.signal && onCallerAbort) {
-          init.signal.removeEventListener("abort", onCallerAbort);
-        }
-        return res;
       } catch (err) {
-        clearTimeout(timeoutId);
-        if (init.signal && onCallerAbort) {
-          init.signal.removeEventListener("abort", onCallerAbort);
-        }
-        const isTimeout = err instanceof Error && err.name === "AbortError";
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        const code = isAbort
+          ? abortedByTimeout
+            ? "fetch_timeout"
+            : abortedByCaller
+              ? "fetch_aborted"
+              : "fetch_failed"
+          : "fetch_failed";
         const error: Error & { code?: string; meta?: Record<string, unknown> } =
-          new Error(isTimeout ? "fetch_timeout" : "fetch_failed");
-        error.code = isTimeout ? "fetch_timeout" : "fetch_failed";
+          new Error(code);
+        error.code = code;
         error.meta = { attempt: attemptNumber, maxRetries: retries, url };
         throw error;
+      } finally {
+        clearTimeout(timeoutId);
+        if (init.signal && onCallerAbort) {
+          init.signal.removeEventListener("abort", onCallerAbort);
+        }
       }
     },
     {
@@ -196,7 +208,11 @@ export function fetchWithRetry(
         // Don't retry on timeout errors or abort errors
         if (error instanceof Error) {
           const errorCode = (error as { code?: string }).code;
-          if (error.name === "AbortError" || errorCode === "fetch_timeout") {
+          if (
+            error.name === "AbortError" ||
+            errorCode === "fetch_timeout" ||
+            errorCode === "fetch_aborted"
+          ) {
             return false;
           }
         }
