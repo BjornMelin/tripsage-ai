@@ -27,6 +27,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  COREPACK_VERSION: "0.35.0"
   VERCEL_CLI_VERSION: "53.3.2"
 
 jobs:
@@ -95,7 +96,7 @@ jobs:
       - name: Install pnpm and Vercel CLI
         shell: bash
         run: |
-          npm install -g corepack@latest "vercel@${VERCEL_CLI_VERSION}"
+          npm install -g "corepack@${COREPACK_VERSION}" "vercel@${VERCEL_CLI_VERSION}"
           corepack enable pnpm
           corepack install
 

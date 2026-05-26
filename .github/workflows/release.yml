@@ -13,6 +13,9 @@ permissions:
   issues: write
   pull-requests: write
 
+env:
+  COREPACK_VERSION: "0.35.0"
+
 jobs:
   release:
     if: ${{ !startsWith(github.event.head_commit.message || '', 'chore(release):') }}
@@ -47,7 +50,7 @@ jobs:
 
       - name: Install pnpm
         run: |
-          npm install -g corepack@latest
+          npm install -g "corepack@${COREPACK_VERSION}"
           corepack enable pnpm
           corepack install
 
