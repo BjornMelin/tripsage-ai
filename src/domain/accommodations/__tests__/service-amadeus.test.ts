@@ -77,6 +77,11 @@ describe("AccommodationsService (Amadeus)", () => {
   });
 
   it("injects geocoded lat/lng and maps provider search result", async () => {
+    const performanceNowSpy = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(12.25)
+      .mockReturnValueOnce(42.75)
+      .mockReturnValue(42.75);
     const provider: AccommodationProviderAdapter = {
       buildBookingPayload: vi.fn(),
       checkAvailability: vi.fn(),
@@ -109,21 +114,26 @@ describe("AccommodationsService (Amadeus)", () => {
       provider,
     });
 
-    const result = await service.search({
-      checkin: "2025-12-01",
-      checkout: "2025-12-02",
-      guests: 1,
-      location: "Paris",
-    });
+    try {
+      const result = await service.search({
+        checkin: "2025-12-01",
+        checkout: "2025-12-02",
+        guests: 1,
+        location: "Paris",
+      });
 
-    expect(result.searchParameters?.lat).toBeCloseTo(1.234);
-    expect(result.searchParameters?.lng).toBeCloseTo(2.345);
-    expect(result.provider).toBe("amadeus");
-    expect(result.resultsReturned).toBe(1);
-    const searchMock = vi.mocked(provider.search);
-    const [searchCallArgs] = searchMock.mock.calls[0] ?? [];
-    expect(searchCallArgs?.lat).toBeCloseTo(1.234);
-    expect(searchCallArgs?.lng).toBeCloseTo(2.345);
+      expect(result.searchParameters?.lat).toBeCloseTo(1.234);
+      expect(result.searchParameters?.lng).toBeCloseTo(2.345);
+      expect(result.provider).toBe("amadeus");
+      expect(result.resultsReturned).toBe(1);
+      expect(result.tookMs).toBe(30.5);
+      const searchMock = vi.mocked(provider.search);
+      const [searchCallArgs] = searchMock.mock.calls[0] ?? [];
+      expect(searchCallArgs?.lat).toBeCloseTo(1.234);
+      expect(searchCallArgs?.lng).toBeCloseTo(2.345);
+    } finally {
+      performanceNowSpy.mockRestore();
+    }
   });
 
   it("keeps listings when cheaper rates are not first", async () => {

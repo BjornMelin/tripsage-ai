@@ -9,7 +9,7 @@ import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 
-const redisStore = new Map<string, string>();
+const redisStore = new Map<string, unknown>();
 const redisClient = {
   del: vi.fn((...keys: string[]) => {
     let deleted = 0;
@@ -19,7 +19,7 @@ const redisClient = {
     return deleted;
   }),
   get: vi.fn(async (key: string) => redisStore.get(key) ?? null),
-  set: vi.fn((key: string, value: string) => {
+  set: vi.fn((key: string, value: unknown) => {
     redisStore.set(key, value);
     return "OK";
   }),
@@ -74,10 +74,9 @@ describe("/api/flights/popular-destinations", () => {
   });
 
   it("returns cached destinations when present", async () => {
-    await redisClient.set(
-      "popular-destinations:global",
-      JSON.stringify([{ code: "NYC", name: "New York" }])
-    );
+    await redisClient.set("popular-destinations:global", [
+      { code: "NYC", name: "New York" },
+    ]);
 
     const req = createMockNextRequest({
       method: "GET",
@@ -147,11 +146,8 @@ describe("/api/flights/popular-destinations", () => {
     expect(body).toEqual([{ code: "LAX", name: "LAX" }]);
 
     const cached = await redisClient.get(`popular-destinations:user:${TEST_USER_ID}`);
-    const parsed = cached
-      ? (JSON.parse(cached) as Array<{ code: string; name: string }>)
-      : null;
 
-    expect(parsed).toEqual([{ code: "LAX", name: "LAX" }]);
+    expect(cached).toEqual([{ code: "LAX", name: "LAX" }]);
   });
 
   it("falls back to global destinations when cache is empty and user missing", async () => {

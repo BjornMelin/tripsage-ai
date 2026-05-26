@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Hoisted mocks per testing.md Pattern A
 const mockFetchDuffelOffers = vi.hoisted(() => vi.fn());
@@ -184,8 +185,9 @@ describe("searchFlightsService", () => {
       };
 
       await expect(
-        // @ts-expect-error - Testing invalid input
-        searchFlightsService(invalidRequest)
+        searchFlightsService(
+          unsafeCast<Parameters<typeof searchFlightsService>[0]>(invalidRequest)
+        )
       ).rejects.toThrow();
     });
 

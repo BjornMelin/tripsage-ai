@@ -3,17 +3,8 @@
 import type { UiTrip } from "@schemas/trips";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  type MockInstance,
-  test,
-  vi,
-} from "vitest";
-import { ApiError, type AppError } from "@/lib/api/error-types";
+import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import { ApiError } from "@/lib/api/error-types";
 
 // Mock Lucide icons
 vi.mock("lucide-react", () => {
@@ -41,7 +32,7 @@ vi.mock("lucide-react", () => {
 // Mock trip data
 const mockTrips = vi.hoisted(() => vi.fn((): UiTrip[] => []));
 const mockIsLoading = vi.hoisted(() => vi.fn(() => false));
-const mockError = vi.hoisted(() => vi.fn((): AppError | null => null));
+const mockError = vi.hoisted(() => vi.fn((): ApiError | null => null));
 const mockIsConnected = vi.hoisted(() => vi.fn(() => true));
 const mockRealtimeStatus = vi.hoisted(() =>
   vi.fn(() => ({ errors: [] as Error[], isConnected: true }))
@@ -51,6 +42,8 @@ const mockCreateIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockDeleteTrip = vi.hoisted(() => vi.fn());
 const mockDeleteIsPending = vi.hoisted(() => vi.fn(() => false));
 const mockToast = vi.hoisted(() => vi.fn());
+const mockRecordClientErrorOnActiveSpan = vi.hoisted(() => vi.fn());
+const mockNowIso = vi.hoisted(() => vi.fn(() => "2025-06-15T00:00:00.000Z"));
 
 const DEFAULT_USER_ID = "11111111-1111-4111-8aaa-111111111111";
 
@@ -74,6 +67,14 @@ vi.mock("@/hooks/use-trips", () => ({
 
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
+}));
+
+vi.mock("@/lib/telemetry/client-errors", () => ({
+  recordClientErrorOnActiveSpan: mockRecordClientErrorOnActiveSpan,
+}));
+
+vi.mock("@/lib/security/random", () => ({
+  nowIso: mockNowIso,
 }));
 
 // Mock child components
@@ -123,6 +124,8 @@ describe("TripsPage", () => {
     mockDeleteTrip.mockReset();
     mockDeleteIsPending.mockReset();
     mockToast.mockReset();
+    mockRecordClientErrorOnActiveSpan.mockReset();
+    mockNowIso.mockReset();
     mockTrips.mockReturnValue([]);
     mockIsLoading.mockReturnValue(false);
     mockError.mockReturnValue(null);
@@ -130,6 +133,7 @@ describe("TripsPage", () => {
     mockRealtimeStatus.mockReturnValue({ errors: [], isConnected: true });
     mockCreateIsPending.mockReturnValue(false);
     mockDeleteIsPending.mockReturnValue(false);
+    mockNowIso.mockReturnValue("2025-06-15T00:00:00.000Z");
   });
 
   describe("Loading state", () => {
@@ -244,26 +248,18 @@ describe("TripsPage", () => {
       expect(screen.getByTestId("connection-status")).toBeInTheDocument();
     });
 
-    it("logs trips errors to console in development mode", async () => {
-      const originalNodeEnv = process.env.NODE_ENV;
-      vi.stubEnv("NODE_ENV", "development");
-
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
+    it("reports trips errors through telemetry", async () => {
       const error = new ApiError("Failed to load trips", 500);
       mockError.mockReturnValue(error);
 
-      try {
-        render(<TripsPage />);
+      render(<TripsPage />);
 
-        await waitFor(() => {
-          expect(consoleErrorSpy).toHaveBeenCalledWith("Trips error:", error);
+      await waitFor(() => {
+        expect(mockRecordClientErrorOnActiveSpan).toHaveBeenCalledWith(error, {
+          action: "loadTrips",
+          context: "TripsClient",
         });
-      } finally {
-        vi.stubEnv("NODE_ENV", originalNodeEnv);
-        consoleErrorSpy.mockRestore();
-      }
+      });
     });
   });
 
@@ -784,19 +780,6 @@ describe("TripsPage", () => {
         visibility: "private",
       },
     ];
-
-    let nowSpy: MockInstance<() => number> | null = null;
-
-    beforeEach(() => {
-      nowSpy = vi
-        .spyOn(Date, "now")
-        .mockReturnValue(new Date("2025-06-15T00:00:00Z").getTime());
-    });
-
-    afterEach(() => {
-      nowSpy?.mockRestore();
-      nowSpy = null;
-    });
 
     const selectFilter = async (name: string) => {
       const trigger = screen.getByRole("combobox", { name: /filter trips/i });

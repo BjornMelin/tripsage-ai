@@ -1,8 +1,10 @@
 /** @vitest-environment jsdom */
 
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WEB_VITALS_ENDPOINT } from "@/lib/telemetry/web-vitals";
+import { server } from "@/test/msw/server";
 
 type CapturedMetric = {
   delta: number;
@@ -80,18 +82,29 @@ describe("WebVitalsReporter", () => {
 
   it("falls back to keepalive fetch when sendBeacon declines the payload", async () => {
     StubSendBeacon(false);
-    const fetch = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
-    vi.stubGlobal("fetch", fetch);
+    let fallbackRequestBody: unknown;
+    let fallbackContentType: string | null = null;
+    server.use(
+      http.post(WEB_VITALS_ENDPOINT, async ({ request }) => {
+        fallbackContentType = request.headers.get("content-type");
+        fallbackRequestBody = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
 
     await RenderReporter();
     ReportMetric();
 
-    expect(fetch).toHaveBeenCalledWith(
-      WEB_VITALS_ENDPOINT,
-      expect.objectContaining({
-        keepalive: true,
-        method: "POST",
-      })
-    );
+    await waitFor(() => {
+      expect(fallbackContentType).toBe("application/json");
+      expect(fallbackRequestBody).toEqual({
+        delta: 15,
+        name: "LCP",
+        navigationType: "navigate",
+        rating: "good",
+        route: "/dashboard/trips/:id",
+        value: 1800,
+      });
+    });
   });
 });

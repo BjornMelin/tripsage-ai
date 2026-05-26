@@ -4,6 +4,7 @@
  */
 
 import { vi } from "vitest";
+import { secureId } from "@/lib/security/random";
 import type { Toast } from "../use-toast";
 
 /**
@@ -15,7 +16,7 @@ import type { Toast } from "../use-toast";
  */
 export const toast = vi.fn((_props: Toast) => ({
   dismiss: vi.fn(),
-  id: `toast-${Date.now()}`,
+  id: `toast-${secureId()}`,
   update: vi.fn(),
 }));
 

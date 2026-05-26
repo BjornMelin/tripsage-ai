@@ -118,17 +118,16 @@ describe("QuickActions", () => {
 
   it("applies custom colors to action buttons", () => {
     renderWithProviders(<QuickActions />);
+    const hasClassName = (className: string) =>
+      Array.from(document.querySelectorAll("[class]")).some((element) =>
+        element.classList.contains(className)
+      );
 
     // Check that custom color classes are applied
-    const infoButton = document.querySelector(".bg-info/10");
-    const successButton = document.querySelector(".bg-success/10");
-    const highlightButton = document.querySelector(".bg-highlight/10");
-    const warningButton = document.querySelector(".bg-warning/10");
-
-    expect(infoButton).toBeInTheDocument();
-    expect(successButton).toBeInTheDocument();
-    expect(highlightButton).toBeInTheDocument();
-    expect(warningButton).toBeInTheDocument();
+    expect(hasClassName("bg-info/10")).toBe(true);
+    expect(hasClassName("bg-success/10")).toBe(true);
+    expect(hasClassName("bg-highlight/10")).toBe(true);
+    expect(hasClassName("bg-warning/10")).toBe(true);
   });
 });
 

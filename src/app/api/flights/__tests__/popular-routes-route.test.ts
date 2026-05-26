@@ -9,37 +9,32 @@ import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-ca
 import { stubRateLimitDisabled } from "@/test/helpers/env";
 import { createMockNextRequest, createRouteParamsContext } from "@/test/helpers/route";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
-import {
-  RedisMockClient,
-  setupUpstashMocks,
-  type UpstashMemoryStore,
-} from "@/test/upstash/redis-mock";
+import { RedisMockClient, setupUpstashMocks } from "@/test/upstash/redis-mock";
 
 const { redis, ratelimit } = setupUpstashMocks();
-
-class RawStringRedisMock extends RedisMockClient {
-  constructor(private readonly rawStore: UpstashMemoryStore) {
-    super(rawStore);
-  }
-
-  override get<T = unknown>(key: string): Promise<T | null> {
-    const entry = this.rawStore.get(key);
-    if (!entry) return Promise.resolve(null);
-    return Promise.resolve(entry.value as T);
-  }
-}
 
 vi.mock("@/lib/redis", async () => {
   const actual = await vi.importActual<typeof import("@/lib/redis")>("@/lib/redis");
   return {
     ...actual,
-    getRedis: vi.fn(() => new RawStringRedisMock(redis.store)),
+    getRedis: vi.fn(() => new RedisMockClient(redis.store)),
   };
 });
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => Promise.resolve(new Map())),
 }));
+
+vi.mock("@/lib/security/random", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/security/random")>(
+    "@/lib/security/random"
+  );
+
+  return {
+    ...actual,
+    nowIso: vi.fn(() => "2025-01-15T12:00:00.000Z"),
+  };
+});
 
 // Import after mocks are registered
 import { GET as getPopularRoutes } from "../popular-routes/route";
@@ -70,7 +65,7 @@ describe("/api/flights/popular-routes", () => {
   });
 
   it("returns cached routes when present", async () => {
-    // Seed cache directly in the shared store (getCachedJson expects raw JSON string)
+    // Seed cache directly in the shared store; RedisMockClient mirrors SDK deserialization.
     redis.store.set(POPULAR_ROUTES_CACHE_KEY_GLOBAL, {
       value: JSON.stringify([
         { date: "May 1, 2026", destination: "Paris", origin: "NYC", price: 123 },
@@ -130,5 +125,15 @@ describe("/api/flights/popular-routes", () => {
     const destinations = body.map((r) => r.destination);
     expect(destinations).toContain("London");
     expect(destinations).toContain("Tokyo");
+
+    // The fallback dates derive from the shared timestamp helper.
+    expect(body.map((route) => route.date)).toEqual([
+      "2026-05-28",
+      "2026-06-15",
+      "2026-06-08",
+      "2026-06-22",
+      "2026-07-10",
+      "2026-07-18",
+    ]);
   });
 });

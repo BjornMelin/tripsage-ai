@@ -78,10 +78,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     },
     async (span) => {
-      const startedAt = Date.now();
+      const startedAt = performance.now();
       try {
         await checkByokVaultHealth();
-        const latencyMs = Date.now() - startedAt;
+        const latencyMs = performance.now() - startedAt;
         span.setAttribute("health.latency_ms", latencyMs);
         span.setAttribute("health.status", "ok");
 
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           { headers: NO_STORE_HEADERS, status: 200 }
         );
       } catch {
-        const latencyMs = Date.now() - startedAt;
+        const latencyMs = performance.now() - startedAt;
         span.setAttribute("health.latency_ms", latencyMs);
         span.setAttribute("health.status", "error");
         recordErrorOnSpan(span, sanitizedHealthCheckError());

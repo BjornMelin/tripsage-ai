@@ -26,6 +26,7 @@ import {
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { toPgvector } from "@/lib/rag/pgvector";
 import { isValidInternalKey } from "@/lib/security/internal-key";
+import { nowIso } from "@/lib/security/random";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { upsertSingle } from "@/lib/supabase/typed-helpers";
@@ -86,7 +87,7 @@ async function persistAccommodationEmbedding(
     id: property.id,
     name: property.name ?? null,
     source: normalizeSource(property.source),
-    updated_at: new Date().toISOString(),
+    updated_at: nowIso(),
   };
 
   const { error } = await upsertSingle(

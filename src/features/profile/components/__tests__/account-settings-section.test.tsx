@@ -108,10 +108,22 @@ describe("AccountSettingsSection", () => {
     render(<AccountSettingsSection />);
 
     expect(screen.getByText("Notification Preferences")).toBeInTheDocument();
-    expect(screen.getByText("Email Notifications")).toBeInTheDocument();
-    expect(screen.getByText("Trip Reminders")).toBeInTheDocument();
-    expect(screen.getByText("Price Alerts")).toBeInTheDocument();
-    expect(screen.getByText("Marketing Communications")).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "Email Notifications" })
+    ).toHaveAccessibleDescription(
+      "Receive trip updates and important account information via email."
+    );
+    expect(
+      screen.getByRole("switch", { name: "Trip Reminders" })
+    ).toHaveAccessibleDescription("Get reminders about upcoming trips and bookings.");
+    expect(
+      screen.getByRole("switch", { name: "Price Alerts" })
+    ).toHaveAccessibleDescription(
+      "Receive notifications when flight or hotel prices drop."
+    );
+    expect(
+      screen.getByRole("switch", { name: "Marketing Communications" })
+    ).toHaveAccessibleDescription("Receive promotional offers and travel tips.");
   });
 
   // Skipped toast assertion on preference toggles to avoid time coupling.

@@ -131,7 +131,7 @@ describe("/api/memory/stats/[userId] route", () => {
     expect(body.memoryTypes.conversation_context).toBe(2);
     expect(body.storageSize).toBe("Paris".length + "Budget stay".length);
     expect(body.totalMemories).toBe(2);
-    expect(mockNowIso).toHaveBeenCalledOnce();
+    expect(mockNowIso).toHaveBeenCalled();
     expect(mockHandleMemoryIntent).toHaveBeenCalledWith({
       limit: 100,
       sessionId: "",

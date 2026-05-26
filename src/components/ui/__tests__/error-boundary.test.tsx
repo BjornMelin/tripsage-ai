@@ -203,9 +203,10 @@ describe("PageErrorFallback", () => {
     render(<PageErrorFallback error={error} />);
 
     expect(screen.getByText("Page Error")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /go to dashboard/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /go to dashboard/i })).toHaveAttribute(
+      "href",
+      "/dashboard"
+    );
   });
 
   it("calls reset when Try Again is clicked", () => {

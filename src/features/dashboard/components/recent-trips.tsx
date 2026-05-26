@@ -20,6 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrips } from "@/hooks/use-trips";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { nowIso } from "@/lib/security/random";
 
 type Trip = UiTrip;
 
@@ -30,6 +31,10 @@ interface RecentTripsProps {
 type RecentTripsVariantProps = RecentTripsProps & {
   showEmpty: boolean;
 };
+
+function GetCurrentRecentTripsDate(): Date {
+  return new Date(nowIso());
+}
 
 function TripCardSkeleton() {
   return (
@@ -93,7 +98,7 @@ function TripCard({ trip }: { trip: Trip }) {
    */
   const getTripStatus = () => {
     if (!trip.startDate || !trip.endDate) return "draft";
-    const now = new Date();
+    const now = GetCurrentRecentTripsDate();
     const start = DateUtils.parse(trip.startDate);
     const end = DateUtils.parse(trip.endDate);
     const nowTs = now.getTime();

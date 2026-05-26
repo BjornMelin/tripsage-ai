@@ -37,6 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { nowIso } from "@/lib/security/random";
 import { clampProgress, cn } from "@/lib/utils";
 import { getToneColors, type ToneVariant } from "@/lib/variants/status";
 
@@ -84,6 +85,10 @@ const OPTIMIZATION_ICON_COLORS = {
   latency: "text-destructive",
   packetLoss: "text-warning",
 } as const;
+
+function GetCurrentConnectionStatusDate() {
+  return new Date(nowIso());
+}
 
 // Type for the connection status
 export type ConnectionStatus =
@@ -376,7 +381,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     }
 
     if (status === "connected") {
-      setLastConnectedTime(new Date());
+      setLastConnectedTime(GetCurrentConnectionStatusDate());
     }
   }, [status]);
 

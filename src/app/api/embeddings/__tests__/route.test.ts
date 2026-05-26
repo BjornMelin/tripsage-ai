@@ -206,6 +206,10 @@ describe("/api/embeddings", () => {
     const json = await res.json();
     expect(json.persisted).toBe(true);
     expect(FROM).toHaveBeenCalledWith("accommodation_embeddings");
+    const persistedPayload = UPSERT.mock.calls[0]?.[0];
+    expect(new Date(persistedPayload.updated_at).toISOString()).toBe(
+      persistedPayload.updated_at
+    );
     expect(UPSERT).toHaveBeenCalledWith(
       expect.objectContaining({
         amenities: "pool, wifi",

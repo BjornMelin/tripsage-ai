@@ -8,6 +8,7 @@ import { withApiGuards } from "@/lib/api/factory";
 import { errorResponse } from "@/lib/api/route-helpers";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { POPULAR_ROUTES_CACHE_KEY_GLOBAL } from "@/lib/flights/popular-routes-cache";
+import { nowIso } from "@/lib/security/random";
 
 /**
  * Popular flight route entry returned to the client.
@@ -26,13 +27,17 @@ interface PopularRoute {
 
 const POPULAR_ROUTES_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
+function getNextUtcYear(): number {
+  return new Date(nowIso()).getUTCFullYear() + 1;
+}
+
 /**
  * Builds a static list of popular flight routes for the next year.
  *
  * @returns Array of popular routes with example dates, destinations, and prices.
  */
 function buildGlobalPopularRoutes(): PopularRoute[] {
-  const nextYear = new Date().getUTCFullYear() + 1;
+  const nextYear = getNextUtcYear();
   return [
     {
       date: `${nextYear}-05-28`,

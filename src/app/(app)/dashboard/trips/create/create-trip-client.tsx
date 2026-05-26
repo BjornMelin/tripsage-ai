@@ -45,6 +45,7 @@ import { useZodForm } from "@/hooks/use-zod-form";
 import { ApiError, getErrorMessage } from "@/lib/api/error-types";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { keys } from "@/lib/keys";
+import { nowIso } from "@/lib/security/random";
 import {
   computeDefaultTripDates,
   computeDefaultTripTitle,
@@ -64,6 +65,10 @@ export interface CreateTripClientProps {
   initialBudgetMax?: number;
   initialSuggestionId?: string;
   initialSuggestionLimit: number;
+}
+
+function getDefaultTripDates(): { endDate: string; startDate: string } {
+  return computeDefaultTripDates(new Date(nowIso()));
 }
 
 /**
@@ -88,7 +93,7 @@ export default function CreateTripClient({
   const { toast } = useToast();
   const createTripMutation = useCreateTrip();
 
-  const [defaultDates] = useState(() => computeDefaultTripDates(new Date()));
+  const [defaultDates] = useState(getDefaultTripDates);
 
   const form = useZodForm({
     defaultValues: {

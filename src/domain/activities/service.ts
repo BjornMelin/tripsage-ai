@@ -8,11 +8,14 @@ import { NotFoundError } from "@domain/activities/errors";
 import type { ActivitySearchResult, ServiceContext } from "@domain/activities/types";
 import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { activitySearchParamsSchema } from "@schemas/search";
+import { todayUtcIsoDate } from "@/lib/dates/unified-date-utils";
+import { nowIso } from "@/lib/security/random";
 
 /**
  * Cache TTL for Places-backed activity search results (24 hours).
  */
 const PLACES_CACHE_TTL_SECONDS = 24 * 60 * 60;
+const MS_PER_SECOND = 1000;
 
 const AI_FALLBACK_DEFAULT_DURATION_MINUTES = 120;
 const AI_FALLBACK_DEFAULT_PRICE_TIER = 2;
@@ -136,8 +139,8 @@ const noopTelemetry: ActivitiesTelemetry = {
 };
 
 const defaultClock: ActivitiesClock = {
-  now: () => Date.now(),
-  todayIsoDate: () => new Date().toISOString().split("T")[0] ?? "1970-01-01",
+  now: () => Date.parse(nowIso()),
+  todayIsoDate: () => todayUtcIsoDate(),
 };
 
 /**
@@ -337,8 +340,9 @@ export class ActivitiesService {
 
         if (userId && this.deps.cache) {
           try {
-            const expiresAt = new Date(this.clock.now());
-            expiresAt.setSeconds(expiresAt.getSeconds() + PLACES_CACHE_TTL_SECONDS);
+            const expiresAt = new Date(
+              this.clock.now() + PLACES_CACHE_TTL_SECONDS * MS_PER_SECOND
+            );
 
             await this.deps.cache.putSearch({
               activityType,

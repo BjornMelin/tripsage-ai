@@ -6,10 +6,10 @@
 
 import {
   CONVERSION_RESULT_SCHEMA,
-  CURRENCY_CODE_SCHEMA,
   type Currency,
   type CurrencyPair,
 } from "@schemas/currency";
+import { CURRENCY_CODE_SCHEMA } from "@schemas/shared/money";
 import type { StateCreator } from "zustand";
 import { getCurrentTimestamp } from "@/features/shared/store/helpers";
 import type { CurrencyStore } from "../../currency-store";

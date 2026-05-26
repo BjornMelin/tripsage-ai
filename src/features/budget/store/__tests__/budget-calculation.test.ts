@@ -2,7 +2,7 @@
 
 import type { Budget } from "@schemas/budget";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   selectActiveBudgetFrom,
   selectBudgetSummaryFrom,
@@ -10,6 +10,8 @@ import {
   selectRecentExpensesFrom,
   useBudgetStore,
 } from "@/features/budget/store/budget-store";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
+import { calculateBudgetSummary } from "../computed";
 
 // Note: persist middleware is mocked in src/test/setup-jsdom.ts
 
@@ -125,6 +127,59 @@ describe("Budget Store - Budget Calculation", () => {
       expect(summary?.spentByCategory.flights).toBe(1000);
       expect(summary?.spentByCategory.accommodations).toBe(800);
     });
+
+    it(
+      "calculates time-based summary fields from the centralized clock",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date("2025-06-05T00:00:00.000Z"));
+
+        const summary = calculateBudgetSummary(
+          {
+            categories: [],
+            createdAt: "2025-05-20T12:00:00Z",
+            currency: "USD",
+            endDate: "2025-06-15",
+            id: "budget-1",
+            isActive: true,
+            name: "Summer Vacation",
+            startDate: "2025-06-01",
+            totalAmount: 5000,
+            updatedAt: "2025-05-20T12:00:00Z",
+          },
+          [
+            {
+              amount: 100,
+              budgetId: "budget-1",
+              category: "flights",
+              createdAt: "2025-06-02T00:00:00Z",
+              currency: "USD",
+              date: "2025-06-02",
+              description: "Flight",
+              id: "expense-1",
+              isShared: false,
+              updatedAt: "2025-06-02T00:00:00Z",
+            },
+            {
+              amount: 300,
+              budgetId: "budget-1",
+              category: "food",
+              createdAt: "2025-06-03T00:00:00Z",
+              currency: "USD",
+              date: "2025-06-03",
+              description: "Meals",
+              id: "expense-2",
+              isShared: false,
+              updatedAt: "2025-06-03T00:00:00Z",
+            },
+          ]
+        );
+
+        expect(summary.daysRemaining).toBe(10);
+        expect(summary.dailyAverage).toBe(100);
+        expect(summary.dailyLimit).toBe(460);
+        expect(summary.projectedTotal).toBe(1400);
+      })
+    );
 
     it("returns budgets by trip ID", () => {
       const { result } = renderHook(() => useBudgetStore());

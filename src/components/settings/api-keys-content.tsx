@@ -276,6 +276,9 @@ export function ApiKeysContent() {
   // Generate unique ids for form controls to satisfy accessibility and lint rules
   const serviceId = useId();
   const apiKeyId = useId();
+  const gatewayFallbackLabelId = useId();
+  const gatewayFallbackDescriptionId = useId();
+  const gatewayFallbackNoteId = useId();
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 py-8">
@@ -421,19 +424,26 @@ export function ApiKeysContent() {
             <>
               <div className="flex items-center justify-between py-2">
                 <div className="space-y-1">
-                  <div className="font-medium">Allow fallback to team Gateway</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="font-medium" id={gatewayFallbackLabelId}>
+                    Allow fallback to team Gateway
+                  </div>
+                  <div
+                    className="text-sm text-muted-foreground"
+                    id={gatewayFallbackDescriptionId}
+                  >
                     When no BYOK key is present, permit using the team Vercel AI
                     Gateway.
                   </div>
                 </div>
                 <Switch
+                  aria-describedby={`${gatewayFallbackDescriptionId} ${gatewayFallbackNoteId}`}
+                  aria-labelledby={gatewayFallbackLabelId}
                   checked={allowGatewayFallback === true}
                   disabled={isBusy || allowGatewayFallback === null || isPending}
                   onCheckedChange={onToggleFallback}
                 />
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground" id={gatewayFallbackNoteId}>
                 You can change this at any time. Some features may require an active
                 provider key if disabled.
               </div>

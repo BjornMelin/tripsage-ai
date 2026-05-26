@@ -473,16 +473,19 @@ describe("/api/keys/validate route", () => {
   });
 
   it("passes timeout-aware fetch to Gateway credits validation", async () => {
-    const fetchMock = vi
-      .fn<FetchLike>()
-      .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+    const requestSpy = vi.fn<(request: Request) => void>();
     let gatewayFetch: typeof fetch | undefined;
     const getCredits = vi.fn(async () => ({ balance: "1", totalUsed: "0" }));
     mockCreateGateway.mockImplementation((options: { fetch?: typeof fetch }) => {
       gatewayFetch = options.fetch;
       return { getCredits };
     });
-    vi.stubGlobal("fetch", fetchMock);
+    server.use(
+      http.get("https://gateway.test/credits", ({ request }) => {
+        requestSpy(request);
+        return HttpResponse.json({});
+      })
+    );
 
     const { POST } = await import("../route");
     const req = createMockNextRequest({
@@ -506,12 +509,9 @@ describe("/api/keys/validate route", () => {
     expect(gatewayFetch).toEqual(expect.any(Function));
 
     await gatewayFetch?.("https://gateway.test/credits");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://gateway.test/credits",
-      expect.objectContaining({
-        signal: expect.any(AbortSignal),
-      })
-    );
+    const capturedRequest = requestSpy.mock.calls[0]?.[0];
+    expect(capturedRequest?.url).toBe("https://gateway.test/credits");
+    expect(capturedRequest?.signal).toEqual(expect.any(AbortSignal));
   });
 
   it("returns REQUEST_TIMEOUT when Gateway credits validation times out", async () => {

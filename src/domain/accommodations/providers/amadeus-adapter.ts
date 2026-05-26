@@ -22,7 +22,9 @@ import type {
   AccommodationDetailsParams,
   AccommodationSearchParams,
 } from "@schemas/accommodations";
+import { todayUtcIsoDate, toUtcIsoDate } from "@/lib/dates/unified-date-utils";
 import { retryWithBackoff } from "@/lib/http/retry";
+import { nowIso } from "@/lib/security/random";
 import { hashTelemetryIdentifier } from "@/lib/telemetry/identifiers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 import type {
@@ -38,6 +40,8 @@ import type {
 
 const DEFAULT_PROVIDER_TIMEOUT_MS = 8_000;
 const DEFAULT_RETRYABLE_CODES = new Set([429, 408, 500, 502, 503, 504]);
+const AVAILABILITY_TOKEN_TTL_MS = 10 * 60 * 1000;
+const ONE_DAY_MS = 86_400_000;
 
 /** Adapter configuration options. */
 type AdapterConfig = {
@@ -143,12 +147,11 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
     ctx?: ProviderContext
   ): Promise<ProviderResult<ProviderDetailsResult>> {
     return this.execute("details", ctx, async () => {
+      const nowMs = currentTimeMs();
       const offers = await searchHotelOffers({
         adults: params.adults ?? 1,
-        checkInDate: params.checkin ?? new Date().toISOString().slice(0, 10),
-        checkOutDate:
-          params.checkout ??
-          new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+        checkInDate: params.checkin ?? todayUtcIsoDate(nowMs),
+        checkOutDate: params.checkout ?? toUtcIsoDate(new Date(nowMs + ONE_DAY_MS)),
         hotelIds: [params.listingId],
       });
       const parsed = amadeusHotelOfferContainerSchema.array().parse(offers.data ?? []);
@@ -192,9 +195,12 @@ export class AmadeusProviderAdapter implements AccommodationProviderAdapter {
           provider: this.name,
         });
       }
+      const expiresAt = new Date(
+        currentTimeMs() + AVAILABILITY_TOKEN_TTL_MS
+      ).toISOString();
       return {
         bookingToken: match.id,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        expiresAt,
         price: {
           breakdown: {
             base: match.price.base,
@@ -433,16 +439,19 @@ async function withTimeout<T>(
   timeoutMs: number,
   onTimeout: () => Error
 ): Promise<T> {
-  return await new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(onTimeout()), timeoutMs);
-    operation()
-      .then((value) => {
-        clearTimeout(timer);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-  });
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      timer = setTimeout(() => reject(onTimeout()), timeoutMs);
+      Promise.resolve().then(operation).then(resolve, reject);
+    });
+  } finally {
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+function currentTimeMs(): number {
+  return Date.parse(nowIso());
 }

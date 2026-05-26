@@ -5,13 +5,13 @@ import { act, screen } from "@testing-library/react";
 import { createRoot, type Root } from "react-dom/client";
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GlobalErrorContent } from "@/components/error/global-error-content";
 import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 import { render } from "@/test/test-utils";
 import DashboardError from "../(app)/dashboard/error";
 import AuthError from "../(auth)/error";
 // Import the error boundary components
 import ErrorComponent from "../error";
-import GlobalError from "../global-error";
 
 const { createErrorReportMock, reportErrorMock } = vi.hoisted(() => {
   const createErrorReport = vi.fn(
@@ -66,7 +66,7 @@ function renderGlobalError(error: unknown, reset: () => void) {
   const root = createRoot(container);
 
   act(() => {
-    root.render(<GlobalError error={error} reset={reset} />);
+    root.render(<GlobalErrorContent error={error} reset={reset} />);
   });
 
   globalErrorRoots.set(root, container);

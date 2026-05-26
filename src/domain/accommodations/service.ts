@@ -128,7 +128,7 @@ export class AccommodationsService {
         redactKeys: ["location", "semanticQuery"],
       },
       async (span) => {
-        const startedAt = Date.now();
+        const startedAt = performance.now();
 
         const baseCacheKey = this.buildCacheKey(params);
         if (baseCacheKey) {
@@ -202,7 +202,7 @@ export class AccommodationsService {
             semanticQuery: params.semanticQuery,
           },
           status: "success" as const,
-          tookMs: Date.now() - startedAt,
+          tookMs: performance.now() - startedAt,
           totalResults: filteredListings.length,
         });
 
