@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { nowIso } from "@/lib/security/random";
 import { primitiveSchemas } from "../registry";
 
 export const ISO_DATE_STRING = z
@@ -38,27 +39,41 @@ const parseIsoDateToLocalMidnight = (value: string): Date | null => {
   return date;
 };
 
-const getTodayLocalMidnight = (): Date => {
-  const now = new Date();
+type LocalDateReference = Date | number | string;
+
+const getReferenceLocalMidnight = (reference?: LocalDateReference): Date => {
+  const now =
+    reference instanceof Date
+      ? new Date(reference.getTime())
+      : new Date(reference ?? nowIso());
+
+  if (!Number.isFinite(now.getTime())) {
+    throw new Error("Invalid local date reference");
+  }
+
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 };
 
-export const FUTURE_DATE_SCHEMA = ISO_DATE_STRING.superRefine((value, ctx) => {
-  const parsed = parseIsoDateToLocalMidnight(value);
-  if (!parsed) {
-    ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
-    return;
-  }
-
-  if (parsed <= getTodayLocalMidnight()) {
-    ctx.addIssue({ code: "custom", message: "Date must be in the future" });
-  }
-});
-
 /**
- * @deprecated Use `FUTURE_DATE_SCHEMA`. This alias will be removed in a future release.
+ * Creates a local-date schema that requires dates after the supplied reference day.
+ *
+ * @param referenceDate - Optional reference clock. Defaults to the current local day.
+ * @returns Zod schema for future local ISO date strings.
  */
-export const FUTURE_DATE_STRING = FUTURE_DATE_SCHEMA;
+export const createFutureLocalDateSchema = (referenceDate?: LocalDateReference) =>
+  ISO_DATE_STRING.superRefine((value, ctx) => {
+    const parsed = parseIsoDateToLocalMidnight(value);
+    if (!parsed) {
+      ctx.addIssue({ code: "custom", message: "Please enter a valid date" });
+      return;
+    }
+
+    if (parsed <= getReferenceLocalMidnight(referenceDate)) {
+      ctx.addIssue({ code: "custom", message: "Date must be in the future" });
+    }
+  });
+
+export const FUTURE_DATE_SCHEMA = createFutureLocalDateSchema();
 
 export const DATE_RANGE_SCHEMA = z
   .strictObject({

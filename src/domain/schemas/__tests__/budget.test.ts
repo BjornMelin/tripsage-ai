@@ -8,6 +8,7 @@ import {
   budgetSchema,
   budgetStateSchema,
   budgetSummarySchema,
+  calculateBudgetSummary,
   createBudgetAlertRequestSchema,
   createBudgetRequestSchema,
   currencyRateSchema,
@@ -259,6 +260,78 @@ describe("budget schemas", () => {
         totalSpent: 2500,
       });
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe("calculateBudgetSummary", () => {
+    it("calculates date-based summary fields from an explicit current date", () => {
+      const summary = calculateBudgetSummary(
+        {
+          categories: [
+            {
+              amount: 2500,
+              category: "flights",
+              id: "123e4567-e89b-12d3-a456-426614174001",
+              percentage: 50,
+              remaining: 2100,
+              spent: 400,
+            },
+            {
+              amount: 2500,
+              category: "food",
+              id: "123e4567-e89b-12d3-a456-426614174002",
+              percentage: 50,
+              remaining: 2500,
+              spent: 0,
+            },
+          ],
+          createdAt: "2025-05-20T12:00:00Z",
+          currency: "USD",
+          endDate: "2025-06-15",
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          isActive: true,
+          name: "Summer Trip",
+          startDate: "2025-06-01",
+          totalAmount: 5000,
+          updatedAt: "2025-05-20T12:00:00Z",
+        },
+        [
+          {
+            amount: 100,
+            budgetId: "123e4567-e89b-12d3-a456-426614174000",
+            category: "flights",
+            createdAt: "2025-06-02T00:00:00Z",
+            currency: "USD",
+            date: "2025-06-02",
+            description: "Flight",
+            id: "123e4567-e89b-12d3-a456-426614174003",
+            isShared: false,
+            updatedAt: "2025-06-02T00:00:00Z",
+          },
+          {
+            amount: 300,
+            budgetId: "123e4567-e89b-12d3-a456-426614174000",
+            category: "food",
+            createdAt: "2025-06-03T00:00:00Z",
+            currency: "USD",
+            date: "2025-06-03",
+            description: "Meals",
+            id: "123e4567-e89b-12d3-a456-426614174004",
+            isShared: false,
+            updatedAt: "2025-06-03T00:00:00Z",
+          },
+        ],
+        { currentDate: "2025-06-05T00:00:00.000Z" }
+      );
+
+      expect(summary.daysRemaining).toBe(10);
+      expect(summary.dailyAverage).toBe(100);
+      expect(summary.dailyLimit).toBe(460);
+      expect(summary.projectedTotal).toBe(1400);
+      expect(summary.spentByCategory).toEqual({
+        flights: 100,
+        food: 300,
+      });
     });
   });
 

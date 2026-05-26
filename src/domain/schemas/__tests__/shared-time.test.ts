@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import {
+  createFutureLocalDateSchema,
   DATE_RANGE_SCHEMA,
   FUTURE_DATE_SCHEMA,
   ISO_DATE_STRING,
@@ -183,29 +184,28 @@ describe("ISO_DATETIME_STRING", () => {
 
 describe("FUTURE_DATE_SCHEMA", () => {
   describe("valid future dates", () => {
-    it.concurrent("should accept date in the future", () => {
-      // Create a date 1 year from now
-      const futureDate = new Date();
-      futureDate.setFullYear(futureDate.getFullYear() + 1);
-      const dateStr = futureDate.toISOString().split("T")[0];
+    it.concurrent("should accept dates after a deterministic reference day", () => {
+      const schema = createFutureLocalDateSchema("2025-06-01T12:00:00");
+      const result = schema.safeParse("2025-06-02");
+      expect(result.success).toBe(true);
+    });
 
-      const result = FUTURE_DATE_SCHEMA.safeParse(dateStr);
+    it.concurrent("keeps the default future-date schema available", () => {
+      const result = FUTURE_DATE_SCHEMA.safeParse("2999-01-01");
       expect(result.success).toBe(true);
     });
   });
 
   describe("invalid dates", () => {
-    it.concurrent("should reject date in the past", () => {
-      const result = FUTURE_DATE_SCHEMA.safeParse("2020-01-01");
+    it.concurrent("should reject dates before a deterministic reference day", () => {
+      const schema = createFutureLocalDateSchema("2025-06-01T12:00:00");
+      const result = schema.safeParse("2025-05-31");
       expect(result.success).toBe(false);
     });
 
-    it.concurrent("should reject yesterday", () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const dateStr = yesterday.toISOString().split("T")[0];
-
-      const result = FUTURE_DATE_SCHEMA.safeParse(dateStr);
+    it.concurrent("should reject the deterministic reference day", () => {
+      const schema = createFutureLocalDateSchema("2025-06-01T12:00:00");
+      const result = schema.safeParse("2025-06-01");
       expect(result.success).toBe(false);
     });
   });
