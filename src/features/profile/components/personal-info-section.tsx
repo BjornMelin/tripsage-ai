@@ -298,7 +298,7 @@ export function PersonalInfoSection() {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-10 w-10 rounded-full p-0 sm:h-8 sm:w-8"
+                className="h-11 w-11 rounded-full p-0 touch-manipulation"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={isUploading}
                 aria-busy={isUploading || undefined}

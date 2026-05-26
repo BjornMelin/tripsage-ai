@@ -33,11 +33,11 @@ function getCurrentEpochMs(currentIso = nowIso()): number {
 }
 
 /**
- * Compute the Retry-After header value from reset and current timestamps.
+ * Computes the `Retry-After` value in whole seconds.
  *
- * @param resetMs - Rate-limit reset timestamp in milliseconds.
- * @param nowMs - Current timestamp in milliseconds.
- * @returns Non-negative retry delay in seconds.
+ * @param resetMs - The reset timestamp in epoch milliseconds.
+ * @param nowMs - Optional current timestamp in epoch milliseconds.
+ * @returns The clamped number of seconds until reset.
  */
 export function computeRetryAfterSeconds(
   resetMs: number,
