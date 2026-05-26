@@ -41,8 +41,10 @@ describe("authRouteErrorResponse", () => {
       error: "invalid_auth_request",
       extras: {
         code: "OTHER_CODE",
+        error: "other_error",
         errors: [{ field: "email", message: "Invalid email" }],
         message: "Other message",
+        reason: "Other reason",
       },
       reason: "Invalid auth request",
       status: 400,

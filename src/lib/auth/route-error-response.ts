@@ -26,10 +26,18 @@ export function authRouteErrorResponse({
   reason,
   status,
 }: AuthRouteErrorResponseOptions): NextResponse {
-  const responseExtras: Record<string, unknown> = {
-    ...extras,
-    message: reason,
-  };
+  const reservedKeys = new Set(["code", "error", "message", "reason"]);
+  const responseExtras: Record<string, unknown> = {};
+
+  if (extras) {
+    for (const [key, value] of Object.entries(extras)) {
+      if (!reservedKeys.has(key)) {
+        responseExtras[key] = value;
+      }
+    }
+  }
+
+  responseExtras.message = reason;
 
   if (code) {
     responseExtras.code = code;

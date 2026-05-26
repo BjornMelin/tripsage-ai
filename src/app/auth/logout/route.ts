@@ -8,6 +8,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("auth.logout");
 
 /**
  * Handles POST /auth/logout requests from client-side consumers.
@@ -20,9 +23,10 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
+    logger.error("auth.logout.sign_out_failed", { message: error.message });
     return authRouteErrorResponse({
       error: "logout_failed",
-      reason: error.message,
+      reason: "Logout failed",
       status: 500,
     });
   }

@@ -60,8 +60,8 @@ describe("auth/logout route", () => {
     const body = await res.json();
     expect(body).toEqual({
       error: "logout_failed",
-      message: "signout failed",
-      reason: "signout failed",
+      message: "Logout failed",
+      reason: "Logout failed",
     });
   });
 
