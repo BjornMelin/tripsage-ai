@@ -3,6 +3,7 @@
 versions:
   node: "24"
   node-full: "24.x"
+  corepack: "0.35.0"
   pnpm: "11.3.0"
   biome: "2.4.15"
   playwright: "1.60.0"

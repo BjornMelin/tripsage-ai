@@ -277,7 +277,7 @@ Zero-trust architecture with defense-in-depth security:
 - **Server-Only Secrets**: BYOK routes import `"server-only"` and run with `dynamic = "force-dynamic"` to ensure secrets processed per-request
 - **PII Redaction**: OpenTelemetry spans automatically redact sensitive data; structured logging with correlation IDs
 - **Tool Approval Gates**: Critical operations (bookings, payments) pause streaming and require explicit user consent
-- **Dependency Security**: Dependabot provides automated vulnerability scanning in CI; `pnpm audit` is available for local/manual checks (not run in CI)
+- **Dependency Security**: Dependabot provides automated vulnerability scanning; CI runs `pnpm deps:audit` and `pnpm audit --audit-level high`, with `pnpm audit` available for local/manual checks
 
 ### Security Testing
 
