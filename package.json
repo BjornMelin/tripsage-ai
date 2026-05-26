@@ -2,7 +2,7 @@
   "name": "tripsage-ai-frontend",
   "version": "1.32.2",
   "private": true,
-  "packageManager": "pnpm@10.28.2",
+  "packageManager": "pnpm@11.3.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -86,18 +86,18 @@
     "pre-commit": "pnpm check:no-secrets:staged"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "3.0.76",
-    "@ai-sdk/openai": "3.0.63",
+    "@ai-sdk/anthropic": "3.0.79",
+    "@ai-sdk/openai": "3.0.65",
     "@ai-sdk/provider": "3.0.10",
-    "@ai-sdk/react": "3.0.179",
-    "@ai-sdk/togetherai": "2.0.51",
-    "@ai-sdk/xai": "3.0.89",
-    "@hookform/resolvers": "^5.2.2",
+    "@ai-sdk/react": "3.0.193",
+    "@ai-sdk/togetherai": "2.0.53",
+    "@ai-sdk/xai": "3.0.92",
+    "@hookform/resolvers": "^5.4.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/context-zone": "2.7.1",
-    "@opentelemetry/exporter-trace-otlp-http": "0.217.0",
-    "@opentelemetry/instrumentation": "0.217.0",
-    "@opentelemetry/instrumentation-fetch": "0.217.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.218.0",
+    "@opentelemetry/instrumentation": "0.218.0",
+    "@opentelemetry/instrumentation-fetch": "0.218.0",
     "@opentelemetry/resources": "2.7.1",
     "@opentelemetry/sdk-trace-base": "2.7.1",
     "@opentelemetry/sdk-trace-web": "2.7.1",
@@ -126,39 +126,38 @@
     "@streamdown/math": "^1.0.2",
     "@streamdown/mermaid": "^1.0.2",
     "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.105.4",
-    "@tanstack/react-query": "^5.100.9",
-    "@upstash/qstash": "^2.10.1",
+    "@supabase/supabase-js": "^2.106.1",
+    "@tanstack/react-query": "^5.100.14",
+    "@upstash/qstash": "^2.11.0",
     "@upstash/ratelimit": "2.0.8",
     "@upstash/redis": "^1.38.0",
     "@vercel/otel": "^2.1.2",
-    "ai": "6.0.177",
+    "ai": "6.0.191",
     "amadeus": "^11.0.0",
     "botid": "^1.5.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
+    "date-fns": "^4.3.0",
     "html-to-text": "^10.0.0",
     "i18n-iso-countries": "^7.14.0",
     "ical-generator": "^10.2.0",
     "ical.js": "^2.2.1",
     "import-in-the-middle": "3.0.1",
     "js-tiktoken": "^1.0.21",
-    "katex": "^0.16.45",
-    "lucide-react": "^1.14.0",
+    "katex": "^0.16.47",
+    "lucide-react": "^1.16.0",
     "mammoth": "^1.12.0",
-    "motion": "12.38.0",
+    "motion": "12.40.0",
     "next": "^16.2.6",
     "next-themes": "^0.4.6",
     "pdf-parse": "^2.4.5",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-error-boundary": "6.1.1",
-    "react-hook-form": "^7.75.0",
-    "recharts": "^3.8.1",
+    "react-hook-form": "^7.76.1",
     "require-in-the-middle": "8.0.1",
     "resend": "^6.12.3",
-    "shiki": "^4.0.2",
+    "shiki": "^4.1.0",
     "sonner": "^2.0.7",
     "streamdown": "^2.5.0",
     "stripe": "22.1.1",
@@ -170,76 +169,45 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.60.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.8",
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@tailwindcss/postcss": "^4.3.0",
-    "@tanstack/react-query-devtools": "^5.100.9",
+    "@tanstack/react-query-devtools": "^5.100.14",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/google.maps": "^3.64.0",
+    "@types/google.maps": "^3.64.1",
     "@types/html-to-text": "^9.0.4",
     "@types/luxon": "^3.7.1",
-    "@types/node": "^24.12.3",
-    "@types/react": "^19.2.14",
+    "@types/node": "^24.12.4",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/coverage-v8": "^4.1.5",
-    "@vitest/ui": "^4.1.5",
+    "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/ui": "^4.1.7",
     "babel-plugin-react-compiler": "^1.0.0",
     "conventional-changelog-conventionalcommits": "^9.3.1",
     "jsdom": "^29.1.1",
-    "knip": "6.12.2",
+    "knip": "6.14.2",
     "madge": "^8.0.0",
-    "msw": "^2.14.5",
-    "postcss": "8.5.14",
+    "msw": "^2.14.6",
+    "postcss": "8.5.15",
     "semantic-release": "^25.0.3",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.3.0",
     "tailwindcss-animate": "^1.0.7",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "unified": "^11.0.5",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.7"
   },
   "engines": {
     "node": "24.x",
-    "pnpm": ">=9.0.0"
-  },
-  "pnpm": {
-    "packageExtensions": {
-      "@hookform/resolvers@*": {
-        "dependencies": {
-          "zod": "^4.2.1"
-        }
-      },
-      "openai@*": {
-        "dependencies": {
-          "zod": "3.25.76"
-        }
-      }
-    },
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "openai>zod": "^4.2.0"
-      }
-    },
-    "overrides": {
-      "axios": "1.14.0",
-      "brace-expansion": ">=5.0.5",
-      "lodash-es": "4.18.1",
-      "mermaid>uuid": "11.1.1",
-      "postcss": "8.5.14",
-      "undici": "7.24.7"
-    },
-    "ignoredBuiltDependencies": [
-      "esbuild",
-      "msw"
-    ]
+    "pnpm": ">=11.0.0"
   }
 }

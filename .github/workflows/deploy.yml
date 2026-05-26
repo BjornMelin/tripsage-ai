@@ -27,7 +27,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PNPM_VERSION: "10.28.2"
   VERCEL_CLI_VERSION: "53.3.2"
 
 jobs:
@@ -93,9 +92,12 @@ jobs:
         with:
           node-version-file: ".nvmrc"
 
-      - name: Install package managers and Vercel CLI
+      - name: Install pnpm and Vercel CLI
         shell: bash
-        run: npm install -g "pnpm@${PNPM_VERSION}" "vercel@${VERCEL_CLI_VERSION}"
+        run: |
+          npm install -g corepack@latest "vercel@${VERCEL_CLI_VERSION}"
+          corepack enable pnpm
+          corepack install
 
       - name: Install dependencies
         shell: bash
@@ -163,10 +165,10 @@ jobs:
           then
             :
           else
-            echo "::error::Git dependencies detected. Configure pnpm allowBuilds/onlyBuiltDependencies for 10.26+ before deploying."
+            echo "::error::Git dependencies detected. Replace git dependency specifiers with registry versions before deploying."
             exit 1
           fi
-          pnpm install --frozen-lockfile
+          pnpm ci
 
       - name: Create GitHub deployment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0

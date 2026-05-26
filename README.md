@@ -65,7 +65,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 ### Prerequisites
 
-- **Node.js 24.x** (see `.nvmrc`) with **pnpm 10.x** (see `package.json#packageManager`)
+- **Node.js 24.x** (see `.nvmrc`) with **pnpm 11.x** (see `package.json#packageManager`)
 - **PostgreSQL 15+** (or Supabase account)
 - **Upstash Redis** for caching (via Vercel integration)
 
@@ -76,8 +76,10 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 git clone https://github.com/BjornMelin/tripsage-ai.git
 cd tripsage-ai
 
-# Install dependencies
-pnpm install --frozen-lockfile            # Install Node.js dependencies
+# Activate the project-pinned pnpm and install dependencies
+corepack enable
+corepack install
+pnpm install
 cp .env.local.example .env.local          # Configure environment
 
 # Start development server (includes API routes)
@@ -106,7 +108,9 @@ Single-runtime, server-first stack optimized for edge deployment:
 
 ```bash
 # Frontend / API (single app at root)
-pnpm install --frozen-lockfile
+corepack enable
+corepack install
+pnpm install
 pnpm dev            # Next.js dev server (includes API routes)
 pnpm type-check
 pnpm biome:fix      # Format/lint (CI enforces clean diffs)
@@ -120,7 +124,7 @@ make supa.link PROJECT_REF=...
 make supa.db.push
 ```
 
-If `pnpm` is not already on your `PATH`, use `corepack pnpm ...` instead of `npx pnpm ...`. The repo root `.npmrc` intentionally contains pnpm-only config, and `npx` will make npm parse it and print warnings. You can also run `corepack enable` once to install the `pnpm` shim so `pnpm` is available directly on your `PATH`, which matters for tools like pre-commit hooks and CI scripts that invoke `pnpm` without the `corepack` prefix.
+If `pnpm` is not already on your `PATH`, run `corepack enable` once to install the `pnpm` shim, or use `corepack pnpm ...` for one-off commands. The canonical package-manager version lives in `package.json#packageManager`; `corepack install` downloads that exact version for this project. Use `pnpm ci` in CI/CD for clean, frozen installs. pnpm-specific supply-chain settings such as `minimumReleaseAge`, `allowBuilds`, `trustPolicy`, and `blockExoticSubdeps` live in `pnpm-workspace.yaml`.
 
 ### Observability (OpenTelemetry)
 

@@ -10,6 +10,8 @@
     "@semantic-release/github",
     "@semantic-release/release-notes-generator",
     "conventional-changelog-conventionalcommits",
+    "import-in-the-middle!",
+    "require-in-the-middle!",
     "shiki"
   ],
   "ignoreFiles": ["src/test/mocks/rehype-harden.ts"],

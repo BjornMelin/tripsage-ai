@@ -112,5 +112,6 @@ For Trips create-flow schema correctness validation details, see SPEC-0102 post-
 ## References
 
 - ADR-0070: [Stripe Webhook Verification + Idempotency](../../architecture/decisions/adr-0070-stripe-webhook-verification-and-idempotency.md)
-- Stripe Node release v20.2.0: https://github.com/stripe/stripe-node/releases/tag/v20.2.0
-- Stripe webhooks: https://stripe.com/docs/webhooks
+- Stripe Node SDK version: `package.json` (`stripe`)
+- Stripe Node releases: <https://github.com/stripe/stripe-node/releases>
+- Stripe webhooks: <https://stripe.com/docs/webhooks>
