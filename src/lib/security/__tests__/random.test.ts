@@ -34,6 +34,20 @@ describe("security/random", () => {
     expect(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.+Z$/.test(ts)).toBe(true);
   });
 
+  it("nowIso accepts deterministic timestamp references", () => {
+    expect(nowIso(Date.parse("2026-05-25T12:34:56.789Z"))).toBe(
+      "2026-05-25T12:34:56.789Z"
+    );
+    expect(nowIso("2026-05-25T12:34:56.789Z")).toBe("2026-05-25T12:34:56.789Z");
+    expect(nowIso(new Date("2026-05-25T12:34:56.789Z"))).toBe(
+      "2026-05-25T12:34:56.789Z"
+    );
+  });
+
+  it("nowIso rejects invalid timestamp references", () => {
+    expect(() => nowIso("not-a-date")).toThrow("Invalid timestamp reference");
+  });
+
   it("falls back when crypto is unavailable", () => {
     vi.stubGlobal("crypto", unsafeCast<Crypto>(undefined));
     try {

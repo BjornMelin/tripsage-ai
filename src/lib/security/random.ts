@@ -86,10 +86,27 @@ export function secureRandomFloat(): number {
   return (fallbackPrngState >>> 0) / 2 ** 32;
 }
 
+type TimestampReference = Date | number | string;
+
+const getTimestampDate = (reference?: TimestampReference): Date => {
+  const date =
+    reference instanceof Date
+      ? new Date(reference.getTime())
+      : new Date(reference ?? Date.now());
+
+  if (!Number.isFinite(date.getTime())) {
+    throw new Error("Invalid timestamp reference");
+  }
+
+  return date;
+};
+
 /**
  * Get current timestamp in ISO 8601 format.
+ *
+ * @param reference - Optional timestamp reference for deterministic callers/tests.
  * @returns ISO timestamp string.
  */
-export function nowIso(): string {
-  return new Date().toISOString();
+export function nowIso(reference?: TimestampReference): string {
+  return getTimestampDate(reference).toISOString();
 }
