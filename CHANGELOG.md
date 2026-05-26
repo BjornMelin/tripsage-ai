@@ -1,3 +1,9 @@
+## [1.35.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.7...v1.35.0) (2026-05-26)
+
+### Features
+
+* **auth:** local theme provider and auth accessibility improvements ([#784](https://github.com/BjornMelin/tripsage-ai/issues/784)) ([74ef798](https://github.com/BjornMelin/tripsage-ai/commit/74ef7986fe02566ff52e2d2529c6d265bd86ca0e))
+
 ## [1.34.7](https://github.com/BjornMelin/tripsage-ai/compare/v1.34.6...v1.34.7) (2026-05-25)
 
 ### Bug Fixes
