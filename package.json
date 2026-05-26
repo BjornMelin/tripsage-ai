@@ -83,7 +83,7 @@
     "deps:cycles": "madge --circular --extensions ts,tsx --ts-config ./tsconfig.json src/ai/agents"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm check:no-secrets:staged"
+    "pre-commit": "node scripts/check-no-secrets.mjs --staged"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.79",
