@@ -13,6 +13,9 @@ permissions:
   issues: write
   pull-requests: write
 
+env:
+  COREPACK_VERSION: "0.35.0"
+
 jobs:
   release:
     if: ${{ !startsWith(github.event.head_commit.message || '', 'chore(release):') }}
@@ -46,10 +49,13 @@ jobs:
           node-version-file: ".nvmrc"
 
       - name: Install pnpm
-        run: npm install -g pnpm@10.28.2
+        run: |
+          npm install -g "corepack@${COREPACK_VERSION}"
+          corepack enable pnpm
+          corepack install
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm ci
 
       - name: Run semantic-release
         env:

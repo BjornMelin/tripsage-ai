@@ -4,15 +4,15 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 ## Platform Overview
 
-- Next.js `^16.1.3` with React `^19.2.3`, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
+- Next.js 16 with React 19, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
 - TypeScript 6, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
 - AI SDK v6 is the only LLM transport (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson)).
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
 - UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
 - Design system uses semantic UI tokens (`success`, `warning`, `info`, `highlight`, `overlay`) via Tailwind classes (e.g., `bg-overlay/50` for dialog overlays).
-- Payments/Email: Stripe `20.2.0`, Resend `^6.7.0`.
-- Calendar/Scheduling: `ical-generator@10.0.0` with Google Calendar REST integration in `src/lib/calendar`.
+- Payments/Email: Stripe and Resend (see `package.json` for exact versions).
+- Calendar/Scheduling: `ical-generator` with Google Calendar REST integration in `src/lib/calendar`.
 
 ## Library Details (from `package.json`)
 
@@ -169,7 +169,7 @@ async function getPublicConfig() {
 }
 
 // Invalidate when config changes:
-revalidateTag(nextCacheTags.publicConfig);
+revalidateTag(nextCacheTags.publicConfig, { expire: 0 });
 ```
 
 **Current status:** No routes currently qualify. All data routes are auth-protected.
@@ -219,7 +219,7 @@ useMutation({
 
 For full-stack invalidation:
 
-1. **Server mutation** → `bumpTag()` (Upstash) + `revalidateTag()` (Next.js)
+1. **Server mutation** → `bumpTag()` (Upstash) + `revalidateTag(tag, { expire: 0 })` (Next.js Route Handlers)
 2. **API response** → Include cache headers
 3. **Client** → `invalidateQueries()` or real-time subscription triggers refetch
 

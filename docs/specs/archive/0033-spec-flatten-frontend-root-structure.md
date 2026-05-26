@@ -91,7 +91,7 @@ There are a few integration points to adjust internally:
 - Front-end asset references: Next’s handling of the `/public` folder requires moving any `frontend/public/` assets to `public/` at root. The Next.js app references assets relatively or via the `/` path, which will still resolve, just from the new location.
 - Logging and telemetry integration: Vercel’s OTEL is configured via env and import in code, `@vercel/otel`. This likely auto-instruments if the package is present at root. With the code move, the import paths remain the same. We should verify if OTEL was being initialized via a `frontend/otel.ts` file or similar. Any such import may need an updated location.
 
-We should also update or keep `.npmrc` settings which help runtime features, such as hoisting `sharp` for Next Image. These settings can remain in root.
+Historical note: this pre-pnpm-11 guidance referred to non-auth pnpm settings that were formerly accepted in `.npmrc`. The live repo now keeps project-wide pnpm settings in `pnpm-workspace.yaml`; `.npmrc` is reserved for registry/auth settings only.
 
 ## 8. UI / UX States
 

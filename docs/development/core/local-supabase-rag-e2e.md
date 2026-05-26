@@ -6,7 +6,7 @@ For general onboarding, start with [Quick Start](quick-start.md).
 
 ## Prerequisites
 
-- Node.js ≥24 and pnpm ≥9
+- Node.js 24.x (see `.nvmrc`) and pnpm 11.x via Corepack (see `package.json#packageManager`)
 - Docker-compatible container runtime (required for `pnpm supabase:*`)
 
 ## 1) Install deps

@@ -15,6 +15,7 @@ on:
       # Root config files (post-flattening)
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'tsconfig.json'
       - 'vitest.config.ts'
       - 'biome.json'
@@ -24,7 +25,6 @@ on:
       - 'playwright.config.ts'
       - 'vercel.json'
       - 'components.json'
-      - '.npmrc'
       - '.nvmrc'
       - 'Dockerfile*'
       - 'README.md'
@@ -42,6 +42,7 @@ on:
       # Root config files (post-flattening)
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'tsconfig.json'
       - 'vitest.config.ts'
       - 'biome.json'
@@ -51,7 +52,6 @@ on:
       - 'playwright.config.ts'
       - 'vercel.json'
       - 'components.json'
-      - '.npmrc'
       - '.nvmrc'
       - 'Dockerfile*'
       - 'README.md'
@@ -84,8 +84,10 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.28.2
-          pnpm install --frozen-lockfile
+          npm install -g corepack@latest
+          corepack enable pnpm
+          corepack install
+          pnpm ci
 
       - name: Cache Vite/Vitest/TS caches
         uses: ./.github/actions/cache-vite-vitest
@@ -181,7 +183,7 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed_files.outputs.files }}
         run: |
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(e2e/|playwright\.config\.ts|scripts/e2e-webserver\.mjs|src/(app|components|features|hooks|lib|server|stores)/.*|package\.json|pnpm-lock\.yaml)$'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(e2e/|playwright\.config\.ts|scripts/e2e-webserver\.mjs|src/(app|components|features|hooks|lib|server|stores)/.*|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -200,7 +202,7 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed_files.outputs.files }}
         run: |
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(src/proxy\.ts|src/app/layout\.tsx|src/instrumentation-client\.ts|e2e/csp-nonce\.spec\.ts|playwright\.prod\.config\.ts|scripts/e2e-webserver-prod\.mjs|package\.json|pnpm-lock\.yaml|next\.config\.ts)$'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(src/proxy\.ts|src/app/layout\.tsx|src/instrumentation-client\.ts|e2e/csp-nonce\.spec\.ts|playwright\.prod\.config\.ts|scripts/e2e-webserver-prod\.mjs|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|next\.config\.ts)$'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -290,8 +292,10 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@10.28.2
-          pnpm install --frozen-lockfile
+          npm install -g corepack@latest
+          corepack enable pnpm
+          corepack install
+          pnpm ci
 
       - name: Cache Vite/Vitest/TS caches
         uses: ./.github/actions/cache-vite-vitest
@@ -328,8 +332,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install -g pnpm@10.28.2
-          pnpm install --frozen-lockfile
+          npm install -g corepack@latest
+          corepack enable pnpm
+          corepack install
+          pnpm ci
 
       - name: Download shard artifacts
         uses: actions/download-artifact@v8.0.1

@@ -3,9 +3,10 @@
 Zod v4 schemas for TripSage AI validation. Provides compile-time types and runtime validation in one declarative API.
 
 > Note: All TripSage application schemas must use **Zod v4 only**. Some transitive
-> dependencies (notably the OpenAI Node SDK) still declare a peer on Zod v3; we
-> handle this at the package manager level (pnpm `peerDependencyRules` /
-> `packageExtensions`). Do not import or author Zod v3 schemas in app code.
+> dependencies publish compatibility peer ranges that include Zod v3, but the
+> lockfile must resolve a single Zod v4 version. Validate any package-manager
+> exceptions in `pnpm-workspace.yaml`; do not import or author Zod v3 schemas in
+> app code.
 
 ## Organization
 
@@ -336,9 +337,10 @@ export const apiRequestSchema = z.object({
 // Error handling
 const result = schema.safeParse(data);
 if (!result.success) {
-  result.error.issues.forEach(issue =>
-    console.log(`${issue.path.join(".")}: ${issue.message}`)
-  );
+  return result.error.issues.map((issue) => ({
+    message: issue.message,
+    path: issue.path.join("."),
+  }));
 }
 ```
 

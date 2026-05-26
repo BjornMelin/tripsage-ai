@@ -10,7 +10,7 @@ the CLI prebuilt deployment workflow after smoke checks pass.
 
 ## Prerequisites
 
-- Node.js 24.x (see `.nvmrc`) and pnpm 10.x (see `package.json#packageManager`)
+- Node.js 24.x (see `.nvmrc`) and pnpm 11.x (see `package.json#packageManager`)
 - Supabase project (Postgres + GoTrue)
 - Upstash Redis + QStash accounts (HTTP/REST clients only; no TCP Redis clients)
 - Provider keys (OpenAI/Anthropic/xAI/OpenRouter or Vercel AI Gateway)
