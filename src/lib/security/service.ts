@@ -11,6 +11,7 @@ import {
   securityMetricsSchema,
 } from "@schemas/security";
 import { extractErrorMessage } from "@/lib/errors/error-message";
+import { nowIso } from "@/lib/security/random";
 import type { TypedAdminSupabase } from "@/lib/supabase/admin";
 import { getMany } from "@/lib/supabase/typed-helpers";
 
@@ -24,6 +25,10 @@ type AuditLogRow = {
 
 /** 24 hours in milliseconds. */
 const HOURS_24_MS = 24 * 60 * 60 * 1000;
+
+function getSecurityMetricsSince(currentIso: string = nowIso()): string {
+  return new Date(Date.parse(currentIso) - HOURS_24_MS).toISOString();
+}
 
 /**
  * Maps an audit log action to a security event type.
@@ -129,7 +134,7 @@ export async function getUserSecurityMetrics(
   adminSupabase: TypedAdminSupabase,
   userId: string
 ): Promise<SecurityMetrics> {
-  const since = new Date(Date.now() - HOURS_24_MS).toISOString();
+  const since = getSecurityMetricsSince();
 
   const [loginRowsRes, failedRes, sessionRes, mfaRes, identitiesRes] =
     await Promise.all([
@@ -312,7 +317,7 @@ export async function getUserSessions(
       id: record.id as string,
       ipAddress: (record.ip as string | null | undefined) ?? "Unknown",
       isCurrent: false,
-      lastActivity: refreshedAt ?? updatedAt ?? createdAt ?? new Date().toISOString(),
+      lastActivity: refreshedAt ?? updatedAt ?? createdAt ?? "Unknown",
       location: "Unknown",
     };
   });

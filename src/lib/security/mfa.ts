@@ -38,6 +38,26 @@ type TypedSupabase = SupabaseClient<Database>;
 type BackupAuditMeta = { ip?: string; userAgent?: string };
 
 const auditLogger = createServerLogger("security.mfa.audit");
+const TOTP_ENROLLMENT_TTL_MS = 15 * 60 * 1000;
+const MS_PER_SECOND = 1000;
+
+function getCurrentEpochMs(currentIso = nowIso()): number {
+  return Date.parse(currentIso);
+}
+
+function createTotpEnrollmentWindow(currentIso = nowIso()): {
+  expiresAt: string;
+  issuedAt: string;
+  ttlSeconds: number;
+} {
+  const issuedAtMs = Date.parse(currentIso);
+  const expiresAt = new Date(issuedAtMs + TOTP_ENROLLMENT_TTL_MS).toISOString();
+  return {
+    expiresAt,
+    issuedAt: currentIso,
+    ttlSeconds: Math.floor(TOTP_ENROLLMENT_TTL_MS / MS_PER_SECOND),
+  };
+}
 
 /** Normalizes an unknown error into a standard Error object for telemetry recordException. */
 function toException(error: unknown): Error {
@@ -190,12 +210,7 @@ export async function startTotpEnrollment(
     "mfa.start_enrollment",
     { attributes: { factor: "totp", feature: "mfa" } },
     async (span) => {
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
-      const ttlSeconds = Math.max(
-        0,
-        Math.floor((expiresAt.getTime() - now.getTime()) / 1000)
-      );
+      const enrollmentWindow = createTotpEnrollmentWindow();
 
       const userId = await getAuthenticatedUserId(supabase).catch((error) => {
         span.recordException(error as Error);
@@ -216,11 +231,11 @@ export async function startTotpEnrollment(
 
       const payload = {
         challengeId: challenge.data.id,
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: enrollmentWindow.expiresAt,
         factorId: enrollResult.data.id,
-        issuedAt: now.toISOString(),
+        issuedAt: enrollmentWindow.issuedAt,
         qrCode: enrollResult.data.totp.qr_code ?? "",
-        ttlSeconds,
+        ttlSeconds: enrollmentWindow.ttlSeconds,
         uri: enrollResult.data.totp.uri ?? undefined,
       };
       const parsed = mfaEnrollmentSchema.parse(payload);
@@ -230,7 +245,10 @@ export async function startTotpEnrollment(
         "mfa_enrollments",
         { status: "expired" },
         (qb) =>
-          qb.eq("user_id", userId).eq("status", "pending").lt("expires_at", nowIso()),
+          qb
+            .eq("user_id", userId)
+            .eq("status", "pending")
+            .lt("expires_at", enrollmentWindow.issuedAt),
         { count: null }
       );
       if (expireError) {
@@ -382,7 +400,7 @@ export async function verifyTotp(
         if (Number.isNaN(expiresAtMs)) {
           throw new TotpVerificationInternalError("mfa_enrollment_expires_at_invalid");
         }
-        if (expiresAtMs < Date.now()) {
+        if (expiresAtMs < getCurrentEpochMs()) {
           const { error: expireError } = await updateMany(
             adminSupabase,
             "mfa_enrollments",
