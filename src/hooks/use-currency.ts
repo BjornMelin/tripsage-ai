@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCurrencyStore } from "@/features/shared/store/currency-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
-import { type AppError, handleApiError, isApiError } from "@/lib/api/error-types";
+import { type ApiError, handleApiError, isApiError } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { staleTimes } from "@/lib/query/config";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
@@ -29,7 +29,7 @@ const MAX_CURRENCY_QUERY_RETRIES = 2;
  * @param error - Normalized application error for the failed request.
  * @returns True when the query should be retried, otherwise false.
  */
-function shouldRetryCurrencyQuery(failureCount: number, error: AppError): boolean {
+function shouldRetryCurrencyQuery(failureCount: number, error: ApiError): boolean {
   if (isApiError(error) && (error.status === 401 || error.status === 403)) {
     return false;
   }
@@ -205,7 +205,7 @@ export function useFetchExchangeRates() {
   );
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useQuery<UpdateExchangeRatesResponse, AppError>({
+  const query = useQuery<UpdateExchangeRatesResponse, ApiError>({
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<UpdateExchangeRatesResponse>(
@@ -255,7 +255,7 @@ export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
   );
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useQuery<{ rate: number; timestamp: string }, AppError>({
+  const query = useQuery<{ rate: number; timestamp: string }, ApiError>({
     enabled: !!targetCurrency && targetCurrency !== baseCurrency,
     queryFn: async () => {
       try {

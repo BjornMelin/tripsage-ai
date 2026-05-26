@@ -3,6 +3,7 @@
 import type { Deal, DealType } from "@schemas/deals";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import { useDealAlerts, useDeals, useFeaturedDeals, useSavedDeals } from "../use-deals";
 
 // Mock current timestamp for consistent testing
@@ -502,6 +503,21 @@ describe("useSavedDeals Hook", () => {
     expect(result.current.sortedByExpiry[0].id).toBe(SAMPLE_DEALS[0].id); // Expires on June 1
     expect(result.current.sortedByExpiry[1].id).toBe(SAMPLE_DEALS[1].id); // Expires on June 15
   });
+
+  it(
+    "should identify saved deals expiring soon from the centralized clock",
+    withFakeTimers(() => {
+      vi.setSystemTime(new Date("2025-06-13T00:00:00.000Z"));
+
+      const { result } = renderHook<ReturnType<typeof useSavedDeals>, void>(() =>
+        useSavedDeals()
+      );
+
+      expect(result.current.expiringSoon.map((deal) => deal.id)).toEqual([
+        SAMPLE_DEALS[1].id,
+      ]);
+    })
+  );
 
   it("should toggle saved status", () => {
     const { result } = renderHook<ReturnType<typeof useSavedDeals>, void>(() =>

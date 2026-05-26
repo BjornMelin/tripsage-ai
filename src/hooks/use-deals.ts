@@ -9,6 +9,13 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDealsStore } from "@/features/search/store/deals-store";
 import { groupBy, mapToUnique } from "@/lib/collection-utils";
+import { nowIso } from "@/lib/security/random";
+
+const SAVED_DEALS_EXPIRING_SOON_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+function getCurrentDealTimestampMs(): number {
+  return Date.parse(nowIso());
+}
 
 /**
  * Hook for accessing and managing deals.
@@ -94,12 +101,9 @@ export function useDeals() {
   // Get all deals as array
   const allDeals = useMemo(() => Object.values(deals), [deals]);
 
-  // Get filtered deals based on current filters
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ensure memo recomputes on state changes used inside store selectors.
-  const filteredDeals = useMemo(
-    () => getFilteredDeals(),
-    [getFilteredDeals, deals, filters]
-  );
+  // Get filtered deals based on current filters. The hook subscribes to deals and
+  // filters above, so render-time derivation stays in sync without hidden deps.
+  const filteredDeals = getFilteredDeals();
 
   // Get featured deals
   const featuredDeals = featuredDealItems;
@@ -110,9 +114,8 @@ export function useDeals() {
   // Get recently viewed deals
   const recentlyViewedDeals = recentlyViewedDealItems;
 
-  // Get deal statistics
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ensure memo recomputes on state changes used inside store selectors.
-  const dealStats = useMemo(() => getDealsStats(), [getDealsStats, deals, filters]);
+  // Get deal statistics from the current store snapshot.
+  const dealStats = getDealsStats();
 
   // Convert IDs to Sets for O(1) membership checks.
   const savedDealIdSet = useMemo(() => new Set(savedDealIds), [savedDealIds]);
@@ -404,12 +407,18 @@ export function useSavedDeals() {
 
   // Get deals expiring soon (within 3 days)
   const expiringSoon = useMemo(() => {
-    const threeDaysFromNow = new Date();
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const currentTimestampMs = getCurrentDealTimestampMs();
+    const expiringSoonCutoffMs =
+      currentTimestampMs + SAVED_DEALS_EXPIRING_SOON_WINDOW_MS;
 
     return savedDeals.filter((deal) => {
-      const expiryDate = new Date(deal.expiryDate);
-      return expiryDate <= threeDaysFromNow && expiryDate >= new Date();
+      const expiryTimestampMs = Date.parse(deal.expiryDate);
+
+      return (
+        Number.isFinite(expiryTimestampMs) &&
+        expiryTimestampMs <= expiringSoonCutoffMs &&
+        expiryTimestampMs >= currentTimestampMs
+      );
     });
   }, [savedDeals]);
 

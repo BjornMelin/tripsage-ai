@@ -2,6 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 // Ensure matchMedia is mocked before importing the store
@@ -20,7 +21,7 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
 });
 
-import type { Theme } from "@schemas/stores";
+import type { LoadingState, Notification, Theme } from "@schemas/stores";
 import { useUiStore } from "@/stores/ui";
 
 describe("UI Store - UI State Management", () => {
@@ -113,8 +114,7 @@ describe("UI Store - UI State Management", () => {
       const previousTheme = result.current.theme;
 
       act(() => {
-        // @ts-expect-error Testing invalid theme
-        result.current.setTheme("invalid-theme");
+        result.current.setTheme(unsafeCast<Theme>("invalid-theme"));
       });
 
       // Store now uses OTEL-based store logger instead of console.error
@@ -303,8 +303,10 @@ describe("UI Store - UI State Management", () => {
       const { result } = renderHook(() => useUiStore());
 
       act(() => {
-        // @ts-expect-error Testing invalid loading state
-        result.current.setLoadingState("test", "invalid-state");
+        result.current.setLoadingState(
+          "test",
+          unsafeCast<LoadingState>("invalid-state")
+        );
       });
 
       // Store now uses OTEL-based store logger instead of console.error
@@ -511,12 +513,13 @@ describe("UI Store - UI State Management", () => {
       const { result } = renderHook(() => useUiStore());
 
       act(() => {
-        result.current.addNotification({
-          isRead: false,
-          title: "Invalid",
-          // @ts-expect-error - intentionally testing invalid type
-          type: "invalid-type",
-        });
+        result.current.addNotification(
+          unsafeCast<Omit<Notification, "createdAt" | "id">>({
+            isRead: false,
+            title: "Invalid",
+            type: "invalid-type",
+          })
+        );
       });
 
       // Store now uses OTEL-based store logger instead of console.error

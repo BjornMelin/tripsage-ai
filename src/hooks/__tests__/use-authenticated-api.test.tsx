@@ -170,6 +170,65 @@ describe("useAuthenticatedApi", () => {
     expect(error).toBeInstanceOf(ApiError);
   });
 
+  it("allows concurrent requests without cancelling older in-flight calls", async () => {
+    server.use(
+      http.get(`${API_BASE}/api/slow-endpoint`, async () => {
+        await delay(25);
+        return HttpResponse.json({ endpoint: "slow" });
+      }),
+      http.get(`${API_BASE}/api/fast-endpoint`, () => {
+        return HttpResponse.json({ endpoint: "fast" });
+      })
+    );
+
+    const { result } = renderHook(() => useAuthenticatedApi());
+
+    let responses: unknown[] = [];
+    await act(async () => {
+      responses = await Promise.all([
+        result.current.authenticatedApi.get("/api/slow-endpoint"),
+        result.current.authenticatedApi.get("/api/fast-endpoint"),
+      ]);
+    });
+
+    expect(responses).toEqual([{ endpoint: "slow" }, { endpoint: "fast" }]);
+  });
+
+  it("cancels all concurrent in-flight requests when cancelRequests is called", async () => {
+    server.use(
+      http.get(`${API_BASE}/api/slow-a`, async () => {
+        await delay(100);
+        return HttpResponse.json({ endpoint: "slow-a" });
+      }),
+      http.get(`${API_BASE}/api/slow-b`, async () => {
+        await delay(100);
+        return HttpResponse.json({ endpoint: "slow-b" });
+      })
+    );
+
+    const { result } = renderHook(() => useAuthenticatedApi());
+
+    let errors: unknown[] = [];
+    await act(async () => {
+      const requests = [
+        result.current.authenticatedApi.get("/api/slow-a"),
+        result.current.authenticatedApi.get("/api/slow-b"),
+      ];
+      result.current.cancelRequests();
+      const settled = await Promise.allSettled(requests);
+      errors = settled
+        .filter((entry) => entry.status === "rejected")
+        .map((entry) => entry.reason);
+    });
+
+    expect(errors).toHaveLength(2);
+    expect(errors.every((error) => error instanceof ApiError)).toBe(true);
+    expect(errors.map((error) => (error as ApiError).code)).toEqual([
+      "REQUEST_CANCELLED",
+      "REQUEST_CANCELLED",
+    ]);
+  });
+
   it("handles HTTP errors without code in response body", async () => {
     server.use(
       http.get(`${API_BASE}/api/test-endpoint`, () => {

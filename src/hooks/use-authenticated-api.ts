@@ -20,7 +20,7 @@ import { ApiError } from "@/lib/api/error-types";
  * `makeAuthenticatedRequest` helper, and a `cancelRequests` function.
  */
 export function useAuthenticatedApi() {
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllersRef = useRef<Set<AbortController>>(new Set());
 
   /**
    * Options for authenticated requests.
@@ -105,8 +105,8 @@ export function useAuthenticatedApi() {
       endpoint: string,
       options: AuthFetchOptions = {}
     ): Promise<T> => {
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-      abortControllerRef.current = new AbortController();
+      const controller = new AbortController();
+      abortControllersRef.current.add(controller);
 
       try {
         const method = (options.method || "GET").toUpperCase() as
@@ -151,10 +151,18 @@ export function useAuthenticatedApi() {
           headers,
           params,
           data,
-          abortControllerRef.current.signal,
+          controller.signal,
           { retries: requestRetries, timeout: requestTimeout }
         );
       } catch (error) {
+        if (controller.signal.aborted) {
+          throw new ApiError({
+            code: "REQUEST_CANCELLED",
+            message: "Request was cancelled",
+            status: 499,
+          });
+        }
+
         // ApiClient handles abort signals and timeouts internally, returning
         // properly typed ApiError instances. Pass them through unchanged.
         if (error instanceof ApiError) {
@@ -179,6 +187,8 @@ export function useAuthenticatedApi() {
           message: error instanceof Error ? error.message : "Request failed",
           status: 500,
         });
+      } finally {
+        abortControllersRef.current.delete(controller);
       }
     },
     [normalizeEndpoint, dispatch]
@@ -242,10 +252,10 @@ export function useAuthenticatedApi() {
    * Cancels any in-flight API requests.
    */
   const cancelRequests = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+    for (const controller of abortControllersRef.current) {
+      controller.abort();
     }
+    abortControllersRef.current.clear();
   }, []);
 
   return {
