@@ -6,7 +6,7 @@ Integration tests for calendar API routes using Vitest with optimized shared moc
 
 ## Test Structure
 
-- **Unit Tests**: Schema validation (`src/schemas/__tests__/calendar.test.ts`)
+- **Unit Tests**: Schema validation (`src/domain/schemas/__tests__/calendar.test.ts`)
 - **Integration Tests**: API route handlers (`src/app/api/calendar/__tests__/`)
 - **E2E Tests**: Full UI flows (`e2e/calendar-integration.spec.ts`)
 

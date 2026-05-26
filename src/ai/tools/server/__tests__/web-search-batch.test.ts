@@ -75,39 +75,50 @@ const mockContext = {
 describe("webSearchBatch", () => {
   test("executes webSearch for each query and normalizes results", async () => {
     const { webSearchBatch } = await import("@ai/tools/server/web-search-batch");
+    const performanceNowSpy = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(22.25)
+      .mockReturnValue(22.25);
     const exec = webSearchBatch.execute as
       | ((params: unknown, ctx: unknown) => Promise<unknown>)
       | undefined;
     if (!exec) {
       throw new Error("webSearchBatch.execute is undefined");
     }
-    const out = await exec(
-      {
-        country: "de",
-        limit: 2,
-        queries: ["q1"],
-      },
-      mockContext
-    );
-    const outAny = unsafeCast<{
-      results: Array<{
-        query: string;
-        ok: boolean;
-        value?: {
-          results: Array<{ url: string; title?: string; snippet?: string }>;
-          fromCache: boolean;
-          tookMs: number;
-        };
-      }>;
-      tookMs: number;
-    }>(out);
-    expect(outAny.results[0].query).toBe("q1");
-    expect(outAny.results[0].ok).toBe(true);
-    expect(outAny.results[0].value?.results[0]?.url).toBe("https://example.com");
-    expect(webSearchExecuteMock).toHaveBeenCalledWith(
-      expect.objectContaining({ country: "DE", query: "q1" }),
-      mockContext
-    );
+    try {
+      const out = await exec(
+        {
+          country: "de",
+          limit: 2,
+          queries: ["q1"],
+        },
+        mockContext
+      );
+      const outAny = unsafeCast<{
+        results: Array<{
+          query: string;
+          ok: boolean;
+          value?: {
+            results: Array<{ url: string; title?: string; snippet?: string }>;
+            fromCache: boolean;
+            tookMs: number;
+          };
+        }>;
+        tookMs: number;
+      }>(out);
+      expect(outAny.results[0].query).toBe("q1");
+      expect(outAny.results[0].ok).toBe(true);
+      expect(outAny.results[0].value?.results[0]?.url).toBe("https://example.com");
+      expect(outAny.tookMs).toBe(12.25);
+      expect(webSearchExecuteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ country: "DE", query: "q1" }),
+        mockContext
+      );
+    } finally {
+      performanceNowSpy.mockRestore();
+    }
   });
 
   test("falls back to direct HTTP when webSearch throws an unexpected error", async () => {

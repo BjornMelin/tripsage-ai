@@ -107,7 +107,7 @@ export async function deleteTripAction(tripId: string): Promise<never> {
 3. **Auth:** Use `createServerSupabase()` for authenticated client
 4. **Returns:** Only serializable data (no Supabase client, no functions)
 5. **Errors:** Throw descriptive errors; client receives error message
-6. **Revalidation:** Call `revalidatePath()` or `revalidateTag()` after mutations
+6. **Revalidation:** Call `revalidatePath()`, `updateTag()`, or `revalidateTag(tag, "max")` after mutations
 
 ## Calling Server Actions
 
@@ -211,13 +211,13 @@ revalidatePath(`/trips/${tripId}`);
 // In data fetching:
 // - Use fetch for external HTTP endpoints
 // - Use the Supabase client for DB reads/writes
-// - Fetch data first, then call revalidateTag() for affected tags
+// - Fetch data first, then call revalidateTag(tag, "max") for affected tags
 // Example:
 // const res = await fetch("https://example.com/api/resource", { next: { tags: ["resource"] } });
 
 // In action after mutation:
 import { revalidateTag } from "next/cache";
-revalidateTag("trips");
+revalidateTag("trips", "max");
 ```
 
 ## Error Handling

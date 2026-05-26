@@ -9,6 +9,8 @@
 
 FROM node:24-alpine
 
+ARG COREPACK_VERSION=0.35.0
+
 # Set working directory
 WORKDIR /app
 
@@ -21,7 +23,7 @@ RUN apk add --no-cache \
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install pnpm and dependencies
-RUN npm install -g corepack@latest && \
+RUN npm install -g "corepack@${COREPACK_VERSION}" && \
     corepack enable pnpm && \
     corepack install && \
     pnpm ci

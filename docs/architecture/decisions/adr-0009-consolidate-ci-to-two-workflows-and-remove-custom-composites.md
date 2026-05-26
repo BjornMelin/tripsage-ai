@@ -52,7 +52,7 @@ Partial simplification with some utility steps. Rejected: still adds maintenance
 
 ## References
 
-- GitHub Docs: secret_scanning.yml paths-ignore (UNVERIFIED)
+- GitHub Docs: [Excluding folders and files from secret scanning](https://docs.github.com/en/code-security/secret-scanning/using-advanced-secret-scanning-and-push-protection-features/excluding-folders-and-files-from-secret-scanning)
 - Internal CI analysis and security scanning review (this PR)
 
 ## Implementation status (last updated: 2026-02-17)

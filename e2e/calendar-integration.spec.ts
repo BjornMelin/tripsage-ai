@@ -76,30 +76,3 @@ test.describe("Calendar Integration", () => {
     await expect(page.getByRole("link", { name: /calendar/i })).toBeVisible();
   });
 });
-
-test.describe("Calendar Export from Trip", () => {
-  test("trip detail page has export to calendar button", async ({ page }) => {
-    // Navigate to a trip detail page (assuming trips exist)
-    await resetTestAuth(page);
-    await authenticateAsTestUser(page);
-    await page.goto("/dashboard/trips", { waitUntil: "load" });
-
-    // Check if trips are listed with timeout
-    const detailLinks = page.getByRole("link", { name: "View Details" });
-    const count = await detailLinks.count();
-
-    if (count > 0) {
-      // Click first trip
-      await detailLinks.first().click();
-      await page.waitForLoadState("load");
-
-      // Verify export button exists
-      await expect(
-        page.getByRole("button", { name: /export to calendar/i })
-      ).toBeVisible({ timeout: 5000 });
-    } else {
-      // Skip test if no trips exist (common in test environments)
-      test.skip();
-    }
-  });
-});

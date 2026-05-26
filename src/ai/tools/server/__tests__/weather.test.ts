@@ -55,6 +55,12 @@ describe("getCurrentWeather", () => {
 
   test("builds correct URL for city query and maps response fields", async () => {
     const execute = await getWeatherExecute();
+    const performanceNowSpy = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(50)
+      .mockReturnValueOnce(62.5)
+      .mockReturnValue(62.5);
     let lastRequestUrl: URL | undefined;
     server.use(
       http.get("https://api.openweathermap.org/data/2.5/weather", ({ request }) => {
@@ -81,55 +87,59 @@ describe("getCurrentWeather", () => {
       })
     );
 
-    const out = await execute(
-      {
+    try {
+      const out = await execute(
+        {
+          city: "Paris",
+          coordinates: null,
+          fresh: true,
+          lang: "en",
+          units: "metric",
+          zip: null,
+        },
+        mockContext
+      );
+
+      expect(lastRequestUrl?.toString()).toContain(
+        "https://api.openweathermap.org/data/2.5/weather"
+      );
+      expect(lastRequestUrl?.searchParams.get("q")).toBe("Paris");
+      expect(lastRequestUrl?.searchParams.get("units")).toBe("metric");
+      expect(lastRequestUrl?.searchParams.get("lang")).toBe("en");
+      expect(lastRequestUrl?.searchParams.get("appid")).toBe("test-key");
+
+      expect(out).toMatchObject({
         city: "Paris",
-        coordinates: null,
-        fresh: true,
-        lang: "en",
-        units: "metric",
-        zip: null,
-      },
-      mockContext
-    );
-
-    expect(lastRequestUrl?.toString()).toContain(
-      "https://api.openweathermap.org/data/2.5/weather"
-    );
-    expect(lastRequestUrl?.searchParams.get("q")).toBe("Paris");
-    expect(lastRequestUrl?.searchParams.get("units")).toBe("metric");
-    expect(lastRequestUrl?.searchParams.get("lang")).toBe("en");
-    expect(lastRequestUrl?.searchParams.get("appid")).toBe("test-key");
-
-    expect(out).toMatchObject({
-      city: "Paris",
-      clouds: 20,
-      country: "FR",
-      description: "clear sky",
-      feelsLike: 21.8,
-      fromCache: false,
-      humidity: 65,
-      icon: "01d",
-      pressure: 1013,
-      provider: "http_get",
-      rain: 0.5,
-      snow: 0.2,
-      status: "success",
-      sunrise: 123,
-      sunset: 456,
-      temp: 22.5,
-      tempMax: 25,
-      tempMin: 20,
-      timezone: 3600,
-      visibility: 10000,
-      windDirection: 180,
-      windGust: 5.2,
-      windSpeed: 3.5,
-    });
-    if (isAsyncIterable(out)) {
-      throw new Error("Unexpected streaming tool output in test");
+        clouds: 20,
+        country: "FR",
+        description: "clear sky",
+        feelsLike: 21.8,
+        fromCache: false,
+        humidity: 65,
+        icon: "01d",
+        pressure: 1013,
+        provider: "http_get",
+        rain: 0.5,
+        snow: 0.2,
+        status: "success",
+        sunrise: 123,
+        sunset: 456,
+        temp: 22.5,
+        tempMax: 25,
+        tempMin: 20,
+        timezone: 3600,
+        visibility: 10000,
+        windDirection: 180,
+        windGust: 5.2,
+        windSpeed: 3.5,
+      });
+      if (isAsyncIterable(out)) {
+        throw new Error("Unexpected streaming tool output in test");
+      }
+      expect(out.tookMs).toBe(12.5);
+    } finally {
+      performanceNowSpy.mockRestore();
     }
-    expect(typeof out.tookMs).toBe("number");
   });
 
   test("uses coordinates when provided", async () => {

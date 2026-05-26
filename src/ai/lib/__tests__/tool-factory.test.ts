@@ -5,6 +5,7 @@ import type { ToolExecutionOptions } from "ai";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { setupUpstashTestEnvironment } from "@/test/upstash/setup";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 const headerStore = new Map<string, string>();
 const setMockHeaders = (values: Record<string, string | undefined>) => {
@@ -148,6 +149,8 @@ afterAll(upstashAfterAllHook);
 
 describe("createAiTool", () => {
   test("creates AI SDK compatible tool with caching", async () => {
+    const performanceNowSpy = vi.spyOn(performance, "now").mockReturnValue(432.5);
+    const cacheHitStartedAt: number[] = [];
     const executeSpy = vi.fn(async ({ id }: { id: string }) => ({
       fromCache: false,
       id,
@@ -161,7 +164,10 @@ describe("createAiTool", () => {
           hashInput: false,
           key: ({ id }) => id,
           namespace: "tool:test:cache",
-          onHit: (cached, _params, _meta) => ({ ...cached, fromCache: true }),
+          onHit: (cached, _params, meta) => {
+            cacheHitStartedAt.push(meta.startedAt);
+            return { ...cached, fromCache: true };
+          },
           ttlSeconds: 60,
         },
       },
@@ -175,72 +181,85 @@ describe("createAiTool", () => {
       toolCallId: "test-call-1",
     };
 
-    // First call - should execute and cache
-    const firstResult = await cachedTool.execute?.({ id: "abc" }, callOptions);
-    expect(firstResult).toEqual({ fromCache: false, id: "abc" });
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-    // Verify cache was written
-    expect(getUpstashCache().store.size).toBeGreaterThan(0);
+    try {
+      // First call - should execute and cache
+      const firstResult = await cachedTool.execute?.({ id: "abc" }, callOptions);
+      expect(firstResult).toEqual({ fromCache: false, id: "abc" });
+      expect(executeSpy).toHaveBeenCalledTimes(1);
+      // Verify cache was written
+      expect(getUpstashCache().store.size).toBeGreaterThan(0);
 
-    // Set up cache hit for second call - need to check actual cache key
-    // The cache key is: namespace + ":" + key(params)
-    // namespace defaults to `tool:${toolName}` if not provided, or uses cache.namespace
-    // So it should be "tool:test:cache:abc" (namespace:tool:test:cache, key:abc)
-    const cachedValue = { fromCache: false, id: "abc" };
-    // Check what key was actually used in first call by inspecting cache store
-    const cacheKeys = Array.from(getUpstashCache().store.keys());
-    expect(cacheKeys.length).toBeGreaterThan(0);
-    const actualCacheKey = cacheKeys[0];
-    getUpstashCache().store.set(actualCacheKey, JSON.stringify(cachedValue));
-    executeSpy.mockClear();
+      // Set up cache hit for second call - need to check actual cache key
+      // The cache key is: namespace + ":" + key(params)
+      // namespace defaults to `tool:${toolName}` if not provided, or uses cache.namespace
+      // So it should be "tool:test:cache:abc" (namespace:tool:test:cache, key:abc)
+      const cachedValue = { fromCache: false, id: "abc" };
+      // Check what key was actually used in first call by inspecting cache store
+      const cacheKeys = Array.from(getUpstashCache().store.keys());
+      expect(cacheKeys.length).toBeGreaterThan(0);
+      const actualCacheKey = cacheKeys[0];
+      getUpstashCache().store.set(actualCacheKey, JSON.stringify(cachedValue));
+      executeSpy.mockClear();
 
-    // Second call - should use cache
-    const secondResult = await cachedTool.execute?.({ id: "abc" }, callOptions);
-    expect(secondResult).toEqual({ fromCache: true, id: "abc" });
-    expect(executeSpy).not.toHaveBeenCalled();
+      // Second call - should use cache
+      const secondResult = await cachedTool.execute?.({ id: "abc" }, callOptions);
+      expect(secondResult).toEqual({ fromCache: true, id: "abc" });
+      expect(cacheHitStartedAt).toEqual([432.5]);
+      expect(executeSpy).not.toHaveBeenCalled();
 
-    // Verify tool has AI SDK Tool structure
-    expect(cachedTool).toHaveProperty("description");
-    expect(cachedTool).toHaveProperty("execute");
-    expect(cachedTool).toHaveProperty("inputSchema");
+      // Verify tool has AI SDK Tool structure
+      expect(cachedTool).toHaveProperty("description");
+      expect(cachedTool).toHaveProperty("execute");
+      expect(cachedTool).toHaveProperty("inputSchema");
+    } finally {
+      performanceNowSpy.mockRestore();
+    }
   });
 
-  test("throws tool error when rate limit exceeded", async () => {
-    upstashMocks.ratelimit.__force({
-      limit: 1,
-      remaining: 0,
-      reset: Date.now() + 60_000,
-      success: false,
-    });
+  test(
+    "throws tool error when rate limit exceeded",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
-    const limitedTool = createAiTool({
-      description: "limited tool for testing",
-      execute: async () => ({ ok: true }),
-      guardrails: {
-        rateLimit: {
-          errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
-          identifier: ({ id }: { id: string }) => `user-${id}`,
-          limit: 1,
-          prefix: "ratelimit:test",
-          window: "1 m",
+      upstashMocks.ratelimit.__force({
+        limit: 1,
+        remaining: 0,
+        reset: Date.parse("2026-02-03T04:06:06.000Z"),
+        success: false,
+      });
+
+      const limitedTool = createAiTool({
+        description: "limited tool for testing",
+        execute: async () => ({ ok: true }),
+        guardrails: {
+          rateLimit: {
+            errorCode: TOOL_ERROR_CODES.webSearchRateLimited,
+            identifier: ({ id }: { id: string }) => `user-${id}`,
+            limit: 1,
+            prefix: "ratelimit:test",
+            window: "1 m",
+          },
         },
-      },
-      inputSchema: z.object({ id: z.string() }),
-      name: "limitedTool",
-    });
+        inputSchema: z.object({ id: z.string() }),
+        name: "limitedTool",
+      });
 
-    const callOptions: ToolExecutionOptions = {
-      messages: [],
-      toolCallId: "test-call-limited",
-    };
+      const callOptions: ToolExecutionOptions = {
+        messages: [],
+        toolCallId: "test-call-limited",
+      };
 
-    await expect(limitedTool.execute?.({ id: "1" }, callOptions)).rejects.toMatchObject(
-      {
+      await expect(
+        limitedTool.execute?.({ id: "1" }, callOptions)
+      ).rejects.toMatchObject({
         code: TOOL_ERROR_CODES.webSearchRateLimited,
-      }
-    );
-    expect(recordedRateLimitIdentifiers.length).toBeGreaterThan(0);
-  });
+        meta: expect.objectContaining({
+          retryAfter: 60,
+        }),
+      });
+      expect(recordedRateLimitIdentifiers.length).toBeGreaterThan(0);
+    })
+  );
 
   test("passes ToolExecutionOptions to execute function", async () => {
     let capturedCallOptions: ToolExecutionOptions | null = null;

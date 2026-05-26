@@ -125,9 +125,9 @@ Tools are automatically available in chat via `toolRegistry` in `src/ai/tools/in
 
 ### Trip Export
 
-- Trip detail page (`/dashboard/trips/[id]`) includes "Export to Calendar" button
+- Trip-to-ICS conversion utilities live in `src/lib/calendar/trip-export.ts`
 - Converts trip destinations, activities, and transportation to calendar events
-- Downloads ICS file for import into any calendar application
+- The current trip detail page does not expose a dedicated export button
 
 ### AI Chat Integration
 

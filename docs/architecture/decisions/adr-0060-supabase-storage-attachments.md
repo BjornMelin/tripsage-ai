@@ -76,7 +76,7 @@ chat/550e8400-e29b-41d4-a716-446655440000/a1b2c3d4-vacation-photo.jpg
 1. **Server-side uploads**: Use `supabase.storage.from("attachments").upload()` with validated content type
 2. **Metadata persistence**: Insert into `file_attachments` after successful storage upload
 3. **Validation**: Zod v4 schemas enforce size limits (10MB per file), MIME types, and file counts (max 5)
-4. **Cache invalidation**: Use `revalidateTag('attachments')` and Upstash `bumpTag()` for listing cache
+4. **Cache invalidation**: Use `revalidateTag("attachments", { expire: 0 })` and Upstash `bumpTag()` for listing cache
 
 #### Signed URL TTL and Refresh Strategy
 

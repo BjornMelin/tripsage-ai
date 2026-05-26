@@ -18,14 +18,14 @@ graph TD
 
 ## Stack Versions (source of truth: package.json)
 
-- ai: 6.0.49
-- @ai-sdk/react: 3.0.51
-- @ai-sdk/openai: 3.0.18
-- @ai-sdk/anthropic: 3.0.23
-- @ai-sdk/xai: 3.0.33
-- @ai-sdk/togetherai: 2.0.20
-- @ai-sdk/provider: 3.0.5
-- zod: 4.3.6
+- ai: 6.0.191
+- @ai-sdk/react: 3.0.193
+- @ai-sdk/openai: 3.0.65
+- @ai-sdk/anthropic: 3.0.79
+- @ai-sdk/xai: 3.0.92
+- @ai-sdk/togetherai: 2.0.53
+- @ai-sdk/provider: 3.0.10
+- zod: 4.4.3
 
 ## Stack Snapshot (high level)
 
@@ -38,7 +38,7 @@ graph TD
 
 ## Key Capabilities
 
-- Streaming chat and tool calling via AI SDK v6 using shared Zod schemas in `src/schemas`.
+- Streaming chat and tool calling via AI SDK v6 using shared Zod schemas in `src/domain/schemas` via `@schemas/*`.
 - Agent routes for flights, accommodations, destinations, itineraries, budget, and memory (`/api/agents/*`) with domain-specific tool sets.
 - BYOK + Vercel AI Gateway routing; provider resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 - Memory pipeline backed by Supabase Postgres + pgvector; QStash jobs cap inserts to 50 messages per batch and enforce idempotency.
@@ -52,7 +52,7 @@ graph TD
 
 - App Router with RSC-first rendering; client components only where interactivity is required.
 - Route handlers live in `src/app/api/**/route.ts`. They parse input (Zod), create request-scoped collaborators (Supabase, rate limiter, providers), and delegate to pure handlers. No module-scope state.
-- AI SDK v6 is the only LLM transport (`streamText`, `generateText` + `Output.object`); structured outputs use Zod schemas under `src/schemas`.
+- AI SDK v6 is the only LLM transport (`streamText`, `generateText` + `Output.object`); structured outputs use Zod schemas under `src/domain/schemas` via `@schemas/*`.
 - Caching and rate limiting use per-request Upstash Redis/RateLimit instances. Auth-dependent routes remain dynamic (no cache).
 - Background/async work uses QStash webhooks; handlers are stateless and idempotent.
 

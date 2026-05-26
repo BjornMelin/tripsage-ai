@@ -100,7 +100,7 @@ export const webSearchBatch = createAiTool({
   description:
     "Run multiple web searches in a single call, reusing per-query cache and rate limits.",
   execute: async ({ queries, userId, ...rest }, callOptions: ToolExecutionOptions) => {
-    const started = Date.now();
+    const started = performance.now();
     // Optional top-level rate limiting (in addition to per-query limits)
     try {
       if (userId) {
@@ -201,7 +201,7 @@ export const webSearchBatch = createAiTool({
             if (rest.scrapeOptions != null) body.scrapeOptions = rest.scrapeOptions;
             if (rest.sources != null) body.sources = rest.sources;
             if (rest.tbs != null) body.tbs = rest.tbs;
-            const startedAt = Date.now();
+            const startedAt = performance.now();
             // Clamp timeouts to safe bounds to avoid too-short/unbounded requests and align with provider expectations.
             const timeoutMs = Math.min(20000, Math.max(5000, rest.timeoutMs ?? 12000));
             body.timeout = timeoutMs;
@@ -249,7 +249,7 @@ export const webSearchBatch = createAiTool({
             const validatedValue = {
               fromCache: false,
               results: normalizedResults,
-              tookMs: Date.now() - startedAt,
+              tookMs: performance.now() - startedAt,
             };
             results.push({
               ok: true,
@@ -300,7 +300,7 @@ export const webSearchBatch = createAiTool({
     // Validate final output against strict schema
     const rawOut = {
       results,
-      tookMs: Date.now() - started,
+      tookMs: performance.now() - started,
     };
     return WEB_SEARCH_BATCH_OUTPUT_SCHEMA.parse(rawOut);
   },

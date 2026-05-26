@@ -122,6 +122,7 @@ webSearch.execute({
 - **Time Filters**: Use `tbs` parameter (`qdr:d` for past day, `qdr:w` for
   week, etc.)
 - **Location**: Geographic filtering (e.g., `"Germany"`)
+- **Country**: Two-letter country code for geo-targeting (e.g., `"DE"`)
 - **Content Scraping**: Optional `scrapeOptions` to fetch full page
   content
 
@@ -147,6 +148,7 @@ webSearch.execute({
   categories: ["research"],
   tbs: "qdr:m", // Past month
   location: "United States",
+  country: "US",
   timeoutMs: 30000,
   scrapeOptions: {
     formats: ["markdown"],

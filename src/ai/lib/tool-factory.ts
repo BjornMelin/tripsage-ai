@@ -294,7 +294,7 @@ export function createAiTool<InputValue, OutputValue>(
   const toolDefinition: Tool<InputValue, ToolOutputValue<OutputValue>> = {
     description: options.description,
     execute: (params: InputValue, callOptions: ToolExecutionOptions) => {
-      const startedAt = Date.now();
+      const startedAt = performance.now();
       return withTelemetrySpan(
         `tool.${telemetryName}`,
         {
@@ -644,9 +644,8 @@ async function enforceRateLimit<InputValue>(
       ? "ip"
       : "unknown";
   span.addEvent("rate_limited", { "ratelimit.subject_type": subjectType });
-  const nowMs = Date.now();
   const retryAfter = validatedResult.reset
-    ? computeRetryAfterSeconds(validatedResult.reset, nowMs)
+    ? computeRetryAfterSeconds(validatedResult.reset)
     : undefined;
   throw createToolError(config.errorCode, undefined, {
     limit: validatedResult.limit,
