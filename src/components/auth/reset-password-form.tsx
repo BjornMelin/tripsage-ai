@@ -12,6 +12,7 @@ import {
   MailIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -75,12 +76,18 @@ function ReportResetResponseValidationError(
  * @returns The password reset form JSX element
  */
 export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
+  const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const emailFieldId = React.useId();
+  const emailDescriptionId = React.useId();
+  const emailErrorId = React.useId();
+  const emailDescribedBy = error
+    ? `${emailDescriptionId} ${emailErrorId}`
+    : emailDescriptionId;
 
   // Memoize path calculations since they depend only on static env config
   const { resetRequestPath, loginPath, supportPath } = React.useMemo(() => {
@@ -147,18 +154,18 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
     if (isSuccess) {
       const timer = setTimeout(() => {
         // Redirect back to login after a short delay for convenience.
-        window.location.assign(loginPath);
+        router.replace(loginPath);
       }, 5000);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [isSuccess, loginPath]);
+  }, [isSuccess, loginPath, router]);
 
   return (
     <Card className={className}>
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center space-x-2">
-          <MailIcon className="h-6 w-6 text-primary" />
+          <MailIcon aria-hidden="true" className="h-6 w-6 text-primary" />
           <CardTitle className="text-2xl">Reset your password</CardTitle>
         </div>
         <CardDescription className="text-center">
@@ -169,8 +176,8 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
       <CardContent>
         {isSuccess ? (
           <div className="space-y-4">
-            <Alert className={cn(statusVariants({ status: "success" }))}>
-              <CheckCircle2Icon className="h-4 w-4" />
+            <Alert role="status" className={cn(statusVariants({ status: "success" }))}>
+              <CheckCircle2Icon aria-hidden="true" className="h-4 w-4" />
               <AlertDescription>
                 {message || "Password reset instructions have been sent to your email"}
               </AlertDescription>
@@ -214,7 +221,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             {error && (
               <Alert variant="destructive">
                 <AlertCircleIcon aria-hidden="true" className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription id={emailErrorId}>{error}</AlertDescription>
               </Alert>
             )}
 
@@ -230,12 +237,14 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 disabled={isLoading}
                 className="w-full"
                 value={email}
+                aria-describedby={emailDescribedBy}
+                aria-invalid={error ? true : undefined}
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (error) setError(null);
                 }}
               />
-              <p className="text-xs text-muted-foreground">
+              <p id={emailDescriptionId} className="text-xs text-muted-foreground">
                 We&apos;ll send password reset instructions to this email address
               </p>
             </div>

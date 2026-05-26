@@ -156,7 +156,10 @@ export default async function LoginPage({
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-lg">
           {errorMessage ? (
-            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
               {errorMessage}
             </div>
           ) : null}
