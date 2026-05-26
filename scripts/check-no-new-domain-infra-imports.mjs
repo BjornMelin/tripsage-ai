@@ -102,10 +102,9 @@ function parseDiffForViolations(diffText) {
 
     // Only flag import-ish lines to avoid false positives in text literals.
     const trimmed = line.trimStart();
+    const isDynamicImport = /(?:^|[\s=(:,])(?:await\s+)?import\s*\(/.test(trimmed);
     const isImportish =
-      trimmed.startsWith("import ") ||
-      trimmed.startsWith("export ") ||
-      trimmed.includes("import(");
+      trimmed.startsWith("import ") || trimmed.startsWith("export ") || isDynamicImport;
     if (!isImportish) continue;
 
     violations.push({ filePath: currentFile, line });

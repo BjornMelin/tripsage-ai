@@ -122,7 +122,11 @@ describe("check-otel-convergence", () => {
   });
 
   it("detects missing runtime shim dependencies", () => {
-    const { "import-in-the-middle": _removed, ...dependencies } = baseDependencies;
+    const dependencies = Object.fromEntries(
+      Object.entries(baseDependencies).filter(
+        ([name]) => name !== "import-in-the-middle"
+      )
+    );
     const result = runGuardInTempProject(dependencies);
 
     expect(result.status).toBe(1);
