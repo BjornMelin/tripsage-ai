@@ -6,6 +6,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -19,10 +20,11 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    return NextResponse.json(
-      { error: "logout_failed", message: error.message },
-      { status: 500 }
-    );
+    return authRouteErrorResponse({
+      error: "logout_failed",
+      reason: error.message,
+      status: 500,
+    });
   }
 
   return NextResponse.json({ success: true });

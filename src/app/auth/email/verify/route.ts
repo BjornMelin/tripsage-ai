@@ -8,6 +8,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { parseJsonBody } from "@/lib/api/route-helpers";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -24,25 +25,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsed = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
   if (!parsed.ok) {
     if (parsed.error.status === 413) {
-      return NextResponse.json(
-        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
-        { status: 413 }
-      );
+      return authRouteErrorResponse({
+        code: "PAYLOAD_TOO_LARGE",
+        reason: "Request body exceeds limit",
+        status: 413,
+      });
     }
-    return NextResponse.json(
-      { code: "BAD_REQUEST", message: "Malformed JSON" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "BAD_REQUEST",
+      reason: "Malformed JSON",
+      status: 400,
+    });
   }
 
   const payload: VerifyPayload = isPlainObject(parsed.data) ? parsed.data : {};
 
   const token = typeof payload.token === "string" ? payload.token : "";
   if (!token) {
-    return NextResponse.json(
-      { code: "VALIDATION_ERROR", message: "Verification token is required" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "VALIDATION_ERROR",
+      reason: "Verification token is required",
+      status: 400,
+    });
   }
 
   const supabase = await createServerSupabase();
@@ -66,10 +70,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       errorCode: error.code,
       status: error.status,
     });
-    return NextResponse.json(
-      { code: "VERIFICATION_FAILED", message: "Verification failed" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "VERIFICATION_FAILED",
+      reason: "Verification failed",
+      status: 400,
+    });
   }
 
   return NextResponse.json({ ok: true });

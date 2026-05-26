@@ -9,6 +9,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { type RouteParamsContext, withApiGuards } from "@/lib/api/factory";
 import { parseJsonBody } from "@/lib/api/route-helpers";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import { getClientIpFromHeaders } from "@/lib/http/ip";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
@@ -82,15 +83,17 @@ const guardedPOST = withApiGuards({
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
   if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
-      return NextResponse.json(
-        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
-        { status: 413 }
-      );
+      return authRouteErrorResponse({
+        code: "PAYLOAD_TOO_LARGE",
+        reason: "Request body exceeds limit",
+        status: 413,
+      });
     }
-    return NextResponse.json(
-      { code: "BAD_REQUEST", message: "Malformed JSON" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "BAD_REQUEST",
+      reason: "Malformed JSON",
+      status: 400,
+    });
   }
 
   const payload: ResetRequestPayload = isPlainObject(parsedBody.data)
@@ -104,7 +107,11 @@ const guardedPOST = withApiGuards({
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const message = issue?.message ?? "Email is required";
-    return NextResponse.json({ code: "VALIDATION_ERROR", message }, { status: 400 });
+    return authRouteErrorResponse({
+      code: "VALIDATION_ERROR",
+      reason: message,
+      status: 400,
+    });
   }
 
   const { email } = parsed.data;
@@ -128,10 +135,11 @@ const guardedPOST = withApiGuards({
       ...telemetryMeta,
       originHash,
     });
-    return NextResponse.json(
-      { code: "INVALID_HOST", message: "Invalid request host" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "INVALID_HOST",
+      reason: "Invalid request host",
+      status: 400,
+    });
   }
 
   const basePath = normalizeBasePath(

@@ -61,6 +61,7 @@ describe("auth/logout route", () => {
     expect(body).toEqual({
       error: "logout_failed",
       message: "signout failed",
+      reason: "signout failed",
     });
   });
 

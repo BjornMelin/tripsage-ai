@@ -45,7 +45,9 @@ describe("POST /auth/email/verify", () => {
     expect(res.status).toBe(413);
     expect(await res.json()).toEqual({
       code: "PAYLOAD_TOO_LARGE",
+      error: "payload_too_large",
       message: "Request body exceeds limit",
+      reason: "Request body exceeds limit",
     });
     expect(cancelled).toBe(true);
     expect(pulls).toBeLessThan(20);

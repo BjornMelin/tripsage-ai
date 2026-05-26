@@ -154,7 +154,9 @@ describe("POST /auth/password/reset-request", () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
       code: "INVALID_HOST",
+      error: "invalid_host",
       message: "Invalid request host",
+      reason: "Invalid request host",
     });
     expect(ResetPassword).not.toHaveBeenCalled();
   });
@@ -222,7 +224,9 @@ describe("POST /auth/password/reset-request", () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
       code: "BAD_REQUEST",
+      error: "bad_request",
       message: "Malformed JSON",
+      reason: "Malformed JSON",
     });
     expect(ResetPassword).not.toHaveBeenCalled();
   });

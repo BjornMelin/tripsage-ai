@@ -40,7 +40,11 @@ describe("/auth/email/resend route", () => {
 
     const res = await POST(new NextRequest("http://localhost/auth/email/resend"));
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toMatchObject({ code: "EMAIL_REQUIRED" });
+    await expect(res.json()).resolves.toMatchObject({
+      code: "EMAIL_REQUIRED",
+      error: "email_required",
+      reason: "User email is required to resend verification",
+    });
     expect(resend).not.toHaveBeenCalled();
   });
 
@@ -57,7 +61,9 @@ describe("/auth/email/resend route", () => {
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({
       code: "RESEND_FAILED",
+      error: "resend_failed",
       message: "Resend failed",
+      reason: "Resend failed",
     });
     expect(resend).toHaveBeenCalledTimes(1);
     expect(resend).toHaveBeenCalledWith({ email: "user@example.com", type: "signup" });

@@ -8,7 +8,8 @@ import { changePasswordPayloadSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { type RouteContext, withApiGuards } from "@/lib/api/factory";
-import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
+import { parseJsonBody } from "@/lib/api/route-helpers";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import {
   getAuthErrorCode,
   getAuthErrorStatus,
@@ -23,29 +24,10 @@ interface ChangePasswordPayload {
   newPassword?: unknown;
 }
 
-interface PasswordChangeErrorOptions {
-  code: string;
-  message: string;
-  status: number;
-}
-
 // Password change payloads are tiny; keep a tight limit to reduce DoS surface.
 const MAX_BODY_BYTES = 4 * 1024;
 
 const logger = createServerLogger("auth.password.change");
-
-function passwordChangeErrorResponse({
-  code,
-  message,
-  status,
-}: PasswordChangeErrorOptions): NextResponse {
-  return errorResponse({
-    error: code.toLowerCase(),
-    extras: { code, message },
-    reason: message,
-    status,
-  });
-}
 
 async function handlePasswordChange(
   request: NextRequest,
@@ -54,15 +36,15 @@ async function handlePasswordChange(
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
   if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
-      return passwordChangeErrorResponse({
+      return authRouteErrorResponse({
         code: "PAYLOAD_TOO_LARGE",
-        message: "Request body exceeds limit",
+        reason: "Request body exceeds limit",
         status: 413,
       });
     }
-    return passwordChangeErrorResponse({
+    return authRouteErrorResponse({
       code: "BAD_REQUEST",
-      message: "Malformed JSON",
+      reason: "Malformed JSON",
       status: 400,
     });
   }
@@ -78,9 +60,9 @@ async function handlePasswordChange(
 
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return passwordChangeErrorResponse({
+    return authRouteErrorResponse({
       code: "VALIDATION_ERROR",
-      message: issue?.message ?? "Invalid input",
+      reason: issue?.message ?? "Invalid input",
       status: 400,
     });
   }
@@ -88,9 +70,9 @@ async function handlePasswordChange(
   const email = user?.email;
 
   if (!email) {
-    return passwordChangeErrorResponse({
+    return authRouteErrorResponse({
       code: "EMAIL_REQUIRED",
-      message: "User email is required to change password",
+      reason: "User email is required to change password",
       status: 400,
     });
   }
@@ -102,9 +84,9 @@ async function handlePasswordChange(
   });
 
   if (isMfaRequiredError(signInError)) {
-    return passwordChangeErrorResponse({
+    return authRouteErrorResponse({
       code: signInError.code ?? "mfa_required",
-      message: "Multi-factor authentication required",
+      reason: "Multi-factor authentication required",
       status: 403,
     });
   }
@@ -128,16 +110,16 @@ async function handlePasswordChange(
         errorCode,
         status,
       });
-      return passwordChangeErrorResponse({
+      return authRouteErrorResponse({
         code: "AUTH_UPSTREAM_ERROR",
-        message: "Password verification temporarily unavailable",
+        reason: "Password verification temporarily unavailable",
         status: 503,
       });
     }
 
-    return passwordChangeErrorResponse({
+    return authRouteErrorResponse({
       code: "INVALID_CREDENTIALS",
-      message: "Current password is incorrect",
+      reason: "Current password is incorrect",
       status: 400,
     });
   }
@@ -167,16 +149,16 @@ async function handlePasswordChange(
 
     // Distinguish upstream service errors from validation failures
     if (upstreamStatus >= 500 || upstreamStatus === 429) {
-      return passwordChangeErrorResponse({
+      return authRouteErrorResponse({
         code: "AUTH_UPSTREAM_ERROR",
-        message: "Password update temporarily unavailable",
+        reason: "Password update temporarily unavailable",
         status: 503,
       });
     }
 
-    return passwordChangeErrorResponse({
+    return authRouteErrorResponse({
       code: "UPDATE_FAILED",
-      message: "Password update failed",
+      reason: "Password update failed",
       status: 400,
     });
   }
