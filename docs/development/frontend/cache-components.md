@@ -34,8 +34,9 @@ If you must cache while using runtime APIs, use `'use cache: private'` **only** 
 
 - Prefer component/function-level caching over file-level unless the whole module is safe.
 - Always set an explicit lifetime with `cacheLife(...)` when the default profile is not appropriate.
-- When cached data has a clear invalidation signal, tag it with `cacheTag(...)` and invalidate via `revalidateTag(...)`.
+- When cached data has a clear invalidation signal, tag it with `cacheTag(...)` and invalidate with an explicit `revalidateTag` profile.
   - Prefer `revalidateTag(tag, { expire: 0 })` for immediate expiration semantics (common for admin/config updates and webhook-driven invalidation).
+  - Prefer `revalidateTag(tag, "max")` when stale-while-revalidate behavior is acceptable.
   - Avoid `updateTag(...)` in Route Handlers; it is intended for Server Actions / same-request consumers.
 
 ## Request-scoped memoization (React.cache)

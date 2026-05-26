@@ -2,7 +2,7 @@
 
 import { StateDepartmentProvider } from "@ai/tools/server/travel-advisory/providers/state-department";
 import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { server } from "@/test/msw/server";
 
 const TRAVEL_ADVISORIES_URL = "https://cadataapi.state.gov/api/TravelAdvisories";
@@ -30,7 +30,10 @@ const mockAdvisoryResponse = [
   },
 ];
 
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  vi.restoreAllMocks();
+  server.resetHandlers();
+});
 
 describe("StateDepartmentProvider", () => {
   let provider: StateDepartmentProvider;
@@ -105,6 +108,42 @@ describe("StateDepartmentProvider", () => {
       await provider.getCountryAdvisory("US");
       await provider.getCountryAdvisory("FR");
       expect(requestCount).toBe(1);
+    });
+
+    test("expires the feed cache using monotonic elapsed time", async () => {
+      const dayMs = 24 * 60 * 60 * 1000;
+      const nowSpy = vi.spyOn(performance, "now");
+      let requestCount = 0;
+      let response = mockAdvisoryResponse;
+      const refreshedAdvisoryResponse = [
+        {
+          ...mockAdvisoryResponse[0],
+          Summary: "<p>Do not travel due to terrorism.</p>",
+          Title: "United States - Level 4: Do Not Travel",
+        },
+      ];
+
+      server.use(
+        http.get(TRAVEL_ADVISORIES_URL, () => {
+          requestCount += 1;
+          return HttpResponse.json(response);
+        })
+      );
+
+      nowSpy.mockReturnValue(1_000);
+      const initialResult = await provider.getCountryAdvisory("US");
+
+      response = refreshedAdvisoryResponse;
+      nowSpy.mockReturnValue(1_000 + dayMs - 1);
+      const cachedResult = await provider.getCountryAdvisory("US");
+
+      nowSpy.mockReturnValue(1_000 + dayMs + 1);
+      const refreshedResult = await provider.getCountryAdvisory("US");
+
+      expect(requestCount).toBe(2);
+      expect(initialResult?.overallScore).toBe(85);
+      expect(cachedResult?.overallScore).toBe(85);
+      expect(refreshedResult?.overallScore).toBe(10);
     });
 
     test("normalizes Level 2 advisory correctly", async () => {

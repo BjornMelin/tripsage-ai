@@ -5,28 +5,35 @@ const navigationTimeoutMs = 15_000;
 const visibilityTimeoutMs = navigationTimeoutMs;
 
 function getUserMenuTrigger(page: Page): Locator {
-  return page
-    .getByRole("banner")
-    .getByRole("button", { name: /Test User|test@example\.com|User/i });
+  return page.getByRole("banner").getByRole("button", {
+    name: /Open account menu for (Test User|test@example\.com|user)/i,
+  });
 }
 
 async function openUserMenu(page: Page): Promise<Locator> {
-  const trigger = getUserMenuTrigger(page);
-  await expect(trigger).toBeVisible({ timeout: visibilityTimeoutMs });
-
   const logoutItem = page.getByRole("menuitem", { name: "Log Out" });
   const menuContent = page.getByRole("menu").filter({ has: logoutItem });
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    await trigger.click();
+  if (await menuContent.isVisible({ timeout: 500 }).catch(() => false)) {
+    return menuContent;
+  }
+
+  const trigger = getUserMenuTrigger(page);
+  await expect(trigger).toBeVisible({ timeout: visibilityTimeoutMs });
+
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
+      if (!(await menuContent.isVisible({ timeout: 500 }).catch(() => false))) {
+        await trigger.click();
+      }
       await expect(menuContent).toBeVisible({ timeout: visibilityTimeoutMs });
       await expect(menuContent).toHaveAttribute("data-state", "open", {
         timeout: visibilityTimeoutMs,
       });
       return menuContent;
     } catch (error) {
-      if (attempt === 1) throw error;
+      if (attempt === 2) throw error;
+      await page.keyboard.press("Escape").catch(() => undefined);
       await page.waitForTimeout(200);
     }
   }
@@ -59,6 +66,27 @@ async function clickAndWaitForUrl(
   }
 }
 
+async function clickUserMenuItemAndWaitForUrl(
+  page: Page,
+  itemName: "Log Out" | "Profile" | "Settings",
+  url: RegExp | string
+): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const menuContent = await openUserMenu(page);
+    const menuItem = menuContent.getByRole("menuitem", { name: itemName });
+    await expect(menuItem).toBeVisible({ timeout: visibilityTimeoutMs });
+    await menuItem.click({ force: attempt > 0, timeout: navigationTimeoutMs });
+
+    try {
+      await expect(page).toHaveURL(url, { timeout: navigationTimeoutMs });
+      return;
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await page.waitForTimeout(300);
+    }
+  }
+}
+
 test.describe("Dashboard Functionality", () => {
   test.describe.configure({ timeout: 60_000 });
 
@@ -75,6 +103,12 @@ test.describe("Dashboard Functionality", () => {
     // Verify login page loads
     await expect(page).toHaveTitle(/TripSage/);
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+    await expect(page.getByLabel("Email")).toHaveAccessibleDescription(
+      "Access your TripSage dashboard"
+    );
+    await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
+      "Access your TripSage dashboard"
+    );
 
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -82,6 +116,11 @@ test.describe("Dashboard Functionality", () => {
     // Verify dashboard content
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByText("Welcome to TripSage AI")).toBeVisible();
+    await expect(
+      page
+        .getByRole("banner")
+        .getByRole("button", { name: "Open account menu for Test User" })
+    ).toBeVisible({ timeout: visibilityTimeoutMs });
 
     // Verify quick actions are present
     await expect(page.getByText("Search Flights").first()).toBeVisible();
@@ -150,11 +189,7 @@ test.describe("Dashboard Functionality", () => {
     });
 
     // Test profile navigation
-    await clickAndWaitForUrl(
-      page,
-      menuContent.getByRole("menuitem", { name: "Profile" }),
-      "/dashboard/profile"
-    );
+    await clickUserMenuItemAndWaitForUrl(page, "Profile", "/dashboard/profile");
     await page.waitForLoadState("domcontentloaded");
 
     // Navigate back and test settings
@@ -164,23 +199,16 @@ test.describe("Dashboard Functionality", () => {
       page.getByRole("banner").getByRole("button", { name: "Toggle theme" })
     ).toBeVisible({ timeout: visibilityTimeoutMs });
 
-    const settingsMenu = await openUserMenu(page);
-    await clickAndWaitForUrl(
-      page,
-      settingsMenu.getByRole("menuitem", { name: "Settings" }),
-      "/dashboard/settings"
-    );
+    await clickUserMenuItemAndWaitForUrl(page, "Settings", "/dashboard/settings");
   });
 
   test("logout functionality works", async ({ page }) => {
     await authenticateAsTestUser(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    const menuContent = await openUserMenu(page);
-    await menuContent.getByRole("menuitem", { name: "Log Out" }).click();
+    await clickUserMenuItemAndWaitForUrl(page, "Log Out", /\/login/);
 
     // Wait for redirect to login page
-    await page.waitForURL(/\/login/, { timeout: navigationTimeoutMs });
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({
       timeout: visibilityTimeoutMs,
     });

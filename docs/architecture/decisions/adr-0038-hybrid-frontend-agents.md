@@ -20,7 +20,7 @@ We will replace the Python-based destination research and itinerary agents with 
 
 1. **Next.js Route Handlers** under `src/app/api/agents/destinations` and `.../itineraries` will host ToolLoopAgent instances bound to our TypeScript tool registry. The handlers stream UI messages via `toUIMessageStreamResponse()`.
 2. **Hybrid Guardrails**: each tool invocation passes through deterministic validators (Zod schemas, Upstash rate limits, cache lookups). The ToolLoop is capped via `stopWhen` conditions and summarized deterministically before responding.
-3. **Shared Schemas & Prompts**: destination + itinerary request/response schemas, prompt templates, and telemetry contracts are centralized in `src/schemas` and `src/prompts` for reuse by UI, tests, and observability.
+3. **Shared Schemas & Prompts**: destination + itinerary request/response schemas, prompt templates, and telemetry contracts are centralized in `src/domain/schemas` (via `@schemas/*`) and `src/prompts` for reuse by UI, tests, and observability.
 4. **AI Elements-first UX**: chat quick actions, structured cards, and timelines render the new agent outputs without dumping JSON, reusing the existing AI Elements Conversation/PromptInput components.
 5. **Telemetry & Rollout**: tool-level metrics (cache hits, validator rejections, budgets) flow through the existing telemetry stack. For this program, rollout uses full cutover (no flags); rollback is a deploy revert.
 
@@ -28,7 +28,9 @@ We will replace the Python-based destination research and itinerary agents with 
 
 - P0 (framework hardening) completed.
 - P1 (flights + accommodations, part of the wider migration) completed on the frontend.
-- Next: P2 – Budget & Memory agents, followed by P3 – Router & Error Recovery.
+- P2 (budget + memory + destination + itinerary agents) completed on the frontend.
+- P3 (router + error recovery) completed on the frontend.
+- Current runtime: TripSage agent orchestration is fully Next.js / AI SDK v6.
 
 ## Consequences
 

@@ -61,7 +61,7 @@ export class StateDepartmentProvider implements AdvisoryProvider {
    * @throws Error if API request fails.
    */
   private async fetchFeed(): Promise<StateDepartmentAdvisory[]> {
-    const now = Date.now();
+    const now = performance.now();
 
     if (this.feedCache && now - this.feedCacheTimestamp < this.feedCacheTtl) {
       return this.feedCache;

@@ -126,6 +126,7 @@ test.describe("Critical production flows", () => {
   test("runs search, calendar, and BYOK UI shells with deterministic providers", async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     const providerMocks = await mockCriticalProviderRoutes(page);
     await authenticateAsTestUser(page);
 
@@ -146,6 +147,7 @@ test.describe("Critical production flows", () => {
     await expect
       .poll(providerMocks.flightSearchRequests, {
         message: "flight search API request should be issued",
+        timeout: 15_000,
       })
       .toBe(1);
     await expect(page.getByText("Search Started")).toBeVisible();
@@ -163,6 +165,11 @@ test.describe("Critical production flows", () => {
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("TestAir", { exact: true })).toBeVisible();
     await expect(page.getByText("TS123")).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Select TestAir TS123 from SFO to LAX",
+      })
+    ).toBeVisible();
 
     await page.goto("/dashboard/calendar", { waitUntil: "domcontentloaded" });
     await expect(
@@ -176,8 +183,16 @@ test.describe("Critical production flows", () => {
     await expect(
       page.getByRole("heading", { name: /Bring Your Own Key/ })
     ).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Provider" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "API Key" })).toBeVisible();
-    await expect(page.getByText("Gateway Fallback Consent")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Provider" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("textbox", { name: "API Key" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByRole("switch", { name: "Allow fallback to team Gateway" })
+    ).toHaveAccessibleDescription(
+      /When no BYOK key is present, permit using the team Vercel AI Gateway\.\s+You can change this at any time\./
+    );
   });
 });

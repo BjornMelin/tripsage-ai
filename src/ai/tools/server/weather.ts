@@ -151,7 +151,7 @@ export const getCurrentWeather = createAiTool<GetCurrentWeatherInput, WeatherRes
     "Results cached for 10 minutes.",
   execute: async (params) => {
     const validated = getCurrentWeatherInputSchema.parse(params);
-    const startedAt = Date.now();
+    const startedAt = performance.now();
 
     const queryParams: Record<string, unknown> = {
       units: validated.units,
@@ -168,7 +168,7 @@ export const getCurrentWeather = createAiTool<GetCurrentWeatherInput, WeatherRes
 
     const { data, provider } = await executeWeatherQuery(queryParams);
     const weatherData = data as Record<string, unknown>;
-    const tookMs = Date.now() - startedAt;
+    const tookMs = performance.now() - startedAt;
 
     const main = weatherData.main as Record<string, unknown> | undefined;
     const weather = (weatherData.weather as unknown[])?.[0] as
@@ -228,7 +228,7 @@ export const getCurrentWeather = createAiTool<GetCurrentWeatherInput, WeatherRes
         ...cached,
         fromCache: true,
         provider: cached.provider ?? "cache",
-        tookMs: Date.now() - meta.startedAt,
+        tookMs: performance.now() - meta.startedAt,
       }),
       shouldBypass: (params) => Boolean(params.fresh),
       ttlSeconds: WEATHER_CACHE_TTL_SECONDS,

@@ -8,9 +8,19 @@
 **Related ADRs:** ADR-0013 (Next.js 16 Proxy Adoption)【46†L31-L39】, ADR-0016 (Tailwind CSS v4 Config)【46†L33-L36】  
 **Related Specs:** SPEC-0002 (Next.js 16 Migration)【39†L29-L37】
 
+## Current Implementation Status
+
+This ADR is implemented. The live repository has no top-level `frontend/`
+directory; the Next.js app runs from the repository root with `src/`,
+`package.json`, `pnpm-lock.yaml`, `next.config.ts`, `tsconfig.json`, and
+`pnpm-workspace.yaml` at root. Use `AGENTS.md` and
+[`docs/architecture/repo-structure.md`](../repo-structure.md) for current
+repo-structure rules. The context and alternatives below describe the
+pre-flattening state and the decision that removed it.
+
 ## Context
 
-The TripSage repository currently isolates the Next.js application in a top-level `frontend/` directory. All source code, dependencies, and configuration for the app live under `frontend/`, with infrastructure (Supabase, Docker, docs, etc.) at the root. This split originated to separate concerns (and perhaps to allow multi-package expansion), but in practice TripSage is a single application. The indirection adds complexity:
+Before this ADR was implemented, the TripSage repository isolated the Next.js application in a top-level `frontend/` directory. All source code, dependencies, and configuration for the app lived under `frontend/`, with infrastructure (Supabase, Docker, docs, etc.) at the root. This split originated to separate concerns (and perhaps to allow multi-package expansion), but in practice TripSage is a single application. The indirection added complexity:
 
 - Developer workflow friction: Contributors must remember to change directory into `frontend/` for nearly every action, for example installing packages, running `pnpm dev`, tests, linting, etc.【2†L75-L83】. Missing this step leads to confusion (for example running commands in root does nothing or operates on a different context).
 - Duplicate configuration: Many config files exist in or refer to `frontend/` where a single config at root would suffice. Examples: separate `frontend/package.json`, `frontend/.npmrc`【63†L1-L4】, `frontend/tsconfig.json` (with path aliases), and a root `.nvmrc` and `Makefile` that assume the subdir. This duplication requires coordination, for example Node version is defined in root, but `pnpm-lock.yaml` is inside frontend.
@@ -18,26 +28,26 @@ The TripSage repository currently isolates the Next.js application in a top-leve
 - Next.js best practices: Next.js (especially App Router projects) usually reside at the repo root or under a `src/` folder, not an extra monorepo-style folder, unless there are multiple apps. Here we have one app, so the indirection is unnecessary.
 - Maintenance overhead: Every update needs to touch both root and `frontend` in some way. For example, Dependabot or version bumps might update root config and frontend separately. Code owners file lists many `frontend/*` patterns【70†L25-L34】 that need mirroring if structure changes. This creates opportunities for inconsistency and increases cognitive load (developers must remember “frontend” prefix everywhere).
 
-In short, the current structure is a remnant of a potential monorepo architecture that is not needed now. Simplifying to a single unified project directory will reduce errors and onboarding time, and make the repository align with community norms.
+In short, the old structure was a remnant of a potential monorepo architecture that was not needed. Simplifying to a single unified project directory reduced errors and onboarding time, and made the repository align with community norms.
 
 ## Decision
 
-We will flatten the Next.js application structure by moving all contents of `frontend/` to the repository root, establishing a single-package architecture. Concretely:
+We flattened the Next.js application structure by moving all contents of `frontend/` to the repository root, establishing a single-package architecture. Concretely:
 
-- The `frontend/src` directory becomes `src` at root. The Next.js app’s entry (`src/app` with all route files) stays the same relative to `src`, just no parent `frontend` folder.
-- Config and support files in `frontend/` will be moved or merged into root. For example, `frontend/package.json` becomes the root `package.json`, combining with any root devDependencies if needed. `frontend/tsconfig.json` moves to root (adjusting paths as required).
-- Redundant or conflicting files will be resolved. For instance, if a root `README.md` and `frontend/README.md` both exist, they might be merged (likely the root README serves as main documentation, and the frontend README can be folded into it or moved under `docs/`).
-- Build and runtime configs will be updated to reflect the new layout:
-  - Next.js config (`next.config.ts`) will reside at root. Its settings (like `turbopack.root`) will be reviewed because previously `turbopack.root: "."` pointed to `frontend`. In the new structure `"."` should correctly point to root.
-  - Tailwind/PostCSS config: Under Tailwind CSS v4, we have a “CSS-first” approach with minimal config. We will ensure that if a Tailwind config file is needed (even if mostly empty) it is correctly placed at root and that the `content` paths cover `./src/**/*.{ts,tsx,mdx}` so Tailwind can find all class usage.
-  - Path aliases currently defined in `frontend/tsconfig.json` (like `"@/*": ["src/*"]`, `"@domain/*": ["src/domain/*"]`) remain logically the same. The tsconfig moves location. The baseUrl will be `"."` at root instead of inside frontend.
+- The `frontend/src` directory became `src` at root. The Next.js app’s entry (`src/app` with all route files) stayed the same relative to `src`, just with no parent `frontend` folder.
+- Config and support files in `frontend/` were moved or merged into root. For example, `frontend/package.json` became the root `package.json`, and `frontend/tsconfig.json` moved to root with paths adjusted as required.
+- Redundant or conflicting files were resolved. Root documentation became the main documentation surface, while superseded frontend-specific guidance was folded into root docs or archived.
+- Build and runtime configs were updated to reflect the new layout:
+  - Next.js config (`next.config.ts`) resides at root. Settings such as `turbopack.root` were reviewed so `"."` points to the repository root.
+  - Tailwind/PostCSS config follows the Tailwind CSS v4 CSS-first approach from root.
+  - Path aliases formerly defined in `frontend/tsconfig.json` (like `"@/*": ["src/*"]`, `"@domain/*": ["src/domain/*"]`) remain logically the same from the root `tsconfig.json`.
 - Tooling adjustments:
-  - CI workflows: Update GitHub Actions YAML to use the repository root as the working directory (remove `working-directory: frontend` everywhere) and change path filters (for example trigger on changes to `src/**` instead of `frontend/**`)【48†L5-L13】【48†L49-L58】. Also, cache keys referencing `frontend/package.json` or lockfile will be changed to the new paths【48†L55-L63】.
-  - Code owners: Modify `.github/CODEOWNERS` to replace `/frontend/` patterns with the corresponding root or `src/` patterns (so ownership rules remain effective)【70†L25-L34】【70†L39-L43】.
-  - Dev scripts: In `package.json` scripts and any npmrc config, remove assumptions of a subdirectory. For example, the `boundary:check` script will be `node scripts/check-boundaries.mjs` instead of `node ../scripts/...` when run from root【61†L33-L37】. Scripts referencing paths like `frontend/coverage` will be updated to `coverage` at root.
-- Documentation: All README and docs references to `cd frontend` or any `frontend/` file paths will be updated to the new locations. The primary README quick start will simplify to a single `pnpm install && pnpm dev` (no subdirectory step)【2†L75-L83】. Architecture docs may remove the extra layer in diagrams or text【2†L125-L133】.
+  - CI workflows: GitHub Actions YAML was updated to use the repository root as the working directory and root path filters such as `src/**` instead of `frontend/**`.
+  - Ownership and governance files were updated where applicable to remove `/frontend/` ownership patterns and use root or `src/` patterns instead.
+  - Dev scripts: `package.json` scripts and npm config assumptions were moved to root. Scripts referencing paths like `frontend/coverage` were updated to root paths.
+- Documentation: README and active docs references to `cd frontend` or old `frontend/` app paths were updated to the new locations. The primary README quick start simplified to root commands such as `pnpm install && pnpm dev` (no subdirectory step). Architecture docs removed the extra layer in diagrams or text.
 
-This decision aligns the repository with the one-app reality and modern Next.js project conventions. It eliminates the cost of maintaining parallel structures and reduces potential for mistakes.
+This decision aligned the repository with the one-app reality and modern Next.js project conventions. It eliminated the cost of maintaining parallel structures and reduced potential for mistakes.
 
 ## Consequences
 

@@ -307,7 +307,7 @@ async function pollCrawlStatus(
     maxResults,
     maxWaitTime,
   } = options;
-  const startTime = Date.now();
+  const startTime = performance.now();
   const maxWaitMs = maxWaitTime ? maxWaitTime * 1000 : timeoutMs;
   let pageCount = 0;
   let resultCount = 0;
@@ -315,7 +315,7 @@ async function pollCrawlStatus(
   let next: string | null = null;
 
   while (true) {
-    const elapsed = Date.now() - startTime;
+    const elapsed = performance.now() - startTime;
     if (elapsed > maxWaitMs) {
       throw new Error(`web_crawl_timeout:${maxWaitMs}ms`);
     }

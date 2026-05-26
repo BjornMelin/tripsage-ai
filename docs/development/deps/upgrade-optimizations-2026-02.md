@@ -28,19 +28,22 @@ Exception marker (rare): add `zod-v4-ok:` on the violating line with a short jus
 
 Script: `scripts/check-api-route-errors.mjs`
 
-Goal: enforce standardized error responses for `src/app/api/**`:
+Goal: enforce standardized error responses for `src/app/api/**` and JSON auth routes in `src/app/auth/**`:
 
 - Forbidden:
   - `NextResponse.json({ error: ... }, ...)`
+  - `NextResponse.json({ code: ... }, ...)`
   - `new Response(JSON.stringify({ error: ... }), ...)`
+  - `new Response(JSON.stringify({ code: ... }), ...)`
 - Required:
   - Use helpers from `@/lib/api/route-helpers`:
     - `errorResponse({ error, reason, status })`
     - `unauthorizedResponse()`, `forbiddenResponse()`, `notFoundResponse()`
+  - Auth route handlers can use `authRouteErrorResponse()` from `@/lib/auth/route-error-response`
 
 Commands:
 
 - `pnpm check:api-route-errors` (diff-based)
-- `pnpm check:api-route-errors:full` (scan all tracked `src/app/api/**`)
+- `pnpm check:api-route-errors:full` (scan all tracked `src/app/api/**` and `src/app/auth/**`)
 
 Exception marker (rare): add `api-route-error-ok:` on the violating line with a short justification.

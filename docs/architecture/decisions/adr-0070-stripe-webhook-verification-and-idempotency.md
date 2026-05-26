@@ -78,6 +78,7 @@ Rejected: payment/webhook code is privileged and must integrate with server-only
 
 ## References
 
-- Stripe Node v20.2.0 release: <https://github.com/stripe/stripe-node/releases/tag/v20.2.0>
+- Stripe Node SDK version: `package.json` (`stripe`)
+- Stripe Node releases: <https://github.com/stripe/stripe-node/releases>
 - Stripe webhooks (signatures): <https://stripe.com/docs/webhooks>
 - Upstash idempotency patterns: `src/lib/idempotency/redis.ts` and ADR-0048

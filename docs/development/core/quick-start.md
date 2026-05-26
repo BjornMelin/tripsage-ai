@@ -4,7 +4,7 @@ Canonical path to get TripSage running locally, with the minimal commands and th
 
 ## Prerequisites
 
-- **Runtime:** Node.js 24.x and pnpm `11.3.0` via Corepack (`corepack enable`; use `corepack install` from the repo root; use `corepack pnpm ...` if `pnpm` is not already on PATH)
+- **Runtime:** Node.js 24.x and pnpm 11.x via Corepack (`corepack enable`; use `corepack install` from the repo root; use `corepack pnpm ...` if `pnpm` is not already on PATH)
 - **Tooling:** Git
 - **Accounts/keys:** Supabase project, Upstash Redis (and QStash if you test jobs), at least one model key (AI Gateway recommended)
 - **Optional:** Docker (required for local Supabase; optional if using a hosted Supabase project), Playwright browsers for E2E

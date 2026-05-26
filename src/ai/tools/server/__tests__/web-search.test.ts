@@ -78,6 +78,12 @@ describe("webSearch", () => {
   });
 
   test("validates inputs and calls Firecrawl with metadata", async () => {
+    const performanceNowSpy = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(20.25)
+      .mockReturnValueOnce(33.75)
+      .mockReturnValue(33.75);
     let receivedBody: Record<string, unknown> | undefined;
     server.use(
       http.post("https://api.firecrawl.dev/v2/search", async ({ request }) => {
@@ -110,48 +116,52 @@ describe("webSearch", () => {
 
     if (!execute) throw new Error("webSearch.execute is undefined");
 
-    const out = await execute(
-      {
-        categories: null,
+    try {
+      const out = await execute(
+        {
+          categories: null,
+          country: "US",
+          fresh: true,
+          limit: 2,
+          location: null,
+          query: "test",
+          scrapeOptions: null,
+          sources: null,
+          tbs: null,
+          timeoutMs: null,
+          userId: null,
+        },
+        mockContext
+      );
+
+      const outAny = unsafeCast<{
+        results: Array<{
+          url: string;
+          title?: string;
+          snippet?: string;
+          publishedAt?: string;
+        }>;
+        fromCache: boolean;
+        tookMs: number;
+      }>(out);
+
+      expect(Array.isArray(outAny.results)).toBe(true);
+      expect(outAny.results[0].url).toBe("https://x");
+      expect(outAny.results[0].snippet).toBe("Web summary");
+      expect(outAny.results[1].publishedAt).toBe("2026-05-01");
+      expect(outAny.fromCache).toBe(false);
+      expect(outAny.tookMs).toBe(13.5);
+      expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
+      expect(withTelemetrySpan).toHaveBeenCalled();
+      expect(receivedBody).toBeDefined();
+      expect(receivedBody).toMatchObject({
         country: "US",
-        fresh: true,
         limit: 2,
-        location: null,
         query: "test",
-        scrapeOptions: null,
-        sources: null,
-        tbs: null,
-        timeoutMs: null,
-        userId: null,
-      },
-      mockContext
-    );
-
-    const outAny = unsafeCast<{
-      results: Array<{
-        url: string;
-        title?: string;
-        snippet?: string;
-        publishedAt?: string;
-      }>;
-      fromCache: boolean;
-      tookMs: number;
-    }>(out);
-
-    expect(Array.isArray(outAny.results)).toBe(true);
-    expect(outAny.results[0].url).toBe("https://x");
-    expect(outAny.results[0].snippet).toBe("Web summary");
-    expect(outAny.results[1].publishedAt).toBe("2026-05-01");
-    expect(outAny.fromCache).toBe(false);
-    expect(typeof outAny.tookMs).toBe("number");
-    expect(Object.keys(outAny).sort()).toEqual(["fromCache", "results", "tookMs"]);
-    expect(withTelemetrySpan).toHaveBeenCalled();
-    expect(receivedBody).toBeDefined();
-    expect(receivedBody).toMatchObject({
-      country: "US",
-      limit: 2,
-      query: "test",
-    });
+      });
+    } finally {
+      performanceNowSpy.mockRestore();
+    }
   });
 
   test("throws when not configured", async () => {

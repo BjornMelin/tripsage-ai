@@ -60,7 +60,7 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
       onHit: (cached, _params, meta) => ({
         ...cached,
         fromCache: true,
-        tookMs: Date.now() - meta.startedAt,
+        tookMs: performance.now() - meta.startedAt,
       }),
       shouldBypass: (params) => Boolean(params.fresh),
       ttlSeconds: (params) => inferTtlSeconds(params.query),
@@ -111,7 +111,7 @@ async function runWebSearch(
 ): Promise<WebSearchResult> {
   try {
     const apiKey = resolveFirecrawlApiKey();
-    const startedAt = Date.now();
+    const startedAt = performance.now();
     const scrapeOptions =
       params.scrapeOptions === null
         ? undefined
@@ -157,7 +157,7 @@ async function runWebSearch(
     return WEB_SEARCH_OUTPUT_SCHEMA.parse({
       fromCache: false,
       results: normalized,
-      tookMs: Date.now() - startedAt,
+      tookMs: performance.now() - startedAt,
     });
   } catch (error) {
     if (isToolError(error)) {

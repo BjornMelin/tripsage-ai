@@ -94,7 +94,6 @@ one of these conditions for the attachment/RAG path:
 Use the shared mocks for unit tests. For local integration, set
 `UPSTASH_USE_EMULATOR=1`, point `UPSTASH_REDIS_REST_URL` at the Redis REST
 emulator, and set `UPSTASH_QSTASH_DEV_URL` to the QStash dev server endpoint.
-`UPSTASH_EMULATOR_URL` remains a legacy Redis alias only.
 
 Live smoke tests use production-compatible env names for credentials:
 `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `QSTASH_TOKEN`.
