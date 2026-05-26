@@ -3,7 +3,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const CHECKED_FILE_RE = /\.(c|m)?[tj]sx?$/;
 
@@ -24,6 +24,7 @@ function listTrackedSrcFiles() {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
+    .filter((filePath) => existsSync(filePath))
     .filter((filePath) => !isExcludedPath(filePath));
 }
 
