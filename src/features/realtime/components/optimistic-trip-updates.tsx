@@ -134,7 +134,7 @@ function BuildOptimisticTripPatch(
     case "start_date":
       return typeof value === "string" ? { startDate: value } : null;
     case "travelers":
-      return typeof value === "number" && Number.isFinite(value)
+      return typeof value === "number" && Number.isFinite(value) && value >= 1
         ? { travelers: value }
         : null;
     default:
@@ -169,8 +169,10 @@ function GetTripValueForUpdateField(
  *
  * Unknown or invalid fields are ignored and reported through client telemetry.
  *
- * @param input - Trip update details and previous UI trip state.
- * @returns Updated UI trip state, or the previous state when the update is invalid.
+ * @param input - Update context containing field, value, trip id, and previous
+ * UI trip snapshot.
+ * @returns The updated UI trip when mapping succeeds, otherwise the previous
+ * trip unchanged.
  */
 export function ApplyTripUpdateToUiTrip(input: {
   field: TripUpdateKey;

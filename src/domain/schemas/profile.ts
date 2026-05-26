@@ -73,8 +73,8 @@ const getReferenceDateParts = (reference?: DateOfBirthReference): DateParts => {
  * Zod schema for personal information form validation.
  * Validates user profile data including name, bio, location, and contact information.
  *
- * @param referenceDate - Optional reference date for age validation.
- * @returns Zod schema for personal information form validation.
+ * @param referenceDate - Optional reference date used to evaluate age bounds.
+ * @returns Zod schema for personal information form data.
  */
 export const createPersonalInfoFormSchema = (referenceDate?: DateOfBirthReference) =>
   z.object({
@@ -109,7 +109,7 @@ export const createPersonalInfoFormSchema = (referenceDate?: DateOfBirthReferenc
     website: primitiveSchemas.url.optional().or(z.literal("")),
   });
 
-/** Default personal information form schema using the runtime date for age validation. */
+/** Default personal-info form schema using the runtime clock as DOB reference. */
 export const personalInfoFormSchema = createPersonalInfoFormSchema();
 
 /** TypeScript type for personal information form data. */

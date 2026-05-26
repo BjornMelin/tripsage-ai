@@ -74,7 +74,7 @@ export const createFutureLocalDateSchema = (referenceDate?: LocalDateReference) 
     }
   });
 
-/** Default future-local-date schema using the runtime local day as reference. */
+/** Default future-date schema using the current local day as reference. */
 export const FUTURE_DATE_SCHEMA = createFutureLocalDateSchema();
 
 export const DATE_RANGE_SCHEMA = z

@@ -117,8 +117,8 @@ describe("QuickActions", () => {
   });
 
   it("applies custom colors to action buttons", () => {
-    renderWithProviders(<QuickActions />);
-    const links = screen.getAllByRole("link");
+    const { container } = renderWithProviders(<QuickActions />);
+    const links = Array.from(container.querySelectorAll("a"));
     const hasClassName = (className: string) =>
       links.some((element) => element.classList.contains(className));
 
