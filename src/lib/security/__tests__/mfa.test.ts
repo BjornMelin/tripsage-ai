@@ -5,12 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createBackupCodes,
   InvalidBackupCodeError,
+  InvalidTotpError,
   resetMfaInitForTest,
   startTotpEnrollment,
   verifyBackupCode,
   verifyTotp,
 } from "@/lib/security/mfa";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 const mockIds = {
   challengeId: "22222222-2222-4222-8222-222222222222",
@@ -277,36 +279,89 @@ describe("mfa service", () => {
     vi.clearAllMocks();
   });
 
-  it("enrolls totp and returns challenge data", async () => {
-    const result = await startTotpEnrollment(mockSupabase, {
-      adminSupabase: mockAdmin,
-    });
-    expect(result.factorId).toBe(mockIds.factorId);
-    expect(result.challengeId).toBe(mockIds.challengeId);
-    expect(result.qrCode).toBe("qr");
-  });
+  it(
+    "enrolls totp with deterministic helper-backed timestamps",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
-  it("verifies totp code during initial enrollment", async () => {
-    // Set up pending enrollment data
-    mfaEnrollmentRows.push({
-      challenge_id: mockIds.challengeId,
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      factor_id: mockIds.factorId,
-      issued_at: new Date().toISOString(),
-      status: "pending",
-    });
+      const result = await startTotpEnrollment(mockSupabase, {
+        adminSupabase: mockAdmin,
+      });
 
-    const result = await verifyTotp(
-      mockSupabase,
-      {
+      expect(result).toMatchObject({
         challengeId: mockIds.challengeId,
-        code: "123456",
+        expiresAt: "2026-02-03T04:20:06.000Z",
         factorId: mockIds.factorId,
-      },
-      { adminSupabase: mockAdmin }
-    );
-    expect(result.isInitialEnrollment).toBe(true);
-  });
+        issuedAt: "2026-02-03T04:05:06.000Z",
+        qrCode: "qr",
+        ttlSeconds: 900,
+      });
+      expect(mfaEnrollmentRows.at(-1)).toMatchObject({
+        challenge_id: mockIds.challengeId,
+        expires_at: "2026-02-03T04:20:06.000Z",
+        factor_id: mockIds.factorId,
+        issued_at: "2026-02-03T04:05:06.000Z",
+        status: "pending",
+      });
+    })
+  );
+
+  it(
+    "verifies totp code during initial enrollment",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+
+      // Set up pending enrollment data
+      mfaEnrollmentRows.push({
+        challenge_id: mockIds.challengeId,
+        expires_at: "2026-02-03T04:20:06.000Z",
+        factor_id: mockIds.factorId,
+        issued_at: "2026-02-03T04:05:06.000Z",
+        status: "pending",
+      });
+
+      const result = await verifyTotp(
+        mockSupabase,
+        {
+          challengeId: mockIds.challengeId,
+          code: "123456",
+          factorId: mockIds.factorId,
+        },
+        { adminSupabase: mockAdmin }
+      );
+      expect(result.isInitialEnrollment).toBe(true);
+    })
+  );
+
+  it(
+    "expires stale pending enrollment using helper-backed current time",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+
+      // Set up pending enrollment data
+      mfaEnrollmentRows.push({
+        challenge_id: mockIds.challengeId,
+        expires_at: "2026-02-03T04:05:05.000Z",
+        factor_id: mockIds.factorId,
+        issued_at: "2026-02-03T03:50:06.000Z",
+        status: "pending",
+      });
+
+      await expect(
+        verifyTotp(
+          mockSupabase,
+          {
+            challengeId: mockIds.challengeId,
+            code: "123456",
+            factorId: mockIds.factorId,
+          },
+          { adminSupabase: mockAdmin }
+        )
+      ).rejects.toBeInstanceOf(InvalidTotpError);
+      expect(mfaEnrollmentRows[0]?.status).toBe("expired");
+      expect(mockSupabase.auth.mfa.verify).not.toHaveBeenCalled();
+    })
+  );
 
   it("verifies totp code during subsequent challenge (no enrollment)", async () => {
     // No pending enrollment - simulates regular MFA login challenge

@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { secureUuid } from "@/lib/security/random";
 import {
   createRouteParamsContext,
   makeJsonRequest,
@@ -57,7 +58,7 @@ describe("POST /api/auth/mfa/challenge", () => {
     const { POST } = await import("../challenge/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/challenge", {
-        factorId: crypto.randomUUID(),
+        factorId: secureUuid(),
       }),
       createRouteParamsContext()
     );
@@ -72,7 +73,7 @@ describe("POST /api/auth/mfa/challenge", () => {
     const { POST } = await import("../challenge/route");
     const res = await POST(
       makeJsonRequest("http://localhost/api/auth/mfa/challenge", {
-        factorId: crypto.randomUUID(),
+        factorId: secureUuid(),
       }),
       createRouteParamsContext()
     );
