@@ -13,6 +13,7 @@ import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createAgentConfigVersionId } from "@/lib/agents/version-id";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import {
@@ -23,7 +24,7 @@ import {
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
-import { nowIso, secureId } from "@/lib/security/random";
+import { nowIso } from "@/lib/security/random";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
@@ -42,7 +43,7 @@ function buildRollbackConfig(existing: AgentConfig, scope: string): AgentConfig 
   return configurationAgentConfigSchema.parse({
     ...existing,
     agentType: existing.agentType,
-    id: `v${Math.floor(Date.now() / 1000)}_${secureId(8)}`,
+    id: createAgentConfigVersionId(),
     scope,
     updatedAt: now,
   });

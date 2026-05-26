@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clampProgress, fireAndForget } from "../utils";
+import { clampProgress, fireAndForget, throttle } from "../utils";
 
 const FLUSH_MICROTASKS = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -61,5 +61,38 @@ describe("fireAndForget", () => {
     await FLUSH_MICROTASKS();
 
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("throttle", () => {
+  it("runs the first call even when the monotonic clock starts below the delay", () => {
+    const nowSpy = vi.spyOn(performance, "now").mockReturnValue(5);
+    const fn = vi.fn();
+    const throttled = throttle(fn, 100);
+
+    throttled("first");
+
+    expect(fn).toHaveBeenCalledOnce();
+    expect(fn).toHaveBeenCalledWith("first");
+    expect(nowSpy).toHaveBeenCalledOnce();
+  });
+
+  it("uses monotonic elapsed time to suppress calls within the delay", () => {
+    const nowSpy = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(40)
+      .mockReturnValueOnce(111);
+    const fn = vi.fn();
+    const throttled = throttle(fn, 100);
+
+    throttled("first");
+    throttled("suppressed");
+    throttled("second");
+
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(fn).toHaveBeenNthCalledWith(1, "first");
+    expect(fn).toHaveBeenNthCalledWith(2, "second");
+    expect(nowSpy).toHaveBeenCalledTimes(3);
   });
 });

@@ -10,7 +10,7 @@ import {
   errorReportSchema,
 } from "@schemas/errors";
 import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
-import { secureId } from "@/lib/security/random";
+import { nowIso, secureId } from "@/lib/security/random";
 import {
   type ErrorSpanMetadata,
   recordClientErrorOnActiveSpan,
@@ -144,7 +144,7 @@ class ErrorService {
    */
   private storeErrorLocally(report: ErrorReport): void {
     try {
-      const key = `error_${Date.now()}_${secureId(9)}`;
+      const key = `error_${nowIso()}_${secureId(9)}`;
       localStorage.setItem(key, JSON.stringify(report));
 
       // Clean up old errors (keep last 10)
@@ -195,7 +195,7 @@ class ErrorService {
             componentStack: errorInfo.componentStack || "",
           }
         : undefined,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       url: window.location.href,
       userAgent: navigator.userAgent,
       ...additionalInfo,

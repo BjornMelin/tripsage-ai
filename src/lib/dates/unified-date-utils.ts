@@ -42,6 +42,7 @@ import {
   subWeeks,
   subYears,
 } from "date-fns";
+import { nowIso } from "@/lib/security/random";
 
 /**
  * Predefined date format patterns used throughout the application.
@@ -88,6 +89,38 @@ function ensureValidDate(date: Date): void {
 }
 
 /**
+ * Formats a Date as a UTC ISO date string (`YYYY-MM-DD`).
+ *
+ * @param date - The date to format.
+ * @returns UTC ISO date-only string.
+ */
+export function toUtcIsoDate(date: Date): string {
+  ensureValidDate(date);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Returns the current UTC ISO date string (`YYYY-MM-DD`).
+ *
+ * @param currentTime - Optional epoch milliseconds or ISO timestamp for deterministic callers/tests.
+ * @returns UTC ISO date-only string.
+ */
+export function todayUtcIsoDate(currentTime?: number | string): string {
+  return toUtcIsoDate(new Date(currentTime ?? nowIso()));
+}
+
+type DateParseReference = Date | number | string;
+
+const getDateParseReferenceDate = (referenceDate?: DateParseReference): Date => {
+  const date =
+    referenceDate instanceof Date
+      ? new Date(referenceDate.getTime())
+      : new Date(referenceDate ?? nowIso());
+  ensureValidDate(date);
+  return date;
+};
+
+/**
  * Unified date utility class providing consistent date operations.
  *
  * Wraps date-fns v4 functionality with a stable API and error handling.
@@ -102,15 +135,20 @@ export class DateUtils {
    *
    * @param dateString - The date string to parse.
    * @param pattern - Optional pattern for parsing. Defaults to ISO parsing.
+   * @param referenceDate - Optional date-fns reference date for pattern parsing.
    * @returns A parsed Date object.
    * @throws Error if the date string is empty or invalid.
    */
-  static parse(dateString: string, pattern?: string): Date {
+  static parse(
+    dateString: string,
+    pattern?: string,
+    referenceDate?: DateParseReference
+  ): Date {
     if (!dateString) {
       throw new Error("Empty date string");
     }
     const parsed = pattern
-      ? parse(dateString, pattern, new Date())
+      ? parse(dateString, pattern, getDateParseReferenceDate(referenceDate))
       : parseISO(dateString);
     ensureValidDate(parsed);
     return parsed;

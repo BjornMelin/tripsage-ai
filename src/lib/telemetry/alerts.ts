@@ -3,6 +3,7 @@
  */
 
 import "server-only";
+import { nowIso } from "@/lib/security/random";
 import { TELEMETRY_SERVICE_NAME } from "@/lib/telemetry/constants";
 import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
@@ -39,7 +40,7 @@ export function emitOperationalAlert(
       }, {})
     : undefined;
 
-  const timestamp = new Date().toISOString();
+  const timestamp = nowIso();
 
   // Record to OTel for distributed tracing and monitoring integration
   recordTelemetryEvent(`alert.${event}`, {

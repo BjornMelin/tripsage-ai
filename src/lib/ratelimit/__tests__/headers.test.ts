@@ -1,11 +1,12 @@
 /** @vitest-environment node */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   applyRateLimitHeaders,
   createRateLimitHeaders,
   normalizeRateLimitResetToMs,
 } from "@/lib/ratelimit/headers";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 describe("ratelimit headers", () => {
   describe("normalizeRateLimitResetToMs", () => {
@@ -79,6 +80,20 @@ describe("ratelimit headers", () => {
         ]
       ).toBe("0");
     });
+
+    it(
+      "uses the helper-backed current time when no nowMs override is provided",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+
+        expect(
+          createRateLimitHeaders({
+            reset: Date.parse("2026-02-03T04:06:36.000Z"),
+            success: false,
+          })["Retry-After"]
+        ).toBe("90");
+      })
+    );
   });
 
   describe("applyRateLimitHeaders", () => {

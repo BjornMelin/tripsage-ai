@@ -1,9 +1,10 @@
 /** @vitest-environment node */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
-const envValues = vi.hoisted(() => ({
+const envValues = vi.hoisted<Record<string, string | undefined>>(() => ({
   COLLAB_WEBHOOK_URL: undefined,
   NEXT_PUBLIC_SUPABASE_URL: "https://supabase.test",
   RESEND_API_KEY: "resend-key",
@@ -74,10 +75,16 @@ const { sendCollaboratorNotifications } = await import(
 describe("sendCollaboratorNotifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    envValues.COLLAB_WEBHOOK_URL = undefined;
+    envValues.RESEND_API_KEY = "resend-key";
     mockAuthAdminGetUserById.mockReset();
     mockAuthAdminGetUserById.mockResolvedValue(
       createDefaultAuthAdminGetUserByIdResult()
     );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("returns empty result when table is not trip_collaborators", async () => {
@@ -108,4 +115,35 @@ describe("sendCollaboratorNotifications", () => {
     expect(mockAuthAdminGetUserById).toHaveBeenCalledTimes(1);
     expect(result.emailed).toBe(true);
   });
+
+  it(
+    "clears downstream webhook timeout when fetch fails before the timeout",
+    withFakeTimers(async () => {
+      envValues.COLLAB_WEBHOOK_URL = "https://downstream.test/webhook";
+      envValues.RESEND_API_KEY = "";
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.reject(new TypeError("network failed")))
+      );
+
+      const result = await sendCollaboratorNotifications(
+        {
+          oldRecord: null,
+          record: { trip_id: 1, user_id: "user-1" },
+          table: "trip_collaborators",
+          type: "INSERT",
+        },
+        "event-key-webhook"
+      );
+
+      expect(result).toEqual({ emailed: false, webhookPosted: false });
+      expect(fetch).toHaveBeenCalledWith(
+        "https://downstream.test/webhook",
+        expect.objectContaining({
+          method: "POST",
+        })
+      );
+      expect(vi.getTimerCount()).toBe(0);
+    })
+  );
 });

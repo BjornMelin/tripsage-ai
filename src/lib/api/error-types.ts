@@ -2,6 +2,8 @@
  * @fileoverview Consolidated error types for API and React Query integration. Single ApiError class with error codes replaces separate error classes.
  */
 
+import { nowIso } from "@/lib/security/random";
+
 /** Standard error codes for API errors. */
 export type ApiErrorCode =
   | "NETWORK_ERROR"
@@ -99,7 +101,7 @@ export class ApiError extends Error {
     this.endpoint = options.endpoint;
     this.validationErrors = options.validationErrors;
     this.fieldErrors = options.fieldErrors;
-    this.timestamp = new Date().toISOString();
+    this.timestamp = nowIso();
 
     Object.setPrototypeOf(this, ApiError.prototype);
   }
@@ -297,9 +299,6 @@ export const isValidationError = (error: unknown): error is ApiError => {
   // Legacy support for Error with name "ValidationError"
   return error instanceof Error && error.name === "ValidationError";
 };
-
-/** Union type for app errors (now just ApiError). */
-export type AppError = ApiError;
 
 /** Error handler utility - normalizes all errors to ApiError. */
 export const handleApiError = (error: unknown): ApiError => {

@@ -5,11 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock env module to prevent validation errors during tests
 vi.mock("@/lib/env/client", () => ({
   getClientEnv: () => ({
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      "",
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   }),
-  getClientEnvVar: (key: string) => process.env[key] ?? "",
+  getClientEnvVar: (key: string) => {
+    if (key === "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") {
+      return (
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        ""
+      );
+    }
+    return process.env[key] ?? "";
+  },
 }));
 
 describe("Supabase Browser Client", () => {
@@ -23,12 +35,18 @@ describe("Supabase Browser Client", () => {
     // Reset environment variables
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
   });
 
   // Dynamic import to get fresh module after resetModules
   async function getClient() {
     const module = await import("../client");
     return module.createClient;
+  }
+
+  async function getBrowserClient() {
+    const module = await import("../client");
+    return module.getBrowserClient;
   }
 
   it("should create a browser client with valid environment variables", async () => {
@@ -56,12 +74,45 @@ describe("Supabase Browser Client", () => {
     expect(() => createClient()).not.toThrow();
   });
 
+  it("should create a browser client with the legacy anon key fallback", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "legacy-anon-key");
+
+    const createClient = await getClient();
+    const client = createClient();
+    expect(client).toBeTruthy();
+  });
+
   it("should handle both environment variables missing gracefully in tests", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
 
     const createClient = await getClient();
     expect(() => createClient()).not.toThrow();
+  });
+
+  it("should return null without logging when singleton env variables are missing", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const getBrowserSupabaseClient = await getBrowserClient();
+
+    expect(getBrowserSupabaseClient()).toBeNull();
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("should create the singleton browser client with the legacy anon key fallback", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "legacy-anon-key");
+
+    const getBrowserSupabaseClient = await getBrowserClient();
+
+    expect(getBrowserSupabaseClient()).toBeTruthy();
   });
 
   it("should handle undefined environment variables gracefully in tests", async () => {

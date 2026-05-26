@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { Activity } from "@schemas/search";
+import { todayUtcIsoDate } from "@/lib/dates/unified-date-utils";
 import { getGoogleMapsServerKey } from "@/lib/env/server";
 import { getPlaceDetails, postPlacesSearch } from "@/lib/google/client";
 import { normalizePlacesTextQuery } from "@/lib/google/places-utils";
@@ -174,7 +175,7 @@ function buildPhotoUrls(photos?: PlacesPhoto[]): string[] {
  */
 export function mapPlacesPlaceToActivity(
   place: PlacesPlace,
-  date: string = new Date().toISOString().split("T")[0]
+  date: string = todayUtcIsoDate()
 ): Activity {
   const name = place.displayName?.text ?? "Unknown Activity";
   const location = place.formattedAddress ?? "Unknown Location";

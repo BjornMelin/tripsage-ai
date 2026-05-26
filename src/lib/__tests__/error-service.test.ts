@@ -11,7 +11,7 @@ import {
   ERROR_REPORTING_ENDPOINT,
 } from "@/test/msw/handlers/error-reporting";
 import { server } from "@/test/msw/server";
-import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
+import { createFakeTimersContext, withFakeTimers } from "@/test/utils/with-fake-timers";
 import { ErrorService } from "../error-service";
 
 type StorageMocks = {
@@ -107,30 +107,35 @@ describe("ErrorService", () => {
   });
 
   describe("createErrorReport", () => {
-    it("builds a report with runtime context and optional details", () => {
-      const error = new Error("Test error");
-      error.stack = "Error: Test error\n    at test (test.js:1:1)";
+    it(
+      "builds a report with helper-backed runtime timestamp and optional details",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
-      const report = errorService.createErrorReport(
-        error,
-        { componentStack: "Component.tsx:10:5" },
-        { sessionId: "session-1", userId: "user-1" }
-      );
+        const error = new Error("Test error");
+        error.stack = "Error: Test error\n    at test (test.js:1:1)";
 
-      expect(report.error).toMatchObject({
-        message: "Test error",
-        name: "Error",
-        stack: "Error: Test error\n    at test (test.js:1:1)",
-      });
-      expect(report.errorInfo).toEqual({
-        componentStack: "Component.tsx:10:5",
-      });
-      expect(report.sessionId).toBe("session-1");
-      expect(report.userId).toBe("user-1");
-      expect(report.url).toBe("https://example.com/");
-      expect(report.userAgent).toBe("Vitest");
-      expect(new Date(report.timestamp).toISOString()).toBe(report.timestamp);
-    });
+        const report = errorService.createErrorReport(
+          error,
+          { componentStack: "Component.tsx:10:5" },
+          { sessionId: "session-1", userId: "user-1" }
+        );
+
+        expect(report.error).toMatchObject({
+          message: "Test error",
+          name: "Error",
+          stack: "Error: Test error\n    at test (test.js:1:1)",
+        });
+        expect(report.errorInfo).toEqual({
+          componentStack: "Component.tsx:10:5",
+        });
+        expect(report.sessionId).toBe("session-1");
+        expect(report.userId).toBe("user-1");
+        expect(report.url).toBe("https://example.com/");
+        expect(report.userAgent).toBe("Vitest");
+        expect(report.timestamp).toBe("2026-02-03T04:05:06.000Z");
+      })
+    );
 
     it("includes error digests when present", () => {
       const error = new Error("Test error") as Error & { digest?: string };
@@ -171,19 +176,24 @@ describe("ErrorService", () => {
       expect(recorder.requests).toHaveLength(0);
     });
 
-    it("persists errors to localStorage when enabled", async () => {
-      const recorder = createErrorReportingRecorder(config.endpoint);
-      server.use(recorder.handler);
-      const errorReport = buildReport();
+    it(
+      "persists errors to localStorage with helper-backed keys when enabled",
+      withFakeTimers(async () => {
+        vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
-      await errorService.reportError(errorReport);
+        const recorder = createErrorReportingRecorder(config.endpoint);
+        server.use(recorder.handler);
+        const errorReport = buildReport();
 
-      const setItemMock = localStorageMock.setItem as ReturnType<typeof vi.fn>;
-      expect(setItemMock).toHaveBeenCalledTimes(1);
-      const [key, value] = setItemMock.mock.calls[0] as [string, string];
-      expect(key).toMatch(/^error_\d+_[a-z0-9]+$/);
-      expect(JSON.parse(value)).toEqual(errorReport);
-    });
+        await errorService.reportError(errorReport);
+
+        const setItemMock = localStorageMock.setItem as ReturnType<typeof vi.fn>;
+        expect(setItemMock).toHaveBeenCalledTimes(1);
+        const [key, value] = setItemMock.mock.calls[0] as [string, string];
+        expect(key).toMatch(/^error_2026-02-03T04:05:06\.000Z_[a-z0-9]+$/);
+        expect(JSON.parse(value)).toEqual(errorReport);
+      })
+    );
 
     it("silently handles invalid reports via Zod validation without crashing", async () => {
       const recorder = createErrorReportingRecorder(config.endpoint);
@@ -210,6 +220,31 @@ describe("ErrorService", () => {
     const timers = createFakeTimersContext();
     beforeEach(timers.setup);
     afterEach(timers.teardown);
+
+    it("simulates rejected fetches before returning a successful response", async () => {
+      const endpoint = config.endpoint ?? ERROR_REPORTING_ENDPOINT;
+      const flaky = createFlakyErrorReportingHandler({
+        endpoint,
+        failTimes: 1,
+      });
+      server.use(flaky.handler);
+
+      await expect(
+        fetch(endpoint, {
+          body: JSON.stringify(buildReport()),
+          method: "POST",
+        })
+      ).rejects.toThrow();
+
+      const response = await fetch(endpoint, {
+        body: JSON.stringify(buildReport()),
+        method: "POST",
+      });
+
+      expect(response.ok).toBe(true);
+      await expect(response.json()).resolves.toEqual({ success: true });
+      expect(flaky.callCount()).toBe(2);
+    });
 
     it("retries transient failures up to maxRetries", async () => {
       const flaky = createFlakyErrorReportingHandler({

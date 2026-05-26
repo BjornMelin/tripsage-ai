@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 vi.mock("@/lib/env/server", () => ({
   getGoogleMapsServerKey: vi.fn(() => "test-api-key"),
@@ -100,6 +101,21 @@ describe("places-activities", () => {
       expect(activity.price).toBe(2); // Default moderate
       expect(activity.type).toBe("activity");
     });
+
+    it(
+      "defaults missing dates to the current UTC ISO date",
+      withFakeTimers(() => {
+        vi.setSystemTime(new Date("2025-12-31T23:30:00Z"));
+
+        const activity = mapPlacesPlaceToActivity({
+          displayName: { text: "Test Activity" },
+          formattedAddress: "Test Address",
+          id: "places/1",
+        });
+
+        expect(activity.date).toBe("2025-12-31");
+      })
+    );
 
     it("should map price levels correctly", () => {
       const testCases = [

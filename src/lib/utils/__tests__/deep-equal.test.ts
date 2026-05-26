@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { deepEqualJsonLike } from "@/lib/utils/deep-equal";
 
 describe("deepEqualJsonLike", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("compares primitives and arrays", () => {
     expect(deepEqualJsonLike(1, 1)).toBe(true);
     expect(deepEqualJsonLike(1, 2)).toBe(false);
@@ -68,6 +72,34 @@ describe("deepEqualJsonLike", () => {
     expect(warnings.some((w) => w.message === "Slow dirty-check comparison")).toBe(
       true
     );
+  });
+
+  it("uses monotonic time for default slow-comparison timing", () => {
+    const dateNowSpy = vi.spyOn(Date, "now");
+    const performanceNowSpy = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(103);
+    const warnings: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+    const logger = {
+      warn: (message: string, meta?: Record<string, unknown>) => {
+        warnings.push({ message, meta });
+      },
+    };
+
+    const result = deepEqualJsonLike(
+      { a: 1 },
+      { a: 1 },
+      { logger, slowThresholdMs: 0 }
+    );
+
+    expect(result).toBe(true);
+    expect(performanceNowSpy).toHaveBeenCalledTimes(2);
+    expect(dateNowSpy).not.toHaveBeenCalled();
+    expect(warnings).toContainEqual({
+      message: "Slow dirty-check comparison",
+      meta: expect.objectContaining({ durationMs: 3 }),
+    });
   });
 
   it("handles large arrays", () => {

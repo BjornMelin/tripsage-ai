@@ -221,7 +221,11 @@ export interface EnqueueJobResult {
  *   }
  * );
  * if (result) {
- *   console.log("Enqueued:", result.messageId);
+ *   recordTelemetryEvent("qstash.enqueue.scheduled", {
+ *     attributes: {
+ *       messageId: result.messageId,
+ *     },
+ *   });
  * }
  * ```
  */
@@ -334,6 +338,16 @@ export async function enqueueJob(
       if (deduplicated !== undefined) {
         span.setAttribute("qstash.deduplicated", deduplicated);
       }
+
+      recordTelemetryEvent("qstash.enqueue.scheduled", {
+        attributes: {
+          ...(deduplicated === undefined ? {} : { deduplicated }),
+          jobType,
+          label: options.label,
+          messageId,
+          path,
+        },
+      });
 
       return { deduplicated, messageId };
     }

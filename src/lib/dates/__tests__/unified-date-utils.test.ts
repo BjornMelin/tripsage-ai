@@ -2,7 +2,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
-import { DATE_FORMATS, DateUtils } from "../unified-date-utils";
+import {
+  DATE_FORMATS,
+  DateUtils,
+  todayUtcIsoDate,
+  toUtcIsoDate,
+} from "../unified-date-utils";
 
 describe("DateUtils", () => {
   const timers = createFakeTimersContext();
@@ -29,6 +34,17 @@ describe("DateUtils", () => {
       expect(result.getFullYear()).toBe(2024);
       expect(result.getMonth()).toBe(0);
       expect(result.getDate()).toBe(15);
+    });
+
+    it("uses an explicit reference date for partial pattern parsing", () => {
+      const referenceDate = new Date(2030, 6, 4, 12, 0, 0);
+      const result = DateUtils.parse("15:45", "HH:mm", referenceDate);
+
+      expect(result.getFullYear()).toBe(2030);
+      expect(result.getMonth()).toBe(6);
+      expect(result.getDate()).toBe(4);
+      expect(result.getHours()).toBe(15);
+      expect(result.getMinutes()).toBe(45);
     });
 
     it("should throw error for empty string", () => {
@@ -99,6 +115,32 @@ describe("DateUtils", () => {
       expect(() => DateUtils.formatForApi(invalidDate)).toThrow(
         "Invalid date instance"
       );
+    });
+  });
+
+  describe("toUtcIsoDate", () => {
+    it("formats a date using the UTC calendar day", () => {
+      const date = new Date("2024-01-15T23:30:00-08:00");
+
+      expect(toUtcIsoDate(date)).toBe("2024-01-16");
+    });
+
+    it("throws for invalid dates", () => {
+      expect(() => toUtcIsoDate(new Date("invalid"))).toThrow("Invalid date instance");
+    });
+  });
+
+  describe("todayUtcIsoDate", () => {
+    it("formats the current UTC day", () => {
+      expect(todayUtcIsoDate()).toBe("2024-01-15");
+    });
+
+    it("accepts a deterministic timestamp", () => {
+      expect(todayUtcIsoDate(Date.parse("2024-02-29T23:59:59Z"))).toBe("2024-02-29");
+    });
+
+    it("accepts a deterministic ISO timestamp", () => {
+      expect(todayUtcIsoDate("2024-03-01T01:00:00+02:00")).toBe("2024-02-29");
     });
   });
 

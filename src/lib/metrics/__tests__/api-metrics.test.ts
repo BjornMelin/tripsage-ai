@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 // Mock dependencies before imports
 vi.mock("@/lib/redis", () => ({
@@ -32,43 +33,52 @@ describe("api-metrics", () => {
   });
 
   describe("recordApiMetric", () => {
-    it("records metric to Supabase and increments Redis counters", async () => {
-      const { getRedis, incrCounter } = await import("@/lib/redis");
-      const { createServerSupabase } = await import("@/lib/supabase/server");
+    it(
+      "records metric to Supabase and increments Redis counters",
+      withFakeTimers(async () => {
+        vi.setSystemTime(new Date("2024-06-07T23:30:00Z"));
 
-      const mockInsert = vi.fn().mockResolvedValue({ data: null, error: null });
-      const mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
-      (createServerSupabase as ReturnType<typeof vi.fn>).mockResolvedValue({
-        from: mockFrom,
-      });
+        const { getRedis, incrCounter } = await import("@/lib/redis");
+        const { createServerSupabase } = await import("@/lib/supabase/server");
 
-      (getRedis as ReturnType<typeof vi.fn>).mockReturnValue({ mock: true });
-      (incrCounter as ReturnType<typeof vi.fn>).mockResolvedValue(1);
+        const mockInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+        const mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
+        (createServerSupabase as ReturnType<typeof vi.fn>).mockResolvedValue({
+          from: mockFrom,
+        });
 
-      const { recordApiMetric } = await import("../api-metrics");
+        (getRedis as ReturnType<typeof vi.fn>).mockReturnValue({ mock: true });
+        (incrCounter as ReturnType<typeof vi.fn>).mockResolvedValue(1);
 
-      await recordApiMetric({
-        durationMs: 100,
-        endpoint: "/api/test",
-        method: "GET",
-        statusCode: 200,
-      });
+        const { recordApiMetric } = await import("../api-metrics");
 
-      // Verify Supabase insert was called
-      expect(mockFrom).toHaveBeenCalledWith("api_metrics");
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          duration_ms: 100,
+        await recordApiMetric({
+          durationMs: 100,
           endpoint: "/api/test",
           method: "GET",
-          status_code: 200,
-          user_id: null,
-        })
-      );
+          statusCode: 200,
+        });
 
-      // Verify Redis counters were incremented
-      expect(incrCounter).toHaveBeenCalled();
-    });
+        // Verify Supabase insert was called
+        expect(mockFrom).toHaveBeenCalledWith("api_metrics");
+        expect(mockInsert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            duration_ms: 100,
+            endpoint: "/api/test",
+            method: "GET",
+            status_code: 200,
+            user_id: null,
+          })
+        );
+
+        // Verify Redis counters were incremented
+        expect(incrCounter).toHaveBeenCalledWith("metrics:requests:2024-06-07", 604800);
+        expect(incrCounter).toHaveBeenCalledWith(
+          "metrics:endpoint:/api/test:2024-06-07",
+          86400
+        );
+      })
+    );
 
     it("handles missing Redis gracefully", async () => {
       const { getRedis } = await import("@/lib/redis");

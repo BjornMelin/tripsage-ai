@@ -7,6 +7,7 @@
 import type { ValidationResult } from "@schemas/validation";
 import type { z } from "zod";
 import { getClientEnvVarWithFallback } from "../env/client";
+import { nowIso } from "../security/random";
 import { getClientOrigin } from "../url/client-origin";
 import { ApiError, type ApiErrorCode } from "./error-types";
 
@@ -59,6 +60,10 @@ interface ApiClientConfig {
   authHeaderName: string;
   /** Default headers to include in all requests. */
   defaultHeaders: Record<string, string>;
+}
+
+function getCurrentValidationDate(): Date {
+  return new Date(nowIso());
 }
 
 /**
@@ -135,6 +140,7 @@ export class ApiClient {
       if (config.validateRequest ?? this.config.validateRequests) {
         const validationResult = config.requestSchema.safeParse(config.data);
         if (!validationResult.success) {
+          const timestamp = getCurrentValidationDate();
           const validationErrors: ValidationResult<unknown> = {
             errors: validationResult.error.issues.map((issue) => ({
               code: issue.code,
@@ -142,7 +148,7 @@ export class ApiClient {
               field: issue.path.join(".") || undefined,
               message: issue.message,
               path: issue.path.map(String),
-              timestamp: new Date(),
+              timestamp,
               value: issue.input,
             })),
             success: false,
@@ -207,6 +213,18 @@ export class ApiClient {
     for (let attempt = 0; attempt <= retries; attempt++) {
       // Track abort source to distinguish timeout vs external cancellation
       let abortedByTimeout = false;
+      let externalAbortHandler: (() => void) | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const cleanupAttempt = () => {
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (config.abortSignal && externalAbortHandler) {
+          config.abortSignal.removeEventListener("abort", externalAbortHandler);
+          externalAbortHandler = null;
+        }
+      };
 
       try {
         const controller = new AbortController();
@@ -215,12 +233,13 @@ export class ApiClient {
           if (config.abortSignal.aborted) {
             controller.abort();
           } else {
-            config.abortSignal.addEventListener("abort", () => controller.abort(), {
+            externalAbortHandler = () => controller.abort();
+            config.abortSignal.addEventListener("abort", externalAbortHandler, {
               once: true,
             });
           }
         }
-        const timeoutId = setTimeout(() => {
+        timeoutId = setTimeout(() => {
           abortedByTimeout = true;
           controller.abort();
         }, timeout);
@@ -229,8 +248,6 @@ export class ApiClient {
           ...requestOptions,
           signal: controller.signal,
         });
-
-        clearTimeout(timeoutId);
 
         // Handle HTTP errors
         if (!response.ok) {
@@ -260,6 +277,7 @@ export class ApiClient {
           if (config.validateResponse ?? this.config.validateResponses) {
             const zodResult = config.responseSchema.safeParse(responseData);
             if (!zodResult.success) {
+              const timestamp = getCurrentValidationDate();
               const validationResult: ValidationResult<unknown> = {
                 errors: zodResult.error.issues.map((issue) => ({
                   code: issue.code,
@@ -267,7 +285,7 @@ export class ApiClient {
                   field: issue.path.join(".") || undefined,
                   message: issue.message,
                   path: issue.path.map(String),
-                  timestamp: new Date(),
+                  timestamp,
                   value: issue.input,
                 })),
                 success: false,
@@ -324,9 +342,13 @@ export class ApiClient {
           break;
         }
 
+        cleanupAttempt();
+
         // Wait before retrying (exponential backoff)
         const delay = Math.min(1000 * 2 ** attempt, 10000);
         await new Promise((resolve) => setTimeout(resolve, delay));
+      } finally {
+        cleanupAttempt();
       }
     }
 

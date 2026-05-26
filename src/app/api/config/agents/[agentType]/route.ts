@@ -17,6 +17,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import { createAgentConfigVersionId } from "@/lib/agents/version-id";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
 import {
@@ -30,7 +31,7 @@ import {
 } from "@/lib/api/route-helpers";
 import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
-import { nowIso, secureId } from "@/lib/security/random";
+import { nowIso } from "@/lib/security/random";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
@@ -47,8 +48,7 @@ function buildConfigPayload(
   existing?: AgentConfig
 ): AgentConfig {
   const now = nowIso();
-  const baseConfigId =
-    existing?.id ?? `v${Math.floor(Date.now() / 1000)}_${secureId(8)}`;
+  const baseConfigId = existing?.id ?? createAgentConfigVersionId();
   const effectiveModel = body.model ?? existing?.model ?? DEFAULT_AGENT_MODEL_ID;
   return configurationAgentConfigSchema.parse({
     agentType,
