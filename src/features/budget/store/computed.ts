@@ -3,14 +3,18 @@
  */
 
 import type { Budget, BudgetSummary, Expense, ExpenseCategory } from "@schemas/budget";
+import { nowIso } from "@/lib/security/random";
 import type { BudgetState } from "./types";
 
 const SELECT_RECENT_EXPENSES_LIMIT = 10;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 type TimestampedExpense = { expense: Expense; timestamp: number };
 
 const compareByTimestampDesc = (a: TimestampedExpense, b: TimestampedExpense): number =>
   b.timestamp - a.timestamp;
+
+const getCurrentBudgetTimestampMs = (): number => Date.parse(nowIso());
 
 export function selectRecentExpensesFromExpenses(
   expensesByBudget: Record<string, Expense[]>
@@ -41,6 +45,7 @@ export function calculateBudgetSummary(
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalRemaining = totalBudget - totalSpent;
   const percentageSpent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const currentTimestampMs = getCurrentBudgetTimestampMs();
 
   // Calculate spent by category
   const spentByCategory = expenses.reduce(
@@ -56,9 +61,8 @@ export function calculateBudgetSummary(
   let daysRemaining: number | undefined;
   if (budget.startDate && budget.endDate) {
     const endDate = new Date(budget.endDate);
-    const today = new Date();
-    const diffTime = endDate.getTime() - today.getTime();
-    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffTime = endDate.getTime() - currentTimestampMs;
+    daysRemaining = Math.ceil(diffTime / MS_PER_DAY);
     daysRemaining = daysRemaining < 0 ? 0 : daysRemaining;
   }
 
@@ -73,11 +77,11 @@ export function calculateBudgetSummary(
   if (startDate && endDate) {
     const totalDays = Math.max(
       1,
-      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      Math.ceil((endDate.getTime() - startDate.getTime()) / MS_PER_DAY)
     );
     const elapsedDays = Math.max(
       1,
-      Math.ceil((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      Math.ceil((currentTimestampMs - startDate.getTime()) / MS_PER_DAY)
     );
 
     dailyAverage = elapsedDays > 0 ? totalSpent / elapsedDays : 0;

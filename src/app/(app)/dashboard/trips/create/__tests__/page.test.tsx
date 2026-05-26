@@ -83,6 +83,10 @@ vi.mock("@/hooks/use-trips", () => ({
   }),
 }));
 
+vi.mock("@/lib/security/random", () => ({
+  nowIso: vi.fn(() => "2026-01-01T12:00:00.000Z"),
+}));
+
 // Import after mocks so Vitest applies them before module evaluation.
 import CreateTripClient from "../create-trip-client";
 
@@ -119,6 +123,13 @@ describe("CreateTripClient", () => {
     await waitFor(() => {
       expect(createButton).toBeEnabled();
     });
+  });
+
+  it("uses centralized clock defaults for trip dates", () => {
+    render(<CreateTripClient initialSuggestionLimit={6} />);
+
+    expect(screen.getByLabelText("Start date (optional)")).toHaveValue("2026-01-02");
+    expect(screen.getByLabelText("End date (optional)")).toHaveValue("2026-01-09");
   });
 
   it("prefills from cached suggestions when the suggestion is available", async () => {

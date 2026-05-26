@@ -4,11 +4,8 @@
 
 "use client";
 
-import {
-  CURRENCY_CODE_SCHEMA,
-  type Currency,
-  type CurrencyCode,
-} from "@schemas/currency";
+import type { Currency } from "@schemas/currency";
+import { CURRENCY_CODE_SCHEMA, type CurrencyCode } from "@schemas/shared/money";
 
 export const isCurrencyCode = (code: unknown): code is CurrencyCode => {
   return CURRENCY_CODE_SCHEMA.safeParse(code).success;

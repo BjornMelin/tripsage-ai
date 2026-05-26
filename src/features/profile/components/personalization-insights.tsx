@@ -5,7 +5,6 @@
 "use client";
 
 import type { MemoryContextResponse } from "@schemas/chat";
-// import type { UserPreferences } from "@schemas/memory"; // Future implementation
 import {
   BarChart3Icon,
   BrainIcon,
@@ -32,14 +31,12 @@ import {
   useMemoryContext,
   useMemoryInsights,
   useMemoryStats,
-  // useUpdatePreferences, // Future implementation
 } from "@/hooks/use-memory";
 import { TREND_COLORS } from "@/lib/variants/status";
 export type PersonalizationInsightsProps = {
   userId: string;
   className?: string;
   showRecommendations?: boolean;
-  onPreferenceUpdate?: (preferences: unknown) => void;
 };
 
 import { cn } from "@/lib/utils";
@@ -59,9 +56,7 @@ export function PersonalizationInsights({
   userId,
   className,
   showRecommendations = true,
-  onPreferenceUpdate: _onPreferenceUpdate, // Future implementation
 }: PersonalizationInsightsProps) {
-  // const [isUpdating, setIsUpdating] = useState(false); // Future implementation
   const [selectedView, setSelectedView] = useState<
     "overview" | "budget" | "destinations" | "recommendations"
   >("overview");
@@ -78,8 +73,6 @@ export function PersonalizationInsights({
     userId,
     !!userId
   );
-
-  // const updatePreferences = useUpdatePreferences(userId); // Future implementation
 
   const formatCurrency = (amount: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
@@ -135,22 +128,6 @@ export function PersonalizationInsights({
         );
     }
   };
-
-  // const handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => { // Future implementation
-  //   setIsUpdating(true);
-  //   try {
-  //     await updatePreferences.mutateAsync({
-  //       preferences,
-  //       merge_strategy: "merge",
-  //     });
-  //     onPreferenceUpdate?.(preferences);
-  //     await refetchInsights();
-  //   } catch (error) {
-  //     console.error("Failed to update preferences:", error);
-  //   } finally {
-  //     setIsUpdating(false);
-  //   }
-  // };
 
   const renderOverview = () => {
     if (!insights?.insights) return null;

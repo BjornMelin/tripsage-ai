@@ -349,7 +349,8 @@ export default function FlightResultsClient({ searchId }: FlightResultsClientPro
                       <Button
                         className="w-24"
                         disabled
-                        title="Flight selection is not available yet."
+                        aria-label={`Select ${flight.airline} ${flight.flightNumber} from ${flight.origin} to ${flight.destination}`}
+                        title={`Flight selection for ${flight.airline} ${flight.flightNumber} from ${flight.origin} to ${flight.destination} is not available yet.`}
                       >
                         Select
                       </Button>

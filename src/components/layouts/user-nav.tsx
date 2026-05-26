@@ -58,11 +58,16 @@ export function UserNav({ user }: UserNavProps) {
         .toUpperCase()
         .slice(0, 2)
     : user.email?.slice(0, 2).toUpperCase() || "U";
+  const userLabel = user.displayName || user.email || "user";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 px-3 py-2"
+          aria-label={`Open account menu for ${userLabel}`}
+        >
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatarUrl} alt={user.displayName || "User"} />
             <AvatarFallback className="bg-primary text-primary-foreground">

@@ -132,6 +132,17 @@ describe("QueryErrorBoundary", () => {
     );
   });
 
+  it("falls back to the internal login URL when loginHref is unsafe", async () => {
+    renderWithProviders(
+      <QueryErrorBoundary loginHref="javascript:alert(1)">
+        <ThrowingComponent error={new ApiError({ message: "auth", status: 401 })} />
+      </QueryErrorBoundary>
+    );
+
+    const loginLink = await screen.findByRole("link", { name: /go to login/i });
+    expect(loginLink).toHaveAttribute("href", "/login");
+  });
+
   it("invokes onOperationalAlert before onError with metadata", async () => {
     const alertHandler = vi.fn();
     const errorHandler = vi.fn();

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { useBudgetsByTrip } from "@/features/budget/store/budget-store";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { nowIso } from "@/lib/security/random";
 import { cn } from "@/lib/utils";
 import { statusVariants } from "@/lib/variants/status";
 
@@ -38,6 +39,10 @@ interface TripCardProps {
   onDelete?: (tripId: string) => void;
   /** Optional additional CSS classes. */
   className?: string;
+}
+
+function GetCurrentTripCardDate(): Date {
+  return new Date(nowIso());
 }
 
 /**
@@ -73,7 +78,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
    */
   const getTripStatus = () => {
     if (!startDate || !endDate) return "draft";
-    const now = new Date();
+    const now = GetCurrentTripCardDate();
     if (DateUtils.isBefore(now, startDate)) return "upcoming";
     if (DateUtils.isAfter(now, endDate)) return "completed";
     return "active";

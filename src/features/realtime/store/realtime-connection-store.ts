@@ -7,6 +7,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { create } from "zustand";
 import { computeBackoffDelay, DEFAULT_BACKOFF_CONFIG } from "@/lib/realtime/backoff";
 import { mapChannelStateToStatus } from "@/lib/realtime/status";
+import { nowIso } from "@/lib/security/random";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 export interface RealtimeConnectionEntry {
@@ -50,6 +51,10 @@ interface RealtimeConnectionStore {
   summary: () => RealtimeConnectionSummary;
 }
 
+function getCurrentRealtimeDate(): Date {
+  return new Date(nowIso());
+}
+
 export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
   (set, get) => ({
     connections: {},
@@ -88,7 +93,7 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
         }
 
         set({
-          lastReconnectAt: new Date(),
+          lastReconnectAt: getCurrentRealtimeDate(),
           reconnectAttempts: attempts,
         });
 
@@ -204,7 +209,7 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
             ...prev.connections,
             [channelId]: {
               ...existing,
-              lastActivity: new Date(),
+              lastActivity: getCurrentRealtimeDate(),
             },
           },
         };
@@ -218,7 +223,7 @@ export const useRealtimeConnectionStore = create<RealtimeConnectionStore>(
         const status = mapChannelStateToStatus(state, hasError);
         const nextError =
           status === "error" || hasError ? (error ?? existing.lastError ?? null) : null;
-        const nextErrorAt = nextError ? new Date() : null;
+        const nextErrorAt = nextError ? getCurrentRealtimeDate() : null;
         if (nextError && nextError !== existing.lastError) {
           recordClientErrorOnActiveSpan(nextError);
         }

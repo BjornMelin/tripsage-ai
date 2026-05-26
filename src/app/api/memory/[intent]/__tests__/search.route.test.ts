@@ -80,12 +80,13 @@ async function importRoute() {
   return mod.POST;
 }
 
-function mockPerformanceNowSequence(values: number[]) {
-  const nowSpy = vi.spyOn(performance, "now");
-  for (const value of values) {
-    nowSpy.mockReturnValueOnce(value);
-  }
-  return nowSpy;
+function mockPerformanceNowSequence(values: readonly number[]) {
+  let index = 0;
+  return vi.spyOn(performance, "now").mockImplementation(() => {
+    const value = values[Math.min(index, values.length - 1)] ?? 0;
+    index += 1;
+    return value;
+  });
 }
 
 describe("/api/memory/search route", () => {
@@ -114,8 +115,8 @@ describe("/api/memory/search route", () => {
   });
 
   it("returns schema-compliant search results", async () => {
-    const nowSpy = mockPerformanceNowSequence([20.25, 33.75]);
     const post = await importRoute();
+    const performanceNowSpy = mockPerformanceNowSequence([20.25, 33.75]);
 
     const context: MemoryContextResponse[] = [
       {
@@ -172,7 +173,7 @@ describe("/api/memory/search route", () => {
         userId,
       });
     } finally {
-      nowSpy.mockRestore();
+      performanceNowSpy.mockRestore();
     }
   }, 15_000);
 

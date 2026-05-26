@@ -33,7 +33,9 @@ describe("UserNav", () => {
   it("opens popover and shows menu items", async () => {
     render(<UserNav user={mockUser} />);
 
-    const trigger = screen.getByRole("button");
+    const trigger = screen.getByRole("button", {
+      name: "Open account menu for Test User",
+    });
     await userEvent.click(trigger);
 
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
@@ -48,7 +50,9 @@ describe("UserNav", () => {
     render(<UserNav user={mockUser} />);
 
     // Open popover
-    await userEvent.click(screen.getByRole("button"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open account menu for Test User" })
+    );
 
     // Click logout
     await userEvent.click(screen.getByText("Log Out"));

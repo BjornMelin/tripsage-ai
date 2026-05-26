@@ -48,6 +48,14 @@ const MOCK_GET_PUBLIC_URL = vi.fn();
 
 const GET_BROWSER_CLIENT = vi.mocked((await import("@/lib/supabase")).getBrowserClient);
 
+function CreateDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 const BASE_USER = {
   avatarUrl: "https://example.com/avatars/user-1.jpg",
   bio: "Travel enthusiast",
@@ -181,6 +189,33 @@ describe("PersonalInfoSection", () => {
     );
   });
 
+  it("labels avatar upload trigger and announces upload progress", async () => {
+    const upload = CreateDeferred<{ data: { path: string }; error: null }>();
+    MOCK_UPLOAD.mockReturnValueOnce(upload.promise);
+
+    const { container } = render(<PersonalInfoSection />);
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const trigger = screen.getByRole("button", { name: "Upload profile picture" });
+
+    expect(trigger).toHaveAttribute("aria-controls", fileInput.id);
+    expect(trigger).toHaveAccessibleDescription(/recommended size: 400x400px/i);
+
+    const validFile = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    const busyTrigger = await screen.findByRole("button", {
+      name: "Uploading profile picture",
+    });
+    expect(busyTrigger).toBeDisabled();
+    expect(busyTrigger).toHaveAttribute("aria-busy", "true");
+
+    upload.resolve({
+      data: { path: "avatars/user-1.jpg" },
+      error: null,
+    });
+    await waitFor(() => expect(MOCK_UPDATE_USER).toHaveBeenCalled());
+  });
+
   it("uploads avatar and shows success toast", async () => {
     const { container } = render(<PersonalInfoSection />);
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -198,7 +233,7 @@ describe("PersonalInfoSection", () => {
     expect(MOCK_UPDATE_USER).toHaveBeenCalledWith({
       data: {
         avatar_url: expect.stringMatching(
-          /^https:\/\/cdn\.example\.com\/avatars\/user-1\.jpg\?v=\d+$/
+          /^https:\/\/cdn\.example\.com\/avatars\/user-1\.jpg\?v=[a-z0-9]{1,8}$/
         ),
       },
     });

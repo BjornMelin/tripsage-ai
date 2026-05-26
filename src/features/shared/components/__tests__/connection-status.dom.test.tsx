@@ -1,7 +1,8 @@
 /** @vitest-environment jsdom */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "@/test/test-utils";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import { ConnectionStatus } from "../connection-status";
 
 describe("ConnectionStatus", () => {
@@ -33,4 +34,29 @@ describe("ConnectionStatus", () => {
     expect(screen.getByText("Uptime")).toBeInTheDocument();
     expect(screen.getByText("Connected")).toBeInTheDocument();
   });
+
+  it(
+    "timestamps last-connected status from the canonical clock helper",
+    withFakeTimers(() => {
+      const fixedNowIso = "2026-02-03T04:05:06.000Z";
+      const expectedTime = new Date(fixedNowIso).toLocaleTimeString();
+      vi.setSystemTime(new Date(fixedNowIso));
+
+      const { rerender } = renderWithProviders(
+        <ConnectionStatus status="connected" variant="detailed" showMetrics={false} />
+      );
+
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+
+      rerender(
+        <ConnectionStatus
+          status="disconnected"
+          variant="detailed"
+          showMetrics={false}
+        />
+      );
+
+      expect(screen.getByText(`Last connected: ${expectedTime}`)).toBeInTheDocument();
+    })
+  );
 });

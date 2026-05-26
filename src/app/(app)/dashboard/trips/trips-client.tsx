@@ -45,6 +45,7 @@ import { TripCard } from "@/features/trips/components/trip-card";
 import { type Trip, useCreateTrip, useDeleteTrip, useTrips } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { nowIso } from "@/lib/security/random";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { parseTripDate } from "@/lib/trips/parse-trip-date";
 
 /**
@@ -94,6 +95,8 @@ const isInvalidTripDateRange = (
   endDate: Date | null
 ): boolean => !!startDate && !!endDate && endDate.getTime() < startDate.getTime();
 
+const getCurrentTripsPageTimestampMs = (): number => Date.parse(nowIso());
+
 type TripStatus = "draft" | "upcoming" | "active" | "completed";
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
@@ -122,7 +125,7 @@ function countTripsByStatus(trips: Trip[]): TripStatusCounts {
     return { active: 0, completed: 0, draft: 0, upcoming: 0 };
   }
 
-  const nowTs = Date.now();
+  const nowTs = getCurrentTripsPageTimestampMs();
   const counts: TripStatusCounts = { active: 0, completed: 0, draft: 0, upcoming: 0 };
   for (const trip of trips) {
     counts[getTripStatus(trip, nowTs)] += 1;
@@ -141,7 +144,7 @@ function filterAndSortTrips(params: {
   if (trips.length === 0) return [];
 
   let filtered = trips;
-  const nowTs = Date.now();
+  const nowTs = getCurrentTripsPageTimestampMs();
   const searchQueryLower = searchQuery.toLowerCase();
 
   if (searchQuery) {
@@ -279,14 +282,15 @@ export default function TripsClient({ userId }: { userId: string }) {
       const message = getErrorMessage(error) || "Unable to load trips.";
       if (message !== lastErrorMessageRef.current) {
         lastErrorMessageRef.current = message;
+        recordClientErrorOnActiveSpan(error, {
+          action: "loadTrips",
+          context: "TripsClient",
+        });
         toast({
           description: message,
           title: "Unable to load trips",
           variant: "destructive",
         });
-      }
-      if (process.env.NODE_ENV === "development") {
-        console.error("Trips error:", error);
       }
     } else {
       lastErrorMessageRef.current = null;

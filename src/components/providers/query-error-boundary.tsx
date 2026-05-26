@@ -15,6 +15,7 @@ import { getErrorMessage, handleApiError } from "@/lib/api/error-types";
 import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
 import { getSessionId } from "@/lib/client/session";
 import { errorService } from "@/lib/error-service";
+import { safeHref } from "@/lib/url/safe-href";
 import { cn, fireAndForget } from "@/lib/utils";
 
 type ErrorVariant = "network" | "server" | "auth" | "permission" | "default";
@@ -201,7 +202,7 @@ function QueryErrorFallback({
   const display = VARIANT_DISPLAY[meta.variant];
   const showLogin = meta.variant === "auth";
   const message = meta.variant === "default" ? errorMessage : display.message;
-  const resolvedLoginHref = loginHref ?? "/login";
+  const resolvedLoginHref = safeHref(loginHref) ?? "/login";
   const isInternalLoginHref =
     resolvedLoginHref.startsWith("/") && !resolvedLoginHref.startsWith("//");
 

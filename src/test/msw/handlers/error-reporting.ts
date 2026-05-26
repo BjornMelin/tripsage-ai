@@ -45,7 +45,7 @@ export function createErrorReportingRecorder(endpoint = ERROR_REPORTING_ENDPOINT
  *
  * Useful for exercising retry logic without duplicating inline handlers.
  *
- * @param options.failTimes - Number of initial calls that should throw.
+ * @param options.failTimes - Number of initial calls that should fail.
  * @param options.endpoint - Endpoint to intercept.
  * @returns MSW handler plus a getter for total call count.
  */
@@ -62,7 +62,7 @@ export function createFlakyErrorReportingHandler(options?: {
     handler: http.post(endpoint, () => {
       calls += 1;
       if (calls <= failTimes) {
-        throw new Error("Network error");
+        return HttpResponse.error();
       }
       return HttpResponse.json({ success: true });
     }),

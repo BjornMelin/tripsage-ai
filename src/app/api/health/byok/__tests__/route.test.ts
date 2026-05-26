@@ -47,6 +47,14 @@ function byokHealthRequest(headers?: Record<string, string>): NextRequest {
   });
 }
 
+function mockPerformanceNowSequence(values: number[]) {
+  const nowSpy = vi.spyOn(performance, "now");
+  for (const value of values) {
+    nowSpy.mockReturnValueOnce(value);
+  }
+  return nowSpy;
+}
+
 describe("GET /api/health/byok", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -102,31 +110,37 @@ describe("GET /api/health/byok", () => {
   });
 
   it("returns a secret-free OK response when Vault health passes", async () => {
+    const nowSpy = mockPerformanceNowSequence([10.25, 34.75]);
     const { GET } = await import("../route");
 
-    const res = await GET(byokHealthRequest({ "x-internal-key": TEST_HEALTH_KEY }));
-    const body = await res.json();
+    try {
+      const res = await GET(byokHealthRequest({ "x-internal-key": TEST_HEALTH_KEY }));
+      const body = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(body).toMatchObject({
-      checks: { rpc: "ok", vault: "ok" },
-      service: "tripsage-ai",
-      status: "ok",
-    });
-    expect(JSON.stringify(body)).not.toContain(TEST_HEALTH_KEY);
-    expect(MOCK_CHECK_BYOK_VAULT_HEALTH).toHaveBeenCalledTimes(1);
-    expect(MOCK_WITH_TELEMETRY_SPAN).toHaveBeenCalledWith(
-      "health.byok",
-      {
-        attributes: {
-          "health.check": "byok",
-          "health.component": "vault",
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+      expect(body).toMatchObject({
+        checks: { rpc: "ok", vault: "ok" },
+        service: "tripsage-ai",
+        status: "ok",
+      });
+      expect(JSON.stringify(body)).not.toContain(TEST_HEALTH_KEY);
+      expect(MOCK_CHECK_BYOK_VAULT_HEALTH).toHaveBeenCalledTimes(1);
+      expect(MOCK_WITH_TELEMETRY_SPAN).toHaveBeenCalledWith(
+        "health.byok",
+        {
+          attributes: {
+            "health.check": "byok",
+            "health.component": "vault",
+          },
         },
-      },
-      expect.any(Function)
-    );
-    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith("health.status", "ok");
+        expect.any(Function)
+      );
+      expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith("health.latency_ms", 24.5);
+      expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith("health.status", "ok");
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it("accepts bearer tokens for external health monitors", async () => {
@@ -141,33 +155,42 @@ describe("GET /api/health/byok", () => {
   });
 
   it("returns VAULT_UNAVAILABLE when the Vault health RPC fails", async () => {
+    const nowSpy = mockPerformanceNowSequence([40, 47.25]);
     MOCK_CHECK_BYOK_VAULT_HEALTH.mockRejectedValueOnce(new Error("secret leaked"));
     const { GET } = await import("../route");
 
-    const res = await GET(byokHealthRequest({ "x-internal-key": TEST_HEALTH_KEY }));
-    const body = await res.json();
+    try {
+      const res = await GET(byokHealthRequest({ "x-internal-key": TEST_HEALTH_KEY }));
+      const body = await res.json();
 
-    expect(res.status).toBe(503);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(body).toEqual({
-      error: "VAULT_UNAVAILABLE",
-      reason: "BYOK Vault health check failed",
-    });
-    expect(JSON.stringify(body)).not.toContain("secret leaked");
-    expect(MOCK_RECORD_TELEMETRY_EVENT).toHaveBeenCalledWith(
-      "health.byok_failure",
-      expect.objectContaining({
-        attributes: expect.objectContaining({ code: "VAULT_UNAVAILABLE" }),
-        level: "error",
-      })
-    );
-    expect(MOCK_RECORD_ERROR_ON_SPAN).toHaveBeenCalledWith(
-      MOCK_SPAN,
-      expect.objectContaining({ message: "BYOK Vault health check failed" })
-    );
-    expect(MOCK_RECORD_ERROR_ON_SPAN.mock.calls[0]?.[1]?.message).not.toContain(
-      "secret leaked"
-    );
-    expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith("health.status", "error");
+      expect(res.status).toBe(503);
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+      expect(body).toEqual({
+        error: "VAULT_UNAVAILABLE",
+        reason: "BYOK Vault health check failed",
+      });
+      expect(JSON.stringify(body)).not.toContain("secret leaked");
+      expect(MOCK_RECORD_TELEMETRY_EVENT).toHaveBeenCalledWith(
+        "health.byok_failure",
+        expect.objectContaining({
+          attributes: expect.objectContaining({
+            code: "VAULT_UNAVAILABLE",
+            latency_ms: 7.25,
+          }),
+          level: "error",
+        })
+      );
+      expect(MOCK_RECORD_ERROR_ON_SPAN).toHaveBeenCalledWith(
+        MOCK_SPAN,
+        expect.objectContaining({ message: "BYOK Vault health check failed" })
+      );
+      expect(MOCK_RECORD_ERROR_ON_SPAN.mock.calls[0]?.[1]?.message).not.toContain(
+        "secret leaked"
+      );
+      expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith("health.latency_ms", 7.25);
+      expect(MOCK_SPAN.setAttribute).toHaveBeenCalledWith("health.status", "error");
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });

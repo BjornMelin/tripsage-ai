@@ -1,5 +1,5 @@
 /**
- * @fileoverview Client instrumentation entrypoint (Next.js 15.3+) for BotID.
+ * @fileoverview Next.js client instrumentation entrypoint for BotID.
  */
 
 import { patchPerformanceMeasureForPrerender } from "@/lib/performance/patch-performance-measure";

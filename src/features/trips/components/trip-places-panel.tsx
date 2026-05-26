@@ -28,6 +28,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useRemoveSavedPlace, useSavedPlaces, useSavePlace } from "@/hooks/use-trips";
 import { getErrorMessage } from "@/lib/api/error-types";
 import { normalizePlaceIdForStorage } from "@/lib/trips/place-id";
+import { safeHref } from "@/lib/url/safe-href";
 import { fireAndForget } from "@/lib/utils";
 
 type TripPlacesPanelProps = {
@@ -247,6 +248,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                 const isSaved = savedPlaceIds.has(normalizedId);
                 const photoName = place.photoName;
                 const imageSrc = photoName ? GetPhotoUrl(photoName) : null;
+                const mapHref = safeHref(place.url);
 
                 return (
                   <div
@@ -315,10 +317,10 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      {place.url && (
+                      {mapHref ? (
                         <Button asChild variant="ghost" size="icon">
                           <a
-                            href={place.url}
+                            href={mapHref}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="Open in Maps"
@@ -326,7 +328,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                             <ExternalLinkIcon aria-hidden="true" className="h-4 w-4" />
                           </a>
                         </Button>
-                      )}
+                      ) : null}
                       <Button
                         variant={isSaved ? "secondary" : "default"}
                         disabled={isSaved || savePlaceMutation.isPending}
@@ -380,6 +382,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                   const normalizedId = normalizePlaceIdForStorage(place.placeId);
                   const photoName = place.photoName;
                   const imageSrc = photoName ? GetPhotoUrl(photoName) : null;
+                  const mapHref = safeHref(place.url);
 
                   return (
                     <div
@@ -417,10 +420,10 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1">
-                        {place.url && (
+                        {mapHref ? (
                           <Button asChild variant="ghost" size="icon">
                             <a
-                              href={place.url}
+                              href={mapHref}
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label="Open in Maps"
@@ -431,7 +434,7 @@ export function TripPlacesPanel({ tripId, userId }: TripPlacesPanelProps) {
                               />
                             </a>
                           </Button>
-                        )}
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="icon"

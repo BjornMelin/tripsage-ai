@@ -6,7 +6,7 @@
 
 import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
 import { CheckIcon, MailIcon, Trash2Icon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,8 +105,13 @@ export function AccountSettingsSection() {
   });
 
   const { reset } = emailForm;
+  const didMountRef = useRef(false);
 
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
     reset({ email: currentEmail });
   }, [currentEmail, reset]);
 
@@ -387,13 +392,20 @@ export function AccountSettingsSection() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <div className="text-sm font-medium">Email Notifications</div>
-                <div className="text-sm text-muted-foreground">
+                <div id="email-notifications-label" className="text-sm font-medium">
+                  Email Notifications
+                </div>
+                <div
+                  id="email-notifications-description"
+                  className="text-sm text-muted-foreground"
+                >
                   Receive trip updates and important account information via email.
                 </div>
               </div>
               <Switch
                 checked={notificationPrefs.email}
+                aria-labelledby="email-notifications-label"
+                aria-describedby="email-notifications-description"
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("email", enabled)
                 }
@@ -402,13 +414,20 @@ export function AccountSettingsSection() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <div className="text-sm font-medium">Trip Reminders</div>
-                <div className="text-sm text-muted-foreground">
+                <div id="trip-reminders-label" className="text-sm font-medium">
+                  Trip Reminders
+                </div>
+                <div
+                  id="trip-reminders-description"
+                  className="text-sm text-muted-foreground"
+                >
                   Get reminders about upcoming trips and bookings.
                 </div>
               </div>
               <Switch
                 checked={notificationPrefs.tripReminders}
+                aria-labelledby="trip-reminders-label"
+                aria-describedby="trip-reminders-description"
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("tripReminders", enabled)
                 }
@@ -417,13 +436,20 @@ export function AccountSettingsSection() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <div className="text-sm font-medium">Price Alerts</div>
-                <div className="text-sm text-muted-foreground">
+                <div id="price-alerts-label" className="text-sm font-medium">
+                  Price Alerts
+                </div>
+                <div
+                  id="price-alerts-description"
+                  className="text-sm text-muted-foreground"
+                >
                   Receive notifications when flight or hotel prices drop.
                 </div>
               </div>
               <Switch
                 checked={notificationPrefs.priceAlerts}
+                aria-labelledby="price-alerts-label"
+                aria-describedby="price-alerts-description"
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("priceAlerts", enabled)
                 }
@@ -432,13 +458,23 @@ export function AccountSettingsSection() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <div className="text-sm font-medium">Marketing Communications</div>
-                <div className="text-sm text-muted-foreground">
+                <div
+                  id="marketing-communications-label"
+                  className="text-sm font-medium"
+                >
+                  Marketing Communications
+                </div>
+                <div
+                  id="marketing-communications-description"
+                  className="text-sm text-muted-foreground"
+                >
                   Receive promotional offers and travel tips.
                 </div>
               </div>
               <Switch
                 checked={notificationPrefs.marketing}
+                aria-labelledby="marketing-communications-label"
+                aria-describedby="marketing-communications-description"
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("marketing", enabled)
                 }

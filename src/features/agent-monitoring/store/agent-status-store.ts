@@ -147,6 +147,8 @@ const ACTIVE_STATUSES = new Set<AgentStatusType>([
 const MAX_ACTIVITIES = 200;
 const MAX_RESOURCE_SAMPLES = 120;
 
+const getCurrentAgentStatusTimestampMs = (): number => Date.parse(nowIso());
+
 const clampProgress = (value: number | undefined, fallback: number): number => {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return fallback;
@@ -277,7 +279,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
       removeStaleAgents: (ttlMs) =>
         set((state) => {
           if (ttlMs <= 0) return state;
-          const cutoff = Date.now() - ttlMs;
+          const cutoff = getCurrentAgentStatusTimestampMs() - ttlMs;
           const staleIds: string[] = [];
 
           for (const [agentId, agent] of Object.entries(state.agentsById)) {

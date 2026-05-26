@@ -4,7 +4,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { renderWithProviders } from "@/test/test-utils";
-import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
+import { createFakeTimersContext, withFakeTimers } from "@/test/utils/with-fake-timers";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -194,24 +194,29 @@ describe("RecentTrips", () => {
     expect(screen.getByText("Create your first trip")).toBeInTheDocument();
   });
 
-  it("calculates trip status correctly", () => {
-    const now = new Date();
-    const pastTrip: Record<string, unknown> = {
-      ...MockTrips[0],
-      endDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    const ongoingTrip: Record<string, unknown> = {
-      ...MockTrips[0],
-      endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      id: "ongoing-trip",
-      startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    setTrips([pastTrip, ongoingTrip]);
-    renderWithProviders(<RecentTrips />);
-    expect(screen.getByText("completed")).toBeInTheDocument();
-    expect(screen.getByText("ongoing")).toBeInTheDocument();
-  });
+  it(
+    "calculates trip status correctly",
+    withFakeTimers(() => {
+      const now = new Date("2024-07-15T00:00:00.000Z");
+      vi.setSystemTime(now);
+
+      const pastTrip: Record<string, unknown> = {
+        ...MockTrips[0],
+        endDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      const ongoingTrip: Record<string, unknown> = {
+        ...MockTrips[0],
+        endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        id: "ongoing-trip",
+        startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      setTrips([pastTrip, ongoingTrip]);
+      renderWithProviders(<RecentTrips />);
+      expect(screen.getByText("completed")).toBeInTheDocument();
+      expect(screen.getByText("ongoing")).toBeInTheDocument();
+    })
+  );
 
   it("formats dates correctly", () => {
     setTrips([MockTrips[0]]);

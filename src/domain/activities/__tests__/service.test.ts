@@ -3,6 +3,7 @@
 import type { Activity, ActivitySearchParams } from "@schemas/search";
 import { describe, expect, it, vi } from "vitest";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import { NotFoundError } from "../errors";
 import type { ActivitiesCache, PlacesActivitiesAdapter, WebSearchFn } from "../service";
 import { ActivitiesService } from "../service";
@@ -81,36 +82,47 @@ describe("ActivitiesService", () => {
     expect(places.search).not.toHaveBeenCalled();
   });
 
-  it("performs Places search on cache miss and writes to cache", async () => {
-    const placesActivity = makeActivity({ id: "places/1", name: "Museum" });
-    const cache = makeCache();
-    const places = makePlacesAdapter({
-      search: vi.fn(async () => [placesActivity]),
-    });
-    const service = new ActivitiesService({
-      cache,
-      hashInput: () => "qhash",
-      places,
-    });
+  it(
+    "performs Places search on cache miss and writes helper-backed cache timestamps",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
-    const result = await service.search(
-      { category: "museums", destination: "New York" },
-      { userId: "user-1" }
-    );
+      const placesActivity = makeActivity({ id: "places/1", name: "Museum" });
+      const cache = makeCache();
+      const places = makePlacesAdapter({
+        search: vi.fn(async () => [placesActivity]),
+      });
+      const service = new ActivitiesService({
+        cache,
+        hashInput: () => "qhash",
+        places,
+      });
 
-    expect(result.metadata.cached).toBe(false);
-    expect(result.metadata.primarySource).toBe("googleplaces");
-    expect(result.metadata.sources).toEqual(["googleplaces"]);
-    expect(result.activities).toEqual([placesActivity]);
-    expect(cache.putSearch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        destination: "New York",
-        queryHash: "qhash",
-        source: "googleplaces",
-        userId: "user-1",
-      })
-    );
-  });
+      const result = await service.search(
+        { category: "museums", destination: "New York" },
+        { userId: "user-1" }
+      );
+
+      expect(result.metadata.cached).toBe(false);
+      expect(result.metadata.primarySource).toBe("googleplaces");
+      expect(result.metadata.sources).toEqual(["googleplaces"]);
+      expect(result.activities).toEqual([placesActivity]);
+      expect(cache.getSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nowIso: "2026-02-03T04:05:06.000Z",
+        })
+      );
+      expect(cache.putSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          destination: "New York",
+          expiresAtIso: "2026-02-04T04:05:06.000Z",
+          queryHash: "qhash",
+          source: "googleplaces",
+          userId: "user-1",
+        })
+      );
+    })
+  );
 
   it("triggers fallback when Places returns zero results", async () => {
     const cache = makeCache();
@@ -145,6 +157,32 @@ describe("ActivitiesService", () => {
     );
     expect(result.activities.some((a) => a.id.startsWith("ai_fallback:"))).toBe(true);
   });
+
+  it(
+    "defaults fallback activity dates to the current UTC ISO date",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2025-12-31T23:30:00Z"));
+
+      const places = makePlacesAdapter({
+        search: vi.fn(async () => []),
+      });
+      const webSearch: WebSearchFn = vi.fn(async () => ({
+        results: [{ title: "Hidden Gem", url: "https://example.com/activity" }],
+      }));
+      const service = new ActivitiesService({
+        hashInput: () => "qhash",
+        places,
+        webSearch,
+      });
+
+      const result = await service.search(
+        { destination: "Unknown City" },
+        { userId: "user-1" }
+      );
+
+      expect(result.activities[0]?.date).toBe("2025-12-31");
+    })
+  );
 
   it("does not trigger fallback when Places returns sufficient results", async () => {
     const places = makePlacesAdapter({

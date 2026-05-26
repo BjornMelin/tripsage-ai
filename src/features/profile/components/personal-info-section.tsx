@@ -7,6 +7,7 @@
 import { type PersonalInfoFormData, personalInfoFormSchema } from "@schemas/profile";
 import { CameraIcon, UploadIcon } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { type Control, useFormState } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/features/auth/store/auth/auth-core";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
+import { secureId } from "@/lib/security/random";
 import { getBrowserClient } from "@/lib/supabase";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -46,6 +48,7 @@ type SupportedAvatarType = keyof typeof SUPPORTED_AVATAR_TYPES;
 type SupportedAvatarExt = (typeof SUPPORTED_AVATAR_TYPES)[SupportedAvatarType];
 
 export function PersonalInfoSection() {
+  const avatarDescriptionId = useId();
   const avatarInputId = useId();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const { user: authUser, setUser } = useAuthCore();
@@ -77,8 +80,13 @@ export function PersonalInfoSection() {
   });
 
   const resetForm = form.reset;
+  const didMountRef = useRef(false);
 
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
     resetForm(defaultValues);
   }, [defaultValues, resetForm]);
 
@@ -204,7 +212,7 @@ export function PersonalInfoSection() {
 
       const { data } = supabase.storage.from("avatars").getPublicUrl(avatarPath);
       // Add cache-busting query parameter so clients fetch the updated image
-      const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
+      const avatarUrl = `${data.publicUrl}?v=${secureId(8)}`;
 
       const { data: updateResult, error: updateError } = await supabase.auth.updateUser(
         {
@@ -287,11 +295,18 @@ export function PersonalInfoSection() {
             </Avatar>
             <div className="absolute -bottom-2 -right-2">
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
                 className="h-8 w-8 rounded-full p-0"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={isUploading}
+                aria-busy={isUploading || undefined}
+                aria-controls={avatarInputId}
+                aria-describedby={avatarDescriptionId}
+                aria-label={
+                  isUploading ? "Uploading profile picture" : "Upload profile picture"
+                }
               >
                 {isUploading ? (
                   <UploadIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
@@ -311,7 +326,7 @@ export function PersonalInfoSection() {
           </div>
           <div className="space-y-1">
             <h3 className="font-medium">Profile Picture</h3>
-            <p className="text-sm text-muted-foreground">
+            <p id={avatarDescriptionId} className="text-sm text-muted-foreground">
               Click the camera icon to upload a new profile picture. Recommended size:
               400x400px. Max file size: 5MB.
             </p>
@@ -418,13 +433,25 @@ export function PersonalInfoSection() {
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving…" : "Save Changes"}
-              </Button>
+              <PersonalInfoSubmitButton control={form.control} />
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
+  );
+}
+
+function PersonalInfoSubmitButton({
+  control,
+}: {
+  control: Control<PersonalInfoFormData>;
+}) {
+  const { isSubmitting } = useFormState({ control });
+
+  return (
+    <Button type="submit" disabled={isSubmitting}>
+      {isSubmitting ? "Saving…" : "Save Changes"}
+    </Button>
   );
 }

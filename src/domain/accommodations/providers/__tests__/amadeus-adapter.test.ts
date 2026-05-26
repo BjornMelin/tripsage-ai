@@ -5,13 +5,18 @@ import {
   AmadeusProviderAdapter,
   mapStatusToProviderCode,
 } from "@domain/accommodations/providers/amadeus-adapter";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 vi.mock("@domain/amadeus/client", () => ({
   bookHotelOffer: vi.fn(),
   listHotelsByGeocode: vi.fn(),
   searchHotelOffers: vi.fn(),
 }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("AmadeusProviderAdapter.buildBookingPayload", () => {
   it("maps Stripe PaymentIntent into Amadeus payments payload", () => {
@@ -70,6 +75,94 @@ describe("AmadeusProviderAdapter.buildBookingPayload", () => {
     });
     expect(data.remarks?.general?.[0]?.text).toContain("StripePaymentIntent=pi_abc123");
   });
+});
+
+describe("AmadeusProviderAdapter.getDetails", () => {
+  it(
+    "defaults missing details dates to current and next UTC ISO dates",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2025-12-31T23:30:00Z"));
+
+      const adapter = new AmadeusProviderAdapter();
+      const { searchHotelOffers } = await import("@domain/amadeus/client");
+      vi.mocked(searchHotelOffers).mockResolvedValue({ data: [] } as never);
+
+      const result = await adapter.getDetails(
+        { listingId: "H123" },
+        { sessionId: "sess-1", userId: "user-1" }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(searchHotelOffers).toHaveBeenCalledWith({
+        adults: 1,
+        checkInDate: "2025-12-31",
+        checkOutDate: "2026-01-01",
+        hotelIds: ["H123"],
+      });
+    })
+  );
+});
+
+describe("AmadeusProviderAdapter.checkAvailability", () => {
+  it(
+    "sets availability token expiry from the current timestamp helper",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+
+      const adapter = new AmadeusProviderAdapter();
+      const { searchHotelOffers } = await import("@domain/amadeus/client");
+      vi.mocked(searchHotelOffers).mockResolvedValue({
+        data: [
+          {
+            hotel: { hotelId: "H123", name: "Hotel Example" },
+            offers: [
+              {
+                checkInDate: "2026-02-10",
+                checkOutDate: "2026-02-12",
+                id: "RATE-1",
+                price: {
+                  base: "100.00",
+                  currency: "USD",
+                  total: "118.40",
+                },
+              },
+            ],
+          },
+        ],
+      } as never);
+
+      const result = await adapter.checkAvailability(
+        {
+          checkIn: "2026-02-10",
+          checkOut: "2026-02-12",
+          guests: 2,
+          priceCheckToken: "RATE-1",
+          propertyId: "H123",
+          rateId: "RATE-1",
+          roomId: "ROOM-1",
+        },
+        { sessionId: "sess-1", userId: "user-1" }
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        retries: 0,
+        value: {
+          bookingToken: "RATE-1",
+          expiresAt: "2026-02-03T04:15:06.000Z",
+          price: {
+            breakdown: {
+              base: "100.00",
+            },
+            currency: "USD",
+            total: "118.40",
+          },
+          propertyId: "H123",
+          rateId: "RATE-1",
+        },
+      });
+    })
+  );
 });
 
 describe("AmadeusProviderAdapter error normalization", () => {
@@ -191,4 +284,33 @@ describe("AmadeusProviderAdapter error normalization", () => {
       vi.useRealTimers();
     }
   });
+
+  it(
+    "clears timeout when the provider operation throws synchronously",
+    withFakeTimers(async () => {
+      const adapter = new AmadeusProviderAdapter({ timeoutMs: 1_000 });
+      const { listHotelsByGeocode, searchHotelOffers } = await import(
+        "@domain/amadeus/client"
+      );
+      vi.mocked(listHotelsByGeocode).mockImplementation(() => {
+        throw new Error("sync provider failure");
+      });
+      vi.mocked(searchHotelOffers).mockResolvedValue({ data: [] } as never);
+
+      const result = await adapter.search(
+        {
+          checkin: "2025-12-01",
+          checkout: "2025-12-02",
+          guests: 1,
+          lat: 1,
+          lng: 1,
+          location: "Paris",
+        },
+        { sessionId: "sess-123", userId: "user-123" }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    })
+  );
 });

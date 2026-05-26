@@ -4,7 +4,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UpcomingFlight } from "@/hooks/use-trips";
-import type { AppError } from "@/lib/api/error-types";
+import { ApiError } from "@/lib/api/error-types";
 import { UPCOMING_FLIGHT_A, UPCOMING_FLIGHT_B } from "@/test/fixtures/flights";
 import { render, screen } from "@/test/test-utils";
 import { UpcomingFlights, UpcomingFlightsNoEmptyState } from "../upcoming-flights";
@@ -21,7 +21,7 @@ interface LinkProps {
   [key: string]: unknown;
 }
 
-type UseUpcomingFlightsReturn = UseQueryResult<UpcomingFlight[], AppError>;
+type UseUpcomingFlightsReturn = UseQueryResult<UpcomingFlight[], ApiError>;
 
 const CreateFlightsReturn = (
   data: UpcomingFlight[],
@@ -108,7 +108,10 @@ describe("UpcomingFlights", () => {
   });
 
   it("renders error state when flights fail to load", () => {
-    const mockError = new Error("Failed to load flights") as AppError;
+    const mockError = new ApiError({
+      message: "Failed to load flights",
+      status: 500,
+    });
     vi.mocked(useUpcomingFlights).mockReturnValue({
       ...CreateFlightsReturn([]),
       error: mockError,

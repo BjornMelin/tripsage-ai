@@ -31,7 +31,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { type UpdateTripData, useTrip, useUpdateTrip } from "@/hooks/use-trips";
 import { keys } from "@/lib/keys";
+import { nowIso } from "@/lib/security/random";
 import type { TablesUpdate } from "@/lib/supabase/database.types";
+import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { statusVariants } from "@/lib/variants/status";
 
 type TripUpdate = TablesUpdate<"trips">;
@@ -87,6 +89,101 @@ function GetConnectionBadgeProps(state: ConnectionState) {
   return CONNECTION_BADGE_PROPS[state];
 }
 
+function GetCurrentOptimisticUpdateDate() {
+  return new Date(nowIso());
+}
+
+function RecordIgnoredTripUpdateField(input: {
+  field: TripUpdateKey;
+  tripId: number;
+  value: TripUpdate[TripUpdateKey];
+}) {
+  try {
+    recordClientErrorOnActiveSpan(new Error("Unmapped trip update field"), {
+      action: "applyOptimisticTripUpdate",
+      context: "OptimisticTripUpdates",
+      field: String(input.field),
+      tripId: input.tripId,
+      valueType: typeof input.value,
+    });
+  } catch {
+    // Optimistic UI fallback must not fail if telemetry is unavailable.
+  }
+}
+
+function BuildOptimisticTripPatch(
+  field: TripUpdateKey,
+  value: TripUpdate[TripUpdateKey]
+): Partial<
+  Pick<
+    UiTrip,
+    "budget" | "destination" | "endDate" | "startDate" | "title" | "travelers"
+  >
+> | null {
+  switch (field) {
+    case "budget":
+      return typeof value === "number" ? { budget: value } : null;
+    case "destination":
+      return typeof value === "string" ? { destination: value } : null;
+    case "end_date":
+      return typeof value === "string" ? { endDate: value } : null;
+    case "name":
+      return typeof value === "string" ? { title: value } : null;
+    case "start_date":
+      return typeof value === "string" ? { startDate: value } : null;
+    case "travelers":
+      return typeof value === "number" ? { travelers: value } : null;
+    default:
+      return null;
+  }
+}
+
+function GetTripValueForUpdateField(
+  trip: UiTrip,
+  field: TripUpdateKey
+): UiTrip[keyof UiTrip] | undefined {
+  switch (field) {
+    case "budget":
+      return trip.budget;
+    case "destination":
+      return trip.destination;
+    case "end_date":
+      return trip.endDate;
+    case "name":
+      return trip.title;
+    case "start_date":
+      return trip.startDate;
+    case "travelers":
+      return trip.travelers;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Applies a database trip update field to the UI trip shape.
+ *
+ * Unknown or invalid fields are ignored and reported through client telemetry.
+ */
+export function ApplyTripUpdateToUiTrip(input: {
+  field: TripUpdateKey;
+  prev: UiTrip;
+  tripId: number;
+  value: TripUpdate[TripUpdateKey];
+}): UiTrip {
+  const patch = BuildOptimisticTripPatch(input.field, input.value);
+  if (!patch) {
+    RecordIgnoredTripUpdateField(input);
+    return input.prev;
+  }
+
+  return {
+    ...input.prev,
+    ...patch,
+    updatedAt: nowIso(),
+  };
+}
+
 /**
  * Interface for the optimistic trip updates props.
  */
@@ -140,15 +237,6 @@ export function OptimisticTripUpdates({
   const travelersInputId = useId();
 
   const [trip, setTrip] = useState<UiTrip | null>(null);
-
-  const fieldToUiKey: Partial<Record<TripUpdateKey, keyof UiTrip>> = {
-    budget: "budget",
-    destination: "destination",
-    end_date: "endDate",
-    name: "title",
-    start_date: "startDate",
-    travelers: "travelers",
-  };
 
   useEffect(() => {
     if (!fetchedTrip) return;
@@ -211,7 +299,7 @@ export function OptimisticTripUpdates({
       ...prev,
       [updateKey]: {
         status: "pending",
-        timestamp: new Date(),
+        timestamp: GetCurrentOptimisticUpdateDate(),
         value,
       },
     }));
@@ -219,22 +307,7 @@ export function OptimisticTripUpdates({
     // Update local trip state optimistically
     setTrip((prev) => {
       if (!prev) return prev;
-      const uiKey = fieldToUiKey[field];
-      if (!uiKey) {
-        if (process.env.NODE_ENV === "development") {
-          console.warn("Unmapped trip update field", {
-            field,
-            tripId,
-            value,
-          });
-        }
-        return prev;
-      }
-      return {
-        ...prev,
-        [uiKey]: value as UiTrip[keyof UiTrip],
-        updatedAt: new Date().toISOString(),
-      };
+      return ApplyTripUpdateToUiTrip({ field, prev, tripId, value });
     });
 
     try {
@@ -340,8 +413,7 @@ export function OptimisticTripUpdates({
   const handleInputBlur = (field: keyof TripUpdate) => {
     if (!canEdit) return;
     const value = formData[field];
-    const uiKey = fieldToUiKey[field];
-    const currentValue = uiKey && trip ? trip[uiKey] : undefined;
+    const currentValue = trip ? GetTripValueForUpdateField(trip, field) : undefined;
     if (value !== currentValue) {
       handleOptimisticUpdate(field, value);
     }

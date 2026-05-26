@@ -1,52 +1,93 @@
 /** @vitest-environment jsdom */
 
 import { screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ProfilePage from "@/app/(app)/dashboard/profile/page";
 import { render } from "@/test/test-utils";
 import { AccountSettingsSection } from "../account-settings-section";
 import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
 
-const MOCK_USER = {
-  createdAt: "2025-01-01T00:00:00.000Z",
-  displayName: "John Doe",
-  email: "test@example.com",
-  firstName: "John",
-  id: "user-1",
-  isEmailVerified: true,
-  lastName: "Doe",
-  preferences: {
-    notifications: {
-      email: true,
-      marketing: false,
-      priceAlerts: false,
-      tripReminders: true,
+const { mockAuthState, mockCurrencyState, mockRouter } = vi.hoisted(() => {
+  const user = {
+    createdAt: "2025-01-01T00:00:00.000Z",
+    displayName: "John Doe",
+    email: "test@example.com",
+    firstName: "John",
+    id: "user-1",
+    isEmailVerified: true,
+    lastName: "Doe",
+    preferences: {
+      notifications: {
+        email: true,
+        marketing: false,
+        priceAlerts: false,
+        tripReminders: true,
+      },
     },
-  },
-  updatedAt: "2025-01-01T00:00:00.000Z",
-};
+    updatedAt: "2025-01-01T00:00:00.000Z",
+  };
+
+  return {
+    mockAuthState: {
+      hasInitialized: true,
+      initialize: vi.fn().mockResolvedValue(undefined),
+      isLoading: false,
+      logout: vi.fn(),
+      setUser: vi.fn(),
+      user,
+    },
+    mockCurrencyState: {
+      baseCurrency: "USD",
+      setBaseCurrency: vi.fn(),
+    },
+    mockRouter: {
+      replace: vi.fn(),
+    },
+  };
+});
 
 vi.mock("@/features/auth/store/auth/auth-core", () => ({
-  useAuthCore: () => ({
-    initialize: vi.fn().mockResolvedValue(undefined),
-    isLoading: false,
-    logout: vi.fn(),
-    setUser: vi.fn(),
-    user: MOCK_USER,
-  }),
+  useAuthCore: <T,>(selector?: (state: typeof mockAuthState) => T) =>
+    selector ? selector(mockAuthState) : mockAuthState,
 }));
 
 vi.mock("@/features/shared/store/currency-store", () => ({
-  useCurrencyStore: () => ({
-    baseCurrency: "USD",
-    setBaseCurrency: vi.fn(),
-  }),
+  useCurrencyStore: <T,>(selector?: (state: typeof mockCurrencyState) => T) =>
+    selector ? selector(mockCurrencyState) : mockCurrencyState,
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => mockRouter,
 }));
+
+const RENDER_PHASE_UPDATE_WARNING = "Cannot update a component";
+type ConsoleErrorSpy = {
+  mock: {
+    calls: unknown[][];
+  };
+  mockRestore: () => void;
+};
+
+let consoleErrorSpy: ConsoleErrorSpy;
+
+const ExpectNoRenderPhaseUpdateWarning = () => {
+  expect(
+    consoleErrorSpy.mock.calls.some((call) => {
+      const message: unknown = call[0];
+      return String(message).includes(RENDER_PHASE_UPDATE_WARNING);
+    })
+  ).toBe(false);
+};
+
+beforeEach(() => {
+  consoleErrorSpy = vi.spyOn(console, "error");
+});
+
+afterEach(() => {
+  ExpectNoRenderPhaseUpdateWarning();
+  consoleErrorSpy.mockRestore();
+});
 
 describe("Profile Components Smoke Tests", () => {
   it("renders PersonalInfoSection without crashing", () => {
