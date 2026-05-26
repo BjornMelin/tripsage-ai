@@ -4,6 +4,7 @@ packages:
   - "!**/node_modules/**"
 
 autoInstallPeers: false
+pmOnFail: download
 
 allowBuilds:
   esbuild: false
