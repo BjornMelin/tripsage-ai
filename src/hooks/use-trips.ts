@@ -18,7 +18,7 @@ import type { QueryKey } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
-import { ApiError, type ApiErrorCode, type AppError } from "@/lib/api/error-types";
+import { ApiError, type ApiErrorCode } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
 import type { Result, ResultError } from "@/lib/result";
@@ -139,7 +139,7 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
     normalizedParams.category = params.category;
   }
 
-  return useQuery<TripSuggestion[], AppError>({
+  return useQuery<TripSuggestion[], ApiError>({
     enabled: !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
@@ -166,7 +166,7 @@ export function useCreateTrip() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  return useMutation<UiTrip, AppError, TripCreateInput>({
+  return useMutation<UiTrip, ApiError, TripCreateInput>({
     mutationFn: async (tripData: TripCreateInput) => {
       const result = await createTripAction(tripData);
       return unwrapResult(result, "trips.create");
@@ -203,7 +203,7 @@ export function useUpdateTrip(options?: { userId?: string | null }) {
 
   return useMutation<
     UiTrip,
-    AppError,
+    ApiError,
     { tripId: string | number; data: UpdateTripData },
     UpdateTripContext
   >({
@@ -307,7 +307,7 @@ export function useDeleteTrip(options?: { userId?: string | null }) {
   const inferredUserId = useCurrentUserId();
   const userId = options?.userId ?? inferredUserId;
 
-  return useMutation<void, AppError, string | number>({
+  return useMutation<void, ApiError, string | number>({
     mutationFn: async (tripId: string | number) => {
       const numericTripId = normalizeTripId(tripId);
       if (numericTripId === null) {
@@ -393,7 +393,7 @@ export function useTrips(filters?: TripFilters, options?: { userId?: string | nu
   const userId = options?.userId ?? inferredUserId;
   const apiParams = convertToApiParams(filters);
 
-  const query = useQuery<Trip[], AppError>({
+  const query = useQuery<Trip[], ApiError>({
     enabled: !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
@@ -424,7 +424,7 @@ export function useTrip(
 
   const numericTripId = normalizeTripId(tripId);
 
-  const query = useQuery<Trip | null, AppError>({
+  const query = useQuery<Trip | null, ApiError>({
     enabled: numericTripId !== null && !!userId,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
@@ -459,7 +459,7 @@ export function useTripItinerary(
       ? keys.trips.itinerary(userId, tripId)
       : keys.trips.itineraryDisabled();
 
-  return useQuery<ItineraryItem[], AppError>({
+  return useQuery<ItineraryItem[], ApiError>({
     enabled,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
@@ -495,7 +495,7 @@ export function useUpsertTripItineraryItem(
 
   return useMutation<
     ItineraryItem,
-    AppError,
+    ApiError,
     ItineraryItemUpsertInput,
     UpsertItineraryContext
   >({
@@ -599,7 +599,7 @@ export function useDeleteTripItineraryItem(
 
   return useMutation<
     void,
-    AppError,
+    ApiError,
     { itemId: number },
     { previous?: ItineraryItem[] }
   >({
@@ -642,7 +642,7 @@ export function useSavedPlaces(tripId: number, options?: { userId?: string | nul
   const inferredUserId = useCurrentUserId();
   const userId = options?.userId ?? inferredUserId;
 
-  return useQuery<SavedPlaceSnapshot[], AppError>({
+  return useQuery<SavedPlaceSnapshot[], ApiError>({
     enabled: !!userId && Number.isFinite(tripId) && tripId > 0,
     gcTime: cacheTimes.short,
     queryFn: async () => {
@@ -664,7 +664,7 @@ export function useSavePlace(tripId: number, options?: { userId?: string | null 
 
   return useMutation<
     SavedPlaceSnapshot,
-    AppError,
+    ApiError,
     { place: PlaceSummary },
     { previous?: SavedPlaceSnapshot[] }
   >({
@@ -722,7 +722,7 @@ export function useRemoveSavedPlace(
 
   return useMutation<
     void,
-    AppError,
+    ApiError,
     { placeId: string },
     { previous?: SavedPlaceSnapshot[] }
   >({
@@ -824,7 +824,7 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
     limit: params?.limit ?? 10,
   };
 
-  return useQuery<UpcomingFlight[], AppError>({
+  return useQuery<UpcomingFlight[], ApiError>({
     gcTime: cacheTimes.short,
     queryFn: async () => {
       return await makeAuthenticatedRequest<UpcomingFlight[]>("/api/flights/upcoming", {

@@ -3,7 +3,6 @@
  */
 
 import type { StateCreator } from "zustand";
-import { useUiStore } from "./index";
 import type { CommandPaletteSlice, CommandPaletteState, UiState } from "./types";
 
 export const DEFAULT_COMMAND_PALETTE_STATE: CommandPaletteState = {
@@ -57,15 +56,3 @@ export const createCommandPaletteSlice: StateCreator<
     }));
   },
 });
-
-// ===== SELECTOR HOOKS =====
-
-/** Select whether the command palette is open */
-export const useCommandPaletteOpen = () => useUiStore((s) => s.commandPalette.isOpen);
-
-/** Select the command palette query */
-export const useCommandPaletteQuery = () => useUiStore((s) => s.commandPalette.query);
-
-/** Select the command palette results */
-export const useCommandPaletteResults = () =>
-  useUiStore((s) => s.commandPalette.results);

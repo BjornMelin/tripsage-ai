@@ -3,6 +3,7 @@
 import type { Agent } from "@schemas/agent-status";
 import { act, renderHook } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 const storeLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -316,21 +317,31 @@ describe("useAgentStatusStore", () => {
     expect(typeof result.current.registerAgents).toBe("function");
   });
 
-  it("removes agents older than the provided ttl", () => {
-    const { result } = renderHook(() => useAgentStatusStore());
-    const nowMs = Date.now();
+  it(
+    "removes agents older than the provided ttl",
+    withFakeTimers(() => {
+      const { result } = renderHook(() => useAgentStatusStore());
+      const nowMs = Date.parse("2026-02-03T04:05:06.000Z");
+      vi.setSystemTime(nowMs);
 
-    act(() => {
-      result.current.registerAgents([
-        mockAgent({ id: "fresh", updatedAt: new Date(nowMs - 5_000).toISOString() }),
-        mockAgent({ id: "stale", updatedAt: new Date(nowMs - 60_000).toISOString() }),
-      ]);
-      result.current.removeStaleAgents(30_000);
-    });
+      act(() => {
+        result.current.registerAgents([
+          mockAgent({
+            id: "fresh",
+            updatedAt: new Date(nowMs - 5_000).toISOString(),
+          }),
+          mockAgent({
+            id: "stale",
+            updatedAt: new Date(nowMs - 60_000).toISOString(),
+          }),
+        ]);
+        result.current.removeStaleAgents(30_000);
+      });
 
-    expect(result.current.agentsById.fresh).toBeDefined();
-    expect(result.current.agentsById.stale).toBeUndefined();
-  });
+      expect(result.current.agentsById.fresh).toBeDefined();
+      expect(result.current.agentsById.stale).toBeUndefined();
+    })
+  );
 
   it("treats invalid updatedAt timestamps as stale and logs an error", () => {
     const { result } = renderHook(() => useAgentStatusStore());

@@ -12,7 +12,7 @@ import type {
 } from "@schemas/trips";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
-import { ApiError, type ApiErrorCode, type AppError } from "@/lib/api/error-types";
+import { ApiError, type ApiErrorCode } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { cacheTimes, staleTimes } from "@/lib/query/config";
 import type { Result, ResultError } from "@/lib/result";
@@ -92,7 +92,7 @@ export function useTripCollaborators(
   const userId = options?.userId ?? inferredUserId;
   const enabled = tripId !== null && !!userId;
 
-  return useQuery<TripCollaboratorsResponse, AppError>({
+  return useQuery<TripCollaboratorsResponse, ApiError>({
     enabled,
     gcTime: cacheTimes.medium,
     queryFn: async () => {
@@ -119,7 +119,7 @@ export function useInviteTripCollaborator(tripId: number) {
 
   return useMutation<
     InviteTripCollaboratorResponse,
-    AppError,
+    ApiError,
     TripCollaboratorInviteInput
   >({
     mutationFn: async (payload) => {
@@ -147,7 +147,7 @@ export function useUpdateTripCollaboratorRole(tripId: number) {
 
   return useMutation<
     UpdateTripCollaboratorRoleResponse,
-    AppError,
+    ApiError,
     { collaboratorUserId: string; payload: TripCollaboratorRoleUpdateInput }
   >({
     mutationFn: async ({ collaboratorUserId, payload }) => {
@@ -173,7 +173,7 @@ export function useRemoveTripCollaborator(tripId: number) {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  return useMutation<void, AppError, { collaboratorUserId: string }>({
+  return useMutation<void, ApiError, { collaboratorUserId: string }>({
     mutationFn: async ({ collaboratorUserId }) => {
       const result = await removeCollaborator(tripId, collaboratorUserId);
       unwrapResult(result, "trips.collaborators.remove");

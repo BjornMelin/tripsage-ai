@@ -5,6 +5,9 @@ import { DEFAULT_BACKOFF_CONFIG } from "@/lib/realtime/backoff";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { createFakeTimersContext } from "@/test/utils/with-fake-timers";
 
+const BASE_NOW_MS = Date.UTC(2026, 0, 15, 12, 0, 0);
+const BASE_NOW_ISO = new Date(BASE_NOW_MS).toISOString();
+
 describe("realtime connection store", () => {
   // Use createFakeTimersContext for safe timer handling across all tests
   // shouldAdvanceTime: true allows async operations to work with fake timers
@@ -12,6 +15,7 @@ describe("realtime connection store", () => {
 
   beforeEach(() => {
     timers.setup();
+    vi.setSystemTime(BASE_NOW_MS);
     useRealtimeConnectionStore.setState({
       connections: {},
       isReconnecting: false,
@@ -43,7 +47,7 @@ describe("realtime connection store", () => {
 
     const entry = useRealtimeConnectionStore.getState().connections[channel.topic];
     expect(entry?.lastActivity).toBeInstanceOf(Date);
-    expect(entry?.lastActivity?.getTime()).toBeGreaterThan(Date.now() - 5_000);
+    expect(entry?.lastActivity?.toISOString()).toBe(BASE_NOW_ISO);
   });
 
   it("ignores updates for unknown channels without throwing", () => {
@@ -90,7 +94,13 @@ describe("realtime connection store", () => {
     expect(
       useRealtimeConnectionStore.getState().connections[channel.topic]?.lastError
     ).toBe(failure);
+    expect(
+      useRealtimeConnectionStore.getState().connections[channel.topic]?.lastErrorAt
+    ).toEqual(new Date(BASE_NOW_ISO));
     expect(useRealtimeConnectionStore.getState().summary().lastError).toBe(failure);
+    expect(useRealtimeConnectionStore.getState().summary().lastErrorAt).toEqual(
+      new Date(BASE_NOW_ISO)
+    );
 
     store.updateStatus(channel.topic, "subscribed", false, null);
 
@@ -122,6 +132,9 @@ describe("realtime connection store", () => {
 
     const updated = useRealtimeConnectionStore.getState();
     expect(updated.reconnectAttempts).toBeGreaterThan(0);
+    expect(updated.lastReconnectAt?.toISOString()).toBe(
+      new Date(BASE_NOW_MS + delay).toISOString()
+    );
     expect(channel.unsubscribe).toHaveBeenCalled();
     expect(channel.subscribe).toHaveBeenCalled();
 

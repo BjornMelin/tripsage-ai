@@ -13,6 +13,7 @@ import {
   useForm,
 } from "react-hook-form";
 import type { z } from "zod";
+import { nowIso } from "@/lib/security/random";
 import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 
 // Zod v4: `ZodType<Output, Input, Internals>` (Input defaults to `unknown`), so we pin
@@ -74,6 +75,10 @@ function isFieldErrorLike(value: unknown): value is FieldErrorLike {
 }
 
 const MAX_ERROR_DEPTH = 20;
+
+function getCurrentValidationDate(): Date {
+  return new Date(nowIso());
+}
 
 function collectRhfErrors(
   errors: unknown,
@@ -167,12 +172,14 @@ function validationResultFromFieldErrors<Data extends FieldValues>(
           code: "FORM_VALIDATION_ERROR",
           context: "form",
           message: "Validation failed",
-          timestamp: new Date(),
+          timestamp: getCurrentValidationDate(),
         },
       ],
       success: false,
     };
   }
+
+  const timestamp = getCurrentValidationDate();
 
   return {
     errors: flattened.map((error) => ({
@@ -181,7 +188,7 @@ function validationResultFromFieldErrors<Data extends FieldValues>(
       field: error.path,
       message: error.message,
       path: error.path ? error.path.split(".") : undefined,
-      timestamp: new Date(),
+      timestamp,
     })),
     success: false,
   };
@@ -230,7 +237,7 @@ export function useZodForm<Schema extends AnyFieldValuesSchema>(
           async (data) => {
             setValidationState({
               isValidating: false,
-              lastValidation: new Date(),
+              lastValidation: getCurrentValidationDate(),
               validationErrors: [],
             });
 
@@ -265,7 +272,7 @@ export function useZodForm<Schema extends AnyFieldValuesSchema>(
               setValidationState((prev) => ({
                 ...prev,
                 isValidating: false,
-                lastValidation: prev.lastValidation ?? new Date(),
+                lastValidation: prev.lastValidation ?? getCurrentValidationDate(),
               }));
             }
           },
@@ -275,7 +282,7 @@ export function useZodForm<Schema extends AnyFieldValuesSchema>(
 
             setValidationState({
               isValidating: false,
-              lastValidation: new Date(),
+              lastValidation: getCurrentValidationDate(),
               validationErrors: validationResult.errors?.map((e) => e.message) ?? [],
             });
 
@@ -296,19 +303,26 @@ export function useZodForm<Schema extends AnyFieldValuesSchema>(
     [form, onSubmitError, onSubmitSuccess, onValidationError, transformSubmitData]
   );
 
-  // Subscribe to form validity via RHF's formState Proxy.
-  const { isValid, isValidating } = form.formState;
-  const isFormComplete = isValid;
-
-  return {
+  const enhancedForm = {
     ...form,
     handleSubmitSafe,
-    isFormComplete,
-    validationState: {
-      ...validationState,
-      isValidating: validationState.isValidating || isValidating,
+  } as UseZodFormReturn<FormFieldValues<Schema>, FormSubmitValues<Schema>>;
+
+  Object.defineProperties(enhancedForm, {
+    isFormComplete: {
+      enumerable: false,
+      get: () => form.formState.isValid,
     },
-  };
+    validationState: {
+      enumerable: false,
+      get: () => ({
+        ...validationState,
+        isValidating: validationState.isValidating || form.formState.isValidating,
+      }),
+    },
+  });
+
+  return enhancedForm;
 }
 
 // Export types for external use

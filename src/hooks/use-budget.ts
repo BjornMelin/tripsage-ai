@@ -20,9 +20,10 @@ import { useShallow } from "zustand/react/shallow";
 import { useBudgetStore } from "@/features/budget/store/budget-store";
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useCurrentUserId } from "@/hooks/use-current-user-id";
-import { type AppError, handleApiError } from "@/lib/api/error-types";
+import { type ApiError, handleApiError } from "@/lib/api/error-types";
 import { keys } from "@/lib/keys";
 import { staleTimes } from "@/lib/query/config";
+import { nowIso } from "@/lib/security/random";
 
 /**
  * Hook for accessing budget store state.
@@ -146,7 +147,7 @@ export function useFetchBudgets() {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
-  const query = useQuery<{ budgets: Budget[] }, AppError>({
+  const query = useQuery<{ budgets: Budget[] }, ApiError>({
     enabled: !!userId,
     queryFn: async () => {
       try {
@@ -188,7 +189,7 @@ export function useFetchBudget(id: string) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
-  const query = useQuery<Budget, AppError>({
+  const query = useQuery<Budget, ApiError>({
     enabled: !!id && !!userId,
     queryFn: async () => {
       try {
@@ -220,7 +221,7 @@ export function useCreateBudget() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  const mutation = useMutation<Budget, AppError, CreateBudgetRequest>({
+  const mutation = useMutation<Budget, ApiError, CreateBudgetRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<Budget>("/api/budgets", {
@@ -232,7 +233,8 @@ export function useCreateBudget() {
         throw handleApiError(error);
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      addBudget(data);
       if (userId) {
         queryClient.invalidateQueries({ queryKey: keys.budget.list(userId) });
       } else {
@@ -241,12 +243,6 @@ export function useCreateBudget() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data) {
-      addBudget(mutation.data);
-    }
-  }, [mutation.data, addBudget]);
 
   return mutation;
 }
@@ -260,7 +256,7 @@ export function useUpdateBudget() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  const mutation = useMutation<Budget, AppError, UpdateBudgetRequest>({
+  const mutation = useMutation<Budget, ApiError, UpdateBudgetRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<Budget>("/api/budgets", {
@@ -273,6 +269,7 @@ export function useUpdateBudget() {
       }
     },
     onSuccess: (data) => {
+      updateBudget(data.id, data);
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.detail(userId, data.id),
@@ -285,12 +282,6 @@ export function useUpdateBudget() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data) {
-      updateBudget(mutation.data.id, mutation.data);
-    }
-  }, [mutation.data, updateBudget]);
 
   return mutation;
 }
@@ -304,7 +295,7 @@ export function useDeleteBudget() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  const mutation = useMutation<{ success: boolean; id: string }, AppError, string>({
+  const mutation = useMutation<{ success: boolean; id: string }, ApiError, string>({
     mutationFn: async (id) => {
       try {
         return await makeAuthenticatedRequest<{ success: boolean; id: string }>(
@@ -318,6 +309,10 @@ export function useDeleteBudget() {
       }
     },
     onSuccess: (data) => {
+      if (data.success) {
+        removeBudget(data.id);
+      }
+
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.detail(userId, data.id),
@@ -330,12 +325,6 @@ export function useDeleteBudget() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data?.success) {
-      removeBudget(mutation.data.id);
-    }
-  }, [mutation.data, removeBudget]);
 
   return mutation;
 }
@@ -350,7 +339,7 @@ export function useFetchExpenses(budgetId: string) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
-  const query = useQuery<{ expenses: Expense[] }, AppError>({
+  const query = useQuery<{ expenses: Expense[] }, ApiError>({
     enabled: !!budgetId && !!userId,
     queryFn: async () => {
       try {
@@ -384,7 +373,7 @@ export function useAddExpense() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  const mutation = useMutation<Expense, AppError, AddExpenseRequest>({
+  const mutation = useMutation<Expense, ApiError, AddExpenseRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<Expense>("/api/expenses", {
@@ -397,6 +386,7 @@ export function useAddExpense() {
       }
     },
     onSuccess: (data) => {
+      addExpense(data);
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.expenses(userId, data.budgetId),
@@ -407,12 +397,6 @@ export function useAddExpense() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data) {
-      addExpense(mutation.data);
-    }
-  }, [mutation.data, addExpense]);
 
   return mutation;
 }
@@ -426,7 +410,7 @@ export function useUpdateExpense() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  const mutation = useMutation<Expense, AppError, UpdateExpenseRequest>({
+  const mutation = useMutation<Expense, ApiError, UpdateExpenseRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<Expense>("/api/expenses", {
@@ -439,6 +423,7 @@ export function useUpdateExpense() {
       }
     },
     onSuccess: (data) => {
+      updateExpense(data.id, data.budgetId, data);
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.expenses(userId, data.budgetId),
@@ -449,12 +434,6 @@ export function useUpdateExpense() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data) {
-      updateExpense(mutation.data.id, mutation.data.budgetId, mutation.data);
-    }
-  }, [mutation.data, updateExpense]);
 
   return mutation;
 }
@@ -470,7 +449,7 @@ export function useDeleteExpense() {
 
   const mutation = useMutation<
     { success: boolean; id: string; budgetId: string },
-    AppError,
+    ApiError,
     string
   >({
     mutationFn: async (id) => {
@@ -487,6 +466,10 @@ export function useDeleteExpense() {
       }
     },
     onSuccess: (data) => {
+      if (data.success) {
+        removeExpense(data.id, data.budgetId);
+      }
+
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.expenses(userId, data.budgetId),
@@ -497,12 +480,6 @@ export function useDeleteExpense() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data?.success) {
-      removeExpense(mutation.data.id, mutation.data.budgetId);
-    }
-  }, [mutation.data, removeExpense]);
 
   return mutation;
 }
@@ -517,7 +494,7 @@ export function useFetchAlerts(budgetId: string) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
   const userId = useCurrentUserId();
 
-  const query = useQuery<{ alerts: BudgetAlert[] }, AppError>({
+  const query = useQuery<{ alerts: BudgetAlert[] }, ApiError>({
     enabled: !!budgetId && !!userId,
     queryFn: async () => {
       try {
@@ -551,7 +528,7 @@ export function useCreateAlert() {
   const queryClient = useQueryClient();
   const userId = useCurrentUserId();
 
-  const mutation = useMutation<BudgetAlert, AppError, CreateBudgetAlertRequest>({
+  const mutation = useMutation<BudgetAlert, ApiError, CreateBudgetAlertRequest>({
     mutationFn: async (variables) => {
       try {
         return await makeAuthenticatedRequest<BudgetAlert>("/api/alerts", {
@@ -564,6 +541,7 @@ export function useCreateAlert() {
       }
     },
     onSuccess: (data) => {
+      addAlert(data);
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.alerts(userId, data.budgetId),
@@ -574,12 +552,6 @@ export function useCreateAlert() {
     },
     throwOnError: false,
   });
-
-  useEffect(() => {
-    if (mutation.data) {
-      addAlert(mutation.data);
-    }
-  }, [mutation.data, addAlert]);
 
   return mutation;
 }
@@ -595,7 +567,7 @@ export function useMarkAlertAsRead() {
 
   const mutation = useMutation<
     { id: string; budgetId: string; isRead: boolean },
-    AppError,
+    ApiError,
     { id: string; budgetId: string }
   >({
     mutationFn: async (variables) => {
@@ -614,6 +586,7 @@ export function useMarkAlertAsRead() {
       }
     },
     onSuccess: (data) => {
+      markAlertAsRead(data.id, data.budgetId);
       if (userId) {
         queryClient.invalidateQueries({
           queryKey: keys.budget.alerts(userId, data.budgetId),
@@ -625,12 +598,6 @@ export function useMarkAlertAsRead() {
     throwOnError: false,
   });
 
-  useEffect(() => {
-    if (mutation.data) {
-      markAlertAsRead(mutation.data.id, mutation.data.budgetId);
-    }
-  }, [mutation.data, markAlertAsRead]);
-
   return mutation;
 }
 
@@ -641,7 +608,7 @@ export function useFetchCurrencyRates() {
   const setCurrencies = useBudgetStore((state) => state.setCurrencies);
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  const query = useQuery<{ rates: Record<string, number> }, AppError>({
+  const query = useQuery<{ rates: Record<string, number> }, ApiError>({
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest<{ rates: Record<string, number> }>(
@@ -664,7 +631,7 @@ export function useFetchCurrencyRates() {
         (acc, [code, rate]) => {
           acc[code] = {
             code,
-            lastUpdated: new Date().toISOString(),
+            lastUpdated: nowIso(),
             rate,
           };
           return acc;
