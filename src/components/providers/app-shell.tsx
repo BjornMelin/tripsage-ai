@@ -60,7 +60,8 @@ export function PublicAppShell({ children }: AppShellProps) {
  * Props for the authenticated application shell.
  *
  * @remarks
- * Extends `AppShellProps` and adds an optional `nonce` string for CSP inline scripts.
+ * Extends `AppShellProps` and adds an optional `nonce` string for CSP-aware
+ * client style tags.
  */
 interface AuthedAppShellProps extends AppShellProps {
   nonce?: string;
@@ -69,11 +70,11 @@ interface AuthedAppShellProps extends AppShellProps {
 /**
  * Authenticated application shell used for dashboard/chat routes.
  *
- * Accepts a CSP nonce when available so client-injected scripts (e.g. next-themes)
- * can execute under a strict nonce-based Content Security Policy.
+ * Accepts a CSP nonce when available so temporary client-injected styles can
+ * execute under a strict nonce-based Content Security Policy.
  *
  * @param children - Child elements rendered within the authenticated shell.
- * @param nonce - Optional CSP nonce for script execution.
+ * @param nonce - Optional CSP nonce for transition-suppression styles.
  * @returns The authenticated application shell component.
  */
 export function AuthedAppShell({ children, nonce }: AuthedAppShellProps) {

@@ -1,12 +1,12 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { Toaster as SonnerToaster } from "sonner";
+import { useTheme } from "@/hooks/use-theme";
 
 /**
  * Toast notification container using Sonner.
  *
- * Integrates with next-themes for automatic light/dark theme support.
+ * Integrates with the app theme provider for automatic light/dark theme support.
  * Renders at bottom-right on desktop, top on mobile.
  */
 export function Toaster() {
