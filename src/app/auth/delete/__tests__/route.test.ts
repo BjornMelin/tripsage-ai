@@ -54,7 +54,9 @@ describe("/auth/delete route", () => {
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({
       code: "DELETE_FAILED",
+      error: "delete_failed",
       message: "Delete failed",
+      reason: "Delete failed",
     });
   });
 
@@ -63,6 +65,10 @@ describe("/auth/delete route", () => {
 
     const res = await DELETE();
     expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toMatchObject({ code: "DELETE_FAILED" });
+    await expect(res.json()).resolves.toMatchObject({
+      code: "DELETE_FAILED",
+      error: "delete_failed",
+      reason: "not authenticated",
+    });
   });
 });

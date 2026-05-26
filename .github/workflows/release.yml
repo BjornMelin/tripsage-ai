@@ -60,4 +60,4 @@ jobs:
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN || github.token }}
-        run: npx semantic-release --extends ./release.config.mjs
+        run: pnpm exec semantic-release --extends ./release.config.mjs

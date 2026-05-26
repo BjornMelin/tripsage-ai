@@ -9,6 +9,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { parseJsonBody } from "@/lib/api/route-helpers";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { emitOperationalAlertOncePerWindow } from "@/lib/telemetry/degraded-mode";
 import { createServerLogger } from "@/lib/telemetry/logger";
@@ -21,15 +22,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
   if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
-      return NextResponse.json(
-        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
-        { status: 413 }
-      );
+      return authRouteErrorResponse({
+        code: "PAYLOAD_TOO_LARGE",
+        reason: "Request body exceeds limit",
+        status: 413,
+      });
     }
-    return NextResponse.json(
-      { code: "BAD_REQUEST", message: "Malformed JSON" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "BAD_REQUEST",
+      reason: "Malformed JSON",
+      status: 400,
+    });
   }
 
   const payload = passwordResetPayloadSchema.safeParse(parsedBody.data);
@@ -39,14 +42,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       field: path.length > 0 ? String(path[0]) : "unknown",
       message,
     }));
-    return NextResponse.json(
-      {
-        code: "VALIDATION_ERROR",
-        errors: fieldErrors,
-        message: "Invalid password reset payload",
-      },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "VALIDATION_ERROR",
+      extras: { errors: fieldErrors },
+      reason: "Invalid password reset payload",
+      status: 400,
+    });
   }
 
   const { token, newPassword } = payload.data;
@@ -75,10 +76,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       status: verifyError.status,
     });
     // Use uniform error code to avoid leaking which step failed
-    return NextResponse.json(
-      { code: "RESET_FAILED", message: "Password reset failed" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "RESET_FAILED",
+      reason: "Password reset failed",
+      status: 400,
+    });
   }
 
   const { error: updateError } = await supabase.auth.updateUser({
@@ -101,10 +103,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       status: updateError.status,
     });
     // Use uniform error code to avoid leaking which step failed
-    return NextResponse.json(
-      { code: "RESET_FAILED", message: "Password reset failed" },
-      { status: 400 }
-    );
+    return authRouteErrorResponse({
+      code: "RESET_FAILED",
+      reason: "Password reset failed",
+      status: 400,
+    });
   }
 
   return NextResponse.json({ ok: true });

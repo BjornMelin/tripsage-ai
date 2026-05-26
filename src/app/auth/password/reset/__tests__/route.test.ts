@@ -65,7 +65,9 @@ describe("/auth/password/reset route", () => {
     expect(res.status).toBe(413);
     await expect(res.json()).resolves.toEqual({
       code: "PAYLOAD_TOO_LARGE",
+      error: "payload_too_large",
       message: "Request body exceeds limit",
+      reason: "Request body exceeds limit",
     });
   });
 
@@ -78,8 +80,15 @@ describe("/auth/password/reset route", () => {
 
     const res = await POST(req);
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { code?: string; errors?: unknown };
+    const body = (await res.json()) as {
+      code?: string;
+      error?: string;
+      errors?: unknown;
+      reason?: string;
+    };
     expect(body.code).toBe("VALIDATION_ERROR");
+    expect(body.error).toBe("validation_error");
+    expect(body.reason).toBe("Invalid password reset payload");
     expect(body.errors).toBeDefined();
   });
 
@@ -96,7 +105,11 @@ describe("/auth/password/reset route", () => {
 
     const res = await POST(req);
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toMatchObject({ code: "RESET_FAILED" });
+    await expect(res.json()).resolves.toMatchObject({
+      code: "RESET_FAILED",
+      error: "reset_failed",
+      reason: "Password reset failed",
+    });
     expect(UPDATE_USER_MOCK).not.toHaveBeenCalled();
   });
 

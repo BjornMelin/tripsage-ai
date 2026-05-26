@@ -61,6 +61,9 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  COREPACK_VERSION: "0.35.0"
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -84,7 +87,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g corepack@latest
+          npm install -g "corepack@${COREPACK_VERSION}"
           corepack enable pnpm
           corepack install
           pnpm ci
@@ -129,6 +132,12 @@ jobs:
       - name: Reject secrets (full scan)
         if: github.event_name != 'pull_request'
         run: pnpm check:no-secrets:full
+
+      - name: Dependency usage audit
+        run: pnpm deps:audit
+
+      - name: High-severity dependency audit
+        run: pnpm audit --audit-level high
 
       - name: Architecture boundary checks
         run: pnpm boundary:check
@@ -292,7 +301,7 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g corepack@latest
+          npm install -g "corepack@${COREPACK_VERSION}"
           corepack enable pnpm
           corepack install
           pnpm ci
@@ -305,7 +314,7 @@ jobs:
           CI: '1'
           VITEST_COVERAGE_SKIP_THRESHOLDS: '1'
         run: >-
-          pnpm vitest run --coverage
+          pnpm exec vitest run --coverage
           --pool=threads --reporter=blob
           --shard=${{ matrix.shard }}/${{ matrix.total }}
 
@@ -332,7 +341,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install -g corepack@latest
+          npm install -g "corepack@${COREPACK_VERSION}"
           corepack enable pnpm
           corepack install
           pnpm ci
@@ -346,7 +355,7 @@ jobs:
 
       - name: Merge reports
         run: |
-          pnpm vitest run --merge-reports .vitest-reports --coverage
+          pnpm exec vitest run --merge-reports .vitest-reports --coverage
           node scripts/check-coverage-critical.mjs
 
       - name: Upload coverage report

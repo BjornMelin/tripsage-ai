@@ -6,7 +6,7 @@ This repository uses semantic-release to automate versioning, changelog updates,
 
 - Trigger: push to `main`.
 - Action: `.github/workflows/release.yml`.
-- Steps: checkout (full history) → set up Node from `.nvmrc` → install pnpm and dependencies → run `npx semantic-release --extends release.config.mjs`.
+- Steps: checkout (full history) → set up Node from `.nvmrc` → install pnpm and dependencies → run `pnpm exec semantic-release --extends release.config.mjs`.
 - Env: `GITHUB_TOKEN`.
 - Permissions: `contents`, `issues`, and `pull-requests` (write) to create tags and release notes.
 

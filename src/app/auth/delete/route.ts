@@ -5,6 +5,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 
@@ -20,16 +21,21 @@ export async function DELETE(): Promise<NextResponse> {
 
     const { error } = await admin.auth.admin.deleteUser(user.id);
     if (error) {
-      return NextResponse.json(
-        { code: "DELETE_FAILED", message: error.message },
-        { status: 400 }
-      );
+      return authRouteErrorResponse({
+        code: "DELETE_FAILED",
+        reason: error.message,
+        status: 400,
+      });
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to delete account.";
-    return NextResponse.json({ code: "DELETE_FAILED", message }, { status: 500 });
+    return authRouteErrorResponse({
+      code: "DELETE_FAILED",
+      reason: message,
+      status: 500,
+    });
   }
 }

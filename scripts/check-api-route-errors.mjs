@@ -1,15 +1,17 @@
 /**
- * @fileoverview Enforces route-handler error response helpers in `src/app/api/**`.
+ * @fileoverview Enforces route-handler error response helpers in app API/auth routes.
  *
  * Repo contract forbids inline JSON error responses like:
  * - `NextResponse.json({ error: "..." }, { status: 4xx/5xx })`
+ * - `NextResponse.json({ code: "..." }, { status: 4xx/5xx })`
  * - `new Response(JSON.stringify({ error: "..." }), { status: 4xx/5xx })`
+ * - `new Response(JSON.stringify({ code: "..." }), { status: 4xx/5xx })`
  *
  * Use `errorResponse()` (and other helpers) from `@/lib/api/route-helpers` instead.
  *
  * Notes:
  * - Only checks files changed in the current diff (BASE_REF...HEAD, defaulting to origin/main...HEAD or main...HEAD).
- * - Use `--full` to scan all tracked `src/app/api/**` files.
+ * - Use `--full` to scan all tracked `src/app/api/**` and `src/app/auth/**` files.
  * - Excludes tests/mocks.
  * - Allow an exception by adding `api-route-error-ok:` on the violating line with a short justification.
  */
@@ -24,23 +26,31 @@ const ARGS = new Set(process.argv.slice(2));
 const MODE = ARGS.has("--full") ? "full" : "diff";
 
 const CHECKED_FILE_RE = /\.(c|m)?[tj]sx?$/;
+const CHECKED_ROUTE_PATHS = ["src/app/api", "src/app/auth"];
+const CHECKED_ROUTE_PREFIXES = CHECKED_ROUTE_PATHS.map((path) => `${path}/`);
 
 function isExcludedPath(filePath) {
-  if (!filePath.startsWith("src/app/api/")) return true;
+  if (!CHECKED_ROUTE_PREFIXES.some((prefix) => filePath.startsWith(prefix))) {
+    return true;
+  }
   if (!CHECKED_FILE_RE.test(filePath)) return true;
   if (EXCLUDED_PATH_PARTS.some((part) => filePath.includes(part))) return true;
   return filePath.includes(".test.") || filePath.includes(".spec.");
 }
 
 function runGitDiffNameOnly(range) {
-  return execFileSync("git", ["diff", "--name-only", range, "--", "src/app/api"], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  return execFileSync(
+    "git",
+    ["diff", "--name-only", range, "--", ...CHECKED_ROUTE_PATHS],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }
+  );
 }
 
 function getTrackedFiles() {
-  const out = execFileSync("git", ["ls-files", "--", "src/app/api"], {
+  const out = execFileSync("git", ["ls-files", "--", ...CHECKED_ROUTE_PATHS], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -345,9 +355,9 @@ function findObjectLiteralAfter(text, startIndex) {
 }
 
 function isErrorObjectLiteral(objectLiteralText) {
-  // We only care about top-level payload objects that include an `error:` property.
+  // We only care about payload objects that include `error:` or legacy `code:`.
   // If a route uses an error helper, this won't match.
-  return /\berror\b\s*:/.test(objectLiteralText);
+  return /\b(error|code)\b\s*:/.test(objectLiteralText);
 }
 
 function scanForbiddenNextResponseJson(text) {
@@ -464,7 +474,7 @@ if (violations.length > 0) {
     `Found forbidden inline error JSON responses in ${
       MODE === "full" ? "tracked" : "changed"
     } route code.\n\n` +
-      "Use `errorResponse()` (or `unauthorizedResponse()`, `forbiddenResponse()`, etc.) from `@/lib/api/route-helpers`.\n\n" +
+      "Use `errorResponse()` (or `unauthorizedResponse()`, `forbiddenResponse()`, etc.) from `@/lib/api/route-helpers`; auth routes may use `authRouteErrorResponse()` from `@/lib/auth/route-error-response`.\n\n" +
       `If absolutely necessary, add '${ALLOWLIST_MARKER}' on the violating line with a short justification.\n\n` +
       formatted +
       "\n"
