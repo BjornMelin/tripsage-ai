@@ -29,8 +29,10 @@ import {
   writeStoredTheme,
 } from "@/lib/theme/theme-provider-utils";
 
+/** Resolved light/dark theme and persisted user preference values. */
 export type { ResolvedTheme, Theme } from "@/lib/theme/theme-provider-utils";
 
+/** Configuration options for the local theme provider. */
 export interface ThemeProviderProps {
   /** React children rendered inside the theme context. */
   children?: ReactNode;
@@ -50,14 +52,21 @@ export interface ThemeProviderProps {
   storageKey?: string;
 }
 
+/** Theme state and mutators exposed through the theme context. */
 export interface ThemeContextValue {
+  /** Currently applied light or dark theme. */
   resolvedTheme: ResolvedTheme;
+  /** Persists and applies a new theme preference. */
   setTheme: (theme: Theme) => void;
+  /** Operating-system color scheme when system preference is enabled. */
   systemTheme: ResolvedTheme;
+  /** Selected theme preference, including `system`. */
   theme: Theme;
+  /** Theme options available to the current provider instance. */
   themes: readonly Theme[];
 }
 
+/** React context holding theme preference and resolved theme state. */
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /**

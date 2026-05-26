@@ -65,14 +65,24 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const handleOAuth = async (provider: "github" | "google") => {
     setOauthError(null);
     setOauthLoading(true);
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      options: { redirectTo: targetUrl },
-      provider,
-    });
-    setOauthLoading(false);
-    if (oauthError) {
-      setOauthError(oauthError.message);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        options: { redirectTo: targetUrl },
+        provider,
+      });
+      if (oauthError) {
+        setOauthError(oauthError.message);
+      }
+    } catch {
+      setOauthError("OAuth failed. Please try again.");
+    } finally {
+      setOauthLoading(false);
     }
+  };
+
+  /** Starts OAuth sign-in and suppresses unhandled async click rejections. */
+  const startOAuth = (provider: "github" | "google") => {
+    handleOAuth(provider).catch(() => undefined);
   };
 
   const passwordError = loginState.status === "error" ? loginState.error : null;
@@ -197,7 +207,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("github")}
+            onClick={() => startOAuth("github")}
             disabled={oauthLoading || loginPending || mfaPending || !!mfaStep}
             aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-github"
@@ -209,7 +219,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("google")}
+            onClick={() => startOAuth("google")}
             disabled={oauthLoading || loginPending || mfaPending || !!mfaStep}
             aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-google"

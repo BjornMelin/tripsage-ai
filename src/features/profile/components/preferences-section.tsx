@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/features/auth/store/auth/auth-core";
@@ -513,24 +514,32 @@ export function PreferencesSection() {
         </CardHeader>
         <CardContent className="space-y-4">
           {ADDITIONAL_SETTING_OPTIONS.map(
-            ({ description, descriptionId, key, label, labelId }) => (
-              <div className="flex items-center justify-between" key={key}>
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium" id={labelId}>
-                    {label}
+            ({ description, descriptionId, key, label, labelId }) => {
+              const switchId = `${key}-switch`;
+
+              return (
+                <div className="flex items-center justify-between gap-4" key={key}>
+                  <div className="flex flex-1 flex-col gap-0.5">
+                    <Label
+                      htmlFor={switchId}
+                      className="cursor-pointer text-sm font-medium"
+                      id={labelId}
+                    >
+                      {label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground" id={descriptionId}>
+                      {description}
+                    </p>
                   </div>
-                  <div className="text-sm text-muted-foreground" id={descriptionId}>
-                    {description}
-                  </div>
+                  <Switch
+                    id={switchId}
+                    aria-describedby={descriptionId}
+                    checked={additionalSettings[key]}
+                    onCheckedChange={(enabled) => toggleAdditionalSetting(key, enabled)}
+                  />
                 </div>
-                <Switch
-                  aria-describedby={descriptionId}
-                  aria-labelledby={labelId}
-                  checked={additionalSettings[key]}
-                  onCheckedChange={(enabled) => toggleAdditionalSetting(key, enabled)}
-                />
-              </div>
-            )
+              );
+            }
           )}
         </CardContent>
       </Card>

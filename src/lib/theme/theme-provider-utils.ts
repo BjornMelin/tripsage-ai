@@ -2,15 +2,22 @@
  * @fileoverview Theme provider helpers for browser theme persistence and DOM updates.
  */
 
+/** Media query used to detect the operating-system color scheme. */
 export const COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)";
+/** Default local storage key for persisted theme preference. */
 export const DEFAULT_THEME_STORAGE_KEY = "theme";
+/** Supported persisted theme preference values. */
 export const THEME_VALUES = ["light", "dark", "system"] as const;
+/** Supported resolved theme values applied to the DOM. */
 export const RESOLVED_THEME_VALUES = ["light", "dark"] as const;
 
 const TRANSITION_SUPPRESSION_CSS = "*,*::before,*::after{transition:none!important}";
 
+/** User-selectable theme preference, including system follow mode. */
 export type Theme = (typeof THEME_VALUES)[number];
+/** Concrete light or dark theme applied to the document. */
 export type ResolvedTheme = (typeof RESOLVED_THEME_VALUES)[number];
+/** DOM attribute updated when the resolved theme changes. */
 export type ThemeAttribute = "class" | `data-${string}`;
 
 function isResolvedTheme(value: string | null | undefined): value is ResolvedTheme {

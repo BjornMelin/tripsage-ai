@@ -100,6 +100,11 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
     }
   };
 
+  /** Starts OAuth sign-in and suppresses unhandled async click rejections. */
+  const startOAuth = (provider: "github" | "google") => {
+    handleOAuth(provider).catch(() => undefined);
+  };
+
   const registerError = registerState.status === "error" ? registerState.error : null;
   const fieldErrors =
     registerState.status === "error" ? registerState.fieldErrors : undefined;
@@ -268,7 +273,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("github")}
+            onClick={() => startOAuth("github")}
             disabled={oauthLoading || registerPending}
             aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-github"
@@ -280,7 +285,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("google")}
+            onClick={() => startOAuth("google")}
             disabled={oauthLoading || registerPending}
             aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-google"
