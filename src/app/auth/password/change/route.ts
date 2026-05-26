@@ -8,7 +8,7 @@ import { changePasswordPayloadSchema } from "@schemas/auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { type RouteContext, withApiGuards } from "@/lib/api/factory";
-import { parseJsonBody } from "@/lib/api/route-helpers";
+import { errorResponse, parseJsonBody } from "@/lib/api/route-helpers";
 import {
   getAuthErrorCode,
   getAuthErrorStatus,
@@ -23,10 +23,29 @@ interface ChangePasswordPayload {
   newPassword?: unknown;
 }
 
+interface PasswordChangeErrorOptions {
+  code: string;
+  message: string;
+  status: number;
+}
+
 // Password change payloads are tiny; keep a tight limit to reduce DoS surface.
 const MAX_BODY_BYTES = 4 * 1024;
 
 const logger = createServerLogger("auth.password.change");
+
+function passwordChangeErrorResponse({
+  code,
+  message,
+  status,
+}: PasswordChangeErrorOptions): NextResponse {
+  return errorResponse({
+    error: code.toLowerCase(),
+    extras: { code, message },
+    reason: message,
+    status,
+  });
+}
 
 async function handlePasswordChange(
   request: NextRequest,
@@ -35,15 +54,17 @@ async function handlePasswordChange(
   const parsedBody = await parseJsonBody(request, { maxBytes: MAX_BODY_BYTES });
   if (!parsedBody.ok) {
     if (parsedBody.error.status === 413) {
-      return NextResponse.json(
-        { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds limit" },
-        { status: 413 }
-      );
+      return passwordChangeErrorResponse({
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Request body exceeds limit",
+        status: 413,
+      });
     }
-    return NextResponse.json(
-      { code: "BAD_REQUEST", message: "Malformed JSON" },
-      { status: 400 }
-    );
+    return passwordChangeErrorResponse({
+      code: "BAD_REQUEST",
+      message: "Malformed JSON",
+      status: 400,
+    });
   }
 
   const payload: ChangePasswordPayload = isPlainObject(parsedBody.data)
@@ -57,19 +78,21 @@ async function handlePasswordChange(
 
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return NextResponse.json(
-      { code: "VALIDATION_ERROR", message: issue?.message ?? "Invalid input" },
-      { status: 400 }
-    );
+    return passwordChangeErrorResponse({
+      code: "VALIDATION_ERROR",
+      message: issue?.message ?? "Invalid input",
+      status: 400,
+    });
   }
 
   const email = user?.email;
 
   if (!email) {
-    return NextResponse.json(
-      { code: "EMAIL_REQUIRED", message: "User email is required to change password" },
-      { status: 400 }
-    );
+    return passwordChangeErrorResponse({
+      code: "EMAIL_REQUIRED",
+      message: "User email is required to change password",
+      status: 400,
+    });
   }
 
   // Verify current password by attempting a sign-in with the provided credentials.
@@ -79,13 +102,11 @@ async function handlePasswordChange(
   });
 
   if (isMfaRequiredError(signInError)) {
-    return NextResponse.json(
-      {
-        code: signInError.code ?? "mfa_required",
-        message: "Multi-factor authentication required",
-      },
-      { status: 403 }
-    );
+    return passwordChangeErrorResponse({
+      code: signInError.code ?? "mfa_required",
+      message: "Multi-factor authentication required",
+      status: 403,
+    });
   }
 
   if (signInError) {
@@ -107,19 +128,18 @@ async function handlePasswordChange(
         errorCode,
         status,
       });
-      return NextResponse.json(
-        {
-          code: "AUTH_UPSTREAM_ERROR",
-          message: "Password verification temporarily unavailable",
-        },
-        { status: 503 }
-      );
+      return passwordChangeErrorResponse({
+        code: "AUTH_UPSTREAM_ERROR",
+        message: "Password verification temporarily unavailable",
+        status: 503,
+      });
     }
 
-    return NextResponse.json(
-      { code: "INVALID_CREDENTIALS", message: "Current password is incorrect" },
-      { status: 400 }
-    );
+    return passwordChangeErrorResponse({
+      code: "INVALID_CREDENTIALS",
+      message: "Current password is incorrect",
+      status: 400,
+    });
   }
 
   const { error: updateError } = await supabase.auth.updateUser({
@@ -147,19 +167,18 @@ async function handlePasswordChange(
 
     // Distinguish upstream service errors from validation failures
     if (upstreamStatus >= 500 || upstreamStatus === 429) {
-      return NextResponse.json(
-        {
-          code: "AUTH_UPSTREAM_ERROR",
-          message: "Password update temporarily unavailable",
-        },
-        { status: 503 }
-      );
+      return passwordChangeErrorResponse({
+        code: "AUTH_UPSTREAM_ERROR",
+        message: "Password update temporarily unavailable",
+        status: 503,
+      });
     }
 
-    return NextResponse.json(
-      { code: "UPDATE_FAILED", message: "Password update failed" },
-      { status: 400 }
-    );
+    return passwordChangeErrorResponse({
+      code: "UPDATE_FAILED",
+      message: "Password update failed",
+      status: 400,
+    });
   }
 
   return NextResponse.json({ ok: true });

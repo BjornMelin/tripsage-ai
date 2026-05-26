@@ -4,11 +4,10 @@
 
 "use client";
 
-import { CURRENCY_CODE_SCHEMA } from "@schemas/currency";
 import { type PreferencesFormData, preferencesFormSchema } from "@schemas/profile";
+import { CURRENCY_CODE_SCHEMA } from "@schemas/shared/money";
 import { GlobeIcon, ZapIcon } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -36,6 +36,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/features/auth/store/auth/auth-core";
 import { useCurrencyStore } from "@/features/shared/store/currency-store";
+import { useTheme } from "@/hooks/use-theme";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
 import { getBrowserClient } from "@/lib/supabase";
@@ -45,6 +46,43 @@ type AdditionalSettingKey =
   | "autoSaveSearches"
   | "locationServices"
   | "smartSuggestions";
+
+const ADDITIONAL_SETTING_OPTIONS = [
+  {
+    description: "Automatically save your search history for quick access.",
+    descriptionId: "auto-save-searches-description",
+    key: "autoSaveSearches",
+    label: "Auto-save Searches",
+    labelId: "auto-save-searches-label",
+  },
+  {
+    description: "Get AI-powered travel suggestions based on your preferences.",
+    descriptionId: "smart-suggestions-description",
+    key: "smartSuggestions",
+    label: "Smart Suggestions",
+    labelId: "smart-suggestions-label",
+  },
+  {
+    description: "Allow location access for nearby recommendations.",
+    descriptionId: "location-services-description",
+    key: "locationServices",
+    label: "Location Services",
+    labelId: "location-services-label",
+  },
+  {
+    description: "Help us improve by sharing anonymous usage data.",
+    descriptionId: "analytics-description",
+    key: "analytics",
+    label: "Analytics",
+    labelId: "analytics-label",
+  },
+] as const satisfies readonly {
+  description: string;
+  descriptionId: string;
+  key: AdditionalSettingKey;
+  label: string;
+  labelId: string;
+}[];
 
 /**
  * Preferences section component.
@@ -96,11 +134,17 @@ export function PreferencesSection() {
     mode: "onChange",
     schema: preferencesFormSchema,
   });
+  const resetForm = form.reset;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: form instance is stable from useZodForm
+  const didMountRef = useRef(false);
+
   useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues]);
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    resetForm(defaultValues);
+  }, [defaultValues, resetForm]);
 
   useEffect(() => {
     setAdditionalSettings(initialAdditionalSettings);
@@ -172,6 +216,10 @@ export function PreferencesSection() {
     setting: AdditionalSettingKey,
     enabled: boolean
   ) => {
+    const settingLabel =
+      ADDITIONAL_SETTING_OPTIONS.find((option) => option.key === setting)?.label ??
+      setting;
+
     setAdditionalSettings((prev) => ({ ...prev, [setting]: enabled }));
 
     try {
@@ -206,7 +254,7 @@ export function PreferencesSection() {
       });
 
       toast({
-        description: `${setting} ${enabled ? "enabled" : "disabled"}.`,
+        description: `${settingLabel} ${enabled ? "enabled" : "disabled"}.`,
         title: "Setting updated",
       });
     } catch (error) {
@@ -465,65 +513,34 @@ export function PreferencesSection() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">Auto-save Searches</div>
-              <div className="text-sm text-muted-foreground">
-                Automatically save your search history for quick access.
-              </div>
-            </div>
-            <Switch
-              checked={additionalSettings.autoSaveSearches}
-              onCheckedChange={(enabled) =>
-                toggleAdditionalSetting("autoSaveSearches", enabled)
-              }
-            />
-          </div>
+          {ADDITIONAL_SETTING_OPTIONS.map(
+            ({ description, descriptionId, key, label, labelId }) => {
+              const switchId = `${key}-switch`;
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">Smart Suggestions</div>
-              <div className="text-sm text-muted-foreground">
-                Get AI-powered travel suggestions based on your preferences.
-              </div>
-            </div>
-            <Switch
-              checked={additionalSettings.smartSuggestions}
-              onCheckedChange={(enabled) =>
-                toggleAdditionalSetting("smartSuggestions", enabled)
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">Location Services</div>
-              <div className="text-sm text-muted-foreground">
-                Allow location access for nearby recommendations.
-              </div>
-            </div>
-            <Switch
-              checked={additionalSettings.locationServices}
-              onCheckedChange={(enabled) =>
-                toggleAdditionalSetting("locationServices", enabled)
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">Analytics</div>
-              <div className="text-sm text-muted-foreground">
-                Help us improve by sharing anonymous usage data.
-              </div>
-            </div>
-            <Switch
-              checked={additionalSettings.analytics}
-              onCheckedChange={(enabled) =>
-                toggleAdditionalSetting("analytics", enabled)
-              }
-            />
-          </div>
+              return (
+                <div className="flex items-center justify-between gap-4" key={key}>
+                  <div className="flex flex-1 flex-col gap-0.5">
+                    <Label
+                      htmlFor={switchId}
+                      className="cursor-pointer text-sm font-medium"
+                      id={labelId}
+                    >
+                      {label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground" id={descriptionId}>
+                      {description}
+                    </p>
+                  </div>
+                  <Switch
+                    id={switchId}
+                    aria-describedby={descriptionId}
+                    checked={additionalSettings[key]}
+                    onCheckedChange={(enabled) => toggleAdditionalSetting(key, enabled)}
+                  />
+                </div>
+              );
+            }
+          )}
         </CardContent>
       </Card>
     </div>

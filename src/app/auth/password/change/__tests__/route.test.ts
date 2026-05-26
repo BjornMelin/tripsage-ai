@@ -46,7 +46,25 @@ describe("/auth/password/change route", () => {
     expect(res.status).toBe(413);
     await expect(res.json()).resolves.toEqual({
       code: "PAYLOAD_TOO_LARGE",
+      error: "payload_too_large",
       message: "Request body exceeds limit",
+      reason: "Request body exceeds limit",
+    });
+  });
+
+  it("returns a standardized validation error for invalid password input", async () => {
+    const req = makeJsonRequest("/auth/password/change", {
+      currentPassword: "short",
+      newPassword: "short",
+    });
+
+    const res = await POST(req, createRouteParamsContext());
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({
+      code: "VALIDATION_ERROR",
+      error: "validation_error",
+      message: expect.any(String),
+      reason: expect.any(String),
     });
   });
 
@@ -73,7 +91,12 @@ describe("/auth/password/change route", () => {
 
     const res = await POST(req, createRouteParamsContext());
     expect(res.status).toBe(403);
-    await expect(res.json()).resolves.toMatchObject({ code: "mfa_required" });
+    await expect(res.json()).resolves.toMatchObject({
+      code: "mfa_required",
+      error: "mfa_required",
+      message: "Multi-factor authentication required",
+      reason: "Multi-factor authentication required",
+    });
   });
 
   it("returns ok:true when password is changed successfully with the store payload", async () => {

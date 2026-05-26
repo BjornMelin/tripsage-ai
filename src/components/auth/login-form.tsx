@@ -5,7 +5,7 @@
 "use client";
 
 import { Loader2Icon, MailIcon } from "lucide-react";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useId, useMemo, useState } from "react";
 import { GitHubMarkIcon, GoogleGIcon } from "@/components/icons/oauth-provider-icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +52,9 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const [mfaCode, setMfaCode] = useState("");
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const loginDescriptionId = useId();
+  const passwordErrorId = useId();
+  const oauthErrorId = useId();
   const nextPath = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
   const targetUrl = useMemo(
     () => resolveRedirectUrl(redirectTo, { absolute: true }),
@@ -62,14 +65,24 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const handleOAuth = async (provider: "github" | "google") => {
     setOauthError(null);
     setOauthLoading(true);
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      options: { redirectTo: targetUrl },
-      provider,
-    });
-    setOauthLoading(false);
-    if (oauthError) {
-      setOauthError(oauthError.message);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        options: { redirectTo: targetUrl },
+        provider,
+      });
+      if (oauthError) {
+        setOauthError(oauthError.message);
+      }
+    } catch {
+      setOauthError("OAuth failed. Please try again.");
+    } finally {
+      setOauthLoading(false);
     }
+  };
+
+  /** Starts OAuth sign-in and suppresses unhandled async click rejections. */
+  const startOAuth = (provider: "github" | "google") => {
+    handleOAuth(provider).catch(() => undefined);
   };
 
   const passwordError = loginState.status === "error" ? loginState.error : null;
@@ -80,12 +93,17 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
       : null;
   const mfaNextPath =
     loginState.status === "mfa_required" ? loginState.nextPath : nextPath;
+  const credentialFieldDescription = passwordError
+    ? `${loginDescriptionId} ${passwordErrorId}`
+    : loginDescriptionId;
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
-        <CardDescription>Access your TripSage dashboard</CardDescription>
+        <CardDescription id={loginDescriptionId}>
+          Access your TripSage dashboard
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form className="space-y-4" action={loginAction}>
@@ -100,6 +118,8 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
               spellCheck={false}
               required
               value={email}
+              aria-describedby={credentialFieldDescription}
+              aria-invalid={passwordError ? true : undefined}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
@@ -112,13 +132,21 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
               autoComplete="current-password"
               required
               value={password}
+              aria-describedby={credentialFieldDescription}
+              aria-invalid={passwordError ? true : undefined}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           {passwordError ? (
-            <p className="text-sm text-destructive">{passwordError}</p>
+            <p id={passwordErrorId} role="alert" className="text-sm text-destructive">
+              {passwordError}
+            </p>
           ) : null}
-          {oauthError ? <p className="text-sm text-destructive">{oauthError}</p> : null}
+          {oauthError ? (
+            <p id={oauthErrorId} role="alert" className="text-sm text-destructive">
+              {oauthError}
+            </p>
+          ) : null}
           <Button
             type="submit"
             className="w-full"
@@ -176,20 +204,24 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
         ) : null}
         <div className="grid grid-cols-1 gap-2">
           <Button
+            type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("github")}
+            onClick={() => startOAuth("github")}
             disabled={oauthLoading || loginPending || mfaPending || !!mfaStep}
+            aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-github"
           >
             <GitHubMarkIcon aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
             GitHub
           </Button>
           <Button
+            type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("google")}
+            onClick={() => startOAuth("google")}
             disabled={oauthLoading || loginPending || mfaPending || !!mfaStep}
+            aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-google"
           >
             <GoogleGIcon aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with

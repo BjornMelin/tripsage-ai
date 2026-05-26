@@ -6,7 +6,7 @@
 
 import { Loader2Icon, MailIcon } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useId, useMemo, useState } from "react";
 import { GitHubMarkIcon, GoogleGIcon } from "@/components/icons/oauth-provider-icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,21 @@ type RegisterFormProps = {
   redirectTo?: string;
 };
 
+type FieldErrorProps = {
+  id: string;
+  message?: string;
+};
+
+function FieldError({ id, message }: FieldErrorProps) {
+  if (!message) return null;
+
+  return (
+    <p id={id} role="alert" className="text-sm text-destructive">
+      {message}
+    </p>
+  );
+}
+
 /**
  * The register form component.
  *
@@ -51,6 +66,15 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const registerDescriptionId = useId();
+  const registerErrorId = useId();
+  const oauthErrorId = useId();
+  const firstNameErrorId = useId();
+  const lastNameErrorId = useId();
+  const emailErrorId = useId();
+  const passwordErrorId = useId();
+  const confirmPasswordErrorId = useId();
+  const acceptTermsErrorId = useId();
   const nextPath = useMemo(() => resolveRedirectUrl(redirectTo), [redirectTo]);
   const targetUrl = useMemo(
     () => resolveRedirectUrl(redirectTo, { absolute: true }),
@@ -76,13 +100,31 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
     }
   };
 
+  /** Starts OAuth sign-in and suppresses unhandled async click rejections. */
+  const startOAuth = (provider: "github" | "google") => {
+    handleOAuth(provider).catch(() => undefined);
+  };
+
   const registerError = registerState.status === "error" ? registerState.error : null;
+  const fieldErrors =
+    registerState.status === "error" ? registerState.fieldErrors : undefined;
+  const firstNameError = fieldErrors?.firstName?.[0];
+  const lastNameError = fieldErrors?.lastName?.[0];
+  const emailError = fieldErrors?.email?.[0];
+  const passwordError = fieldErrors?.password?.[0];
+  const confirmPasswordError = fieldErrors?.confirmPassword?.[0];
+  const acceptTermsError = fieldErrors?.acceptTerms?.[0];
+
+  const getFieldDescription = (errorId: string, hasError: boolean) =>
+    hasError ? `${registerDescriptionId} ${errorId}` : registerDescriptionId;
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Create account</CardTitle>
-        <CardDescription>Join TripSage to start planning</CardDescription>
+        <CardDescription id={registerDescriptionId}>
+          Join TripSage to start planning
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form className="space-y-4" action={registerAction}>
@@ -98,8 +140,14 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
                 autoComplete="given-name"
                 required
                 value={firstName}
+                aria-describedby={getFieldDescription(
+                  firstNameErrorId,
+                  Boolean(firstNameError)
+                )}
+                aria-invalid={firstNameError ? true : undefined}
                 onChange={(e) => setFirstName(e.target.value)}
               />
+              <FieldError id={firstNameErrorId} message={firstNameError} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last name</Label>
@@ -110,8 +158,14 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
                 autoComplete="family-name"
                 required
                 value={lastName}
+                aria-describedby={getFieldDescription(
+                  lastNameErrorId,
+                  Boolean(lastNameError)
+                )}
+                aria-invalid={lastNameError ? true : undefined}
                 onChange={(e) => setLastName(e.target.value)}
               />
+              <FieldError id={lastNameErrorId} message={lastNameError} />
             </div>
           </div>
           <div className="space-y-2">
@@ -124,8 +178,11 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               spellCheck={false}
               required
               value={email}
+              aria-describedby={getFieldDescription(emailErrorId, Boolean(emailError))}
+              aria-invalid={emailError ? true : undefined}
               onChange={(e) => setEmail(e.target.value)}
             />
+            <FieldError id={emailErrorId} message={emailError} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -136,8 +193,14 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               autoComplete="new-password"
               required
               value={password}
+              aria-describedby={getFieldDescription(
+                passwordErrorId,
+                Boolean(passwordError)
+              )}
+              aria-invalid={passwordError ? true : undefined}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <FieldError id={passwordErrorId} message={passwordError} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm-password">Confirm password</Label>
@@ -148,13 +211,21 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               autoComplete="new-password"
               required
               value={confirmPassword}
+              aria-describedby={getFieldDescription(
+                confirmPasswordErrorId,
+                Boolean(confirmPasswordError)
+              )}
+              aria-invalid={confirmPasswordError ? true : undefined}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
+            <FieldError id={confirmPasswordErrorId} message={confirmPasswordError} />
           </div>
           <div className="flex items-start space-x-2">
             <Checkbox
               id="acceptTerms"
               checked={acceptTerms}
+              aria-describedby={acceptTermsError ? acceptTermsErrorId : undefined}
+              aria-invalid={acceptTermsError ? true : undefined}
               onCheckedChange={(checked) => setAcceptTerms(checked === true)}
             />
             <Label htmlFor="acceptTerms" className="text-sm leading-tight">
@@ -171,14 +242,22 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
               </Link>
             </Label>
           </div>
+          <FieldError id={acceptTermsErrorId} message={acceptTermsError} />
           {registerError ? (
-            <p className="text-sm text-destructive">{registerError}</p>
+            <p id={registerErrorId} role="alert" className="text-sm text-destructive">
+              {registerError}
+            </p>
           ) : null}
-          {oauthError ? <p className="text-sm text-destructive">{oauthError}</p> : null}
+          {oauthError ? (
+            <p id={oauthErrorId} role="alert" className="text-sm text-destructive">
+              {oauthError}
+            </p>
+          ) : null}
           <Button
             type="submit"
             className="w-full"
             disabled={oauthLoading || registerPending}
+            aria-describedby={registerError ? registerErrorId : undefined}
             data-testid="password-signup"
           >
             {registerPending ? (
@@ -191,20 +270,24 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
         </form>
         <div className="grid grid-cols-1 gap-2">
           <Button
+            type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("github")}
+            onClick={() => startOAuth("github")}
             disabled={oauthLoading || registerPending}
+            aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-github"
           >
             <GitHubMarkIcon aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with
             GitHub
           </Button>
           <Button
+            type="button"
             variant="outline"
             className="w-full"
-            onClick={() => handleOAuth("google")}
+            onClick={() => startOAuth("google")}
             disabled={oauthLoading || registerPending}
+            aria-describedby={oauthError ? oauthErrorId : undefined}
             data-testid="oauth-google"
           >
             <GoogleGIcon aria-hidden="true" className="mr-2 h-4 w-4" /> Continue with

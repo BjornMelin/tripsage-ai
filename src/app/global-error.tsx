@@ -4,9 +4,7 @@
 
 "use client";
 
-import { useEffect } from "react";
-import { MinimalErrorFallback } from "@/components/error/error-fallback";
-import { reportRouteErrorBoundaryError } from "@/lib/telemetry/route-error-boundary";
+import { GlobalErrorContent } from "@/components/error/global-error-content";
 
 /**
  * Global error boundary for the app.
@@ -20,16 +18,10 @@ export default function GlobalError({
   error: unknown;
   reset: () => void;
 }) {
-  useEffect(() => {
-    reportRouteErrorBoundaryError(error, {
-      context: "GlobalErrorBoundary",
-    });
-  }, [error]);
-
   return (
     <html lang="en">
       <body>
-        <MinimalErrorFallback error={error} reset={reset} />
+        <GlobalErrorContent error={error} reset={reset} />
       </body>
     </html>
   );

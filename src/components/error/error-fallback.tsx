@@ -6,6 +6,7 @@
 
 import type { ErrorFallbackProps } from "@schemas/errors";
 import { AlertTriangleIcon, BugIcon, HomeIcon, RefreshCwIcon } from "lucide-react";
+import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { normalizeThrownError } from "@/lib/client/normalize-thrown-error";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Default error fallback component for error boundaries.
@@ -29,14 +31,6 @@ export function ErrorFallback({
 }: ErrorFallbackProps) {
   const isDev = process.env.NODE_ENV === "development";
   const normalized = normalizeThrownError(error);
-
-  const handleGoHome = () => {
-    if (onGoHome) {
-      onGoHome();
-      return;
-    }
-    window.location.href = "/";
-  };
 
   const handleReload = () => {
     if (onReload) {
@@ -102,10 +96,19 @@ export function ErrorFallback({
             <Button onClick={handleReload} variant="secondary" className="flex-1">
               Reload Page
             </Button>
-            <Button onClick={handleGoHome} variant="ghost" className="flex-1">
-              <HomeIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-              Go Home
-            </Button>
+            {onGoHome ? (
+              <Button onClick={onGoHome} variant="ghost" className="flex-1">
+                <HomeIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                Go Home
+              </Button>
+            ) : (
+              <Button asChild variant="ghost" className="flex-1">
+                <Link href={ROUTES.home}>
+                  <HomeIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+                  Go Home
+                </Link>
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -144,13 +147,6 @@ export function MinimalErrorFallback({ error: _error, reset }: ErrorFallbackProp
  */
 export function PageErrorFallback({ error, onGoHome, reset }: ErrorFallbackProps) {
   const normalized = normalizeThrownError(error);
-  const handleGoHome = () => {
-    if (onGoHome) {
-      onGoHome();
-      return;
-    }
-    window.location.href = "/";
-  };
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -171,10 +167,19 @@ export function PageErrorFallback({ error, onGoHome, reset }: ErrorFallbackProps
               Try Again
             </Button>
           )}
-          <Button onClick={handleGoHome} variant="outline" size="lg">
-            <HomeIcon aria-hidden="true" className="mr-2 h-5 w-5" />
-            Go to Dashboard
-          </Button>
+          {onGoHome ? (
+            <Button onClick={onGoHome} variant="outline" size="lg">
+              <HomeIcon aria-hidden="true" className="mr-2 h-5 w-5" />
+              Go to Dashboard
+            </Button>
+          ) : (
+            <Button asChild variant="outline" size="lg">
+              <Link href={ROUTES.dashboard.root}>
+                <HomeIcon aria-hidden="true" className="mr-2 h-5 w-5" />
+                Go to Dashboard
+              </Link>
+            </Button>
+          )}
         </div>
 
         {process.env.NODE_ENV === "development" && normalized.stack && (
