@@ -5,6 +5,7 @@
 import "server-only";
 
 import type { HttpMethod } from "@schemas/supabase";
+import { todayUtcIsoDate } from "@/lib/dates/unified-date-utils";
 import { getRedis, incrCounter } from "@/lib/redis";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -54,7 +55,7 @@ export async function recordApiMetric(metric: ApiMetric): Promise<void> {
       },
     },
     async (span) => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayUtcIsoDate();
       const counterKey = `metrics:requests:${today}`;
       const errorCounterKey = `metrics:errors:${today}`;
 

@@ -52,6 +52,7 @@ type PaginatedResponse = z.infer<typeof PAGINATED_RESPONSE_SCHEMA>;
 
 /** Dedicated API client instance for testing with absolute base URL. */
 const CLIENT = new ApiClient({ baseUrl: "http://localhost" });
+const FIXED_NOW_ISO = "2026-01-15T12:00:00.000Z";
 
 describe("API client with Zod Validation", () => {
   beforeEach(() => {
@@ -60,9 +61,8 @@ describe("API client with Zod Validation", () => {
 
   it("normalizes baseUrl without duplicating /api segments", () => {
     const client = new ApiClient({ baseUrl: "/api" });
-    // @ts-expect-error – accessing private for test verification
-    const baseUrl: string = client.config.baseUrl;
-    expect(baseUrl).toBe("http://localhost:3000/api/");
+    const clientInternals = unsafeCast<{ config: { baseUrl: string } }>(client);
+    expect(clientInternals.config.baseUrl).toBe("http://localhost:3000/api/");
   });
 
   describe("Request Validation", () => {
@@ -127,6 +127,35 @@ describe("API client with Zod Validation", () => {
       // Should not make HTTP request with invalid data - verify no handler was called
       // (MSW will warn if unhandled request, but validation happens before HTTP call)
     });
+
+    it(
+      "uses the shared timestamp helper for request validation errors",
+      withFakeTimers(async () => {
+        vi.setSystemTime(new Date(FIXED_NOW_ISO));
+        const invalidUserData = {
+          age: 15,
+          email: "invalid-email",
+          name: "",
+        };
+
+        await expect(
+          CLIENT.postValidated<UserCreateRequest, UserResponse>(
+            "/api/users",
+            invalidUserData,
+            USER_CREATE_REQUEST_SCHEMA,
+            USER_RESPONSE_SCHEMA
+          )
+        ).rejects.toMatchObject({
+          validationErrors: {
+            errors: expect.arrayContaining([
+              expect.objectContaining({
+                timestamp: new Date(FIXED_NOW_ISO),
+              }),
+            ]),
+          },
+        });
+      })
+    );
 
     it("handles nested validation errors", async () => {
       const invalidUserData = {
@@ -201,6 +230,42 @@ describe("API client with Zod Validation", () => {
         CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA)
       ).rejects.toThrow();
     });
+
+    it(
+      "uses the shared timestamp helper for response validation errors",
+      withFakeTimers(async () => {
+        vi.setSystemTime(new Date(FIXED_NOW_ISO));
+        const invalidResponse = {
+          age: -5,
+          createdAt: "invalid-date",
+          email: "invalid-email",
+          id: "invalid-uuid",
+          isActive: "yes",
+          name: "",
+          updatedAt: "invalid-date",
+        };
+
+        server.use(
+          http.get("http://localhost/api/users/123", () =>
+            HttpResponse.json(invalidResponse, {
+              headers: { "content-type": "application/json" },
+            })
+          )
+        );
+
+        await expect(
+          CLIENT.getValidated("/api/users/123", USER_RESPONSE_SCHEMA)
+        ).rejects.toMatchObject({
+          validationErrors: {
+            errors: expect.arrayContaining([
+              expect.objectContaining({
+                timestamp: new Date(FIXED_NOW_ISO),
+              }),
+            ]),
+          },
+        });
+      })
+    );
 
     it("validates complex nested response structures", async () => {
       const validPaginatedResponse: PaginatedResponse = {
@@ -304,7 +369,7 @@ describe("API client with Zod Validation", () => {
       withFakeTimers(async () => {
         server.use(
           http.get("http://localhost/api/users", () => {
-            throw new Error("Network error");
+            return HttpResponse.error();
           })
         );
 
@@ -324,7 +389,26 @@ describe("API client with Zod Validation", () => {
 
         await vi.advanceTimersByTimeAsync(2000);
 
-        await expect(pendingRequest).rejects.toThrow("Network error");
+        await expect(pendingRequest).rejects.toThrow("Failed to fetch");
+      })
+    );
+
+    it(
+      "clears request timeout timers when fetch fails before the timeout",
+      withFakeTimers(async () => {
+        server.use(http.get("http://localhost/api/users", () => HttpResponse.error()));
+
+        const fastClient = new ApiClient({
+          baseUrl: "http://localhost",
+          retries: 0,
+          timeout: 1_000,
+        });
+
+        await expect(
+          fastClient.getValidated("/api/users", USER_RESPONSE_SCHEMA)
+        ).rejects.toThrow("Failed to fetch");
+
+        expect(vi.getTimerCount()).toBe(0);
       })
     );
   });

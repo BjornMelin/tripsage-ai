@@ -114,12 +114,12 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
-  let lastCall = 0;
+  let lastCall: number | null = null;
 
   return (...args: Parameters<T>) => {
-    const now = Date.now();
+    const now = performance.now();
 
-    if (now - lastCall < delay) {
+    if (lastCall !== null && now - lastCall < delay) {
       return;
     }
 

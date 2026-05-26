@@ -245,10 +245,11 @@ describe("Supabase Factory", () => {
         }
       );
 
-      // @ts-expect-error - runtime should guard against missing cookie adapter
-      createServerSupabaseClient({
-        enableTracing: false,
-      });
+      createServerSupabaseClient(
+        unsafeCast<Parameters<typeof createServerSupabaseClient>[0]>({
+          enableTracing: false,
+        })
+      );
     });
   });
 

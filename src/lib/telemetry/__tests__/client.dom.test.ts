@@ -47,6 +47,31 @@ const FETCH_INSTRUMENTATION = vi.hoisted(() => {
   return vi.fn(FetchInstrumentation);
 });
 const REGISTER_INSTRUMENTATIONS = vi.hoisted(() => vi.fn());
+const ORIGINAL_WINDOW_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  globalThis,
+  "window"
+);
+const ORIGINAL_ZONE_DESCRIPTOR = Object.getOwnPropertyDescriptor(globalThis, "Zone");
+
+function setGlobalPropertyForTest(key: "window" | "Zone", value: unknown): void {
+  Object.defineProperty(globalThis, key, {
+    configurable: true,
+    value,
+    writable: true,
+  });
+}
+
+function restoreGlobalPropertyForTest(
+  key: "window" | "Zone",
+  descriptor: PropertyDescriptor | undefined
+): void {
+  if (descriptor) {
+    Object.defineProperty(globalThis, key, descriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(globalThis, key);
+}
 
 // Mock OpenTelemetry modules
 vi.mock("@opentelemetry/sdk-trace-web", () => ({
@@ -102,9 +127,8 @@ describe("initTelemetry", () => {
     vi.restoreAllMocks();
     // Reset module cache to clear singleton state between tests
     vi.resetModules();
-
-    // @ts-expect-error - test-only cleanup for zone.js globals
-    globalThis.Zone = undefined;
+    restoreGlobalPropertyForTest("window", ORIGINAL_WINDOW_DESCRIPTOR);
+    restoreGlobalPropertyForTest("Zone", ORIGINAL_ZONE_DESCRIPTOR);
   });
 
   async function waitForInit(expectedExporterCalls = 1) {
@@ -125,19 +149,17 @@ describe("initTelemetry", () => {
 
     // First call initializes successfully in a browser-like environment
     // Provide Zone to exercise ZoneContextManager branch.
-    // @ts-expect-error - Zone is added by zone.js at runtime
-    globalThis.Zone = {};
+    setGlobalPropertyForTest("Zone", {});
     initTelemetry();
     await waitForInit(1);
 
     // Second call should be a no-op even if window is missing
     const originalWindow = globalThis.window;
-    // @ts-expect-error - intentionally setting window to undefined for test
-    globalThis.window = undefined;
+    setGlobalPropertyForTest("window", undefined);
 
     expect(() => initTelemetry()).not.toThrow();
 
-    globalThis.window = originalWindow;
+    setGlobalPropertyForTest("window", originalWindow);
 
     expect(OTLP_TRACE_EXPORTER).toHaveBeenCalledTimes(1);
   });
@@ -146,12 +168,11 @@ describe("initTelemetry", () => {
     const { initTelemetry } = await import("../client");
 
     const originalWindow = globalThis.window;
-    // @ts-expect-error - intentionally setting window to undefined for test
-    globalThis.window = undefined;
+    setGlobalPropertyForTest("window", undefined);
 
     expect(() => initTelemetry()).not.toThrow();
 
-    globalThis.window = originalWindow;
+    setGlobalPropertyForTest("window", originalWindow);
 
     expect(OTLP_TRACE_EXPORTER).not.toHaveBeenCalled();
     expect(WEB_TRACER_PROVIDER).not.toHaveBeenCalled();

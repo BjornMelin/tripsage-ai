@@ -9,6 +9,7 @@ import type { CalendarEvent } from "@schemas/calendar";
 import ical, { ICalAlarmType, ICalAttendeeStatus } from "ical-generator";
 import { RecurringDateGenerator } from "@/lib/dates/recurring-rules";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
+import { nowIso } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 /** Logger for ICS generation operations. */
@@ -22,6 +23,8 @@ export interface GenerateIcsOptions {
   calendarName: string;
   /** Events to include in the calendar. */
   events: CalendarEvent[];
+  /** Fallback start date for events missing start data. Defaults to now. */
+  fallbackStartDate?: Date;
   /** Timezone for the calendar (defaults to UTC). */
   timezone?: string;
 }
@@ -89,7 +92,7 @@ function reminderMethodToIcal(method: string): ICalAlarmType {
  * ```
  */
 export function generateIcsFromEvents(options: GenerateIcsOptions): GenerateIcsResult {
-  const { calendarName, events, timezone = "UTC" } = options;
+  const { calendarName, events, fallbackStartDate, timezone = "UTC" } = options;
 
   // Create calendar
   const calendar = ical({
@@ -105,11 +108,11 @@ export function generateIcsFromEvents(options: GenerateIcsOptions): GenerateIcsR
     } else if (event.start.date) {
       startDate = DateUtils.parse(event.start.date);
     } else {
-      logger.warn("Event missing start date, using current time", {
+      logger.warn("Event missing start date, using fallback start date", {
         eventId: event.id,
         eventSummary: event.summary,
       });
-      startDate = new Date();
+      startDate = fallbackStartDate ?? DateUtils.parse(nowIso());
     }
 
     const endDate =

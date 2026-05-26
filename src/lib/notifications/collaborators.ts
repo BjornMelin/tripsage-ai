@@ -118,16 +118,20 @@ export async function sendCollaboratorNotifications(
         try {
           const controller = new AbortController();
           const id = setTimeout(() => controller.abort(), 1500);
-          const resp = await fetch(downstreamUrl, {
-            body: JSON.stringify({ event, eventKey }),
-            headers: {
-              "content-type": "application/json",
-              "x-event-key": eventKey,
-            },
-            method: "POST",
-            signal: controller.signal,
-          });
-          clearTimeout(id);
+          let resp: Response;
+          try {
+            resp = await fetch(downstreamUrl, {
+              body: JSON.stringify({ event, eventKey }),
+              headers: {
+                "content-type": "application/json",
+                "x-event-key": eventKey,
+              },
+              method: "POST",
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(id);
+          }
           if (resp.ok) webhookPosted = true;
         } catch (err) {
           span.recordException(err as Error);

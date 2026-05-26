@@ -20,7 +20,7 @@ interface TiktokenWithFree extends Tiktoken {
 export type { ClampResult };
 export type ChatMessage = TokenChatMessage;
 
-/** Heuristic fallback ratio: ~4 characters per token (UNVERIFIED for non-OpenAI). */
+/** Approximate fallback ratio for models without first-party JS tokenizers; see ADR-027. */
 export const CHARS_PER_TOKEN_HEURISTIC = 4;
 
 /** Cache for tokenizer instances to avoid repeated WASM instantiation. */

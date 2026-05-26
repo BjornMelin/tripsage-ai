@@ -14,6 +14,7 @@ const mockSpan = vi.hoisted(() => ({
 
 const GET_ENV_FALLBACK = vi.hoisted(() => vi.fn());
 const GET_REQUIRED_SERVER_ORIGIN = vi.hoisted(() => vi.fn(() => "https://example.com"));
+const RECORD_TELEMETRY_EVENT = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/env/server", () => ({
   getServerEnvVarWithFallback: (...args: unknown[]) => GET_ENV_FALLBACK(...args),
@@ -27,7 +28,7 @@ vi.mock("@/lib/telemetry/span", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/telemetry/span")>();
   return {
     ...actual,
-    recordTelemetryEvent: vi.fn(),
+    recordTelemetryEvent: RECORD_TELEMETRY_EVENT,
     withTelemetrySpan: vi.fn((_name: string, _opts: unknown, execute: unknown) =>
       (execute as (span: unknown) => unknown)(mockSpan)
     ),
@@ -47,6 +48,7 @@ describe("enqueueJob", () => {
     setQStashClientFactoryForTests(null);
     GET_ENV_FALLBACK.mockReset();
     GET_REQUIRED_SERVER_ORIGIN.mockReset();
+    RECORD_TELEMETRY_EVENT.mockReset();
     mockSpan.setAttribute.mockReset();
   });
 
@@ -77,6 +79,28 @@ describe("enqueueJob", () => {
     expect(messages[0]?.redact).toEqual({ body: true });
     expect(messages[0]?.timeout).toBe(30);
     expect(result?.messageId).toBe("qstash-mock-1");
+  });
+
+  it("records a scheduled telemetry event after successful publish", async () => {
+    const { enqueueJob, setQStashClientFactoryForTests } = await import(
+      "@/lib/qstash/client"
+    );
+    setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
+
+    const result = await enqueueJob("test-job", { ok: true }, "/api/jobs/test", {
+      deduplicationId: "test-job:telemetry",
+      label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+    });
+
+    expect(result?.messageId).toBe("qstash-mock-1");
+    expect(RECORD_TELEMETRY_EVENT).toHaveBeenCalledWith("qstash.enqueue.scheduled", {
+      attributes: {
+        jobType: "test-job",
+        label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+        messageId: "qstash-mock-1",
+        path: "/api/jobs/test",
+      },
+    });
   });
 
   it("records telemetry attributes for label, flow control, and failure callback", async () => {

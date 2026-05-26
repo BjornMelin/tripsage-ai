@@ -5,6 +5,7 @@
 import "server-only";
 
 import { retryWithBackoff } from "@/lib/http/retry";
+import { nowIso } from "@/lib/security/random";
 import { GooglePlacesPhotoError } from "./errors";
 
 // === Coordinate Validation ===
@@ -358,7 +359,7 @@ export async function getTimezone(params: TimezoneParams): Promise<Response> {
   url.searchParams.set("location", `${params.lat},${params.lng}`);
   url.searchParams.set(
     "timestamp",
-    String(params.timestamp ?? Math.floor(Date.now() / 1000))
+    String(params.timestamp ?? getCurrentUnixTimestampSeconds())
   );
   url.searchParams.set("key", params.apiKey);
 
@@ -367,6 +368,10 @@ export async function getTimezone(params: TimezoneParams): Promise<Response> {
     baseDelayMs: 200,
     maxDelayMs: 1_000,
   });
+}
+
+function getCurrentUnixTimestampSeconds(): number {
+  return Math.floor(Date.parse(nowIso()) / 1000);
 }
 
 // === Places Photo API ===

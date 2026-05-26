@@ -2,12 +2,16 @@
  * @fileoverview Helpers for attaching standard rate limit response headers.
  */
 
+import { nowIso } from "@/lib/security/random";
+
 export type RateLimitHeaderMeta = {
   limit?: number;
   remaining?: number;
   reset?: number;
   success?: boolean;
 };
+
+const MS_PER_SECOND = 1000;
 
 /**
  * Normalize a Unix timestamp to milliseconds.
@@ -24,11 +28,15 @@ export function normalizeRateLimitResetToMs(reset: number): number {
   return reset;
 }
 
+function getCurrentEpochMs(currentIso = nowIso()): number {
+  return Date.parse(currentIso);
+}
+
 export function computeRetryAfterSeconds(
   resetMs: number,
-  nowMs: number = Date.now()
+  nowMs: number = getCurrentEpochMs()
 ): number {
-  return Math.max(0, Math.ceil((resetMs - nowMs) / 1000));
+  return Math.max(0, Math.ceil((resetMs - nowMs) / MS_PER_SECOND));
 }
 
 /**
@@ -51,9 +59,7 @@ export function createRateLimitHeaders(
   if (resetMs !== undefined) headers["X-RateLimit-Reset"] = String(resetMs);
 
   if (meta.success === false && resetMs !== undefined) {
-    headers["Retry-After"] = String(
-      computeRetryAfterSeconds(resetMs, options?.nowMs ?? Date.now())
-    );
+    headers["Retry-After"] = String(computeRetryAfterSeconds(resetMs, options?.nowMs));
   }
 
   return headers;

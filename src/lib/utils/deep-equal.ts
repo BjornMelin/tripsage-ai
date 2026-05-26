@@ -30,8 +30,7 @@ export interface DeepEqualJsonLikeOptions {
   slowThresholdMs?: number;
 }
 
-const defaultNowMs = (): number =>
-  typeof performance === "undefined" ? Date.now() : performance.now();
+const defaultNowMs = (): number => globalThis.performance?.now() ?? 0;
 
 const sizeOf = (value: unknown): number => {
   if (Array.isArray(value)) return value.length;

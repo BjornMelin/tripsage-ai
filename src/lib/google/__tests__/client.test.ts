@@ -3,6 +3,7 @@
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/msw/server";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 import {
   getGeocode,
   getPlaceDetails,
@@ -223,6 +224,30 @@ describe("Google API Client", () => {
         timestamp: mockTimestamp,
       });
     });
+
+    it(
+      "defaults timestamp from the shared timestamp helper",
+      withFakeTimers(async () => {
+        vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+        server.use(
+          http.get(
+            "https://maps.googleapis.com/maps/api/timezone/json",
+            ({ request }) => {
+              const url = new URL(request.url);
+              expect(url.searchParams.get("timestamp")).toBe("1770091506");
+
+              return HttpResponse.json({ status: "OK" });
+            }
+          )
+        );
+
+        await getTimezone({
+          apiKey: "test-key",
+          lat: 35.6762,
+          lng: 139.6503,
+        });
+      })
+    );
 
     it("should throw error for invalid coordinates", async () => {
       await expect(

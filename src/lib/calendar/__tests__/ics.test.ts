@@ -373,6 +373,24 @@ describe("generateIcsFromEvents", () => {
   });
 
   describe("edge cases", () => {
+    it("uses deterministic fallback start date when event start is missing", () => {
+      const event = calendarEventSchema.parse({
+        end: {},
+        start: {},
+        summary: "Missing Start Time",
+      });
+
+      const { icsString } = generateIcsFromEvents({
+        calendarName: "Test",
+        events: [event],
+        fallbackStartDate: new Date("2024-06-15T10:00:00Z"),
+      });
+
+      expect(icsString).toContain("SUMMARY:Missing Start Time");
+      expect(icsString).toContain("DTSTART:20240615T100000Z");
+      expect(icsString).toContain("DTEND:20240615T110000Z");
+    });
+
     it("should handle event without end date (defaults to 1 hour)", () => {
       // This tests the fallback behavior
       const event = calendarEventSchema.parse({

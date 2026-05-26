@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApiRouteAuthUser, resetApiRouteMocks } from "@/test/helpers/api-route";
 import { TEST_USER_ID } from "@/test/helpers/ids";
 import { createMockSupabaseClient, getSupabaseMockState } from "@/test/mocks/supabase";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 vi.mock("@/lib/cache/tags", () => ({
   bumpTag: vi.fn(async () => 1),
@@ -208,6 +209,59 @@ describe("config routes", () => {
     );
   });
 
+  it(
+    "PUT creates helper-backed version-shaped config id when no config exists",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+
+      const supabase = createMockSupabaseClient({ user: null });
+      const state = getSupabaseMockState(supabase);
+      state.selectByTable.set("agent_config", {
+        count: null,
+        data: [],
+        error: null,
+      });
+      state.rpcResults.set("agent_config_upsert", {
+        count: null,
+        data: [{ version_id: "ver-created" }],
+        error: null,
+      });
+      const rpcSpy = vi.spyOn(supabase, "rpc");
+
+      const { PUT } = await import("../[agentType]/route");
+      const req = new NextRequest("http://localhost/api/config/agents/budgetAgent", {
+        body: JSON.stringify({
+          description: "created",
+          model: "gpt-5.5",
+          temperature: 0.4,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+      } as never);
+
+      const res = await PUT(req, {
+        params: Promise.resolve({ agentType: "budgetAgent" }),
+        supabase,
+        user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
+      } as never);
+
+      expect(res.status).toBe(200);
+      const rpcPayload = rpcSpy.mock.calls[0]?.[1] as
+        | Record<string, unknown>
+        | undefined;
+      const configPayload = rpcPayload?.p_config as
+        | { createdAt?: string; id?: string; updatedAt?: string }
+        | undefined;
+      expect(configPayload).toEqual(
+        expect.objectContaining({
+          createdAt: "2026-02-03T04:05:06.000Z",
+          id: expect.stringMatching(/^v1770091506_[a-z0-9]{8}$/),
+          updatedAt: "2026-02-03T04:05:06.000Z",
+        })
+      );
+    })
+  );
+
   it("versions returns list", async () => {
     const versionsRow = {
       agent_type: "budgetAgent",
@@ -241,48 +295,66 @@ describe("config routes", () => {
     expect(json.versions[0].id).toBe("ver-1");
   });
 
-  it("rollback emits alert", async () => {
-    const supabase = createMockSupabaseClient({ user: null });
-    const state = getSupabaseMockState(supabase);
-    state.selectByTable.set("agent_config_versions", {
-      count: null,
-      data: [supabaseData],
-      error: null,
-    });
-    state.rpcResults.set("agent_config_upsert", {
-      count: null,
-      data: [{ version_id: "ver-rollback" }],
-      error: null,
-    });
+  it(
+    "rollback emits alert and helper-backed version-shaped config id",
+    withFakeTimers(async () => {
+      vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
 
-    const { POST } = await import("../[agentType]/rollback/[versionId]/route");
-    const req = new NextRequest(
-      "http://localhost/api/config/agents/budgetAgent/rollback/11111111-1111-4111-8111-111111111111"
-    );
+      const supabase = createMockSupabaseClient({ user: null });
+      const state = getSupabaseMockState(supabase);
+      state.selectByTable.set("agent_config_versions", {
+        count: null,
+        data: [supabaseData],
+        error: null,
+      });
+      state.rpcResults.set("agent_config_upsert", {
+        count: null,
+        data: [{ version_id: "ver-rollback" }],
+        error: null,
+      });
+      const rpcSpy = vi.spyOn(supabase, "rpc");
 
-    const res = await POST(req, {
-      params: Promise.resolve({
-        agentType: "budgetAgent",
-        versionId: "11111111-1111-4111-8111-111111111111",
-      }),
-      supabase,
-      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
-    } as never);
+      const { POST } = await import("../[agentType]/rollback/[versionId]/route");
+      const req = new NextRequest(
+        "http://localhost/api/config/agents/budgetAgent/rollback/11111111-1111-4111-8111-111111111111"
+      );
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toEqual(
-      expect.objectContaining({
-        versionId: "ver-rollback",
-      })
-    );
-    expect(mockEmit).toHaveBeenCalledWith(
-      "agent_config.rollback",
-      expect.objectContaining({
-        attributes: expect.objectContaining({ agentType: "budgetAgent" }),
-      })
-    );
-  });
+      const res = await POST(req, {
+        params: Promise.resolve({
+          agentType: "budgetAgent",
+          versionId: "11111111-1111-4111-8111-111111111111",
+        }),
+        supabase,
+        user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
+      } as never);
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual(
+        expect.objectContaining({
+          versionId: "ver-rollback",
+        })
+      );
+      const rpcPayload = rpcSpy.mock.calls[0]?.[1] as
+        | Record<string, unknown>
+        | undefined;
+      const configPayload = rpcPayload?.p_config as
+        | { id?: string; updatedAt?: string }
+        | undefined;
+      expect(configPayload).toEqual(
+        expect.objectContaining({
+          id: expect.stringMatching(/^v1770091506_[a-z0-9]{8}$/),
+          updatedAt: "2026-02-03T04:05:06.000Z",
+        })
+      );
+      expect(mockEmit).toHaveBeenCalledWith(
+        "agent_config.rollback",
+        expect.objectContaining({
+          attributes: expect.objectContaining({ agentType: "budgetAgent" }),
+        })
+      );
+    })
+  );
 
   it("rejects non-admin", async () => {
     mockApiRouteAuthUser({ id: TEST_USER_ID } as never);

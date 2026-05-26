@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withFakeTimers } from "@/test/utils/with-fake-timers";
 
 // Mock dependencies before imports
 const mockRedisGet = vi.fn();
@@ -130,45 +131,50 @@ describe("aggregate", () => {
       expect(result.activeTrips).toBe(0);
     });
 
-    it("calculates metrics correctly with api_metrics data", async () => {
-      const { createServerSupabase } = await import("@/lib/supabase/server");
-      const userId = "user_123";
+    it(
+      "calculates metrics with a helper-backed api metrics window filter",
+      withFakeTimers(async () => {
+        vi.setSystemTime(new Date("2026-02-03T04:05:06.000Z"));
+        const { createServerSupabase } = await import("@/lib/supabase/server");
+        const userId = "user_123";
 
-      // Reset redis mock to not return cached
-      mockRedisGet.mockResolvedValue(null);
+        // Reset redis mock to not return cached
+        mockRedisGet.mockResolvedValue(null);
 
-      const mockSelect = vi.fn();
-      const mockGte = vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue({
-          data: [
-            { duration_ms: 100, status_code: 200 },
-            { duration_ms: 200, status_code: 200 },
-            { duration_ms: 150, status_code: 500 },
-            { duration_ms: 250, status_code: 400 },
-          ],
-          error: null,
-        }),
-      });
+        const mockSelect = vi.fn();
+        const mockGte = vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({
+            data: [
+              { duration_ms: 100, status_code: 200 },
+              { duration_ms: 200, status_code: 200 },
+              { duration_ms: 150, status_code: 500 },
+              { duration_ms: 250, status_code: 400 },
+            ],
+            error: null,
+          }),
+        });
 
-      // First call for trips, second for api_metrics
-      mockSelect
-        .mockResolvedValueOnce({ data: [], error: null }) // trips
-        .mockReturnValueOnce({ gte: mockGte }); // api_metrics
+        // First call for trips, second for api_metrics
+        mockSelect
+          .mockResolvedValueOnce({ data: [], error: null }) // trips
+          .mockReturnValueOnce({ gte: mockGte }); // api_metrics
 
-      (createServerSupabase as ReturnType<typeof vi.fn>).mockResolvedValue({
-        from: vi.fn().mockReturnValue({ select: mockSelect }),
-      });
+        (createServerSupabase as ReturnType<typeof vi.fn>).mockResolvedValue({
+          from: vi.fn().mockReturnValue({ select: mockSelect }),
+        });
 
-      const { aggregateDashboardMetrics } = await import("../aggregate");
+        const { aggregateDashboardMetrics } = await import("../aggregate");
 
-      const result = await aggregateDashboardMetrics(userId, 24);
+        const result = await aggregateDashboardMetrics(userId, 24);
 
-      expect(result.totalRequests).toBe(4);
-      // (100 + 200 + 150 + 250) / 4 = 175
-      expect(result.avgLatencyMs).toBe(175);
-      // 2 errors out of 4 = 50%
-      expect(result.errorRate).toBe(50);
-    });
+        expect(result.totalRequests).toBe(4);
+        // (100 + 200 + 150 + 250) / 4 = 175
+        expect(result.avgLatencyMs).toBe(175);
+        // 2 errors out of 4 = 50%
+        expect(result.errorRate).toBe(50);
+        expect(mockGte).toHaveBeenCalledWith("created_at", "2026-02-02T04:05:06.000Z");
+      })
+    );
   });
 
   describe("invalidateDashboardCache", () => {

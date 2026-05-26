@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { nowIso } from "@/lib/security/random";
 import type { OperationalAlertOptions } from "@/lib/telemetry/alerts";
 import { emitOperationalAlert } from "@/lib/telemetry/alerts";
 import { isPlainObject } from "@/lib/utils/type-guards";
@@ -13,6 +14,10 @@ const MAX_DEDUPE_ENTRY_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10m
 const CLEANUP_SIZE_THRESHOLD = 1000;
 let lastCleanupAt = 0;
+
+function getCurrentEpochMs(currentIso = nowIso()): number {
+  return Date.parse(currentIso);
+}
 
 function normalizeForStableJson(value: unknown): unknown {
   if (value === null) return null;
@@ -70,7 +75,7 @@ export function emitOperationalAlertOncePerWindow(
 ): void {
   const { event, windowMs, ...options } = params;
 
-  const now = Date.now();
+  const now = getCurrentEpochMs();
   maybeCleanup(now);
   const dedupeKey = `${event}:${stableStringifyAttributes(options.attributes ?? {})}`;
   const last = lastEmittedAtByKey.get(dedupeKey);

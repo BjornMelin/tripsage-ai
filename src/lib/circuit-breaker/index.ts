@@ -5,6 +5,7 @@
 import "server-only";
 
 import { getRedis } from "@/lib/redis";
+import { nowIso } from "@/lib/security/random";
 import { recordTelemetryEvent, withTelemetrySpan } from "@/lib/telemetry/span";
 
 // ===== TYPES =====
@@ -49,6 +50,7 @@ const DEFAULT_FAILURE_THRESHOLD = 5;
 const DEFAULT_COOLDOWN_SECONDS = 30;
 const DEFAULT_SUCCESS_THRESHOLD = 2;
 const DEFAULT_FAILURE_WINDOW_SECONDS = 60;
+const MS_PER_SECOND = 1000;
 
 // ===== HELPERS =====
 
@@ -62,6 +64,14 @@ function getOpenedAtKey(name: string): string {
 
 function getSuccessCountKey(name: string): string {
   return `${REDIS_PREFIX}${name}:successes`;
+}
+
+function getCurrentEpochMs(currentIso = nowIso()): number {
+  return Date.parse(currentIso);
+}
+
+function getElapsedSecondsSince(openedAtMs: number): number {
+  return (getCurrentEpochMs() - openedAtMs) / MS_PER_SECOND;
 }
 
 // ===== CIRCUIT BREAKER =====
@@ -95,7 +105,7 @@ export async function checkCircuit(
 
   if (openedAt) {
     const openedAtMs = parseInt(openedAt as string, 10);
-    const elapsedSeconds = (Date.now() - openedAtMs) / 1000;
+    const elapsedSeconds = getElapsedSecondsSince(openedAtMs);
 
     if (elapsedSeconds < cooldownSeconds) {
       // Circuit is open, reject request
@@ -118,7 +128,9 @@ export async function checkCircuit(
 
   if (failureCount >= failureThreshold) {
     // Threshold exceeded, open circuit
-    await redis.set(openedAtKey, Date.now().toString(), { ex: cooldownSeconds * 2 });
+    await redis.set(openedAtKey, getCurrentEpochMs().toString(), {
+      ex: cooldownSeconds * 2,
+    });
 
     recordTelemetryEvent("circuit_breaker.opened", {
       attributes: {
@@ -267,7 +279,7 @@ export async function getCircuitState(
 
   // Circuit was opened - check if cooldown has passed
   const openedAtMs = parseInt(openedAt as string, 10);
-  const elapsedSeconds = (Date.now() - openedAtMs) / 1000;
+  const elapsedSeconds = getElapsedSecondsSince(openedAtMs);
 
   // Use provided cooldown for read-only state check
   if (elapsedSeconds < cooldownSeconds) {

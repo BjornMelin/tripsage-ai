@@ -5,7 +5,9 @@
 import "server-only";
 
 import { type DashboardMetrics, dashboardMetricsSchema } from "@schemas/dashboard";
+import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { getRedis } from "@/lib/redis";
+import { nowIso } from "@/lib/security/random";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getMany } from "@/lib/supabase/typed-helpers";
@@ -13,6 +15,16 @@ import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 /** Metric row shape for api_metrics queries (subset of columns needed). */
 type ApiMetricRow = Pick<Tables<"api_metrics">, "duration_ms" | "status_code">;
+
+function getMetricsWindowSince(
+  windowHours: number,
+  currentIso: string = nowIso()
+): string | null {
+  if (windowHours <= 0) return null;
+  return DateUtils.formatForApi(
+    DateUtils.add(DateUtils.parse(currentIso), -windowHours, "hours")
+  );
+}
 
 /**
  * Aggregates dashboard metrics from Supabase with Redis caching.
@@ -66,10 +78,7 @@ export function aggregateDashboardMetrics(
       const supabase = await createServerSupabase();
 
       // Calculate time filter
-      const since =
-        windowHours > 0
-          ? new Date(Date.now() - windowHours * 3600000).toISOString()
-          : null;
+      const since = getMetricsWindowSince(windowHours);
 
       // Parallel queries for trips and API metrics
       const [tripsResult, metricsResult] = await Promise.all([
