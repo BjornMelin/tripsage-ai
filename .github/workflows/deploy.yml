@@ -28,7 +28,7 @@ concurrency:
 
 env:
   COREPACK_VERSION: "0.35.0"
-  VERCEL_CLI_VERSION: "53.3.2"
+  VERCEL_CLI_VERSION: "54.6.1"
 
 jobs:
   deploy:
