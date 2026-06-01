@@ -33,9 +33,10 @@ publicHoistPattern:
   - "*@tailwindcss/oxide*"
 
 # Security and compatibility pins for transitive dependencies:
-# amadeus>qs, axios, brace-expansion, lodash-es, and undici keep patched
-# transitive versions; mermaid and mermaid>uuid keep diagram rendering on the
-# supported renderer/UUID line; postcss stays aligned with the Tailwind 4 stack.
+# amadeus>qs, axios, @ungap/structured-clone, brace-expansion, lodash-es, and
+# undici keep patched transitive versions; mermaid and mermaid>uuid keep diagram
+# rendering on the supported renderer/UUID line; postcss stays aligned with the
+# Tailwind 4 stack.
 overrides:
   "amadeus>qs": 6.15.2
   axios: 1.14.0
