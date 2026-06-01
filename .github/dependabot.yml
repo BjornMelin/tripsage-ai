@@ -150,6 +150,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # Node runtime major changes are planned platform migrations, not automated dependency PRs.
+      - dependency-name: "@types/node"
+        versions: [">=25"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -214,3 +217,7 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+    ignore:
+      # Keep Docker aligned with the repository Node 24 runtime baseline.
+      - dependency-name: "node"
+        versions: [">=25"]
