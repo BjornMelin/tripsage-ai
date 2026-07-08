@@ -1,6 +1,6 @@
 # ADR-0017: Adopt Node.js v24 LTS baseline
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Status**: Accepted
 **Date**: 2025-10-23
 **Category**: platform
@@ -12,8 +12,9 @@ Our frontend stack targets modern Node features and Next.js 16. Standardizing on
 
 ## Decision
 
-- Set `engines.node` >=24 in package.json and add `.nvmrc`/`.node-version` to pin.
+- Set `engines.node` to `24.x` in `package.json` and pin the exact local/CI patch in `.nvmrc`.
 - Use `.nvmrc` as the authoritative local + CI Node version pin (`actions/setup-node` reads it in CI).
+- Keep `@types/node` on the latest published 24.x line; Dependabot must ignore semver-major `@types/node` updates until the runtime baseline moves past Node 24.
 
 ## Consequences
 
@@ -31,6 +32,7 @@ Our frontend stack targets modern Node features and Next.js 16. Standardizing on
 
 ## Changelog
 
+- 1.1.0 (2026-07-08) — Pinned `.nvmrc` to Node 24.16.0 and documented the Node 24 `@types/node` Dependabot policy.
 - 1.0.0 (2025-10-24) — Standardized metadata and formatting; added version and changelog.
 
 ## Alternatives Considered

@@ -2,12 +2,12 @@
 
 versions:
   node: "24"
-  node-full: "24.x"
+  node-full: "24.16.0"
   corepack: "0.35.0"
-  pnpm: "11.5.0"
+  pnpm: "11.10.0"
   biome: "2.4.16"
   playwright: "1.60.0"
-  vitest: "4.1.7"
+  vitest: "4.1.10"
   typescript: "6.0.3"
   docker-buildx: "0.29.1"
   docker-compose: "2.40.3"

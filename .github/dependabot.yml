@@ -152,7 +152,7 @@ updates:
         update-types: ["version-update:semver-major"]
       # Node runtime major changes are planned platform migrations, not automated dependency PRs.
       - dependency-name: "@types/node"
-        versions: [">=25"]
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
