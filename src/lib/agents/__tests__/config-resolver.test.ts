@@ -2,13 +2,27 @@
 
 import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import {
+  getAgentConfigCacheTags,
+  invalidateAgentConfigCache,
+  resolveAgentConfig,
+} from "@/lib/agents/config-resolver";
 
 const mockGetCachedJson = vi.hoisted(() => vi.fn());
 const mockSetCachedJson = vi.hoisted(() => vi.fn());
+const mockBumpTag = vi.hoisted(() => vi.fn());
 const mockVersionedKey = vi.hoisted(() => vi.fn());
+const mockCacheLife = vi.hoisted(() => vi.fn());
+const mockCacheTag = vi.hoisted(() => vi.fn());
+const mockRevalidateTag = vi.hoisted(() => vi.fn());
 const mockEmitAlert = vi.hoisted(() => vi.fn());
 const mockRecordEvent = vi.hoisted(() => vi.fn());
+
+vi.mock("next/cache", () => ({
+  cacheLife: mockCacheLife,
+  cacheTag: mockCacheTag,
+  revalidateTag: mockRevalidateTag,
+}));
 
 vi.mock("@/lib/cache/upstash", () => ({
   getCachedJson: mockGetCachedJson,
@@ -16,6 +30,7 @@ vi.mock("@/lib/cache/upstash", () => ({
 }));
 
 vi.mock("@/lib/cache/tags", () => ({
+  bumpTag: mockBumpTag,
   versionedKey: mockVersionedKey,
 }));
 
@@ -86,7 +101,11 @@ describe("resolveAgentConfig", () => {
   beforeEach(() => {
     mockGetCachedJson.mockReset();
     mockSetCachedJson.mockReset();
+    mockBumpTag.mockReset();
     mockVersionedKey.mockReset();
+    mockCacheLife.mockReset();
+    mockCacheTag.mockReset();
+    mockRevalidateTag.mockReset();
     mockEmitAlert.mockReset();
     mockRecordEvent.mockReset();
     supabaseSelect.mockReset();
@@ -145,5 +164,33 @@ describe("resolveAgentConfig", () => {
     await expect(resolveAgentConfig("budgetAgent")).rejects.toBeTruthy();
     expect(mockEmitAlert).toHaveBeenCalled();
     expect(mockRecordEvent).toHaveBeenCalled();
+  });
+
+  it("invalidates every agent config cache tag", async () => {
+    mockBumpTag.mockResolvedValue(2);
+
+    await invalidateAgentConfigCache("budgetAgent", "global");
+
+    expect(mockBumpTag).toHaveBeenCalledWith("configuration");
+    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockRevalidateTag).toHaveBeenNthCalledWith(1, "configuration", {
+      expire: 0,
+    });
+    expect(mockRevalidateTag).toHaveBeenNthCalledWith(2, "configuration:budgetAgent", {
+      expire: 0,
+    });
+    expect(mockRevalidateTag).toHaveBeenNthCalledWith(
+      3,
+      "configuration:budgetAgent:global",
+      { expire: 0 }
+    );
+  });
+
+  it("keeps the cache tag tuple stable for routes and resolver", () => {
+    expect(getAgentConfigCacheTags("budgetAgent", "global")).toEqual([
+      "configuration",
+      "configuration:budgetAgent",
+      "configuration:budgetAgent:global",
+    ]);
   });
 });

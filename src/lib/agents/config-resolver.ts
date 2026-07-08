@@ -6,8 +6,8 @@ import "server-only";
 
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import { configurationAgentConfigSchema } from "@schemas/configuration";
-import { cacheLife, cacheTag } from "next/cache";
-import { versionedKey } from "@/lib/cache/tags";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
+import { bumpTag, versionedKey } from "@/lib/cache/tags";
 import { getCachedJson, setCachedJson } from "@/lib/cache/upstash";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
@@ -38,6 +38,27 @@ export type ResolveAgentConfigOptions = {
   cacheTtlSeconds?: number;
 };
 
+export function getAgentConfigCacheTags(
+  agentType: AgentType,
+  scope: string
+): readonly [string, string, string] {
+  return [CACHE_TAG, `${CACHE_TAG}:${agentType}`, `${CACHE_TAG}:${agentType}:${scope}`];
+}
+
+export async function invalidateAgentConfigCache(
+  agentType: AgentType,
+  scope: string
+): Promise<void> {
+  await bumpTag(CACHE_TAG);
+  try {
+    for (const tag of getAgentConfigCacheTags(agentType, scope)) {
+      revalidateTag(tag, { expire: 0 });
+    }
+  } catch {
+    // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
+  }
+}
+
 /**
  * Resolve an agent configuration with cache + Supabase fallback.
  *
@@ -57,11 +78,7 @@ export async function resolveAgentConfig(
   const usesDefaultTtl = options.cacheTtlSeconds === undefined;
 
   try {
-    cacheTag(
-      CACHE_TAG,
-      `${CACHE_TAG}:${agentType}`,
-      `${CACHE_TAG}:${agentType}:${scope}`
-    );
+    cacheTag(...getAgentConfigCacheTags(agentType, scope));
     if (usesDefaultTtl) {
       cacheLife(CACHE_PROFILE);
     } else {
