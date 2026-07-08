@@ -10,13 +10,13 @@ const sourceScriptPath = join(process.cwd(), "scripts/check-otel-convergence.mjs
 const sourceScript = readFileSync(sourceScriptPath, "utf8");
 
 const baseDependencies: Record<string, string> = {
-  "@opentelemetry/context-zone": "2.7.1",
-  "@opentelemetry/exporter-trace-otlp-http": "0.218.0",
-  "@opentelemetry/instrumentation": "0.218.0",
-  "@opentelemetry/instrumentation-fetch": "0.218.0",
-  "@opentelemetry/resources": "2.7.1",
-  "@opentelemetry/sdk-trace-base": "2.7.1",
-  "@opentelemetry/sdk-trace-web": "2.7.1",
+  "@opentelemetry/context-zone": "2.9.0",
+  "@opentelemetry/exporter-trace-otlp-http": "0.220.0",
+  "@opentelemetry/instrumentation": "0.220.0",
+  "@opentelemetry/instrumentation-fetch": "0.220.0",
+  "@opentelemetry/resources": "2.9.0",
+  "@opentelemetry/sdk-trace-base": "2.9.0",
+  "@opentelemetry/sdk-trace-web": "2.9.0",
   "import-in-the-middle": "3.0.1",
   "require-in-the-middle": "8.0.1",
 };
@@ -31,14 +31,14 @@ ${entries.map((entry) => `  '${entry}':\n    resolution: {integrity: sha512-test
 
 function convergedLockfile() {
   return createLockfile([
-    "@opentelemetry/context-zone@2.7.1",
-    "@opentelemetry/core@2.7.1",
-    "@opentelemetry/exporter-trace-otlp-http@0.218.0",
-    "@opentelemetry/instrumentation-fetch@0.218.0",
-    "@opentelemetry/instrumentation@0.218.0",
-    "@opentelemetry/resources@2.7.1",
-    "@opentelemetry/sdk-trace-base@2.7.1",
-    "@opentelemetry/sdk-trace-web@2.7.1",
+    "@opentelemetry/context-zone@2.9.0",
+    "@opentelemetry/core@2.9.0",
+    "@opentelemetry/exporter-trace-otlp-http@0.220.0",
+    "@opentelemetry/instrumentation-fetch@0.220.0",
+    "@opentelemetry/instrumentation@0.220.0",
+    "@opentelemetry/resources@2.9.0",
+    "@opentelemetry/sdk-trace-base@2.9.0",
+    "@opentelemetry/sdk-trace-web@2.9.0",
     "import-in-the-middle@3.0.1",
     "require-in-the-middle@8.0.1",
   ]);
@@ -86,7 +86,7 @@ describe("check-otel-convergence", () => {
   it("detects direct OpenTelemetry core dependency version drift", () => {
     const result = runGuardInTempProject({
       ...baseDependencies,
-      "@opentelemetry/resources": "2.7.2",
+      "@opentelemetry/resources": "2.9.1",
     });
 
     expect(result.status).toBe(1);
@@ -94,22 +94,22 @@ describe("check-otel-convergence", () => {
     expect(result.stderr).toContain(
       "OpenTelemetry core runtime dependencies must share one declared version"
     );
-    expect(result.stderr).toContain("@opentelemetry/resources@2.7.2");
+    expect(result.stderr).toContain("@opentelemetry/resources@2.9.1");
   });
 
   it("detects multiple resolved versions for monitored lockfile packages", () => {
     const result = runGuardInTempProject(
       baseDependencies,
       createLockfile([
-        "@opentelemetry/context-zone@2.7.1",
-        "@opentelemetry/core@2.7.1",
-        "@opentelemetry/core@2.7.2",
-        "@opentelemetry/exporter-trace-otlp-http@0.218.0",
-        "@opentelemetry/instrumentation-fetch@0.218.0",
-        "@opentelemetry/instrumentation@0.218.0",
-        "@opentelemetry/resources@2.7.1",
-        "@opentelemetry/sdk-trace-base@2.7.1",
-        "@opentelemetry/sdk-trace-web@2.7.1",
+        "@opentelemetry/context-zone@2.9.0",
+        "@opentelemetry/core@2.9.0",
+        "@opentelemetry/core@2.9.1",
+        "@opentelemetry/exporter-trace-otlp-http@0.220.0",
+        "@opentelemetry/instrumentation-fetch@0.220.0",
+        "@opentelemetry/instrumentation@0.220.0",
+        "@opentelemetry/resources@2.9.0",
+        "@opentelemetry/sdk-trace-base@2.9.0",
+        "@opentelemetry/sdk-trace-web@2.9.0",
         "import-in-the-middle@3.0.1",
         "require-in-the-middle@8.0.1",
       ])
@@ -117,7 +117,7 @@ describe("check-otel-convergence", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "@opentelemetry/core resolves to multiple versions in lockfile: 2.7.1, 2.7.2"
+      "@opentelemetry/core resolves to multiple versions in lockfile: 2.9.0, 2.9.1"
     );
   });
 
@@ -139,14 +139,14 @@ describe("check-otel-convergence", () => {
     const result = runGuardInTempProject(
       baseDependencies,
       createLockfile([
-        "@opentelemetry/context-zone@2.7.1",
-        "@opentelemetry/core@2.7.1",
-        "@opentelemetry/exporter-trace-otlp-http@0.218.0",
-        "@opentelemetry/instrumentation-fetch@0.218.0",
-        "@opentelemetry/instrumentation@0.218.0",
-        "@opentelemetry/resources@2.7.1",
-        "@opentelemetry/sdk-trace-base@2.7.1",
-        "@opentelemetry/sdk-trace-web@2.7.1",
+        "@opentelemetry/context-zone@2.9.0",
+        "@opentelemetry/core@2.9.0",
+        "@opentelemetry/exporter-trace-otlp-http@0.220.0",
+        "@opentelemetry/instrumentation-fetch@0.220.0",
+        "@opentelemetry/instrumentation@0.220.0",
+        "@opentelemetry/resources@2.9.0",
+        "@opentelemetry/sdk-trace-base@2.9.0",
+        "@opentelemetry/sdk-trace-web@2.9.0",
         "import-in-the-middle@3.0.2",
         "require-in-the-middle@8.0.1",
       ])
