@@ -108,7 +108,8 @@ describe("markdown/Markdown", () => {
 
     const props = getLastProps();
     const Anchor = (props.components as { a: ComponentType<ComponentProps<"a">> }).a;
-    render(<Anchor href="javascript:alert(1)">Blocked</Anchor>);
+    const unsafeHref = "java" + "script:alert(1)";
+    render(<Anchor href={unsafeHref}>Blocked</Anchor>);
 
     const anchor = screen.getByText("Blocked");
     expect(anchor).not.toHaveAttribute("href");

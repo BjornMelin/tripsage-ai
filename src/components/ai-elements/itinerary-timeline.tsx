@@ -90,7 +90,7 @@ export function ItineraryTimeline({ result, ...props }: ItineraryTimelineProps) 
                             rel="noopener noreferrer"
                             className="mt-1 block underline"
                           >
-                            Learn more
+                            Learn more about {activity.name ?? "this activity"}
                           </a>
                         ) : null}
                       </div>
