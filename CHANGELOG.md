@@ -1,3 +1,14 @@
+## [1.36.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.0...v1.36.1) (2026-07-08)
+
+### Bug Fixes
+
+* **auth:** refresh proxy sessions with Supabase claims ([d6cc4a7](https://github.com/BjornMelin/tripsage-ai/commit/d6cc4a709e5ce5c01784a695e52012ca28f09f9a))
+* **config:** preserve successful agent config writes ([c4572ee](https://github.com/BjornMelin/tripsage-ai/commit/c4572eeff523a52dc1ebde36eceea83d588a1636))
+* **ratelimit:** honor registry fail-open telemetry policy ([1f88083](https://github.com/BjornMelin/tripsage-ai/commit/1f8808390d423c3b5a682b69fedd30d4a47ace2e))
+* **ratelimit:** remove redundant registry cast ([94a8334](https://github.com/BjornMelin/tripsage-ai/commit/94a8334fd8c62f43717fce036993e9f20a03fe5b))
+* **security:** tighten degraded cache and rate-limit handling ([d635ba3](https://github.com/BjornMelin/tripsage-ai/commit/d635ba3815360a25263e5acecd08d4654beabc1f))
+* **ui:** satisfy stricter frontend lint checks ([b800edc](https://github.com/BjornMelin/tripsage-ai/commit/b800edc7cf77cdbb3ebce6190c8f33bb98994ff5))
+
 ## [1.36.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.35.0...v1.36.0) (2026-05-26)
 
 ### Features
