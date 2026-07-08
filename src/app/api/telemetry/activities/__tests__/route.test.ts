@@ -37,6 +37,7 @@ describe("POST /api/telemetry/activities", () => {
     expect((capturedOptions as { rateLimit?: string })?.rateLimit).toBe(
       "telemetry:post"
     );
+    expect("degradedMode" in (capturedOptions as Record<string, unknown>)).toBe(false);
     expect(response.status).toBe(200);
     expect(recordTelemetryEvent).toHaveBeenCalledWith("activities.clicked", {
       attributes: { foo: "bar" },

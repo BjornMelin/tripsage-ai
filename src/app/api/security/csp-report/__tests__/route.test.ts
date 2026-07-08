@@ -73,7 +73,7 @@ describe("/api/security/csp-report", () => {
     expect(res.status).toBe(429);
   });
 
-  it("fails closed when report rate limiting is unavailable", async () => {
+  it("fails open when report rate limiting is unavailable", async () => {
     disableApiRouteRateLimit();
 
     const req = makeJsonRequest("/api/security/csp-report", {
@@ -84,7 +84,7 @@ describe("/api/security/csp-report", () => {
 
     const res = await POST(req, createRouteParamsContext());
 
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(204);
   });
 
   it("drops invalid non-URI telemetry fields", async () => {

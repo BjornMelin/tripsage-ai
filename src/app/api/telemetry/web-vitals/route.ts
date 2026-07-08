@@ -36,7 +36,6 @@ const webVitalsPayloadSchema = z.strictObject({
  */
 export const POST = withApiGuards({
   auth: false,
-  degradedMode: "fail_closed",
   rateLimit: "telemetry:post",
   telemetry: "telemetry.web-vitals",
 })(async (req: NextRequest) => {
