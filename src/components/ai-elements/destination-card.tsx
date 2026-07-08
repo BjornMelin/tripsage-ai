@@ -79,7 +79,7 @@ export function DestinationCard({ result, ...props }: DestinationCardProps) {
                         rel="noopener noreferrer"
                         className="mt-1 block underline"
                       >
-                        Learn more
+                        Learn more about {attraction.title ?? "this attraction"}
                       </a>
                     ) : null}
                   </div>
