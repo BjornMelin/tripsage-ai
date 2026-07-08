@@ -4,7 +4,7 @@
 
 - Docker (required for `supabase start`)
 - `pnpm` per repo `package.json`
-- Supabase CLI: this repo runs a pinned CLI via `pnpm dlx supabase@2.72.8` in `package.json` scripts (no global install required). If you choose to install the CLI locally, Supabase’s docs note `pnpm add supabase --save-dev --allow-build=supabase` may be required on pnpm v10+.
+- Supabase CLI: this repo runs a pinned CLI via `pnpm dlx supabase@2.102.0` in `package.json` scripts (no global install required). If you choose to install the CLI locally, Supabase’s docs note `pnpm add supabase --save-dev --allow-build=supabase` may be required on pnpm v10+.
 
 ## Local stack
 
