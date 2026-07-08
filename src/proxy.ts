@@ -4,7 +4,7 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { COMMON_SECURITY_HEADERS, HSTS_HEADER } from "@/lib/security/headers";
-import { createMiddlewareSupabase, getCurrentUser } from "@/lib/supabase/factory";
+import { createMiddlewareSupabase } from "@/lib/supabase/factory";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 type CspMode = "authed" | "public";
@@ -328,10 +328,7 @@ export async function proxy(request: NextRequest) {
           },
         },
       });
-      await getCurrentUser(supabase, {
-        enableTracing: false,
-        spanName: "proxy.supabase",
-      });
+      await supabase.auth.getClaims();
     } catch (error) {
       // Ignore auth refresh failures in Proxy; downstream auth guards handle redirects/401s.
       const logger = createServerLogger("proxy.supabase");
