@@ -32,8 +32,9 @@ TripSage needs:
 - Build all `@upstash/ratelimit` instances through `src/lib/ratelimit/upstash.ts`.
   Surfaces keep their own degraded-mode policy:
   - API routes: `ROUTE_RATE_LIMITS` owns per-key `degradedMode`; missing
-    `degradedMode` means intentional fail-open, and `withApiGuards({ degradedMode })`
-    remains an exceptional route-local override.
+    `degradedMode` defaults to fail-closed. Explicit fail-open is limited to
+    approved low-risk telemetry/reporting routes, and
+    `withApiGuards({ degradedMode })` remains an exceptional route-local override.
   - Webhooks and jobs: fail closed by default.
   - AI tools: fail open on unavailable limiter infrastructure but emit telemetry.
 - Publish all QStash jobs through `src/lib/qstash/client.ts` with:

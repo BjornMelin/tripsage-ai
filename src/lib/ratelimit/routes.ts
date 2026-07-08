@@ -164,7 +164,11 @@ export const ROUTE_RATE_LIMITS = {
   routes: { limit: 60, window: "1 m" },
 
   // Security
-  "security:csp-report": { limit: 120, window: "1 m" },
+  "security:csp-report": {
+    degradedMode: "fail_open",
+    limit: 120,
+    window: "1 m",
+  },
   "security:events": { limit: 20, window: "1 m" },
   "security:metrics": { limit: 20, window: "1 m" },
   "security:sessions:list": { limit: 20, window: "1 m" },
@@ -176,7 +180,7 @@ export const ROUTE_RATE_LIMITS = {
 
   // Telemetry
   "telemetry:ai-demo": { degradedMode: "fail_closed", limit: 10, window: "1 m" },
-  "telemetry:post": { limit: 60, window: "1 m" },
+  "telemetry:post": { degradedMode: "fail_open", limit: 60, window: "1 m" },
 
   // Timezone
   timezone: { limit: 60, window: "1 m" },
@@ -215,5 +219,5 @@ export type RouteRateLimitKey = keyof typeof ROUTE_RATE_LIMITS;
 
 export function getRouteRateLimitDegradedMode(key: RouteRateLimitKey): DegradedMode {
   const config = ROUTE_RATE_LIMITS[key] as RouteRateLimitDefinition;
-  return config.degradedMode ?? "fail_open";
+  return config.degradedMode ?? "fail_closed";
 }

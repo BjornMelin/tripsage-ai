@@ -21,8 +21,8 @@ Some endpoints are privileged or cost-bearing and must **fail closed** if rate l
   - `fail_closed`: deny the request with `503 rate_limit_unavailable`
   - `fail_open`: allow the request, but emit a deduped operational alert (`ratelimit.degraded`)
 - API route policy is defined in `ROUTE_RATE_LIMITS`:
-  - Set `degradedMode: "fail_closed"` on privileged, mutating, or cost-bearing route keys.
-  - Omitted `degradedMode` intentionally defaults to `fail_open`.
+  - Omitted `degradedMode` defaults to `fail_closed`.
+  - Set `degradedMode: "fail_open"` only for approved low-risk telemetry/reporting routes.
   - Route-local `withApiGuards({ degradedMode })` remains an override for exceptional cases.
 - Webhooks (`src/lib/webhooks/rate-limit.ts`) default to `fail_closed`.
 

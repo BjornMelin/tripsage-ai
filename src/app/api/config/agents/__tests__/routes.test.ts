@@ -47,7 +47,11 @@ vi.mock("@/lib/telemetry/span", async () => {
 const mockResolveAgentConfig = vi.fn();
 type CacheInvalidationResult =
   | { degraded: false }
-  | { degraded: true; reason: "cache_invalidation_failed" };
+  | {
+      degraded: true;
+      failures: readonly string[];
+      reason: "cache_invalidation_failed";
+    };
 const mockInvalidateAgentConfigCacheAfterWrite = vi.fn(
   async (_agentType: unknown, _scope: unknown): Promise<CacheInvalidationResult> => ({
     degraded: false,
@@ -329,6 +333,7 @@ describe("config routes", () => {
     });
     mockInvalidateAgentConfigCacheAfterWrite.mockResolvedValueOnce({
       degraded: true,
+      failures: ["redis_tag_bump_failed"],
       reason: "cache_invalidation_failed",
     });
 
@@ -432,6 +437,7 @@ describe("config routes", () => {
     });
     mockInvalidateAgentConfigCacheAfterWrite.mockResolvedValueOnce({
       degraded: true,
+      failures: ["redis_tag_bump_failed"],
       reason: "cache_invalidation_failed",
     });
 

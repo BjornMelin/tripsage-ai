@@ -40,7 +40,15 @@ export type ResolveAgentConfigOptions = {
 
 export type AgentConfigCacheInvalidationResult =
   | { degraded: false }
-  | { degraded: true; reason: "cache_invalidation_failed" };
+  | {
+      degraded: true;
+      failures: readonly AgentConfigCacheInvalidationFailure[];
+      reason: "cache_invalidation_failed";
+    };
+
+type AgentConfigCacheInvalidationFailure =
+  | "next_cache_revalidation_failed"
+  | "redis_tag_bump_failed";
 
 export function getAgentConfigCacheTags(
   agentType: AgentType,
@@ -52,28 +60,42 @@ export function getAgentConfigCacheTags(
 export async function invalidateAgentConfigCache(
   agentType: AgentType,
   scope: string
-): Promise<void> {
-  await bumpTag(CACHE_TAG);
+): Promise<AgentConfigCacheInvalidationResult> {
+  const failures: AgentConfigCacheInvalidationFailure[] = [];
+
   try {
-    for (const tag of getAgentConfigCacheTags(agentType, scope)) {
-      revalidateTag(tag, { expire: 0 });
-    }
+    await bumpTag(CACHE_TAG);
   } catch {
-    // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
+    failures.push("redis_tag_bump_failed");
   }
+
+  let nextRevalidationFailed = false;
+  for (const tag of getAgentConfigCacheTags(agentType, scope)) {
+    try {
+      revalidateTag(tag, { expire: 0 });
+    } catch {
+      nextRevalidationFailed = true;
+    }
+  }
+
+  if (nextRevalidationFailed) failures.push("next_cache_revalidation_failed");
+
+  return failures.length > 0
+    ? { degraded: true, failures, reason: "cache_invalidation_failed" }
+    : { degraded: false };
 }
 
 export async function invalidateAgentConfigCacheAfterWrite(
   agentType: AgentType,
   scope: string
 ): Promise<AgentConfigCacheInvalidationResult> {
-  try {
-    await invalidateAgentConfigCache(agentType, scope);
-    return { degraded: false };
-  } catch {
+  const result = await invalidateAgentConfigCache(agentType, scope);
+
+  if (result.degraded) {
     emitOperationalAlertOncePerWindow({
       attributes: {
         agentType,
+        failures: result.failures.join(","),
         reason: "cache_invalidation_failed",
         scope,
       },
@@ -81,8 +103,9 @@ export async function invalidateAgentConfigCacheAfterWrite(
       severity: "warning",
       windowMs: 60 * 60 * 1000, // 1h
     });
-    return { degraded: true, reason: "cache_invalidation_failed" };
   }
+
+  return result;
 }
 
 /**

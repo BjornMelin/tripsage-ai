@@ -194,14 +194,42 @@ describe("resolveAgentConfig", () => {
 
     expect(result).toEqual({
       degraded: true,
+      failures: ["redis_tag_bump_failed"],
       reason: "cache_invalidation_failed",
     });
+    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
     expect(mockEmitAlert).toHaveBeenCalledWith(
       expect.objectContaining({
         attributes: expect.objectContaining({
           agentType: "budgetAgent",
+          failures: "redis_tag_bump_failed",
           reason: "cache_invalidation_failed",
           scope: "global",
+        }),
+        event: "agent_config.cache_invalidation_failed",
+      })
+    );
+  });
+
+  it("reports degraded cache invalidation when Next tag revalidation fails", async () => {
+    mockBumpTag.mockResolvedValue(2);
+    mockRevalidateTag.mockImplementationOnce(() => {
+      throw new Error("outside next runtime");
+    });
+
+    const result = await invalidateAgentConfigCacheAfterWrite("budgetAgent", "global");
+
+    expect(result).toEqual({
+      degraded: true,
+      failures: ["next_cache_revalidation_failed"],
+      reason: "cache_invalidation_failed",
+    });
+    expect(mockBumpTag).toHaveBeenCalledWith("configuration");
+    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockEmitAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          failures: "next_cache_revalidation_failed",
         }),
         event: "agent_config.cache_invalidation_failed",
       })
