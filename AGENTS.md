@@ -66,9 +66,13 @@ This file defines required rules for all AI coding agents in this repo. If anyth
 - **Secret scanning:** CI runs `pnpm check:no-secrets` on PR diffs and `pnpm check:no-secrets:full` on pushes (see `.github/workflows/ci.yml`). The script `check:no-secrets:staged` exists but is not used in workflows.
 - **Biome:** `pnpm biome:fix`. Do **not** edit `biome.json`; fix code instead.
 - **File structure:**
-  - Source (`.ts`, `.tsx`): Optional `@fileoverview`, blank line, `"use client"` (if needed), blank line, imports, implementation.
+  - Source (`.ts`, `.tsx`): Optional one-sentence `@fileoverview`,
+    blank line, `"use client"` (if needed), blank line, imports, implementation.
   - Test (`*.test.ts`, `*.spec.ts`): No `@fileoverview`. Use `@vitest-environment` only when overriding default.
-- **JSDoc:** Use `/** ... */` for public APIs; `//` for notes. Document top‑level exports and non‑obvious functions. Avoid repeating types or TS‑duplicated tags.
+- **JSDoc/comments:** Use `/** ... */` for public APIs and `//` for notes.
+  Keep comments near Biome's 88-character line width where practical. Shorten
+  long `@fileoverview` text instead of wrapping it; CI rejects multi-line
+  fileoverview blocks.
 - **IDs/timestamps:** Use `@/lib/security/random` (`secureUuid`, `secureId`, `nowIso`). Never `Math.random` or `crypto.randomUUID` directly.
 - **Imports/exports:** Import from slice modules directly (e.g., `@/stores/auth/auth-core`). No barrel files or `export *`.
   - **Path aliases:** `@schemas/*` (Zod), `@domain/*`, `@ai/*`, `@/*` (generic). **Disallowed:** `@/domain/*`, `@/ai/*`, `@/domain/schemas/*`—use short forms.
