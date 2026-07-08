@@ -38,7 +38,12 @@ export type ResolveAgentConfigOptions = {
   cacheTtlSeconds?: number;
 };
 
-/** Result from agent configuration cache invalidation attempts. */
+/**
+ * Result from agent configuration cache invalidation attempts.
+ *
+ * @remarks Write routes return degraded metadata when invalidation partially fails.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export type AgentConfigCacheInvalidationResult =
   | { degraded: false }
   | {
@@ -47,6 +52,7 @@ export type AgentConfigCacheInvalidationResult =
       reason: "cache_invalidation_failed";
     };
 
+/** Failure categories surfaced by agent configuration cache invalidation. */
 type AgentConfigCacheInvalidationFailure =
   | "next_cache_revalidation_failed"
   | "redis_tag_bump_failed";
