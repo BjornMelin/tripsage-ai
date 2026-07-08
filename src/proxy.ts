@@ -13,15 +13,7 @@ const AUTHED_ROUTE_PREFIXES = ["/chat", "/dashboard"] as const;
 const DEFAULT_CSP_REPORT_URI = "/api/security/csp-report";
 
 function base64EncodeBytes(value: Uint8Array): string {
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(value).toString("base64");
-  }
-  // Edge runtime: Buffer is not available, but btoa is.
-  let binary = "";
-  for (const byte of value) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
+  return Buffer.from(value).toString("base64");
 }
 
 function createNonce(): string {

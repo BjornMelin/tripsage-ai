@@ -14,6 +14,7 @@
     "require-in-the-middle!",
     "shiki"
   ],
+  "ignoreBinaries": ["rg"],
   "ignoreFiles": ["src/test/mocks/rehype-harden.ts"],
   "project": [
     "src/**/*.{ts,tsx}!",

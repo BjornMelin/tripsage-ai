@@ -113,7 +113,6 @@ async function persistAccommodationEmbedding(
  */
 export const POST = withApiGuards({
   auth: false,
-  degradedMode: "fail_closed",
   rateLimit: "embeddings",
   schema: embeddingsRequestSchema,
   telemetry: "embeddings.generate",

@@ -16,7 +16,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import {
-  invalidateAgentConfigCache,
+  invalidateAgentConfigCacheAfterWrite,
   resolveAgentConfig,
 } from "@/lib/agents/config-resolver";
 import { createAgentConfigVersionId } from "@/lib/agents/version-id";
@@ -213,7 +213,10 @@ export const PUT = withApiGuards({
         });
       }
 
-      await invalidateAgentConfigCache(agentValidation.data, scope);
+      const invalidation = await invalidateAgentConfigCacheAfterWrite(
+        agentValidation.data,
+        scope
+      );
 
       emitOperationalAlert("agent_config.updated", {
         attributes: {
@@ -225,7 +228,11 @@ export const PUT = withApiGuards({
         severity: "info",
       });
 
-      return NextResponse.json({ config: configPayload, versionId });
+      return NextResponse.json({
+        config: configPayload,
+        degraded: invalidation.degraded ? { reason: invalidation.reason } : undefined,
+        versionId,
+      });
     } catch (err) {
       if ((err as { status?: number }).status === 403) {
         return errorResponse({

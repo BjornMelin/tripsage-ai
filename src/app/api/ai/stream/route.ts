@@ -55,7 +55,6 @@ const STREAM_TIMEOUT_SECONDS = Math.max(5, maxDuration - 5);
 const guardedPOST = withApiGuards({
   auth: true,
   botId: true,
-  degradedMode: "fail_closed",
   rateLimit: "ai:stream",
   schema: STREAM_BODY_SCHEMA,
   telemetry: "ai.stream",

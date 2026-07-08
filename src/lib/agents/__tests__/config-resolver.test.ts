@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getAgentConfigCacheTags,
   invalidateAgentConfigCache,
+  invalidateAgentConfigCacheAfterWrite,
   resolveAgentConfig,
 } from "@/lib/agents/config-resolver";
 
@@ -183,6 +184,27 @@ describe("resolveAgentConfig", () => {
       3,
       "configuration:budgetAgent:global",
       { expire: 0 }
+    );
+  });
+
+  it("reports degraded cache invalidation after successful writes", async () => {
+    mockBumpTag.mockRejectedValue(new Error("redis unavailable"));
+
+    const result = await invalidateAgentConfigCacheAfterWrite("budgetAgent", "global");
+
+    expect(result).toEqual({
+      degraded: true,
+      reason: "cache_invalidation_failed",
+    });
+    expect(mockEmitAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          agentType: "budgetAgent",
+          reason: "cache_invalidation_failed",
+          scope: "global",
+        }),
+        event: "agent_config.cache_invalidation_failed",
+      })
     );
   });
 

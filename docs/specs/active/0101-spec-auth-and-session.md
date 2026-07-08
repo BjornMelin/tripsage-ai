@@ -28,7 +28,7 @@
 ### Session refresh (SSR cookies)
 
 - Use Next.js Proxy to refresh Supabase session cookies for Server Components:
-  - `src/proxy.ts` (`proxy()`), built on `createProxySupabase()` + `getCurrentUser()`.
+  - `src/proxy.ts` (`proxy()`), built on `createProxySupabase()` + `supabase.auth.getClaims()`.
 - Proxy is also the canonical location for CSP + security headers (see SPEC-0108).
 
 ### Auth flows

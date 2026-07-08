@@ -17,7 +17,7 @@ const baseDependencies: Record<string, string> = {
   "@opentelemetry/resources": "2.9.0",
   "@opentelemetry/sdk-trace-base": "2.9.0",
   "@opentelemetry/sdk-trace-web": "2.9.0",
-  "import-in-the-middle": "3.0.1",
+  "import-in-the-middle": "3.3.1",
   "require-in-the-middle": "8.0.1",
 };
 
@@ -39,7 +39,7 @@ function convergedLockfile() {
     "@opentelemetry/resources@2.9.0",
     "@opentelemetry/sdk-trace-base@2.9.0",
     "@opentelemetry/sdk-trace-web@2.9.0",
-    "import-in-the-middle@3.0.1",
+    "import-in-the-middle@3.3.1",
     "require-in-the-middle@8.0.1",
   ]);
 }
@@ -110,7 +110,7 @@ describe("check-otel-convergence", () => {
         "@opentelemetry/resources@2.9.0",
         "@opentelemetry/sdk-trace-base@2.9.0",
         "@opentelemetry/sdk-trace-web@2.9.0",
-        "import-in-the-middle@3.0.1",
+        "import-in-the-middle@3.3.1",
         "require-in-the-middle@8.0.1",
       ])
     );
@@ -154,7 +154,7 @@ describe("check-otel-convergence", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "import-in-the-middle resolves to 3.0.2 but package.json expects 3.0.1"
+      "import-in-the-middle resolves to 3.0.2 but package.json expects 3.3.1"
     );
   });
 });
