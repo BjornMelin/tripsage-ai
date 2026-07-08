@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 
 import { describe, expect, it } from "vitest";
-import { ROUTE_RATE_LIMITS } from "../routes";
+import { getRouteRateLimitDegradedMode, ROUTE_RATE_LIMITS } from "../routes";
 
 describe("ROUTE_RATE_LIMITS", () => {
   describe("route definitions", () => {
@@ -19,9 +19,9 @@ describe("ROUTE_RATE_LIMITS", () => {
       ["security:metrics", { limit: 20, window: "1 m" }],
       ["security:sessions:list", { limit: 20, window: "1 m" }],
     ])("defines rate limit for %s", (routeName, expected) => {
-      expect(ROUTE_RATE_LIMITS[routeName as keyof typeof ROUTE_RATE_LIMITS]).toEqual(
-        expected
-      );
+      expect(
+        ROUTE_RATE_LIMITS[routeName as keyof typeof ROUTE_RATE_LIMITS]
+      ).toMatchObject(expected);
     });
   });
 
@@ -49,6 +49,28 @@ describe("ROUTE_RATE_LIMITS", () => {
       for (const config of Object.values(ROUTE_RATE_LIMITS)) {
         expect(config.window).toMatch(validWindowPattern);
       }
+    });
+  });
+
+  describe("degraded-mode policy", () => {
+    it.each([
+      "auth:login",
+      "chat:stream",
+      "config:agents:rollback",
+      "config:agents:update",
+      "flights:search",
+      "memory:sync",
+      "trips:create",
+    ] as const)("fails closed for protected key %s", (routeName) => {
+      expect(getRouteRateLimitDegradedMode(routeName)).toBe("fail_closed");
+    });
+
+    it.each([
+      "config:agents:read",
+      "places:search",
+      "timezone",
+    ] as const)("fails open for low-cost key %s", (routeName) => {
+      expect(getRouteRateLimitDegradedMode(routeName)).toBe("fail_open");
     });
   });
 });

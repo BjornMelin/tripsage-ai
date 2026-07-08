@@ -27,7 +27,12 @@ import {
 import { type ApiMetric, fireAndForgetMetric } from "@/lib/metrics/api-metrics";
 import { applyRateLimitHeaders } from "@/lib/ratelimit/headers";
 import { hashIdentifier, normalizeIdentifier } from "@/lib/ratelimit/identifier";
-import { ROUTE_RATE_LIMITS, type RouteRateLimitKey } from "@/lib/ratelimit/routes";
+import {
+  getRouteRateLimitDegradedMode,
+  ROUTE_RATE_LIMITS,
+  type RouteRateLimitDefinition,
+  type RouteRateLimitKey,
+} from "@/lib/ratelimit/routes";
 import {
   checkUpstashRateLimit,
   type DegradedMode,
@@ -243,49 +248,8 @@ export type RouteHandler<Data = unknown> = (
  * @param key Rate limit key from registry.
  * @returns Configuration object or null if not found.
  */
-function getRateLimitConfig(
-  key: RouteRateLimitKey
-): { limit: number; window: string } | null {
+function getRateLimitConfig(key: RouteRateLimitKey): RouteRateLimitDefinition | null {
   return ROUTE_RATE_LIMITS[key] || null;
-}
-
-/**
- * Determine the degraded mode for a rate limit key when Redis is unavailable.
- *
- * SECURITY: Cost-sensitive routes must fail_closed to prevent:
- * - Massive AI provider costs (OpenAI, Anthropic)
- * - Third-party API quota exhaustion (Amadeus, accommodations)
- * - Memory/data manipulation abuse
- *
- * Only read-only, low-cost routes should fail_open.
- */
-function defaultDegradedModeForRateLimitKey(key: RouteRateLimitKey): DegradedMode {
-  // Explicit high-cost routes
-  if (key === "embeddings" || key === "ai:stream" || key === "telemetry:ai-demo") {
-    return "fail_closed";
-  }
-
-  // Security-critical routes
-  if (key.startsWith("auth:")) return "fail_closed";
-  if (key.startsWith("keys:")) return "fail_closed";
-  if (key.startsWith("agents:")) return "fail_closed";
-
-  // AI/LLM routes - fail closed to prevent cost abuse
-  if (key.startsWith("chat:")) return "fail_closed";
-  if (key.startsWith("ai:")) return "fail_closed";
-
-  // Travel API routes - fail closed to prevent third-party quota exhaustion
-  if (key.startsWith("flights:")) return "fail_closed";
-  if (key.startsWith("accommodations:")) return "fail_closed";
-  if (key.startsWith("activities:")) return "fail_closed";
-
-  // Data manipulation routes - fail closed to prevent abuse
-  if (key.startsWith("memory:")) return "fail_closed";
-  if (key.startsWith("trips:")) return "fail_closed";
-  if (key.startsWith("calendar:")) return "fail_closed";
-
-  // Read-only, low-cost routes can fail open
-  return "fail_open";
 }
 
 function getSafeRouteKeyForTelemetry(options: {
@@ -628,7 +592,7 @@ export function withApiGuards<SchemaType extends z.ZodType>(
           identifier = ipHash === "unknown" ? "ip:unknown" : `ip:${ipHash}`;
         }
         const configuredDegradedMode =
-          config.degradedMode ?? defaultDegradedModeForRateLimitKey(rateLimit);
+          config.degradedMode ?? getRouteRateLimitDegradedMode(rateLimit);
         const rateLimitError = await enforceRateLimit(rateLimit, identifier, {
           degradedMode: configuredDegradedMode,
         });

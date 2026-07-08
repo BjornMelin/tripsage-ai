@@ -39,7 +39,7 @@ describe("withApiGuards degraded-mode policy", () => {
     setSupabaseFactoryForTests(null);
   });
 
-  it("defaults to fail_closed for auth:* rate limit keys", async () => {
+  it("uses the registry degraded-mode policy when route config omits an override", async () => {
     const { withApiGuards } = await setupTestWithRateLimitFactory(() =>
       Promise.reject(new Error("redis_down"))
     );
