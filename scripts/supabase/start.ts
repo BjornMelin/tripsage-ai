@@ -13,7 +13,7 @@ function main() {
     // Best-effort cleanup; ignore if container doesn't exist.
   }
 
-  // Workaround: Supabase CLI 2.72.8 `supabase start` fails health checks when
+  // Workaround: the pinned Supabase CLI `supabase start` fails health checks when
   // `storage-api` is started directly by the CLI in this repo's setup.
   run(
     "pnpm",

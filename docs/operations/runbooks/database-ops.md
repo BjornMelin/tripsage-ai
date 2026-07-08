@@ -42,7 +42,7 @@ Local sign-up confirmation:
 4. Generate types after changes:
    - Local (recommended for PRs): `pnpm supabase:bootstrap && pnpm supabase:typegen`
    - Remote (if you must typegen without local Supabase):
-     `pnpm dlx supabase@2.72.8 gen types --lang typescript --project-id <project-ref> --schema auth --schema public --schema memories --schema storage > src/lib/supabase/database.types.ts`
+    `pnpm dlx supabase@2.102.0 gen types --lang typescript --project-id <project-ref> --schema auth --schema public --schema memories --schema storage > src/lib/supabase/database.types.ts`
      (requires `SUPABASE_ACCESS_TOKEN` in your shell)
 
 ### Required Environment Variables

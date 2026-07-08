@@ -31,11 +31,11 @@ curl http://localhost:3000/api/health
 | :--- | :--- | :--- |
 | **Framework** | Next.js 16 | Server route handlers, React Server Components |
 | **AI** | AI SDK v6 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson)) | `streamText`, `generateText` + `Output.object`, tool calling, streaming |
-| **Database** | Supabase (`@supabase/ssr@^0.8.0`) | PostgreSQL, Row Level Security, SSR cookie handling |
+| **Database** | Supabase (`@supabase/ssr@^0.12.0`) | PostgreSQL, Row Level Security, SSR cookie handling |
 | **Cache/Rate Limiting** | Upstash (`@upstash/redis`, `@upstash/ratelimit`) | Redis caching, sliding window rate limits |
 | **State Management** | TanStack Query (`@tanstack/react-query@5.x`) | Client-side data fetching, caching, mutations |
 | **Validation** | Zod v4 (`zod@4.x`) | Request/response schema validation |
-| **Observability** | OpenTelemetry (`@opentelemetry/api@1.9.0`) | Distributed tracing, metrics |
+| **Observability** | OpenTelemetry (`@opentelemetry/api@^1.9.1`) | Distributed tracing, metrics |
 
 ### Route Handler Pattern
 
