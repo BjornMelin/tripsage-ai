@@ -85,9 +85,9 @@ Implement a **Supabase-backed agent configuration service** with:
    - Agent configs are cached in Upstash Redis using `getCachedJson` /
      `setCachedJson` with a key prefix such as
      `agent-config:{agentType}:{scope}`.
-   - After a successful config update or rollback, we bump a cache tag
-     `configuration` using `bumpTag("configuration")` to invalidate dependent
-     caches.
+   - After a successful config update or rollback,
+     `invalidateAgentConfigCache(agentType, scope)` bumps the Redis cache tag
+     and expires the matching Next cache tags.
 
 4. **Agent runtime integration:**
 
@@ -153,11 +153,9 @@ Implement a **Supabase-backed agent configuration service** with:
   - Misconfigured cache invalidation could lead to stale configs in agents until
     TTL expiry.
   - Cache invalidation edge cases (prescriptive handling):
-    - If `bumpTag("configuration")` fails (e.g., Redis unavailable), retry up to
-      3 times with a short backoff; on final failure, emit an operational alert
-      and continue serving the last cached config (stale) while marking the
-      response as degraded (do not fail the user‑visible request after a
-      successful DB write).
+    - If `invalidateAgentConfigCache(agentType, scope)` fails after a successful
+      database write, emit an operational alert and mark the response as
+      degraded instead of preserving a second invalidation path.
     - Concurrency window: Supabase writes may be readable before the tag bump is
       observed. Mitigation: perform the tag bump in the same transaction when
       possible; otherwise include the version/etag in cached payloads and have

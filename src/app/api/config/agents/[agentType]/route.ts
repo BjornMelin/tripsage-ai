@@ -12,11 +12,13 @@ import {
   agentTypeSchema,
   configurationAgentConfigSchema,
 } from "@schemas/configuration";
-import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
-import { resolveAgentConfig } from "@/lib/agents/config-resolver";
+import {
+  invalidateAgentConfigCache,
+  resolveAgentConfig,
+} from "@/lib/agents/config-resolver";
 import { createAgentConfigVersionId } from "@/lib/agents/version-id";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
@@ -29,7 +31,6 @@ import {
   requireUserId,
   validateSchema,
 } from "@/lib/api/route-helpers";
-import { bumpTag } from "@/lib/cache/tags";
 import { ensureAdmin, scopeSchema } from "@/lib/config/helpers";
 import { nowIso } from "@/lib/security/random";
 import { getMaybeSingle } from "@/lib/supabase/typed-helpers";
@@ -212,14 +213,7 @@ export const PUT = withApiGuards({
         });
       }
 
-      await bumpTag("configuration");
-      try {
-        revalidateTag("configuration", { expire: 0 });
-        revalidateTag(`configuration:${agentValidation.data}`, { expire: 0 });
-        revalidateTag(`configuration:${agentValidation.data}:${scope}`, { expire: 0 });
-      } catch {
-        // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
-      }
+      await invalidateAgentConfigCache(agentValidation.data, scope);
 
       emitOperationalAlert("agent_config.updated", {
         attributes: {

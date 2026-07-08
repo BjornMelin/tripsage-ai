@@ -59,9 +59,9 @@ For server-only reads that are safe to cache across requests (no `cookies()` / `
 Repo example:
 
 - `resolveAgentConfig()` in `src/lib/agents/config-resolver.ts` caches agent configuration with:
-  - tags: `configuration`, `configuration:{agentType}`, `configuration:{agentType}:{scope}`
+  - tags from `getAgentConfigCacheTags(agentType, scope)`
   - default lifetime via `cacheLife("agentConfiguration")` (custom profile configured in `next.config.ts`)
-  - invalidation in Route Handlers via `revalidateTag(..., { expire: 0 })` after config updates/rollbacks.
+  - invalidation via `invalidateAgentConfigCache(agentType, scope)` after config updates/rollbacks.
   - table-driven invalidation via `src/app/api/hooks/cache/route.ts` using `src/lib/cache/registry.ts` (includes `agent_config*` tables).
 
 > Note: This repo includes a small typing shim in `@types/next-cache-components.d.ts` to ensure `cacheLife("<custom-profile>")` remains type-safe under bundler resolution.

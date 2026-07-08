@@ -45,7 +45,12 @@ vi.mock("@/lib/telemetry/span", async () => {
 });
 
 const mockResolveAgentConfig = vi.fn();
+const mockInvalidateAgentConfigCache = vi.fn(
+  async (_agentType: unknown, _scope: unknown) => undefined
+);
 vi.mock("@/lib/agents/config-resolver", () => ({
+  invalidateAgentConfigCache: (agentType: unknown, scope: unknown) =>
+    mockInvalidateAgentConfigCache(agentType, scope),
   resolveAgentConfig: (...args: unknown[]) => mockResolveAgentConfig(...args),
 }));
 
@@ -121,6 +126,7 @@ describe("config routes", () => {
     supabaseInsert.mockReset();
     supabaseMaybeSingle.mockResolvedValue({ data: supabaseData, error: null });
     mockResolveAgentConfig.mockReset();
+    mockInvalidateAgentConfigCache.mockClear();
     mockEmit.mockReset();
   });
 
@@ -182,6 +188,10 @@ describe("config routes", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.versionId).toBe("ver-2");
+    expect(mockInvalidateAgentConfigCache).toHaveBeenCalledWith(
+      "budgetAgent",
+      "global"
+    );
     expect(mockEmit).toHaveBeenCalledWith(
       "agent_config.updated",
       expect.objectContaining({
@@ -246,6 +256,10 @@ describe("config routes", () => {
       } as never);
 
       expect(res.status).toBe(200);
+      expect(mockInvalidateAgentConfigCache).toHaveBeenCalledWith(
+        "budgetAgent",
+        "global"
+      );
       const rpcPayload = rpcSpy.mock.calls[0]?.[1] as
         | Record<string, unknown>
         | undefined;
@@ -329,6 +343,10 @@ describe("config routes", () => {
       } as never);
 
       expect(res.status).toBe(200);
+      expect(mockInvalidateAgentConfigCache).toHaveBeenCalledWith(
+        "budgetAgent",
+        "global"
+      );
       const body = await res.json();
       expect(body).toEqual(
         expect.objectContaining({
