@@ -102,7 +102,7 @@ Span names are stable. Attributes must be low-cardinality and must not contain s
 | Span name | When |
 | :--- | :--- |
 | `supabase.init` | `createServerSupabase()` |
-| `middleware.supabase.init` | `createMiddlewareSupabase()` (tracing usually disabled) |
+| `proxy.supabase.init` | `createProxySupabase()` (tracing is usually disabled) |
 | `supabase.auth.getUser` | `getCurrentUser()` |
 
 **CRUD spans (`src/lib/supabase/typed-helpers.ts`):**

@@ -15,7 +15,7 @@ type CookieAdapter = {
 let lastCookieAdapter: CookieAdapter | null = null;
 
 vi.mock("@/lib/supabase/factory", () => ({
-  createMiddlewareSupabase: (options: { cookies: CookieAdapter }) => {
+  createProxySupabase: (options: { cookies: CookieAdapter }) => {
     lastCookieAdapter = options.cookies;
     return {
       auth: {

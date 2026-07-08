@@ -89,7 +89,7 @@ const { SpanStatusCode } = await import("@opentelemetry/api");
 const { getClientEnv } = await import("@/lib/env/client");
 const {
   createCookieAdapter,
-  createMiddlewareSupabase,
+  createProxySupabase,
   createServerSupabaseClient,
   getCurrentUser,
 } = await import("../factory");
@@ -253,7 +253,7 @@ describe("Supabase Factory", () => {
     });
   });
 
-  describe("createMiddlewareSupabase", () => {
+  describe("createProxySupabase", () => {
     let mockCookieAdapter: CookieMethodsServer;
 
     beforeEach(() => {
@@ -267,7 +267,7 @@ describe("Supabase Factory", () => {
       vi.clearAllMocks();
     });
 
-    it("should create a middleware client with cookie adapter", () => {
+    it("should create a proxy client with cookie adapter", () => {
       mockCreateServerClient.mockReturnValue({
         auth: {
           getUser: vi.fn(),
@@ -275,7 +275,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      const client = createMiddlewareSupabase({
+      const client = createProxySupabase({
         cookies: mockCookieAdapter,
       });
 
@@ -297,7 +297,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      const client = createMiddlewareSupabase({
+      const client = createProxySupabase({
         cookies: mockCookieAdapter,
       });
 
@@ -317,20 +317,20 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      const client = createMiddlewareSupabase({
+      const client = createProxySupabase({
         cookies: mockCookieAdapter,
         enableTracing: true,
-        spanName: "test.middleware.span",
+        spanName: "test.proxy.span",
       });
 
       expect(startActiveSpanMock).toHaveBeenCalledWith(
-        "test.middleware.span",
+        "test.proxy.span",
         expect.objectContaining({
           attributes: expect.objectContaining({
             "db.name": "tripsage",
-            "db.supabase.operation": "middleware.init",
+            "db.supabase.operation": "proxy.init",
             "db.system": "postgres",
-            "runtime.environment": "edge",
+            "runtime.environment": "nodejs",
             "service.name": "tripsage-frontend",
           }),
         }),
@@ -347,7 +347,7 @@ describe("Supabase Factory", () => {
         from: vi.fn(),
       });
 
-      createMiddlewareSupabase({
+      createProxySupabase({
         cookies: mockCookieAdapter,
       });
 

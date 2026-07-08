@@ -4,7 +4,7 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { COMMON_SECURITY_HEADERS, HSTS_HEADER } from "@/lib/security/headers";
-import { createMiddlewareSupabase } from "@/lib/supabase/factory";
+import { createProxySupabase } from "@/lib/supabase/factory";
 import { createServerLogger } from "@/lib/telemetry/logger";
 
 type CspMode = "authed" | "public";
@@ -253,7 +253,7 @@ function applySecurityHeaders(headers: Headers, options: { isProd: boolean }): v
 }
 
 /**
- * Next.js middleware proxy that applies CSP headers and refreshes Supabase auth cookies.
+ * Next.js proxy that applies CSP headers and refreshes Supabase auth cookies.
  *
  * @param request - The incoming Next.js request to process.
  * @returns The response with security headers and CSP applied.
@@ -297,7 +297,7 @@ export async function proxy(request: NextRequest) {
   // This keeps auth cookies up-to-date without requiring a separate backend service.
   if (mode === "authed" && requestHeaders) {
     try {
-      const supabase = createMiddlewareSupabase({
+      const supabase = createProxySupabase({
         cookies: {
           getAll: () => request.cookies.getAll(),
           setAll: (cookiesToSet) => {
@@ -352,7 +352,7 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * Next.js middleware matcher configuration excluding static assets and prefetch requests.
+ * Next.js proxy matcher configuration excluding static assets and prefetch requests.
  */
 export const config = {
   matcher: [

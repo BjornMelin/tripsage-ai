@@ -70,7 +70,7 @@ export const GET = withApiGuards({
 ```
 
 - **Telemetry**: wrap service-layer DB calls with `withTelemetrySpan`; never use `console.*` in server paths.
-- **Proxy client**: `createMiddlewareSupabase()` from `@/lib/supabase/factory` is used in `src/proxy.ts` for session refresh; tracing disabled by default.
+- **Proxy client**: `createProxySupabase()` from `@/lib/supabase/factory` is used in `src/proxy.ts` for session refresh; tracing is disabled by default.
 
 ## Schema & Domains
 

@@ -19,7 +19,7 @@
 
 - Server client uses `@supabase/ssr` and Next `cookies()` integration:
   - `src/lib/supabase/server.ts` (`createServerSupabase()`)
-  - `src/lib/supabase/factory.ts` (`createServerSupabaseClient()`, `createMiddlewareSupabase()`)
+  - `src/lib/supabase/factory.ts` (`createServerSupabaseClient()`, `createProxySupabase()`)
 - Browser client uses `@supabase/ssr` `createBrowserClient()` (typed singleton):
   - `src/lib/supabase/client.ts` (`getBrowserClient()`, `useSupabaseRequired()`)
 - Service role client is server-only:
@@ -28,7 +28,7 @@
 ### Session refresh (SSR cookies)
 
 - Use Next.js Proxy to refresh Supabase session cookies for Server Components:
-  - `src/proxy.ts` (`proxy()`), built on `createMiddlewareSupabase()` + `getCurrentUser()`.
+  - `src/proxy.ts` (`proxy()`), built on `createProxySupabase()` + `getCurrentUser()`.
 - Proxy is also the canonical location for CSP + security headers (see SPEC-0108).
 
 ### Auth flows
