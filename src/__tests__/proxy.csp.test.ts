@@ -17,22 +17,25 @@ let lastCookieAdapter: CookieAdapter | null = null;
 vi.mock("@/lib/supabase/factory", () => ({
   createMiddlewareSupabase: (options: { cookies: CookieAdapter }) => {
     lastCookieAdapter = options.cookies;
-    return {};
-  },
-  getCurrentUser: () => {
-    lastCookieAdapter?.setAll?.([
-      {
-        name: "sb-access-token",
-        options: { path: "/" },
-        value: "refreshed-access",
+    return {
+      auth: {
+        getClaims: () => {
+          lastCookieAdapter?.setAll?.([
+            {
+              name: "sb-access-token",
+              options: { path: "/" },
+              value: "refreshed-access",
+            },
+            {
+              name: "sb-refresh-token",
+              options: { path: "/" },
+              value: "refreshed-refresh",
+            },
+          ]);
+          return { data: { claims: {} }, error: null };
+        },
       },
-      {
-        name: "sb-refresh-token",
-        options: { path: "/" },
-        value: "refreshed-refresh",
-      },
-    ]);
-    return null;
+    };
   },
 }));
 
