@@ -38,6 +38,10 @@ export type ResolveAgentConfigOptions = {
   cacheTtlSeconds?: number;
 };
 
+export type AgentConfigCacheInvalidationResult =
+  | { degraded: false }
+  | { degraded: true; reason: "cache_invalidation_failed" };
+
 export function getAgentConfigCacheTags(
   agentType: AgentType,
   scope: string
@@ -56,6 +60,28 @@ export async function invalidateAgentConfigCache(
     }
   } catch {
     // Ignore Cache Components invalidation when executed outside the Next runtime (e.g. unit tests).
+  }
+}
+
+export async function invalidateAgentConfigCacheAfterWrite(
+  agentType: AgentType,
+  scope: string
+): Promise<AgentConfigCacheInvalidationResult> {
+  try {
+    await invalidateAgentConfigCache(agentType, scope);
+    return { degraded: false };
+  } catch {
+    emitOperationalAlertOncePerWindow({
+      attributes: {
+        agentType,
+        reason: "cache_invalidation_failed",
+        scope,
+      },
+      event: "agent_config.cache_invalidation_failed",
+      severity: "warning",
+      windowMs: 60 * 60 * 1000, // 1h
+    });
+    return { degraded: true, reason: "cache_invalidation_failed" };
   }
 }
 

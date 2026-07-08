@@ -29,7 +29,6 @@ const MAX_BODY_BYTES = 16 * 1024;
  */
 const guardedPOST = withApiGuards({
   auth: false,
-  degradedMode: "fail_closed",
   maxBodyBytes: MAX_BODY_BYTES,
   rateLimit: "telemetry:ai-demo",
   schema: telemetryAiDemoRequestSchema,

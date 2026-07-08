@@ -3,6 +3,30 @@
 import { describe, expect, it } from "vitest";
 import { getRouteRateLimitDegradedMode, ROUTE_RATE_LIMITS } from "../routes";
 
+const FAIL_OPEN_ROUTE_KEYS = [
+  "attachments:files",
+  "config:agents:read",
+  "config:agents:versions",
+  "dashboard:metrics",
+  "images:proxy",
+  "itineraries:create",
+  "itineraries:list",
+  "places:details",
+  "places:nearby",
+  "places:photo",
+  "places:search",
+  "rag:index",
+  "rag:search",
+  "route-matrix",
+  "security:csp-report",
+  "security:events",
+  "security:metrics",
+  "security:sessions:list",
+  "telemetry:post",
+  "user-settings:get",
+  "user-settings:update",
+] as const;
+
 describe("ROUTE_RATE_LIMITS", () => {
   describe("route definitions", () => {
     it.each([
@@ -60,17 +84,30 @@ describe("ROUTE_RATE_LIMITS", () => {
       "config:agents:update",
       "flights:search",
       "memory:sync",
+      "security:sessions:terminate",
       "trips:create",
     ] as const)("fails closed for protected key %s", (routeName) => {
       expect(getRouteRateLimitDegradedMode(routeName)).toBe("fail_closed");
     });
 
     it.each([
-      "config:agents:read",
-      "places:search",
+      ...FAIL_OPEN_ROUTE_KEYS,
+      "geocode",
+      "routes",
       "timezone",
     ] as const)("fails open for low-cost key %s", (routeName) => {
       expect(getRouteRateLimitDegradedMode(routeName)).toBe("fail_open");
+    });
+
+    it("keeps registry omissions limited to the explicit fail-open allowlist", () => {
+      const omittedKeys = Object.entries(ROUTE_RATE_LIMITS)
+        .filter(([, config]) => !("degradedMode" in config))
+        .map(([key]) => key)
+        .sort();
+
+      expect(omittedKeys).toEqual(
+        [...FAIL_OPEN_ROUTE_KEYS, "geocode", "routes", "timezone"].sort()
+      );
     });
   });
 });

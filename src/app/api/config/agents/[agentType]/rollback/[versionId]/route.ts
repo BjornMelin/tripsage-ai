@@ -12,7 +12,7 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { invalidateAgentConfigCache } from "@/lib/agents/config-resolver";
+import { invalidateAgentConfigCacheAfterWrite } from "@/lib/agents/config-resolver";
 import { createAgentConfigVersionId } from "@/lib/agents/version-id";
 import type { RouteParamsContext } from "@/lib/api/factory";
 import { withApiGuards } from "@/lib/api/factory";
@@ -153,7 +153,10 @@ export const POST = withApiGuards({
         });
       }
 
-      await invalidateAgentConfigCache(agentValidation.data, scope);
+      const invalidation = await invalidateAgentConfigCacheAfterWrite(
+        agentValidation.data,
+        scope
+      );
 
       emitOperationalAlert("agent_config.rollback", {
         attributes: {
@@ -165,7 +168,11 @@ export const POST = withApiGuards({
         severity: "warning",
       });
 
-      return NextResponse.json({ config: rollbackConfig, versionId: newVersionId });
+      return NextResponse.json({
+        config: rollbackConfig,
+        degraded: invalidation.degraded ? { reason: invalidation.reason } : undefined,
+        versionId: newVersionId,
+      });
     } catch (err) {
       if ((err as { status?: number }).status === 403) {
         return errorResponse({

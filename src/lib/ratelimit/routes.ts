@@ -168,7 +168,11 @@ export const ROUTE_RATE_LIMITS = {
   "security:events": { limit: 20, window: "1 m" },
   "security:metrics": { limit: 20, window: "1 m" },
   "security:sessions:list": { limit: 20, window: "1 m" },
-  "security:sessions:terminate": { limit: 10, window: "1 m" },
+  "security:sessions:terminate": {
+    degradedMode: "fail_closed",
+    limit: 10,
+    window: "1 m",
+  },
 
   // Telemetry
   "telemetry:ai-demo": { degradedMode: "fail_closed", limit: 10, window: "1 m" },

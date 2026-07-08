@@ -45,12 +45,17 @@ vi.mock("@/lib/telemetry/span", async () => {
 });
 
 const mockResolveAgentConfig = vi.fn();
-const mockInvalidateAgentConfigCache = vi.fn(
-  async (_agentType: unknown, _scope: unknown) => undefined
+type CacheInvalidationResult =
+  | { degraded: false }
+  | { degraded: true; reason: "cache_invalidation_failed" };
+const mockInvalidateAgentConfigCacheAfterWrite = vi.fn(
+  async (_agentType: unknown, _scope: unknown): Promise<CacheInvalidationResult> => ({
+    degraded: false,
+  })
 );
 vi.mock("@/lib/agents/config-resolver", () => ({
-  invalidateAgentConfigCache: (agentType: unknown, scope: unknown) =>
-    mockInvalidateAgentConfigCache(agentType, scope),
+  invalidateAgentConfigCacheAfterWrite: (agentType: unknown, scope: unknown) =>
+    mockInvalidateAgentConfigCacheAfterWrite(agentType, scope),
   resolveAgentConfig: (...args: unknown[]) => mockResolveAgentConfig(...args),
 }));
 
@@ -126,7 +131,7 @@ describe("config routes", () => {
     supabaseInsert.mockReset();
     supabaseMaybeSingle.mockResolvedValue({ data: supabaseData, error: null });
     mockResolveAgentConfig.mockReset();
-    mockInvalidateAgentConfigCache.mockClear();
+    mockInvalidateAgentConfigCacheAfterWrite.mockClear();
     mockEmit.mockReset();
   });
 
@@ -188,7 +193,7 @@ describe("config routes", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.versionId).toBe("ver-2");
-    expect(mockInvalidateAgentConfigCache).toHaveBeenCalledWith(
+    expect(mockInvalidateAgentConfigCacheAfterWrite).toHaveBeenCalledWith(
       "budgetAgent",
       "global"
     );
@@ -256,7 +261,7 @@ describe("config routes", () => {
       } as never);
 
       expect(res.status).toBe(200);
-      expect(mockInvalidateAgentConfigCache).toHaveBeenCalledWith(
+      expect(mockInvalidateAgentConfigCacheAfterWrite).toHaveBeenCalledWith(
         "budgetAgent",
         "global"
       );
@@ -309,6 +314,44 @@ describe("config routes", () => {
     expect(json.versions[0].id).toBe("ver-1");
   });
 
+  it("PUT reports degraded cache invalidation after a successful upsert", async () => {
+    const supabase = createMockSupabaseClient({ user: null });
+    const state = getSupabaseMockState(supabase);
+    state.selectByTable.set("agent_config", {
+      count: null,
+      data: [{ config: supabaseData.config, version_id: supabaseData.version_id }],
+      error: null,
+    });
+    state.rpcResults.set("agent_config_upsert", {
+      count: null,
+      data: [{ version_id: "ver-2" }],
+      error: null,
+    });
+    mockInvalidateAgentConfigCacheAfterWrite.mockResolvedValueOnce({
+      degraded: true,
+      reason: "cache_invalidation_failed",
+    });
+
+    const { PUT } = await import("../[agentType]/route");
+    const req = new NextRequest("http://localhost/api/config/agents/budgetAgent", {
+      body: JSON.stringify({ model: "gpt-5.5", temperature: 0.4 }),
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+    } as never);
+
+    const res = await PUT(req, {
+      params: Promise.resolve({ agentType: "budgetAgent" }),
+      supabase,
+      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
+    } as never);
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      degraded: { reason: "cache_invalidation_failed" },
+      versionId: "ver-2",
+    });
+  });
+
   it(
     "rollback emits alert and helper-backed version-shaped config id",
     withFakeTimers(async () => {
@@ -343,7 +386,7 @@ describe("config routes", () => {
       } as never);
 
       expect(res.status).toBe(200);
-      expect(mockInvalidateAgentConfigCache).toHaveBeenCalledWith(
+      expect(mockInvalidateAgentConfigCacheAfterWrite).toHaveBeenCalledWith(
         "budgetAgent",
         "global"
       );
@@ -373,6 +416,45 @@ describe("config routes", () => {
       );
     })
   );
+
+  it("rollback reports degraded cache invalidation after a successful upsert", async () => {
+    const supabase = createMockSupabaseClient({ user: null });
+    const state = getSupabaseMockState(supabase);
+    state.selectByTable.set("agent_config_versions", {
+      count: null,
+      data: [supabaseData],
+      error: null,
+    });
+    state.rpcResults.set("agent_config_upsert", {
+      count: null,
+      data: [{ version_id: "ver-rollback" }],
+      error: null,
+    });
+    mockInvalidateAgentConfigCacheAfterWrite.mockResolvedValueOnce({
+      degraded: true,
+      reason: "cache_invalidation_failed",
+    });
+
+    const { POST } = await import("../[agentType]/rollback/[versionId]/route");
+    const req = new NextRequest(
+      "http://localhost/api/config/agents/budgetAgent/rollback/11111111-1111-4111-8111-111111111111"
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({
+        agentType: "budgetAgent",
+        versionId: "11111111-1111-4111-8111-111111111111",
+      }),
+      supabase,
+      user: { app_metadata: { is_admin: true }, id: TEST_USER_ID } as never,
+    } as never);
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      degraded: { reason: "cache_invalidation_failed" },
+      versionId: "ver-rollback",
+    });
+  });
 
   it("rejects non-admin", async () => {
     mockApiRouteAuthUser({ id: TEST_USER_ID } as never);
