@@ -10,6 +10,8 @@ All `@upstash/ratelimit` instances are constructed through
 `src/lib/ratelimit/upstash.ts`. That module owns limiter caching, sliding-window
 construction, timeout normalization, and Redis-unavailable detection. Surface
 modules own only response shape and degraded-mode policy.
+API route degraded-mode policy lives with the route key in
+`src/lib/ratelimit/routes.ts`.
 
 ## Degraded-mode policy (fail-open vs fail-closed)
 
@@ -18,9 +20,10 @@ Some endpoints are privileged or cost-bearing and must **fail closed** if rate l
 - Route handlers (`withApiGuards`) support `degradedMode: "fail_closed" | "fail_open"`.
   - `fail_closed`: deny the request with `503 rate_limit_unavailable`
   - `fail_open`: allow the request, but emit a deduped operational alert (`ratelimit.degraded`)
-- Default policy:
-  - `fail_closed` for `embeddings`, `ai:stream`, `telemetry:ai-demo`, and `keys:*`
-  - `fail_open` for non-privileged routes unless explicitly overridden
+- API route policy is defined in `ROUTE_RATE_LIMITS`:
+  - Set `degradedMode: "fail_closed"` on privileged, mutating, or cost-bearing route keys.
+  - Omitted `degradedMode` intentionally defaults to `fail_open`.
+  - Route-local `withApiGuards({ degradedMode })` remains an override for exceptional cases.
 - Webhooks (`src/lib/webhooks/rate-limit.ts`) default to `fail_closed`.
 
 ### Upstash timeout behavior (important)
