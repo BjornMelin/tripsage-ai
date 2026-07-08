@@ -38,6 +38,7 @@ export type ResolveAgentConfigOptions = {
   cacheTtlSeconds?: number;
 };
 
+/** Result from agent configuration cache invalidation attempts. */
 export type AgentConfigCacheInvalidationResult =
   | { degraded: false }
   | {
@@ -50,6 +51,14 @@ type AgentConfigCacheInvalidationFailure =
   | "next_cache_revalidation_failed"
   | "redis_tag_bump_failed";
 
+/**
+ * Returns Cache Components tags used for an agent configuration scope.
+ *
+ * @param agentType - Canonical agent type identifier.
+ * @param scope - Configuration scope.
+ * @returns Root, agent-level, and scoped cache tags.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export function getAgentConfigCacheTags(
   agentType: AgentType,
   scope: string
@@ -57,6 +66,15 @@ export function getAgentConfigCacheTags(
   return [CACHE_TAG, `${CACHE_TAG}:${agentType}`, `${CACHE_TAG}:${agentType}:${scope}`];
 }
 
+/**
+ * Invalidates Redis and Next cache tags for agent configuration reads.
+ *
+ * @remarks Attempts both invalidation paths and reports partial failures.
+ * @param agentType - Canonical agent type identifier.
+ * @param scope - Configuration scope.
+ * @returns Degraded state for the invalidation attempt.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export async function invalidateAgentConfigCache(
   agentType: AgentType,
   scope: string
@@ -85,6 +103,15 @@ export async function invalidateAgentConfigCache(
     : { degraded: false };
 }
 
+/**
+ * Invalidates agent configuration caches after a successful write.
+ *
+ * @remarks Emits an operational alert when any invalidation path fails.
+ * @param agentType - Canonical agent type identifier.
+ * @param scope - Configuration scope.
+ * @returns Degraded state for the post-write invalidation attempt.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export async function invalidateAgentConfigCacheAfterWrite(
   agentType: AgentType,
   scope: string

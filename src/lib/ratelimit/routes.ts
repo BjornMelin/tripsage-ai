@@ -4,16 +4,13 @@
 
 import type { DegradedMode } from "./upstash";
 
-/**
- * Rate limit configuration.
- *
- * @property degradedMode Behavior when Redis/rate-limit enforcement is unavailable.
- * @property limit Maximum number of requests allowed per window.
- * @property window Time window string (e.g., "1 m", "1 h", "1 d").
- */
+/** Rate limit configuration for an API route. */
 export interface RouteRateLimitDefinition {
+  /** Behavior when Redis/rate-limit enforcement is unavailable. */
   degradedMode?: DegradedMode;
+  /** Maximum number of requests allowed per window. */
   limit: number;
+  /** Time window string (e.g., "1 m", "1 h", "1 d"). */
   window: string;
 }
 
@@ -217,6 +214,12 @@ export const ROUTE_RATE_LIMITS = {
 /** Type for rate limit registry keys. */
 export type RouteRateLimitKey = keyof typeof ROUTE_RATE_LIMITS;
 
+/**
+ * Resolves the degraded-mode policy for a rate-limited route.
+ *
+ * @param key - Route rate-limit registry key.
+ * @returns The configured policy, defaulting to fail-closed when unset.
+ */
 export function getRouteRateLimitDegradedMode(key: RouteRateLimitKey): DegradedMode {
   const config = ROUTE_RATE_LIMITS[key] as RouteRateLimitDefinition;
   return config.degradedMode ?? "fail_closed";

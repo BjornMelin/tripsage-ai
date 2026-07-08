@@ -219,9 +219,9 @@ export function createProxySupabase(
  * Gets the current authenticated user with OpenTelemetry tracing.
  *
  * This helper function provides a unified way to retrieve the current user,
- * eliminating duplicate auth.getUser() calls across proxy, route handlers,
- * and server components. It includes telemetry for observability and redacts
- * sensitive user information in logs.
+ * eliminating duplicate auth.getUser() calls across route handlers and server
+ * components. It includes telemetry for observability and redacts sensitive
+ * user information in logs.
  *
  * @param supabase - Supabase client instance
  * @param options - Optional configuration

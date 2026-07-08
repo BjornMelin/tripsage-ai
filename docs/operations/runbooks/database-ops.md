@@ -409,7 +409,7 @@ The BYOK system integrates with OpenTelemetry:
 - **BYOK RPCs**: `supabase.rpc.*` spans for Vault/gateway RPCs with operation, RPC name, provider, and hashed user identifiers; secret values are never attached.
 - **BYOK Health**: `health.byok` spans and `health.byok_failure` events for the protected `/api/health/byok` operator probe. The backing RPC creates, decrypts, and deletes a non-user probe secret to prove the Vault path without returning decrypted values.
 - **Auth Operations**: `supabase.auth.getUser` spans for session management
-- **Proxy**: Session refresh runs in the Node.js Proxy runtime
+- **Proxy**: Session refresh runs in the Node.js Proxy runtime.
 
 ### Key Metrics
 
