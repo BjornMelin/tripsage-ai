@@ -221,6 +221,6 @@ export type RouteRateLimitKey = keyof typeof ROUTE_RATE_LIMITS;
  * @returns The configured policy, defaulting to fail-closed when unset.
  */
 export function getRouteRateLimitDegradedMode(key: RouteRateLimitKey): DegradedMode {
-  const config = ROUTE_RATE_LIMITS[key] as RouteRateLimitDefinition;
+  const config: RouteRateLimitDefinition = ROUTE_RATE_LIMITS[key];
   return config.degradedMode ?? "fail_closed";
 }
