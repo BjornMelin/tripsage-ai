@@ -31,8 +31,9 @@ TripSage needs:
   - “already processed” short-circuit stored in Redis or DB
 - Build all `@upstash/ratelimit` instances through `src/lib/ratelimit/upstash.ts`.
   Surfaces keep their own degraded-mode policy:
-  - API routes: `withApiGuards({ degradedMode })`, defaulting high-cost and
-    security-sensitive routes to fail closed.
+  - API routes: `ROUTE_RATE_LIMITS` owns per-key `degradedMode`; missing
+    `degradedMode` means intentional fail-open, and `withApiGuards({ degradedMode })`
+    remains an exceptional route-local override.
   - Webhooks and jobs: fail closed by default.
   - AI tools: fail open on unavailable limiter infrastructure but emit telemetry.
 - Publish all QStash jobs through `src/lib/qstash/client.ts` with:

@@ -44,7 +44,7 @@ async function invalidateTrips() {
 ## Where to invalidate
 
 - DB changes → the `/api/hooks/cache` route bumps the relevant tags (via pg_net triggers).
-- Application changes → call `bumpTag(s)` in write paths that modify derived views but do not trigger DB changes.
+- Application changes → call `bumpTag(s)` or a domain cache invalidation helper in write paths that modify derived views but do not trigger DB changes.
 
 ## Migration/rollout guidance
 
@@ -110,7 +110,7 @@ The `/api/hooks/cache` route automatically invalidates tags based on database ta
 Some cache invalidation happens in application code:
 
 - **Accommodations booking** (`accommodations/service.ts:421`): Bumps `accommodations:search` when a booking is created
-- **Agent configuration** (`api/config/agents/*/route.ts`): Bumps `configuration` tag on config updates
+- **Agent configuration** (`api/config/agents/*/route.ts`): Calls `invalidateAgentConfigCache(agentType, scope)` after config updates/rollbacks
 
 ## Real-World Example: Accommodations Service
 

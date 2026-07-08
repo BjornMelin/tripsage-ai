@@ -1,5 +1,5 @@
 /**
- * @fileoverview Agent configuration read/update API. Routes: GET/PUT /api/config/agents/[agentType] - Authenticated admin-only via RLS + explicit check. - GET resolves active config (cached) via resolver. - PUT validates input, builds config payload, upserts via Supabase function, and bumps cache tags.
+ * @fileoverview Agent configuration read/update API. Routes: GET/PUT /api/config/agents/[agentType] - Authenticated admin-only via RLS + explicit check. - GET resolves active config (cached) via resolver. - PUT validates input, builds config payload, upserts via Supabase function, and invalidates config cache tags.
  */
 
 import "server-only";
@@ -111,7 +111,7 @@ export const GET = withApiGuards({
 });
 
 /**
- * Updates agent configuration and revalidates the config cache tag.
+ * Updates agent configuration and revalidates the config cache tags.
  *
  * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
  */
