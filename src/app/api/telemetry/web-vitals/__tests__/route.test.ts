@@ -56,7 +56,7 @@ describe("POST /api/telemetry/web-vitals", () => {
     capturedRateLimit = undefined;
   });
 
-  it("applies fail-closed rate limiting and records valid Web Vitals", async () => {
+  it("uses telemetry rate limiting and records valid Web Vitals", async () => {
     const response = await postWebVitals({
       ...VALID_LCP_PAYLOAD,
       delta: 120.4,
@@ -66,7 +66,7 @@ describe("POST /api/telemetry/web-vitals", () => {
       value: 2500.3,
     });
 
-    expect(capturedDegradedMode).toBe("fail_closed");
+    expect(capturedDegradedMode).toBeUndefined();
     expect(capturedRateLimit).toBe("telemetry:post");
     expect(response.status).toBe(200);
     expectWebVitalsRecorded({

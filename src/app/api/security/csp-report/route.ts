@@ -83,7 +83,6 @@ function sanitizeDirective(value: string | null): string | null {
  * @returns Empty response when accepted, or a standardized error response for malformed input.
  */
 export const POST = withApiGuards({
-  degradedMode: "fail_closed",
   rateLimit: "security:csp-report",
   telemetry: "security.csp-report",
 })(async (req: NextRequest) => {
