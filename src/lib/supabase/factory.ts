@@ -159,32 +159,27 @@ export function createServerSupabaseClient(
 }
 
 /**
- * Creates a Supabase client for middleware with client-only environment variables.
+ * Creates a Supabase client for Next.js proxy with client-only environment variables.
  *
- * This factory function creates a server-side Supabase client specifically for middleware
- * running in the Edge runtime. It only validates client-safe environment variables
- * (NEXT_PUBLIC_*) to avoid dependency on server secrets that aren't available in Edge.
+ * This factory function creates a server-side Supabase client specifically for proxy.
+ * It only validates client-safe environment variables (NEXT_PUBLIC_*) to avoid
+ * dependency on server secrets at the network boundary.
  *
- * @param options - Configuration options for the middleware client
- * @returns A typed Supabase client instance for middleware operations
+ * @param options - Configuration options for the proxy client
+ * @returns A typed Supabase client instance for proxy operations
  * @throws Error if required client environment variables are missing
  *
  * @example
- * const supabase = createMiddlewareSupabase({
+ * const supabase = createProxySupabase({
  *   cookies: customCookieAdapter,
- *   enableTracing: false, // Disable tracing in Edge runtime
  * });
  */
-export function createMiddlewareSupabase(
+export function createProxySupabase(
   options: CreateServerSupabaseOptions
 ): ServerSupabaseClient {
-  const {
-    cookies,
-    enableTracing = false,
-    spanName = "middleware.supabase.init",
-  } = options;
+  const { cookies, enableTracing = false, spanName = "proxy.supabase.init" } = options;
 
-  // Validate only client environment variables for Edge runtime compatibility
+  // Validate only client environment variables at the proxy boundary.
   const env = getClientEnv();
 
   const createClient = () => {
@@ -210,9 +205,9 @@ export function createMiddlewareSupabase(
     {
       attributes: {
         "db.name": "tripsage",
-        "db.supabase.operation": "middleware.init",
+        "db.supabase.operation": "proxy.init",
         "db.system": "postgres",
-        "runtime.environment": "edge",
+        "runtime.environment": "nodejs",
         "service.name": TELEMETRY_SERVICE_NAME,
       },
     },
@@ -224,7 +219,7 @@ export function createMiddlewareSupabase(
  * Gets the current authenticated user with OpenTelemetry tracing.
  *
  * This helper function provides a unified way to retrieve the current user,
- * eliminating duplicate auth.getUser() calls across middleware, route handlers,
+ * eliminating duplicate auth.getUser() calls across proxy, route handlers,
  * and server components. It includes telemetry for observability and redacts
  * sensitive user information in logs.
  *
