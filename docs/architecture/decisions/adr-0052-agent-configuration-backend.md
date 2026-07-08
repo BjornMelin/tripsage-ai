@@ -86,8 +86,9 @@ Implement a **Supabase-backed agent configuration service** with:
      `setCachedJson` with a key prefix such as
      `agent-config:{agentType}:{scope}`.
    - After a successful config update or rollback,
-     `invalidateAgentConfigCache(agentType, scope)` bumps the Redis cache tag
-     and expires the matching Next cache tags.
+     `invalidateAgentConfigCache(agentType, scope)` attempts both the Redis tag
+     bump and matching Next cache tag expiration, then reports any partial
+     invalidation failure as degraded.
 
 4. **Agent runtime integration:**
 
@@ -153,9 +154,9 @@ Implement a **Supabase-backed agent configuration service** with:
   - Misconfigured cache invalidation could lead to stale configs in agents until
     TTL expiry.
   - Cache invalidation edge cases (prescriptive handling):
-    - If `invalidateAgentConfigCache(agentType, scope)` fails after a successful
-      database write, emit an operational alert and mark the response as
-      degraded instead of preserving a second invalidation path.
+    - If either Redis tag bumping or Next tag expiration fails after a
+      successful database write, still attempt the other invalidation path,
+      emit an operational alert, and mark the response as degraded.
     - Concurrency window: Supabase writes may be readable before the tag bump is
       observed. Mitigation: perform the tag bump in the same transaction when
       possible; otherwise include the version/etag in cached payloads and have

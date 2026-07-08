@@ -53,7 +53,10 @@ Privileged/cost-bearing endpoints must **fail closed** (`503 rate_limit_unavaila
 
 Non-privileged endpoints may **fail open** for availability, but must emit a deduped operational alert (`ratelimit.degraded`).
 
-API route degraded-mode policy is stored in `ROUTE_RATE_LIMITS` beside each route key. Missing `degradedMode` means intentional fail-open; route-local `withApiGuards({ degradedMode })` is reserved for exceptional overrides.
+API route degraded-mode policy is stored in `ROUTE_RATE_LIMITS` beside each
+route key. Missing `degradedMode` defaults to fail-closed; explicit fail-open
+is reserved for approved low-risk telemetry/reporting routes. Route-local
+`withApiGuards({ degradedMode })` is reserved for exceptional overrides.
 
 Upstash timeout behavior is treated as degraded infrastructure: `success: true` with `reason: "timeout"` still triggers the same degraded-mode policy.
 

@@ -49,11 +49,19 @@ describe("/api/attachments/files", () => {
   const mockCreateSignedUrls = vi.fn();
   let fromSpy: ReturnType<typeof vi.spyOn>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetModules();
     resetApiRouteMocks();
     mockApiRouteAuthUser({ id: userId });
     vi.clearAllMocks();
+
+    const { setRateLimitFactoryForTests } = await import("@/lib/api/factory");
+    setRateLimitFactoryForTests(async () => ({
+      limit: 100,
+      remaining: 99,
+      reset: Date.now() + 60_000,
+      success: true,
+    }));
 
     // Setup storage mock for signed URL generation
     const supabase = getApiRouteSupabaseMock();
