@@ -31,8 +31,8 @@ importers:
         specifier: 3.0.67
         version: 3.0.67(zod@4.4.3)
       '@ai-sdk/provider':
-        specifier: 3.0.10
-        version: 3.0.10
+        specifier: 4.0.2
+        version: 4.0.2
       '@ai-sdk/react':
         specifier: 3.0.195
         version: 3.0.195(react@19.2.7)(zod@4.4.3)
@@ -424,6 +424,10 @@ packages:
   '@ai-sdk/provider@3.0.10':
     resolution: {integrity: sha512-Q3BZ27qfpYqnCYGvE3vt+Qi6LGOF9R5Nmzn+9JoM1lCRsD9mYaIhfJLkSunN48nfGXJ6n+XNV0J/XVpqGQl7Dw==}
     engines: {node: '>=18'}
+
+  '@ai-sdk/provider@4.0.2':
+    resolution: {integrity: sha512-pfPoy9J1B1xV7cqJ8MYHOsDYrMv5tR3+EMNfI249OhkD2uRakvav3Fo7XpD2luuN/YNCBY7KfEQc7vEV7KEtyw==}
+    engines: {node: '>=22'}
 
   '@ai-sdk/react@3.0.195':
     resolution: {integrity: sha512-+yIH84d4bBNzLKfaDDf4EocEH0XQKKNwNShxbrz5xAiJMNIPnWVWT9cyrSerYaGH3iNVS/g2io42PE4HNbc4RA==}
@@ -6203,6 +6207,10 @@ snapshots:
       zod: 4.4.3
 
   '@ai-sdk/provider@3.0.10':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@4.0.2':
     dependencies:
       json-schema: 0.4.0
 
