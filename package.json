@@ -190,7 +190,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "@vitest/ui": "^4.1.10",
     "babel-plugin-react-compiler": "^1.0.0",
-    "conventional-changelog-conventionalcommits": "^9.3.1",
+    "conventional-changelog-conventionalcommits": "^10.2.1",
     "jsdom": "^29.1.1",
     "knip": "6.25.0",
     "madge": "^8.0.0",
