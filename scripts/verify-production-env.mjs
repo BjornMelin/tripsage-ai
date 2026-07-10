@@ -28,7 +28,9 @@ const valueValidators = new Map([
   ["AMADEUS_CLIENT_SECRET", [minLength(16)]],
   ["AMADEUS_ENV", [oneOf(["production", "test"])]],
   ["BYOK_HEALTHCHECK_KEY", [minLength(32)]],
+  ["ENABLE_AI_DEMO", [oneOf(["true", "false"])]],
   ["HMAC_SECRET", [minLength(32)]],
+  ["MFA_BACKUP_CODE_PEPPER", [minLength(16)]],
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", [supabaseLegacyAnonKey()]],
   ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", [startsWithOneOf(["sb_publishable_"])]],
   ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", [startsWithOneOf(["pk_live_", "pk_test_"])]],
@@ -164,8 +166,9 @@ function missing(names) {
 
 function invalidValues(names) {
   return names.flatMap((name) => {
-    const value = envValue(name);
-    if (!value) return [];
+    const rawValue = process.env[name] ?? "";
+    const value = name === "ENABLE_AI_DEMO" ? rawValue : envValue(name);
+    if (!value.trim()) return [];
     if (isPlaceholderValue(value)) {
       return [{ name, reason: "placeholder value is not allowed" }];
     }
@@ -257,6 +260,24 @@ addRequiredGroupCheck("webhook_hmac_contract", ["HMAC_SECRET"], {
   requiredWhen: "production",
 });
 
+addRequiredGroupCheck("mfa_backup_code_contract", ["MFA_BACKUP_CODE_PEPPER"], {
+  requiredWhen: "production",
+});
+
+const mfaPepper = envValue("MFA_BACKUP_CODE_PEPPER");
+const supabaseJwtSecret = envValue("SUPABASE_JWT_SECRET");
+const reusesSupabaseJwtSecret =
+  isProduction &&
+  Boolean(mfaPepper) &&
+  Boolean(supabaseJwtSecret) &&
+  mfaPepper === supabaseJwtSecret;
+checks.push(
+  makeCheck("mfa_backup_code_secret_separation", !reusesSupabaseJwtSecret, {
+    distinct: ["MFA_BACKUP_CODE_PEPPER", "SUPABASE_JWT_SECRET"],
+    requiredWhen: "production",
+  })
+);
+
 addRequiredGroupCheck("byok_health_contract", ["BYOK_HEALTHCHECK_KEY"], {
   requiredWhen: "production",
 });
@@ -335,6 +356,14 @@ checks.push(
     deprecatedBy: ["upstash_redis_contract", "qstash_delivery_contract"],
     missing: isProduction ? missing(legacyUpstashRequired) : [],
     requiredWhen: "production",
+  })
+);
+
+const aiDemoFlagInvalid = invalidValues(["ENABLE_AI_DEMO"]);
+checks.push(
+  makeCheck("ai_demo_flag_contract", aiDemoFlagInvalid.length === 0, {
+    accepted: ["true", "false"],
+    invalid: aiDemoFlagInvalid,
   })
 );
 

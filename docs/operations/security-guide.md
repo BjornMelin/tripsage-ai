@@ -79,13 +79,15 @@ USING (
       - Local development: `.env.local`
       - CI: CI/CD secret store
       - Preview/production: deployment platform secret manager
-    - Configure `SUPABASE_JWT_SECRET` (>=16 chars) as the JWT signing key.
-    - Backup-code hashing always prefers `MFA_BACKUP_CODE_PEPPER`; `SUPABASE_JWT_SECRET` is used only as a bootstrap fallback when the pepper is absent. Rotating the JWT secret while using it as a fallback pepper invalidates existing backup codes.
+    - Configure `SUPABASE_JWT_SECRET` (>=32 chars) as the JWT signing key.
+    - Backup-code hashing requires `MFA_BACKUP_CODE_PEPPER`; startup fails when
+      the dedicated pepper is absent.
     - Example generation (run once per environment): `openssl rand -hex 32`.
   - **Relationship and intended use**:
     - `MFA_BACKUP_CODE_PEPPER`: deterministic pepper for backup-code hashing/salting only.
     - `SUPABASE_JWT_SECRET`: JWT signing key for Supabase auth tokens.
-    - Do **not** treat these as interchangeable secrets. Using `SUPABASE_JWT_SECRET` as a backup-code pepper is a compatibility fallback only and should be phased out by setting a dedicated `MFA_BACKUP_CODE_PEPPER`.
+    - Do **not** treat these as interchangeable secrets. The application rejects
+      their reuse in production and never uses the JWT secret as a fallback pepper.
   - **Support-driven recovery**:
     - Definition: admin-initiated account recovery flows (e.g., regenerating backup codes for a locked-out user, clearing a stuck enrollment, or disabling a compromised factor).
     - Requirements:
@@ -101,8 +103,8 @@ USING (
 
 | Variable / Table | Purpose | Min Length | Precedence / Notes |
 | --- | --- | --- | --- |
-| `MFA_BACKUP_CODE_PEPPER` | Backup-code hashing pepper | ≥ 16 chars | Preferred source; used for all backup-code hashing when set. |
-| `SUPABASE_JWT_SECRET` | JWT signing key (Supabase) | ≥ 16 chars | Used as fallback pepper **only** when `MFA_BACKUP_CODE_PEPPER` is unset; rotate carefully. |
+| `MFA_BACKUP_CODE_PEPPER` | Backup-code hashing pepper | ≥ 16 chars | Required dedicated source for backup-code hashing. |
+| `SUPABASE_JWT_SECRET` | JWT signing key (Supabase) | ≥ 32 chars | Never used as a backup-code pepper. |
 | `mfa_backup_code_audit` table | Backup-code regeneration/consumption | N/A | Schema defined in `supabase/migrations/20260120000000_base_schema.sql`; used for long-lived audit. |
 
 ### BYOK (Bring Your Own Key) System

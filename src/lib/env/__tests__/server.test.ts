@@ -8,6 +8,16 @@ import {
   getServerEnvVarWithFallback,
 } from "../server";
 
+const exactBooleanEnvFlags = ["ENABLE_AI_DEMO"] as const;
+
+function stubRequiredProductionEnv(): void {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("APP_BASE_URL", "https://app.example.com");
+  vi.stubEnv("HMAC_SECRET", "h".repeat(32));
+  vi.stubEnv("SUPABASE_JWT_SECRET", "j".repeat(32));
+  vi.stubEnv("TELEMETRY_HASH_SECRET", "t".repeat(32));
+}
+
 describe("env/server", () => {
   beforeEach(() => {
     // Set up required env vars for tests
@@ -65,6 +75,68 @@ describe("env/server", () => {
       vi.stubEnv("NODE_ENV", "invalid");
 
       expect(() => getServerEnv()).toThrow("Environment validation failed");
+    });
+
+    it.each(
+      exactBooleanEnvFlags
+    )("parses %s only from exact boolean strings", (flag) => {
+      vi.stubEnv(flag, "true");
+      expect(getServerEnv()[flag]).toBe(true);
+
+      vi.stubEnv(flag, "false");
+      __resetServerEnvCacheForTest();
+      expect(getServerEnv()[flag]).toBe(false);
+    });
+
+    it.each(exactBooleanEnvFlags)("rejects invalid %s values", (flag) => {
+      vi.stubEnv(flag, "yes");
+
+      expect(() => getServerEnv()).toThrow("Environment validation failed");
+    });
+
+    it.each(exactBooleanEnvFlags)("treats blank %s values as unset", (flag) => {
+      vi.stubEnv(flag, "   ");
+
+      expect(getServerEnv()[flag]).toBe(false);
+    });
+
+    it.each([
+      " false ",
+      "FALSE",
+      "1",
+      "*",
+    ])("rejects non-canonical ENABLE_AI_DEMO=%j", (value) => {
+      vi.stubEnv("ENABLE_AI_DEMO", value);
+
+      expect(() => getServerEnv()).toThrow("Environment validation failed");
+    });
+
+    it("requires a dedicated MFA backup-code pepper in production", () => {
+      stubRequiredProductionEnv();
+      Reflect.deleteProperty(process.env, "MFA_BACKUP_CODE_PEPPER");
+
+      expect(() => getServerEnv()).toThrow("Environment validation failed");
+    });
+
+    it("rejects reusing the Supabase JWT secret as the production MFA pepper", () => {
+      const sharedSecret = "s".repeat(32);
+      stubRequiredProductionEnv();
+      vi.stubEnv("MFA_BACKUP_CODE_PEPPER", sharedSecret);
+      vi.stubEnv("SUPABASE_JWT_SECRET", sharedSecret);
+
+      expect(() => getServerEnv()).toThrow(
+        "MFA_BACKUP_CODE_PEPPER must be distinct from SUPABASE_JWT_SECRET"
+      );
+    });
+
+    it("accepts distinct production MFA pepper and Supabase JWT secrets", () => {
+      stubRequiredProductionEnv();
+      vi.stubEnv("MFA_BACKUP_CODE_PEPPER", "m".repeat(32));
+
+      const env = getServerEnv();
+
+      expect(env.MFA_BACKUP_CODE_PEPPER).toBe("m".repeat(32));
+      expect(env.SUPABASE_JWT_SECRET).toBe("j".repeat(32));
     });
   });
 

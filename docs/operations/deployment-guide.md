@@ -22,12 +22,13 @@ Copy the root `.env.example` to the target environment and fill the values (see 
 - **Core URLs**: `APP_BASE_URL` (preferred server origin), `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NODE_ENV`
 - **Supabase**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (canonical) or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (legacy fallback), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` (Dashboard > Settings > API)
 - **Upstash/QStash**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` (Upstash console)
-- **AI providers**: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `EMBEDDINGS_API_KEY`, `BYOK_HEALTHCHECK_KEY` (operator token for `/api/health/byok`)
+- **Security/operator keys**: `HMAC_SECRET`, `MFA_BACKUP_CODE_PEPPER`, `BYOK_HEALTHCHECK_KEY` (operator token for `/api/health/byok`)
+- **AI providers**: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `EMBEDDINGS_API_KEY`
 - **Feature flags**: `ENABLE_AI_DEMO` (set to `"true"` to enable demo routes)
 - **Telemetry**: `TELEMETRY_HASH_SECRET` (required in production; enables stable hashed identifiers in spans), `TELEMETRY_AI_DEMO_KEY` (required only if enabling `/api/telemetry/ai-demo`)
 - **Maps/Weather**: `GOOGLE_MAPS_SERVER_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`, `OPENWEATHERMAP_API_KEY`
 - **Payments**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (required as a complete group when payments are enabled)
-- **Email/Notifications**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `HMAC_SECRET` (`RESEND_*` required as a complete group when email notifications are enabled)
+- **Email/Notifications**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME` (required as a complete group when email notifications are enabled)
 - **Travel APIs**: `DUFFEL_ACCESS_TOKEN`, `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV` (`AMADEUS_*` required as a complete group when Amadeus is enabled)
 
 Keep root `.env.test.example` aligned for CI.

@@ -63,6 +63,15 @@ These routes are cost-bearing/privileged and are disabled unless explicitly enab
 
 - `TELEMETRY_HASH_SECRET` (≥32 chars): required in production. Enables stable hashed identifiers in telemetry spans (e.g., `user.id_hash`, `session.id_hash`) and optional HMAC fingerprints on privileged alerts (e.g., `ai_demo.stream.detail_hash`). In non-production, if unset, identifier/fingerprint attributes are omitted by default.
 
+## Security and operator keys
+
+- `HMAC_SECRET` (≥32 chars): verifies HMAC signatures on inbound Supabase
+  Database Webhooks.
+- `MFA_BACKUP_CODE_PEPPER` (≥16 chars): dedicated backup-code hashing pepper.
+  Production must not reuse `SUPABASE_JWT_SECRET` as this value.
+- `BYOK_HEALTHCHECK_KEY` (≥32 chars): protects the operator-only Vault health
+  check.
+
 ## Search / crawling
 
 - `FIRECRAWL_API_KEY`

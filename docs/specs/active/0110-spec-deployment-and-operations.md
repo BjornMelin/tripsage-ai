@@ -36,7 +36,8 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
 - Required environment groups:
   - Core origins: `APP_BASE_URL`, public app/API/site URLs, and CSP report origin.
   - Supabase: project URL, publishable key, service role key, JWT secret, and Vault RPC support.
-  - Security: `HMAC_SECRET`, `TELEMETRY_HASH_SECRET`, and `BYOK_HEALTHCHECK_KEY`.
+  - Security: `HMAC_SECRET`, `MFA_BACKUP_CODE_PEPPER`,
+    `TELEMETRY_HASH_SECRET`, and `BYOK_HEALTHCHECK_KEY`.
   - Upstash: Redis REST credentials, QStash token, and QStash signing keys.
   - Feature-aware providers: Stripe, Resend, Amadeus, Duffel, Expedia, analytics,
     and AI provider keys are required only when the corresponding feature is enabled.

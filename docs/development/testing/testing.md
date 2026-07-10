@@ -74,7 +74,9 @@ Never use global `vi.useFakeTimers()` in `beforeEach`/`afterEach`.
 
 ### MFA Tests
 
-Set `MFA_BACKUP_CODE_PEPPER` (≥16 chars) or `SUPABASE_JWT_SECRET`. `validateMfaConfig()` enforces this outside `NODE_ENV=test`; missing values fail fast in server code.
+Set a dedicated `MFA_BACKUP_CODE_PEPPER` (≥16 chars) for every MFA test.
+`validateMfaConfig()` never falls back to `SUPABASE_JWT_SECRET`; missing values
+fail fast whenever MFA configuration initializes.
 
 Mock admin client:
 

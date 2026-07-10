@@ -39,9 +39,11 @@ Vercel project production environment:
     `NEXT_PUBLIC_SUPABASE_ANON_KEY` as legacy fallback
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `SUPABASE_JWT_SECRET`
-- Webhook and telemetry:
+- Security and operator keys:
   - `HMAC_SECRET`
+  - `MFA_BACKUP_CODE_PEPPER`
   - `TELEMETRY_HASH_SECRET`
+  - `BYOK_HEALTHCHECK_KEY`
 - Upstash Redis and QStash:
   - `UPSTASH_REDIS_REST_URL`
   - `UPSTASH_REDIS_REST_TOKEN`
