@@ -42,10 +42,10 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 ### Performance & Scalability
 
-- **Upstash Redis**: Serverless HTTP Redis for sub-10ms global caching, sliding-window rate limiting, and deduplication keys
+- **Upstash Redis**: Serverless HTTP Redis for caching, sliding-window rate limiting, and deduplication keys
 - **Upstash QStash**: Webhook-driven background jobs with signature verification, Redis idempotency gates, and batch processing (memory sync, async tasks)
 - **Vercel Runtime Architecture**: Next.js 16 route handlers, Vercel CLI prebuilt promotion, and global CDN delivery for low-latency responses
-- **React Compiler**: Automatic memoization and zero-overhead reactive rendering for optimal performance
+- **React Compiler**: Automatic memoization to reduce avoidable client rerenders
 
 ### Security & Compliance
 
@@ -246,24 +246,19 @@ We welcome contributions! See the [Development Guide](docs/development/core/deve
 
 ## Performance
 
-TripSage AI is optimized for high performance and global scalability:
+TripSage AI includes performance-oriented runtime building blocks:
 
-- **Response Times**: Sub-200ms for cached requests via Upstash Redis HTTP API
-- **Edge Performance**: Sub-10ms global latency with Vercel Edge runtime and Upstash Redis distributed caching
-- **Throughput**: 1000+ requests/second on standard hardware with Upstash serverless scaling
-- **Vector Search**: Supabase pgvector with HNSW indexes for sub-50ms semantic similarity queries
+- **Caching**: Upstash Redis HTTP caching and request deduplication
+- **Vector Search**: Supabase pgvector with HNSW indexes for semantic retrieval
 - **Streaming**: Real-time SSE with AI SDK v6, interleaved tool calls, and progressive UI rendering
-- **Background Processing**: Upstash QStash handles async jobs (memory sync, batch operations) with guaranteed delivery
+- **Background Processing**: Upstash QStash handles signed async jobs for memory sync and batch operations
 
-### Benchmarks
+### Performance validation
 
-```bash
-# Performance testing via load testing tools
-pnpm test --grep performance
-
-# Or use external load testing
-autocannon -c 100 -d 30 http://localhost:3000/api/health
-```
+`pnpm test:benchmark` measures Vitest suite duration for regression detection. It
+does not establish production latency, throughput, or vector-search performance.
+Publish runtime performance claims only with a dated, reproducible environment,
+dataset, command, and raw result artifact.
 
 ---
 
