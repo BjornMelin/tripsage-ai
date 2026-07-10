@@ -1,6 +1,6 @@
 # SPEC-0110: Deployment on Vercel (Supabase + Upstash)
 
-**Version**: 1.2.0
+**Version**: 1.3.0
 **Status**: Final
 **Date**: 2026-07-09
 
@@ -52,6 +52,17 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
   - Upstash: Redis REST credentials, QStash token, and QStash signing keys.
   - Feature-aware providers: Stripe, Resend, Amadeus, Duffel, Expedia, analytics,
     and AI provider keys are required only when the corresponding feature is enabled.
+
+- Activation telemetry operations:
+  - Configure an OpenTelemetry trace drain/exporter before using activation events for
+    production aggregation. The live Vercel environment does not configure one.
+  - Count activated planners as unique `user.id_hash` values on
+    `activation.trip_created`; treat `activation.itinerary_item_completed` as the
+    deeper conversion milestone.
+  - Keep monetization disabled until production evidence reaches both 500 activated
+    planners and 30 explicit paid-feature requests.
+  - Never export raw user, trip, or itinerary-item identifiers or content. Identifier
+    attributes depend on `TELEMETRY_HASH_SECRET` and are omitted when unavailable.
 
 ## Environment setup
 

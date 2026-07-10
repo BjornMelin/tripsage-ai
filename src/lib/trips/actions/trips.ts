@@ -27,6 +27,7 @@ import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { deleteSingle, insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordTripCreatedActivation } from "@/lib/trips/activation-telemetry";
 import { mapDbTripToUi } from "@/lib/trips/mappers";
 import { getTripByIdForUser, listTripsForUser } from "@/server/queries/trips";
 import {
@@ -195,6 +196,11 @@ export async function createTripImpl(
       });
       return err({ error: "internal", reason: "Created trip failed validation" });
     }
+
+    recordTripCreatedActivation({
+      tripId: parsedRow.data.id,
+      userId: user.id,
+    });
 
     return ok(validatedUi.data);
   });

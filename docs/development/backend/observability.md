@@ -91,6 +91,40 @@ Do not record raw user/session identifiers in telemetry spans by default.
 - In non-production, if `TELEMETRY_HASH_SECRET` is unset, identifier attributes should be omitted (fail-safe).
 - Policy and attribute classification: [Telemetry Data Classification](../security/telemetry-data-classification.md#telemetry-data-classification-server--client).
 
+## Activation and conversion telemetry
+
+Server actions emit activation events only after a durable mutation succeeds and its
+returned row passes runtime validation. These OpenTelemetry events are best effort:
+hashing or export failures must not change the persisted action result.
+
+| Event | Attributes | Trigger |
+| :--- | :--- | :--- |
+| `activation.trip_created` | Optional `user.id_hash`, optional namespaced `trip.id_hash` | A trip insert succeeds and the returned trip passes database and UI validation |
+| `activation.itinerary_item_completed` | `itinerary.item_type`, `itinerary.operation` (`create` or `update`), optional `user.id_hash`, optional namespaced `trip.id_hash` | An itinerary-item insert or update succeeds and the validated returned `bookingStatus` is `completed` |
+
+Operational definitions:
+
+- An activated planner is one unique `user.id_hash` observed on
+  `activation.trip_created`. Events without `user.id_hash` cannot contribute to this
+  unique-user count.
+- `activation.itinerary_item_completed` is the deeper conversion milestone. Count
+  distinct hashed users separately from raw event volume because later updates to a
+  completed item can emit another event.
+- Monetization remains disabled until production evidence reaches both 500 activated
+  planners and 30 explicit paid-feature requests. Count one request per requester who
+  names a paid capability or states a willingness to pay. Do not infer requests from
+  itinerary activity.
+
+`TELEMETRY_HASH_SECRET` enables stable hash-based message authentication code (HMAC)
+identifiers. The events never include raw user, trip, or itinerary-item IDs, names,
+destinations, user content, or secrets. Without the hash secret, the event records its
+low-cardinality milestone attributes but omits identifier attributes.
+
+Production aggregation requires a configured OpenTelemetry trace drain/exporter
+because `recordTelemetryEvent()` represents events as short spans. The live Vercel
+environment does not configure this export path, so production activation counts are
+not yet available and the monetization thresholds cannot be evaluated.
+
 ## Infrastructure spans (catalog)
 
 Span names are stable. Attributes must be low-cardinality and must not contain secrets/PII.
