@@ -1,8 +1,8 @@
 # SPEC-0110: Deployment on Vercel (Supabase + Upstash)
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Status**: Final
-**Date**: 2026-05-11
+**Date**: 2026-07-09
 
 ## Goals
 
@@ -33,6 +33,17 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
   - Deploy gate: `scripts/verify-production-env.mjs`
   - Fails fast on missing/invalid production secrets before build/deploy.
 
+- Production provenance:
+  - Gate: `scripts/verify-deploy-provenance.mjs`
+  - Runs before deployment secrets are read.
+  - Requires `refs/heads/main`, the live default-branch head SHA, and a completed
+    successful CI workflow run for that exact SHA.
+  - Repeats immediately before production promotion so a candidate cannot be
+    promoted after main advances during build or smoke verification.
+  - Applies equally to manually dispatched and reusable workflow calls.
+  - Requires the GitHub `Production` environment to allow only the selected
+    branch `main`.
+
 - Required environment groups:
   - Core origins: `APP_BASE_URL`, public app/API/site URLs, and CSP report origin.
   - Supabase: project URL, publishable key, service role key, JWT secret, and Vault RPC support.
@@ -45,13 +56,15 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
 ## Environment setup
 
 1) Link the repository to a Vercel project, but keep Vercel Git deployments disabled.
-2) Configure Supabase and Upstash integrations or set equivalent env vars manually.
-3) Enable BotID for the routes described in ADR-0059.
-4) Run `pnpm deploy:check-env`.
-5) Build with `vercel build --prod`.
-6) Deploy the prebuilt artifact with `vercel deploy --prebuilt --prod --skip-domain`.
-7) Run `pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"`.
-8) Promote with `vercel promote "$DEPLOYMENT_URL" --yes --timeout=5m`.
+2) Restrict the GitHub `Production` environment deployment policy to `main`.
+3) Ensure the live main head has a completed successful CI run.
+4) Configure Supabase and Upstash integrations or set equivalent env vars manually.
+5) Enable BotID for the routes described in ADR-0059.
+6) Run `pnpm deploy:check-env`.
+7) Build with `vercel build --prod`.
+8) Deploy the prebuilt artifact with `vercel deploy --prebuilt --prod --skip-domain`.
+9) Run `pnpm deploy:smoke -- --url "$DEPLOYMENT_URL"`.
+10) Promote with `vercel promote "$DEPLOYMENT_URL" --yes --timeout=5m`.
 
 Notes:
 
@@ -67,4 +80,5 @@ Supabase Next.js quickstart: https://supabase.com/docs/guides/getting-started/qu
 Upstash: https://upstash.com/docs
 Deployment Runbook: ../../runbooks/deployment-vercel.md
 Environment Validation Schema: ../../../src/domain/schemas/env.ts
+Production Provenance Gate: ../../../scripts/verify-deploy-provenance.mjs
 ```
