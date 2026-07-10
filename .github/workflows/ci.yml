@@ -10,7 +10,6 @@ on:
       - 'scripts/**'
       - 'docs/**'
       - '.github/workflows/**'
-      - '.github/ci-config.yml'
       - '.pre-commit-config.yaml'
       # Root config files (post-flattening)
       - 'package.json'
@@ -37,7 +36,6 @@ on:
       - 'scripts/**'
       - 'docs/**'
       - '.github/workflows/**'
-      - '.github/ci-config.yml'
       - '.pre-commit-config.yaml'
       # Root config files (post-flattening)
       - 'package.json'

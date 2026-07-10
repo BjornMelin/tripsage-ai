@@ -17,7 +17,6 @@
 /.github/workflows/ @BjornMelin
 /.github/dependabot.yml @BjornMelin
 /.github/CODEOWNERS @BjornMelin
-/.github/ci-config.yml @BjornMelin
 
 # Tooling and scripts
 /scripts/ @BjornMelin
