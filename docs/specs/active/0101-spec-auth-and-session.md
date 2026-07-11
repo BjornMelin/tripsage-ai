@@ -1,6 +1,6 @@
 # SPEC-0101: Authentication and session (Supabase SSR + RLS)
 
-**Version**: 1.0.0  
+**Version**: 1.1.0
 **Status**: Final  
 **Date**: 2026-01-05
 
@@ -35,12 +35,19 @@
 
 - Email/password and OAuth (configurable).
 - Email/password uses Server Actions (credentials never hit client bundles):
-  - `src/lib/auth/actions.ts` (`loginWithPasswordAction`, `registerWithPasswordAction`, `logoutAction`)
+  - `src/lib/auth/actions.ts` (`loginWithPasswordAction`, `registerWithPasswordAction`)
   - `src/components/auth/login-form.tsx`, `src/components/auth/register-form.tsx`
 - OAuth uses browser client redirect flows from the auth forms.
 - Logout:
-  - Server Action: `src/lib/auth/actions.ts` (`logoutAction`)
-  - Route handler: `src/app/auth/logout/route.ts` (GET/POST `/auth/logout`)
+  - `useAuthCore().logout()` calls the canonical POST route, clears client auth
+    state only after the server confirms sign-out, and rejects on failure.
+  - Callers own post-logout navigation. The account menu navigates to `/login`
+    only after `logout()` succeeds.
+  - After the server confirms irreversible account deletion, the account settings
+    flow clears client auth state directly and navigates to `/login`; it does not
+    require a redundant logout request.
+  - `src/app/auth/logout/route.ts` owns GET/POST `/auth/logout` and Supabase
+    cookie invalidation; there is no parallel Server Action logout path.
 - Protected routes live under `src/app/(app)/*` and must redirect unauthenticated users to `/login`.
 
 ### RLS baseline

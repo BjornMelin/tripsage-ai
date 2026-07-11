@@ -3,13 +3,28 @@
 import type { AuthUser } from "@schemas/stores";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UserNav } from "../user-nav";
 
-// Mock logoutAction
-vi.mock("@/lib/auth/actions", () => ({
-  logoutAction: vi.fn(),
+const { logoutMock, refreshMock, replaceMock, toastMock } = vi.hoisted(() => ({
+  logoutMock: vi.fn(async () => undefined),
+  refreshMock: vi.fn(),
+  replaceMock: vi.fn(),
+  toastMock: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: refreshMock, replace: replaceMock }),
+}));
+
+vi.mock("@/features/auth/store/auth/auth-core", () => ({
+  useAuthCore: (selector: (state: { logout: typeof logoutMock }) => unknown) =>
+    selector({ logout: logoutMock }),
+}));
+
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: toastMock }),
 }));
 
 describe("UserNav", () => {
@@ -21,6 +36,13 @@ describe("UserNav", () => {
     isEmailVerified: true,
     updatedAt: new Date().toISOString(),
   };
+
+  beforeEach(() => {
+    logoutMock.mockReset().mockResolvedValue(undefined);
+    refreshMock.mockClear();
+    replaceMock.mockClear();
+    toastMock.mockClear();
+  });
 
   it("renders user avatar and name", () => {
     render(<UserNav user={mockUser} />);
@@ -45,8 +67,7 @@ describe("UserNav", () => {
     expect(screen.getByText("Log Out")).toBeInTheDocument();
   });
 
-  it("calls logoutAction when logout button is clicked", async () => {
-    const { logoutAction } = await import("@/lib/auth/actions");
+  it("logs out through the auth store and returns to login", async () => {
     render(<UserNav user={mockUser} />);
 
     // Open popover
@@ -58,7 +79,27 @@ describe("UserNav", () => {
     await userEvent.click(screen.getByText("Log Out"));
 
     await waitFor(() => {
-      expect(logoutAction).toHaveBeenCalled();
+      expect(logoutMock).toHaveBeenCalledTimes(1);
+      expect(replaceMock).toHaveBeenCalledWith("/login");
+      expect(refreshMock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("keeps the current page and reports a failed logout", async () => {
+    logoutMock.mockRejectedValueOnce(new Error("Failed to log out."));
+    render(<UserNav user={mockUser} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /open account menu/i }));
+    await userEvent.click(screen.getByText("Log Out"));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith({
+        description: "Your session is still active. Please try again.",
+        title: "Logout failed",
+        variant: "destructive",
+      });
+    });
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 });

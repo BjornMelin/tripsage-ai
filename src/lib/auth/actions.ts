@@ -7,7 +7,6 @@
 import "server-only";
 
 import { loginFormSchema, registerFormSchema } from "@schemas/auth";
-import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -468,20 +467,4 @@ export async function registerWithPasswordAction(
   }
 
   redirect(nextPath);
-}
-
-/**
- * Signs the user out and redirects to the login page.
- */
-export async function logoutAction(): Promise<never> {
-  const supabase = await createServerSupabase();
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    logger.error("Logout error", {
-      error: error instanceof Error ? error.message : String(error ?? "unknown_error"),
-    });
-  }
-  revalidatePath("/");
-  redirect("/login");
 }

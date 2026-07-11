@@ -6,6 +6,7 @@
 
 import { type EmailUpdateFormData, emailUpdateFormSchema } from "@schemas/profile";
 import { CheckIcon, MailIcon, Trash2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -40,8 +41,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/features/auth/store/auth/auth-core";
+import { resetAuthState } from "@/features/auth/store/auth/reset-auth";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { getUnknownErrorMessage } from "@/lib/errors/get-unknown-error-message";
+import { ROUTES } from "@/lib/routes";
 import { getBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +69,8 @@ const ALERT_COLORS = {
  * @returns A settings section with email and notification controls.
  */
 export function AccountSettingsSection() {
-  const { user: authUser, setUser, logout } = useAuthCore();
+  const router = useRouter();
+  const { user: authUser, setUser } = useAuthCore();
   const { toast } = useToast();
 
   const currentEmail = authUser?.email ?? "";
@@ -220,12 +224,14 @@ export function AccountSettingsSection() {
         throw new Error(errorData?.message ?? "Failed to delete account.");
       }
 
-      await logout();
+      resetAuthState();
 
       toast({
         description: "Your account deletion request has been processed.",
         title: "Account deletion initiated",
       });
+      router.replace(ROUTES.login);
+      router.refresh();
     } catch (error) {
       toast({
         description: getUnknownErrorMessage(

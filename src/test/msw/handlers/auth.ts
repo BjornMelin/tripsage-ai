@@ -4,7 +4,6 @@
  * Provides default mock responses for:
  * - /api/auth/login
  * - /api/auth/register
- * - /api/auth/logout
  * - /api/auth/me
  * - /api/auth/callback
  */
@@ -53,11 +52,6 @@ export const authHandlers = [
         id: TEST_USER_ID,
       },
     });
-  }),
-
-  // POST /api/auth/logout - Logout endpoint
-  http.post("/api/auth/logout", () => {
-    return HttpResponse.json({ success: true });
   }),
 
   // GET /api/auth/callback - OAuth callback endpoint

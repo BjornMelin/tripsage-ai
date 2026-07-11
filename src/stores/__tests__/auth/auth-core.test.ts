@@ -111,6 +111,43 @@ describe("AuthCore", () => {
 
       expect(resetSessionSpy).toHaveBeenCalledTimes(1);
     });
+
+    it("preserves client session state when server logout fails", async () => {
+      server.use(
+        http.post("/auth/logout", () =>
+          HttpResponse.json({ error: "logout_failed" }, { status: 500 })
+        )
+      );
+      const user = createAuthUser();
+      const session = {
+        createdAt: "2025-01-01T00:00:00Z",
+        expiresAt: "2025-01-02T00:00:00Z",
+        id: "session-1",
+        lastActivity: "2025-01-01T01:00:00Z",
+        userId: user.id,
+      };
+      act(() => {
+        useAuthCore.setState({ isAuthenticated: true, user });
+        useAuthSession.setState({ session });
+      });
+      const { result } = renderHook(() => useAuthCore());
+      let logoutError: unknown;
+
+      await act(async () => {
+        try {
+          await result.current.logout();
+        } catch (error) {
+          logoutError = error;
+        }
+      });
+
+      expect(logoutError).toEqual(new Error("Failed to log out. Please try again."));
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(result.current.user).toEqual(user);
+      expect(result.current.error).toBe("Failed to log out. Please try again.");
+      expect(result.current.isLoading).toBe(false);
+      expect(useAuthSession.getState().session).toEqual(session);
+    });
   });
 
   describe("Utility Actions", () => {

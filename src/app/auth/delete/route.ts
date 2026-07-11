@@ -6,8 +6,11 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
-import { requireUser } from "@/lib/auth/server";
+import { getOptionalUser } from "@/lib/auth/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("auth.delete");
 
 /**
  * Handles DELETE /auth/delete requests from client-side consumers.
@@ -16,7 +19,14 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
  */
 export async function DELETE(): Promise<NextResponse> {
   try {
-    const { user } = await requireUser({ redirectTo: "/login" });
+    const { supabase, user } = await getOptionalUser();
+    if (!user) {
+      return authRouteErrorResponse({
+        code: "UNAUTHORIZED",
+        reason: "Authentication required",
+        status: 401,
+      });
+    }
     const admin = createAdminSupabase();
 
     const { error } = await admin.auth.admin.deleteUser(user.id);
@@ -25,6 +35,19 @@ export async function DELETE(): Promise<NextResponse> {
         code: "DELETE_FAILED",
         reason: error.message,
         status: 400,
+      });
+    }
+
+    try {
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      if (signOutError) {
+        logger.warn("auth.delete.local_sign_out_failed", {
+          message: signOutError.message,
+        });
+      }
+    } catch (error) {
+      logger.warn("auth.delete.local_sign_out_failed", {
+        message: error instanceof Error ? error.message : "unknown_error",
       });
     }
 

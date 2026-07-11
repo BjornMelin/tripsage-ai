@@ -1,16 +1,31 @@
 /** @vitest-environment jsdom */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "@/components/ui/use-toast";
 import { useAuthCore } from "@/features/auth/store/auth/auth-core";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { server } from "@/test/msw/server";
 import { AccountSettingsSection } from "../account-settings-section";
 
 // Mock the stores and hooks
 vi.mock("@/features/auth/store/auth/auth-core");
-const { updateUserMock } = vi.hoisted(() => ({
-  updateUserMock: vi.fn(),
+const { refreshMock, replaceMock, resetAuthStateMock, updateUserMock } = vi.hoisted(
+  () => ({
+    refreshMock: vi.fn(),
+    replaceMock: vi.fn(),
+    resetAuthStateMock: vi.fn(),
+    updateUserMock: vi.fn(),
+  })
+);
+
+vi.mock("@/features/auth/store/auth/reset-auth", () => ({
+  resetAuthState: resetAuthStateMock,
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: refreshMock, replace: replaceMock }),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -19,7 +34,6 @@ vi.mock("@/lib/supabase", () => ({
 // use-toast is mocked in src/test/setup-jsdom.ts; avoid overriding here.
 
 const MockToast = unsafeCast<ReturnType<typeof vi.fn>>(toast);
-const MockLogout = vi.fn();
 const MockSetUser = vi.fn();
 const MockAuthUser = {
   createdAt: "",
@@ -51,7 +65,6 @@ describe("AccountSettingsSection", () => {
     vi.clearAllMocks();
     updateUserMock.mockResolvedValue({ data: { user: MockSupabaseUser }, error: null });
     vi.mocked(useAuthCore).mockReturnValue({
-      logout: MockLogout,
       setUser: MockSetUser,
       user: MockAuthUser,
     });
@@ -68,7 +81,6 @@ describe("AccountSettingsSection", () => {
 
   it("shows verification banner when email is unverified", () => {
     vi.mocked(useAuthCore).mockReturnValueOnce({
-      logout: MockLogout,
       setUser: MockSetUser,
       user: { ...MockAuthUser, isEmailVerified: false },
     });
@@ -151,7 +163,44 @@ describe("AccountSettingsSection", () => {
 
   // Removed confirmation-with-toast timing; dialog flows are validated by render/cancel tests.
 
-  // Account deletion error path omitted (component simulates success toast only).
+  it("clears local auth state and navigates after account deletion succeeds", async () => {
+    server.use(http.delete("/auth/delete", () => HttpResponse.json({ success: true })));
+    render(<AccountSettingsSection />);
+
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /yes, delete my account/i }));
+
+    await waitFor(() => {
+      expect(resetAuthStateMock).toHaveBeenCalledTimes(1);
+      expect(replaceMock).toHaveBeenCalledWith("/login");
+      expect(refreshMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("preserves local auth state and location when account deletion fails", async () => {
+    server.use(
+      http.delete("/auth/delete", () =>
+        HttpResponse.json({ message: "Account deletion failed." }, { status: 500 })
+      )
+    );
+    render(<AccountSettingsSection />);
+
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /yes, delete my account/i }));
+
+    await waitFor(() => {
+      expect(MockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Account deletion failed.",
+          title: "Error",
+          variant: "destructive",
+        })
+      );
+    });
+    expect(resetAuthStateMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
 
   it("cancels account deletion", () => {
     render(<AccountSettingsSection />);

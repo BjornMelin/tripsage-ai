@@ -114,18 +114,15 @@ export const useAuthCore = create<AuthCoreState>()(
         },
 
         logout: async () => {
-          set({ isLoading: true });
-
-          const clearSessionState = (): void => {
-            const { resetSession } = useAuthSession.getState();
-            resetSession();
-          };
+          set({ error: null, isLoading: true });
 
           try {
-            // Call server route that uses createServerSupabase
-            await fetch("/auth/logout", {
+            const response = await fetch("/auth/logout", {
               method: "POST",
             });
+            if (!response.ok) {
+              throw new Error("Failed to log out. Please try again.");
+            }
 
             set({
               error: null,
@@ -134,16 +131,14 @@ export const useAuthCore = create<AuthCoreState>()(
               user: null,
               userDisplayName: "",
             });
+            useAuthSession.getState().resetSession();
           } catch (_error) {
-            // Even if logout fails on server, clear local state
+            const error = new Error("Failed to log out. Please try again.");
             set({
-              isAuthenticated: false,
+              error: error.message,
               isLoading: false,
-              user: null,
-              userDisplayName: "",
             });
-          } finally {
-            clearSessionState();
+            throw error;
           }
         },
 
