@@ -129,6 +129,19 @@ const hmacSecretSchema = z
   })
   .optional();
 
+/** Parses only documented lowercase booleans; blank values are treated as unset. */
+const exactBooleanEnvSchema = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim().length === 0 ? undefined : value,
+  z
+    .stringbool({
+      case: "sensitive",
+      falsy: ["false"],
+      truthy: ["true"],
+    })
+    .default(false)
+);
+
 // Base environment schema for common variables
 const baseEnvSchema = z.object({
   HOSTNAME: z.string().optional(),
@@ -254,10 +267,9 @@ const monitoringEnvSchema = z.object({
   POSTHOG_KEY: z.string().optional(),
 });
 
-// Feature flags and configuration (empty - not used in frontend)
+// Feature flags and configuration
 const featureEnvSchema = z.object({
-  // Coerce to boolean for type safety; avoids string comparison pitfalls ("true" vs "TRUE")
-  ENABLE_AI_DEMO: z.coerce.boolean().default(false),
+  ENABLE_AI_DEMO: exactBooleanEnvSchema,
 });
 
 /**
@@ -284,12 +296,6 @@ const securityEnvSchema = z.object({
   TELEMETRY_HASH_SECRET: secretSchema("TELEMETRY_HASH_SECRET"),
 });
 
-// Development and debugging (minimal - only ANALYZE and DEBUG used)
-const developmentEnvSchema = z.object({
-  ANALYZE: z.coerce.boolean().default(false),
-  DEBUG: z.coerce.boolean().default(false),
-});
-
 // Complete environment schema
 export const envSchema = z
   .object({
@@ -305,7 +311,6 @@ export const envSchema = z
     ...featureEnvSchema.shape,
     ...imageProxyEnvSchema.shape,
     ...securityEnvSchema.shape,
-    ...developmentEnvSchema.shape,
   })
   .refine(
     (data) => {
@@ -330,6 +335,7 @@ export const envSchema = z
         // Required variables in production
         const requiredInProduction = [
           "HMAC_SECRET",
+          "MFA_BACKUP_CODE_PEPPER",
           "NEXT_PUBLIC_SUPABASE_URL",
           "SUPABASE_JWT_SECRET",
           "TELEMETRY_HASH_SECRET",
@@ -346,6 +352,18 @@ export const envSchema = z
     },
     {
       error: "Missing required environment variables for production",
+    }
+  )
+  .refine(
+    (data) =>
+      data.NODE_ENV !== "production" ||
+      !data.MFA_BACKUP_CODE_PEPPER ||
+      !data.SUPABASE_JWT_SECRET ||
+      data.MFA_BACKUP_CODE_PEPPER.trim() !== data.SUPABASE_JWT_SECRET.trim(),
+    {
+      error:
+        "MFA_BACKUP_CODE_PEPPER must be distinct from SUPABASE_JWT_SECRET in production",
+      path: ["MFA_BACKUP_CODE_PEPPER"],
     }
   );
 

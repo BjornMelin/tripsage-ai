@@ -3,7 +3,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   loginWithPasswordAction,
-  logoutAction,
   registerWithPasswordAction,
   verifyMfaAction,
 } from "../actions";
@@ -35,13 +34,11 @@ const {
   mockGetAuthenticatorAssuranceLevel,
   mockListFactors,
   mockSignInWithPassword,
-  mockSignOut,
   mockSignUp,
   mockSupabase,
   mockVerifyMfa,
 } = vi.hoisted(() => {
   const signInWithPassword = vi.fn();
-  const signOut = vi.fn();
   const signUp = vi.fn();
   const challenge = vi.fn();
   const getAuthenticatorAssuranceLevel = vi.fn();
@@ -56,7 +53,6 @@ const {
     mockGetAuthenticatorAssuranceLevel: getAuthenticatorAssuranceLevel,
     mockListFactors: listFactors,
     mockSignInWithPassword: signInWithPassword,
-    mockSignOut: signOut,
     mockSignUp: signUp,
     mockSupabase: {
       auth: {
@@ -67,7 +63,6 @@ const {
           verify,
         },
         signInWithPassword,
-        signOut,
         signUp,
       },
     },
@@ -87,10 +82,6 @@ vi.mock("@/lib/telemetry/logger", () => ({
   }),
 }));
 
-vi.mock("next/cache", () => ({
-  revalidatePath: vi.fn(),
-}));
-
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
 }));
@@ -104,7 +95,6 @@ function createFormData(values: Record<string, string>): FormData {
 }
 
 beforeEach(() => {
-  mockSignOut.mockReset();
   mockSignInWithPassword.mockReset();
   mockGetAuthenticatorAssuranceLevel.mockReset();
   mockListFactors.mockReset();
@@ -114,36 +104,6 @@ beforeEach(() => {
   loggerErrorMock.mockReset();
   loggerWarnMock.mockReset();
   vi.clearAllMocks();
-});
-
-describe("logoutAction", () => {
-  it("should sign out and redirect to login", async () => {
-    const { redirect } = await import("next/navigation");
-    const { revalidatePath } = await import("next/cache");
-
-    mockSignOut.mockResolvedValueOnce(undefined);
-    await logoutAction();
-
-    expect(mockSignOut).toHaveBeenCalled();
-    expect(revalidatePath).toHaveBeenCalledWith("/");
-    expect(redirect).toHaveBeenCalledWith("/login");
-  });
-
-  it("logs and continues when sign out fails", async () => {
-    const { redirect } = await import("next/navigation");
-    const { revalidatePath } = await import("next/cache");
-
-    const signOutError = new Error("sign-out-failed");
-    mockSignOut.mockRejectedValueOnce(signOutError);
-
-    await logoutAction();
-
-    expect(loggerErrorMock).toHaveBeenCalledWith("Logout error", {
-      error: "sign-out-failed",
-    });
-    expect(revalidatePath).toHaveBeenCalledWith("/");
-    expect(redirect).toHaveBeenCalledWith("/login");
-  });
 });
 
 describe("loginWithPasswordAction", () => {

@@ -2,12 +2,14 @@
 
 import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetServerEnvCacheForTest } from "@/lib/env/server";
 import {
   createBackupCodes,
   InvalidBackupCodeError,
   InvalidTotpError,
   resetMfaInitForTest,
   startTotpEnrollment,
+  validateMfaConfig,
   verifyBackupCode,
   verifyTotp,
 } from "@/lib/security/mfa";
@@ -275,8 +277,19 @@ describe("mfa service", () => {
     backupRows.length = 0;
     mfaEnrollmentRows.length = 0;
     process.env.MFA_BACKUP_CODE_PEPPER = "placeholder-mfa-pepper-secret";
+    __resetServerEnvCacheForTest();
     resetMfaInitForTest();
     vi.clearAllMocks();
+  });
+
+  it("does not reuse the Supabase JWT secret as a backup-code pepper", () => {
+    delete process.env.MFA_BACKUP_CODE_PEPPER;
+    process.env.SUPABASE_JWT_SECRET = "j".repeat(32);
+    __resetServerEnvCacheForTest();
+
+    expect(() => validateMfaConfig()).toThrow(
+      "MFA_BACKUP_CODE_PEPPER must be set to a non-empty secret"
+    );
   });
 
   it(

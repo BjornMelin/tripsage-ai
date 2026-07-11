@@ -19,6 +19,8 @@ on:
           - production
 
 permissions:
+  # Required by verify-deploy-provenance.mjs to inspect completed CI workflow runs.
+  actions: read
   contents: read
   deployments: write
 
@@ -69,6 +71,19 @@ jobs:
               ;;
           esac
 
+      - name: Set up Node
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Verify production deployment provenance
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ github.sha }}
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/verify-deploy-provenance.mjs
+
       - name: Validate required GitHub secrets
         shell: bash
         env:
@@ -87,11 +102,6 @@ jobs:
             printf '::error::Missing required GitHub secret(s): %s\n' "${missing[*]}"
             exit 1
           fi
-
-      - name: Set up Node
-        uses: actions/setup-node@v6.4.0
-        with:
-          node-version-file: ".nvmrc"
 
       - name: Install pnpm and Vercel CLI
         shell: bash
@@ -298,6 +308,15 @@ jobs:
         run: |
           set -euo pipefail
           vercel env run -e "$VERCEL_ENVIRONMENT" -- pnpm ops ai check byok-health --url "$DEPLOYMENT_URL"
+
+      - name: Reverify production deployment provenance
+        if: steps.vercel_env.outputs.promote_after_smoke == 'true'
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ github.sha }}
+          DEPLOY_ENVIRONMENT: ${{ steps.vercel_env.outputs.deploy_environment }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/verify-deploy-provenance.mjs
 
       - name: Promote production deployment
         id: promote

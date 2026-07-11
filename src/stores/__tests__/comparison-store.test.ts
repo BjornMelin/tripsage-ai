@@ -7,6 +7,7 @@ import {
   useCanAddComparison,
   useComparisonItemCount,
   useComparisonItems,
+  useComparisonItemsByType,
   useComparisonStore,
   useHasComparisonItem,
 } from "@/features/search/store/comparison-store";
@@ -324,6 +325,21 @@ describe("comparison-store", () => {
 
       rerender();
       expect(result.current).toBe(false);
+    });
+
+    it("useComparisonItemsByType returns a stable filtered subscription", () => {
+      const { result } = renderHook(() => useComparisonItemsByType("activity"));
+
+      expect(result.current).toEqual([]);
+
+      act(() => {
+        addActivity("activity-1", activityStub);
+        addFlight("flight-1", flightStub);
+      });
+
+      expect(result.current).toEqual([
+        expect.objectContaining({ id: "activity-1", type: "activity" }),
+      ]);
     });
 
     it("useHasComparisonItem should check for item", () => {

@@ -1,8 +1,8 @@
 # SPEC-0102: Trips domain (CRUD, itinerary, collaboration)
 
-**Version**: 1.1.0  
-**Status**: Final  
-**Date**: 2026-01-19
+**Version**: 1.2.0
+**Status**: Final
+**Date**: 2026-07-09
 
 ## Goals
 
@@ -69,6 +69,24 @@ Error handling:
 
 - Prefer domain-specific error classes where available; map to standardized error codes/messages at the boundary.
 - Server actions should surface errors with stable error identifiers that the UI can render without string matching.
+
+Activation measurement:
+
+- Emit `activation.trip_created` only after the trip insert succeeds and the returned
+  trip passes database and UI validation.
+- Emit `activation.itinerary_item_completed` only after an itinerary-item insert or
+  update succeeds and the validated returned `bookingStatus` is `completed`.
+- Activation telemetry is best effort and cannot change a successful persisted action
+  result. Events contain only low-cardinality operation/item-type attributes and
+  optional keyed-hash pseudonyms. Do not emit raw identifiers or trip/itinerary content.
+- An activated planner is one unique `user.id_hash` with a
+  `activation.trip_created` event. Itinerary completion is the deeper conversion
+  milestone.
+- Monetization remains disabled until production evidence includes at least 500
+  activated planners and 30 explicit paid-feature requests, counted once per requester
+  who names a paid capability or states a willingness to pay.
+- Production aggregation requires an OpenTelemetry trace drain/exporter. The live
+  Vercel environment does not configure one, so the thresholds cannot yet be evaluated.
 
 Testing
 

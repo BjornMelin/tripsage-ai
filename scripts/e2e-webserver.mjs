@@ -133,9 +133,13 @@ function startMockSupabaseAuth() {
 }
 
 function startNextDev() {
-  const child = spawn("pnpm", ["exec", "next", "dev", "--webpack"], {
-    stdio: "inherit",
-  });
+  const host = process.env.E2E_HOST ?? "127.0.0.1";
+  const port = process.env.PORT ?? "3100";
+  const child = spawn(
+    "pnpm",
+    ["exec", "next", "dev", "--webpack", "--hostname", host, "--port", port],
+    { stdio: "inherit" }
+  );
   return child;
 }
 

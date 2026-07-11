@@ -1,6 +1,6 @@
 # ADR-0062: Server Actions transport and Route Handler policy
 
-**Version**: 1.0.0  
+**Version**: 1.1.0
 **Status**: Accepted  
 **Date**: 2026-01-05  
 **Category**: fullstack  
@@ -21,11 +21,16 @@ TripSage needs:
   1) Streaming AI responses (SSE or UI streams)
   2) External inbound webhooks (Supabase, QStash, provider callbacks)
   3) Public read APIs that are explicitly required (rare, versioned, documented)
+  4) Browser authentication/session lifecycle endpoints that must update HTTP
+     cookies and synchronize the client auth store, such as `/auth/logout`.
 
 Additionally:
 
 - All Server Actions validate input with Zod v4 and return a standardized `Result<T, E>`.
 - Client mutations use TanStack Query `useMutation` calling the Server Action, including optimistic updates and cache invalidation.
+- Authentication lifecycle routes may be called by the owning auth store. Do
+  not retain an equivalent Server Action and Route Handler for the same auth
+  transition.
 
 ## Consequences
 

@@ -12,10 +12,10 @@ Security sessions, metrics, events, and dashboard.
 Environment prerequisites:
 
 - Set `MFA_BACKUP_CODE_PEPPER` (>=16 chars) for backup-code hashing in all environments (local `.env.local`, CI secrets, deployment secret manager).
-- Configure `SUPABASE_JWT_SECRET` (>=16 chars) as the Supabase JWT signing key.
-- Backup-code hashing prefers `MFA_BACKUP_CODE_PEPPER`; when it is unset, the system derives a pepper from `SUPABASE_JWT_SECRET` for bootstrap/startup compatibility. This fallback is **not** recommended for long-term use because rotating the JWT secret invalidates all existing backup codes.
+- Configure `SUPABASE_JWT_SECRET` (>=32 chars) as the Supabase JWT signing key.
 - Operators should treat `MFA_BACKUP_CODE_PEPPER` and `SUPABASE_JWT_SECRET` as distinct secrets: the pepper is only for deterministic backup-code hashing/salting, while the JWT secret is for token signing.
-- When the fallback is used, document the risk and schedule rotation to a dedicated pepper as soon as possible.
+- The application does not fall back to `SUPABASE_JWT_SECRET` for backup-code
+  hashing. Startup fails when the dedicated pepper is absent.
 
 Audit events for backup-code operations are stored in the `mfa_backup_code_audit` table (schema in `supabase/migrations/20260120000000_base_schema.sql`) with columns:
 

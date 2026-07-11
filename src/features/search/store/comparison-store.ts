@@ -2,13 +2,18 @@
  * @fileoverview Zustand store for managing comparison items across search types.
  */
 
-import type {
-  Accommodation,
-  Activity,
-  Destination,
-  FlightResult,
-  SearchType,
+import {
+  type Accommodation,
+  type Activity,
+  accommodationSchema,
+  activitySchema,
+  type Destination,
+  destinationSchema,
+  type FlightResult,
+  flightResultSchema,
+  type SearchType,
 } from "@schemas/search";
+import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { nowIso } from "@/lib/security/random";
@@ -60,38 +65,86 @@ interface ComputedState {
 }
 
 const DEFAULT_MAX_ITEMS = 3;
+const EMPTY_COMPARISON_ITEMS: ComparisonItem[] = [];
+const PERSISTED_COMPARISON_ITEM_SCHEMA = z
+  .discriminatedUnion("type", [
+    z.strictObject({
+      addedAt: z.iso.datetime(),
+      data: flightResultSchema,
+      id: z.string().min(1),
+      type: z.literal("flight"),
+    }),
+    z.strictObject({
+      addedAt: z.iso.datetime(),
+      data: accommodationSchema,
+      id: z.string().min(1),
+      type: z.literal("accommodation"),
+    }),
+    z.strictObject({
+      addedAt: z.iso.datetime(),
+      data: activitySchema,
+      id: z.string().min(1),
+      type: z.literal("activity"),
+    }),
+    z.strictObject({
+      addedAt: z.iso.datetime(),
+      data: destinationSchema,
+      id: z.string().min(1),
+      type: z.literal("destination"),
+    }),
+  ])
+  .refine((item) => item.id === item.data.id, {
+    error: "Persisted comparison item IDs must match their data IDs",
+    path: ["id"],
+  });
+const PERSISTED_COMPARISON_ITEMS_SCHEMA = z
+  .array(PERSISTED_COMPARISON_ITEM_SCHEMA)
+  .max(DEFAULT_MAX_ITEMS)
+  .refine((items) => new Set(items.map((item) => item.id)).size === items.length, {
+    error: "Persisted comparison item IDs must be unique",
+  });
+const PERSISTED_COMPARISON_STATE_SCHEMA = z.strictObject({
+  items: PERSISTED_COMPARISON_ITEMS_SCHEMA.optional(),
+  // Accepted only so existing snapshots retain valid items; policy is never restored.
+  maxItems: z.unknown().optional(),
+});
 
 const initialState = {
   items: [] as ComparisonItem[],
   maxItems: DEFAULT_MAX_ITEMS,
 };
 
+function computeComparisonState(
+  state: Pick<ComparisonState, "items" | "maxItems">
+): ComputedState {
+  const itemsByTypeMap = new Map<SearchType, ComparisonItem[]>();
+  const idsSet = new Set<string>();
+
+  for (const item of state.items) {
+    idsSet.add(item.id);
+    const existing = itemsByTypeMap.get(item.type);
+    if (existing) {
+      existing.push(item);
+    } else {
+      itemsByTypeMap.set(item.type, [item]);
+    }
+  }
+
+  return {
+    canAdd: state.items.length < state.maxItems,
+    idsSet,
+    itemCount: state.items.length,
+    itemsByTypeMap,
+  };
+}
+
+/** Persisted comparison store with derived lookup state. */
 export const useComparisonStore = create<ComparisonState & ComputedState>()(
   devtools(
     persist(
       withComputed<ComparisonState & ComputedState>(
         {
-          compute: (state) => {
-            const itemsByTypeMap = new Map<SearchType, ComparisonItem[]>();
-            const idsSet = new Set<string>();
-
-            for (const item of state.items) {
-              idsSet.add(item.id);
-              const existing = itemsByTypeMap.get(item.type);
-              if (existing) {
-                existing.push(item);
-              } else {
-                itemsByTypeMap.set(item.type, [item]);
-              }
-            }
-
-            return {
-              canAdd: state.items.length < state.maxItems,
-              idsSet,
-              itemCount: state.items.length,
-              itemsByTypeMap,
-            };
-          },
+          compute: computeComparisonState,
         },
         (set, get) => ({
           ...initialState,
@@ -158,10 +211,26 @@ export const useComparisonStore = create<ComparisonState & ComputedState>()(
         })
       ),
       {
+        merge: (persistedState, currentState) => {
+          const restoredState = PERSISTED_COMPARISON_STATE_SCHEMA.safeParse(
+            persistedState ?? {}
+          );
+          const mergedState = {
+            ...currentState,
+            items:
+              restoredState.success && restoredState.data.items
+                ? restoredState.data.items
+                : currentState.items,
+          };
+
+          return {
+            ...mergedState,
+            ...computeComparisonState(mergedState),
+          };
+        },
         name: "comparison-storage",
         partialize: (state) => ({
           items: state.items,
-          maxItems: state.maxItems,
         }),
       }
     ),
@@ -178,7 +247,9 @@ export const useComparisonItemCount = () =>
 export const useCanAddComparison = () => useComparisonStore((state) => state.canAdd);
 
 export const useComparisonItemsByType = (type: SearchType) =>
-  useComparisonStore((state) => state.getItemsByType(type));
+  useComparisonStore(
+    (state) => state.itemsByTypeMap.get(type) ?? EMPTY_COMPARISON_ITEMS
+  );
 
 export const useHasComparisonItem = (id: string) =>
   useComparisonStore((state) => state.hasItem(id));

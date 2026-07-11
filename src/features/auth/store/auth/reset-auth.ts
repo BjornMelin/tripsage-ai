@@ -12,8 +12,8 @@ import {
  * Resets all auth-related Zustand slices to their initial view-model state.
  *
  * This helper mirrors Supabase SSR session authority but never mutates or
- * persists tokens. It should be the single entrypoint for clearing client-side
- * auth view state across tests and runtime flows such as logout.
+ * persists tokens. Use it when all client auth view state must be discarded,
+ * including test isolation and terminal flows such as confirmed account deletion.
  */
 export const resetAuthState = (): void => {
   // Reset auth-core view-model state (user snapshot and flags).

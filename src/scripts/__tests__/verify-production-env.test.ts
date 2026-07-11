@@ -18,6 +18,7 @@ type EnvSummary = {
 
 const scriptPath = path.join(process.cwd(), "scripts/verify-production-env.mjs");
 const longSecret = "a".repeat(32);
+const mfaPepper = "m".repeat(32);
 const legacyAnonJwt =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.signature";
 const validRedisUrl = "https://upstash-valid.test";
@@ -26,6 +27,7 @@ const productionEnv = {
   APP_BASE_URL: "https://app.example.com",
   BYOK_HEALTHCHECK_KEY: longSecret,
   HMAC_SECRET: longSecret,
+  MFA_BACKUP_CODE_PEPPER: mfaPepper,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
   NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
   NODE_ENV: "production",
@@ -128,6 +130,7 @@ describe("verify-production-env", () => {
     const result = runVerifier({
       BYOK_HEALTHCHECK_KEY: "short",
       HMAC_SECRET: "short",
+      MFA_BACKUP_CODE_PEPPER: "short",
       QSTASH_CURRENT_SIGNING_KEY: "short",
       QSTASH_NEXT_SIGNING_KEY: "short",
       QSTASH_TOKEN: "short",
@@ -145,6 +148,11 @@ describe("verify-production-env", () => {
     );
     expect(check(result.summary, "webhook_hmac_contract").details.invalid).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "HMAC_SECRET" })])
+    );
+    expect(check(result.summary, "mfa_backup_code_contract").details.invalid).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "MFA_BACKUP_CODE_PEPPER" }),
+      ])
     );
     expect(check(result.summary, "byok_health_contract").details.invalid).toEqual(
       expect.arrayContaining([
@@ -249,6 +257,90 @@ describe("verify-production-env", () => {
     });
     expect(check(result.summary, "ai_provider_contract")).toMatchObject({
       status: "failed",
+    });
+  });
+
+  it("keeps AI demo provider contracts disabled for the exact false flag", () => {
+    const result = runVerifier({ ENABLE_AI_DEMO: "false" });
+
+    expect(result.status).toBe(0);
+    expect(check(result.summary, "ai_demo_flag_contract")).toMatchObject({
+      status: "passed",
+    });
+    expect(check(result.summary, "ai_demo_telemetry_contract").details.enabled).toBe(
+      false
+    );
+  });
+
+  it("rejects non-canonical AI demo flag values", () => {
+    const result = runVerifier({ ENABLE_AI_DEMO: "yes" });
+
+    expect(result.status).toBe(1);
+    expect(check(result.summary, "ai_demo_flag_contract")).toMatchObject({
+      details: {
+        invalid: [expect.objectContaining({ name: "ENABLE_AI_DEMO" })],
+      },
+      status: "failed",
+    });
+  });
+
+  it("treats blank AI demo flags as unset", () => {
+    const result = runVerifier({ ENABLE_AI_DEMO: "   " });
+
+    expect(result.status).toBe(0);
+    expect(check(result.summary, "ai_demo_flag_contract")).toMatchObject({
+      status: "passed",
+    });
+    expect(check(result.summary, "ai_demo_telemetry_contract").details.enabled).toBe(
+      false
+    );
+  });
+
+  it.each([
+    " false ",
+    "FALSE",
+    "1",
+    "*",
+  ])("rejects non-canonical AI demo flag %j", (value) => {
+    const result = runVerifier({ ENABLE_AI_DEMO: value });
+
+    expect(result.status).toBe(1);
+    expect(check(result.summary, "ai_demo_flag_contract")).toMatchObject({
+      details: {
+        invalid: [expect.objectContaining({ name: "ENABLE_AI_DEMO" })],
+      },
+      status: "failed",
+    });
+    expect(check(result.summary, "ai_demo_telemetry_contract").details.enabled).toBe(
+      false
+    );
+  });
+
+  it("requires a dedicated MFA backup-code pepper", () => {
+    const result = runVerifier({ MFA_BACKUP_CODE_PEPPER: undefined });
+
+    expect(result.status).toBe(1);
+    expect(check(result.summary, "mfa_backup_code_contract")).toMatchObject({
+      details: { missing: ["MFA_BACKUP_CODE_PEPPER"] },
+      status: "failed",
+    });
+  });
+
+  it("rejects reusing the Supabase JWT secret as the MFA pepper", () => {
+    const result = runVerifier({ MFA_BACKUP_CODE_PEPPER: longSecret });
+
+    expect(result.status).toBe(1);
+    expect(check(result.summary, "mfa_backup_code_secret_separation")).toMatchObject({
+      status: "failed",
+    });
+  });
+
+  it("accepts distinct MFA pepper and Supabase JWT secrets", () => {
+    const result = runVerifier({ MFA_BACKUP_CODE_PEPPER: mfaPepper });
+
+    expect(result.status).toBe(0);
+    expect(check(result.summary, "mfa_backup_code_secret_separation")).toMatchObject({
+      status: "passed",
     });
   });
 });

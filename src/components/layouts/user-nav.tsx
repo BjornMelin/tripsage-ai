@@ -13,7 +13,8 @@ import {
   UserIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { logoutAction } from "@/lib/auth/actions";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuthCore } from "@/features/auth/store/auth/auth-core";
 import { ROUTES } from "@/lib/routes";
 
 interface UserNavProps {
@@ -41,13 +43,26 @@ interface UserNavProps {
  * @returns The UserNav component.
  */
 export function UserNav({ user }: UserNavProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const logout = useAuthCore((state) => state.logout);
   const [isPending, startTransition] = useTransition();
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     startTransition(async () => {
-      await logoutAction();
+      try {
+        await logout();
+        router.replace(ROUTES.login);
+        router.refresh();
+      } catch {
+        toast({
+          description: "Your session is still active. Please try again.",
+          title: "Logout failed",
+          variant: "destructive",
+        });
+      }
     });
-  };
+  }, [logout, router, toast]);
 
   // Get initials for avatar fallback
   const initials = user.displayName

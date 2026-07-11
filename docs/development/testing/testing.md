@@ -74,7 +74,9 @@ Never use global `vi.useFakeTimers()` in `beforeEach`/`afterEach`.
 
 ### MFA Tests
 
-Set `MFA_BACKUP_CODE_PEPPER` (≥16 chars) or `SUPABASE_JWT_SECRET`. `validateMfaConfig()` enforces this outside `NODE_ENV=test`; missing values fail fast in server code.
+Set a dedicated `MFA_BACKUP_CODE_PEPPER` (≥16 chars) for every MFA test.
+`validateMfaConfig()` never falls back to `SUPABASE_JWT_SECRET`; missing values
+fail fast whenever MFA configuration initializes.
 
 Mock admin client:
 
@@ -263,7 +265,11 @@ Standard workflow:
 - For local sign-up confirmation, use Inbucket/Mailpit at `http://localhost:54324`
   (see [Supabase runbook: Inbucket/Mailpit](../../runbooks/supabase.md#local-auth-email-confirmations-inbucket--mailpit))
 
-> Note: the default `pnpm test:e2e:*` Playwright config uses `scripts/e2e-webserver.mjs`, which starts a mock Supabase Auth server on `http://127.0.0.1:54329` and does not require local Supabase. Use local Supabase when you want to validate real DB/RLS/RAG/attachments behavior end-to-end.
+> Note: the default `pnpm test:e2e:*` Playwright config binds the application to
+> `http://127.0.0.1:${E2E_PORT:-3100}` and starts a mock Supabase Auth server on
+> `http://127.0.0.1:54329`. It does not require local Supabase. Use local
+> Supabase when you want to validate real DB/RLS/RAG/attachments behavior
+> end-to-end.
 
 ### WSL storage proxy workaround
 

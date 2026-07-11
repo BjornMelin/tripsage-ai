@@ -37,7 +37,10 @@ import {
   useAbortableSearchTask,
 } from "@/features/search/hooks/search/use-search-client-state";
 import { useSearchOrchestration } from "@/features/search/hooks/search/use-search-orchestration";
-import { useComparisonStore } from "@/features/search/store/comparison-store";
+import {
+  useComparisonItemsByType,
+  useComparisonStore,
+} from "@/features/search/store/comparison-store";
 import { useSearchResultsStore } from "@/features/search/store/search-results-store";
 import { openActivityBooking } from "@/lib/activities/booking";
 import { getErrorMessage } from "@/lib/api/error-types";
@@ -46,9 +49,6 @@ import { recordClientErrorOnActiveSpan } from "@/lib/telemetry/client-errors";
 import { addActivityToTrip, getPlanningTrips } from "./actions";
 import { ActivitiesSelectionDialog } from "./activities-selection-dialog";
 import { isActivity, partitionActivitiesByFallback } from "./activity-results";
-
-/** Maximum number of items allowed in comparison views. */
-const MAX_COMPARISON_ITEMS = 3;
 
 /**
  * Activity search semantic colors aligned with statusVariants.
@@ -117,10 +117,10 @@ export default function ActivitiesSearchClient({
   const addItem = useComparisonStore((state) => state.addItem);
   const clearByType = useComparisonStore((state) => state.clearByType);
   const hasItem = useComparisonStore((state) => state.hasItem);
+  const comparisonItemCount = useComparisonStore((state) => state.itemCount);
+  const maxComparisonItems = useComparisonStore((state) => state.maxItems);
   const removeItem = useComparisonStore((state) => state.removeItem);
-  const activityComparisonItems = useComparisonStore((state) =>
-    state.getItemsByType("activity")
-  );
+  const activityComparisonItems = useComparisonItemsByType("activity");
 
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const [trips, setTrips] = useState<UiTrip[]>([]);
@@ -314,9 +314,6 @@ export default function ActivitiesSearchClient({
 
   const toggleComparison = useCallback(
     (activity: Activity): void => {
-      // Pre-mutation count from selector; accurate since we early-return after remove
-      const currentCount = activityComparisonItems.length;
-
       if (hasItem(activity.id)) {
         removeItem(activity.id);
         toast({
@@ -326,22 +323,22 @@ export default function ActivitiesSearchClient({
         return;
       }
 
-      if (currentCount >= MAX_COMPARISON_ITEMS) {
+      const added = addItem("activity", activity.id, activity);
+      if (!added) {
         toast({
-          description: `You can compare up to ${MAX_COMPARISON_ITEMS} activities at once`,
+          description: `You can keep up to ${maxComparisonItems} items across all comparison types`,
           title: "Comparison limit reached",
           variant: "destructive",
         });
         return;
       }
 
-      addItem("activity", activity.id, activity);
       toast({
         description: `Added "${activity.name}" to comparison`,
         title: "Added to comparison",
       });
     },
-    [activityComparisonItems.length, addItem, hasItem, removeItem, toast]
+    [addItem, hasItem, maxComparisonItems, removeItem, toast]
   );
 
   const handleCompareActivity = useCallback(
@@ -454,50 +451,52 @@ export default function ActivitiesSearchClient({
             </div>
 
             <div className="lg:col-span-2 space-y-4">
-              {comparisonList.size > 0 && (
+              {comparisonItemCount > 0 && (
                 <Card className="border-primary/50 bg-primary/5">
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">
-                          {comparisonList.size}/{MAX_COMPARISON_ITEMS}
+                          {comparisonItemCount}/{maxComparisonItems}
                         </Badge>
                         <span className="text-sm font-medium">
-                          Activities selected for comparison
+                          Comparison slots used
                         </span>
                       </div>
-                      <div className="flex gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              onClick={() => setShowComparisonModal(true)}
-                              disabled={comparisonList.size < 2}
-                            >
-                              Compare Now
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {comparisonList.size < 2
-                              ? "Select at least 2 activities"
-                              : "Open comparison view"}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            clearByType("activity");
-                            setShowComparisonModal(false);
-                            toast({
-                              description: "Comparison list cleared",
-                              title: "Cleared",
-                            });
-                          }}
-                        >
-                          Clear
-                        </Button>
-                      </div>
+                      {comparisonList.size > 0 && (
+                        <div className="flex gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                onClick={() => setShowComparisonModal(true)}
+                                disabled={comparisonList.size < 2}
+                              >
+                                Compare Now
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {comparisonList.size < 2
+                                ? "Select at least 2 activities"
+                                : "Open comparison view"}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              clearByType("activity");
+                              setShowComparisonModal(false);
+                              toast({
+                                description: "Activity comparison list cleared",
+                                title: "Activities cleared",
+                              });
+                            }}
+                          >
+                            Clear activities
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

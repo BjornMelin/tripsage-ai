@@ -26,6 +26,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { deleteSingle, insertSingle, updateSingle } from "@/lib/supabase/typed-helpers";
 import { withTelemetrySpan } from "@/lib/telemetry/span";
+import { recordItineraryItemCompletedActivation } from "@/lib/trips/activation-telemetry";
 import {
   mapItineraryItemUpsertToDbInsert,
   mapItineraryItemUpsertToDbUpdate,
@@ -115,7 +116,7 @@ export async function upsertItineraryItemImpl(
 ): Promise<Result<ItineraryItem, ResultError>> {
   return await withTelemetrySpan(
     "trips.itinerary.upsert",
-    { attributes: { tripId } },
+    { attributes: { "itinerary.operation": "upsert" } },
     async () => {
       const tripIdResult = tripIdSchema.safeParse(tripId);
       if (!tripIdResult.success) {
@@ -173,7 +174,6 @@ export async function upsertItineraryItemImpl(
           logger.error("itinerary_item_insert_failed", {
             code: (error as { code?: unknown } | null)?.code ?? null,
             message: error instanceof Error ? error.message : "insert returned no row",
-            tripId: tripIdResult.data,
           });
           return err({ error: "internal", reason: "Failed to add itinerary item" });
         }
@@ -182,11 +182,19 @@ export async function upsertItineraryItemImpl(
         if (!parsed.ok) {
           logger.error("itinerary_item_insert_parse_failed", {
             issues: parsed.error,
-            tripId: tripIdResult.data,
           });
           return err({
             error: "internal",
             reason: "Created itinerary item failed validation",
+          });
+        }
+
+        if (parsed.data.bookingStatus === "completed") {
+          recordItineraryItemCompletedActivation({
+            itemType: parsed.data.itemType,
+            operation: "create",
+            tripId: tripIdResult.data,
+            userId: user.id,
           });
         }
 
@@ -227,9 +235,7 @@ export async function upsertItineraryItemImpl(
         }
         logger.error("itinerary_item_update_failed", {
           code,
-          itemId: idResult.data,
           message: error instanceof Error ? error.message : "update failed",
-          tripId: tripIdResult.data,
         });
         return err({ error: "internal", reason: "Failed to update itinerary item" });
       }
@@ -242,12 +248,19 @@ export async function upsertItineraryItemImpl(
       if (!parsed.ok) {
         logger.error("itinerary_item_update_parse_failed", {
           issues: parsed.error,
-          itemId: idResult.data,
-          tripId: tripIdResult.data,
         });
         return err({
           error: "internal",
           reason: "Updated itinerary item failed validation",
+        });
+      }
+
+      if (parsed.data.bookingStatus === "completed") {
+        recordItineraryItemCompletedActivation({
+          itemType: parsed.data.itemType,
+          operation: "update",
+          tripId: tripIdResult.data,
+          userId: user.id,
         });
       }
 

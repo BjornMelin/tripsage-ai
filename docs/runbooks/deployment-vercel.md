@@ -11,6 +11,32 @@ Issue #733 supersedes the broad placeholder direction in #233 for the web app
 deployment path. Keep #233 only for remaining infrastructure work that is not
 covered by this Vercel CLI runbook.
 
+## Production provenance gate
+
+Before reading deployment secrets, production runs execute
+`node scripts/verify-deploy-provenance.mjs`. The gate requires all of the
+following:
+
+- `GITHUB_REF` is exactly `refs/heads/main`.
+- The `${{ github.sha }}` workflow-context SHA equals the repository's live
+  default-branch head.
+- The exact SHA has a completed successful run of `.github/workflows/ci.yml`.
+
+The same checks apply to `workflow_dispatch` and `workflow_call`; reusable
+workflow callers cannot bypass them. Development and staging deployments skip
+the GitHub provenance reads. The workflow's token has `actions: read` solely to
+read CI runs, alongside the existing `contents: read` and `deployments: write`
+permissions.
+
+Production repeats the same gate after smoke and BYOK health checks, immediately
+before promotion. If main advances while a candidate builds or is tested, the
+second check fails closed and the stale candidate is not promoted.
+
+Configure the GitHub `Production` environment deployment branch policy for
+selected branches with `main` as the only allowed branch. If a release-only
+commit becomes the new main head without a CI run, dispatch CI on that exact
+main SHA before retrying production deployment.
+
 ## Required GitHub Environment Secrets
 
 Configure these in each GitHub environment that can run `.github/workflows/deploy.yml`:
@@ -39,9 +65,11 @@ Vercel project production environment:
     `NEXT_PUBLIC_SUPABASE_ANON_KEY` as legacy fallback
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `SUPABASE_JWT_SECRET`
-- Webhook and telemetry:
+- Security and operator keys:
   - `HMAC_SECRET`
+  - `MFA_BACKUP_CODE_PEPPER`
   - `TELEMETRY_HASH_SECRET`
+  - `BYOK_HEALTHCHECK_KEY`
 - Upstash Redis and QStash:
   - `UPSTASH_REDIS_REST_URL`
   - `UPSTASH_REDIS_REST_TOKEN`
@@ -67,25 +95,29 @@ requires them.
 
 ## Production Deploy Flow
 
-1. Trigger the Deploy workflow with `environment=production`.
-2. GitHub Actions validates `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
+1. Trigger the Deploy workflow from `main` with `environment=production`.
+2. GitHub Actions verifies the exact main SHA and its successful CI run.
+3. GitHub Actions validates `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
    `VERCEL_PROJECT_ID`.
-3. The workflow installs pinned `pnpm` and Vercel CLI versions.
-4. The workflow runs `vercel pull --yes --environment=production`.
-5. The workflow runs production env contract checks with:
+4. The workflow installs pinned `pnpm` and Vercel CLI versions.
+5. The workflow runs `vercel pull --yes --environment=production`.
+6. The workflow runs production env contract checks with:
    `vercel env run -e production -- pnpm deploy:check-env -- --environment production`.
-6. The workflow runs live Supabase and Upstash probes with:
+7. The workflow runs live Supabase and Upstash probes with:
    - `vercel env run -e production -- pnpm ops infra check supabase`
    - `vercel env run -e production -- pnpm ops infra check upstash`
-7. The workflow builds the Vercel artifact with:
+8. The workflow builds the Vercel artifact with:
    `vercel build --prod --token=$VERCEL_TOKEN`.
-8. The workflow deploys the local build output without moving production
+9. The workflow deploys the local build output without moving production
    domains yet:
    `vercel deploy --prebuilt --prod --skip-domain --archive=tgz --yes --token=$VERCEL_TOKEN`.
-9. The workflow runs `pnpm deploy:smoke` against the emitted deployment URL.
-10. After smoke checks pass, the workflow promotes the verified production
+10. The workflow runs `pnpm deploy:smoke` against the emitted deployment URL.
+11. The workflow runs the operator-only BYOK health check against the candidate.
+12. After smoke and BYOK health checks pass, the workflow verifies that the
+    candidate SHA is still the live main head with successful CI.
+13. The workflow promotes the verified production
     deployment with `vercel promote <deployment-url> --yes --timeout=5m`.
-11. After promotion succeeds, the workflow writes `deployment-summary.json`,
+14. After promotion succeeds, the workflow writes `deployment-summary.json`,
     uploads it as an artifact, and updates the GitHub deployment status with
     the real deployment URL.
 
@@ -184,5 +216,6 @@ are present. Use it as a contract check, not as a secret bootstrap mechanism.
 - Vercel CLI promote docs: https://vercel.com/docs/cli/promote
 - Vercel CLI rollback docs: https://vercel.com/docs/cli/rollback
 - Vercel production deployments: https://vercel.com/docs/deployments/production-deployments
+- GitHub Actions workflow runs API: https://docs.github.com/rest/actions/workflow-runs
 - Supabase Next.js quickstart: https://supabase.com/docs/guides/getting-started/quickstarts/nextjs
 - BotID docs: https://vercel.com/docs/botid/get-started
