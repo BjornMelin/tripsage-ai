@@ -103,7 +103,7 @@ USING (
 
 | Variable / Table | Purpose | Min Length | Precedence / Notes |
 | --- | --- | --- | --- |
-| `MFA_BACKUP_CODE_PEPPER` | Backup-code hashing pepper | ≥ 16 chars | Required dedicated source for backup-code hashing. |
+| `MFA_BACKUP_CODE_PEPPER` | Backup-code hashing pepper | ≥ 16 chars | Dedicated source required for backup-code hashing. |
 | `SUPABASE_JWT_SECRET` | JWT signing key (Supabase) | ≥ 32 chars | Never used as a backup-code pepper. |
 | `mfa_backup_code_audit` table | Backup-code regeneration/consumption | N/A | Schema defined in `supabase/migrations/20260120000000_base_schema.sql`; used for long-lived audit. |
 

@@ -50,8 +50,9 @@ For operational runbooks (monitoring, alerting, incident response, secret rotati
   - Security: `HMAC_SECRET`, `MFA_BACKUP_CODE_PEPPER`,
     `TELEMETRY_HASH_SECRET`, and `BYOK_HEALTHCHECK_KEY`.
   - Upstash: Redis REST credentials, QStash token, and QStash signing keys.
-  - Feature-aware providers: Stripe, Resend, Amadeus, Duffel, Expedia, analytics,
-    and AI provider keys are required only when the corresponding feature is enabled.
+  - Feature-aware providers: Stripe, Resend, and Amadeus require complete
+    variable groups when configured. AI demo mode requires telemetry plus at
+    least one valid configured AI provider key.
 
 - Activation telemetry operations:
   - Configure an OpenTelemetry trace drain/exporter before using activation events for

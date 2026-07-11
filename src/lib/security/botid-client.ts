@@ -35,6 +35,8 @@ export function consumeBotIdClientInitFailure(): Error | null {
  * The marker is not a security boundary; server-side BotID enforcement remains
  * authoritative. It prevents client instrumentation from patching local requests when
  * the canonical server environment predicate has disabled BotID.
+ *
+ * @returns Whether BotID client initialization is enabled.
  */
 export function shouldInitializeBotIdClientFromDocument(): boolean {
   if (typeof document === "undefined") return false;

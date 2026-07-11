@@ -10,7 +10,26 @@ import {
 
 vi.unmock("zustand/middleware");
 
-const activityStub = {} as Activity;
+const activityStub: Activity = {
+  date: "2026-01-01",
+  description: "Guided museum visit",
+  duration: 2,
+  id: "activity-persisted",
+  location: "Paris",
+  name: "Museum Tour",
+  price: 25,
+  rating: 4.5,
+  type: "Museum",
+};
+
+function persistedActivity(id: string) {
+  return {
+    addedAt: "2026-01-01T00:00:00.000Z",
+    data: { ...activityStub, id },
+    id,
+    type: "activity" as const,
+  };
+}
 
 describe("comparison-store persistence", () => {
   beforeEach(() => {
@@ -36,19 +55,87 @@ describe("comparison-store persistence", () => {
     expect(store.itemsByTypeMap.size).toBe(0);
   });
 
+  it.each([
+    { items: { invalid: true }, maxItems: 3 },
+    { items: [null], maxItems: 3 },
+    {
+      items: [
+        {
+          addedAt: "2026-01-01T00:00:00.000Z",
+          data: {},
+          id: "activity-invalid",
+          type: "activity",
+        },
+      ],
+      maxItems: 3,
+    },
+    {
+      items: [
+        persistedActivity("activity-1"),
+        persistedActivity("activity-2"),
+        persistedActivity("activity-3"),
+        persistedActivity("activity-4"),
+      ],
+      maxItems: 3,
+    },
+    {
+      items: [
+        persistedActivity("activity-duplicate"),
+        persistedActivity("activity-duplicate"),
+      ],
+      maxItems: 3,
+    },
+    {
+      items: [
+        {
+          ...persistedActivity("activity-wrapper"),
+          data: { ...activityStub, id: "activity-data" },
+        },
+      ],
+      maxItems: 3,
+    },
+  ])("falls back safely for malformed persisted state %#", async (state) => {
+    localStorage.setItem("comparison-storage", JSON.stringify({ state, version: 0 }));
+
+    await act(async () => {
+      await useComparisonStore.persist.rehydrate();
+    });
+
+    const store = useComparisonStore.getState();
+    expect(useComparisonStore.persist.hasHydrated()).toBe(true);
+    expect(store.items).toEqual([]);
+    expect(store.maxItems).toBe(3);
+    expect(store.itemCount).toBe(0);
+    expect(store.itemsByTypeMap.size).toBe(0);
+  });
+
+  it("retains valid legacy items without restoring the old comparison limit", async () => {
+    localStorage.setItem(
+      "comparison-storage",
+      JSON.stringify({
+        state: {
+          items: [persistedActivity(activityStub.id)],
+          maxItems: 999_999,
+        },
+        version: 0,
+      })
+    );
+
+    await act(async () => {
+      await useComparisonStore.persist.rehydrate();
+    });
+
+    const store = useComparisonStore.getState();
+    expect(store.items).toHaveLength(1);
+    expect(store.maxItems).toBe(3);
+  });
+
   it("recomputes derived state when persisted items are rehydrated", async () => {
     localStorage.setItem(
       "comparison-storage",
       JSON.stringify({
         state: {
-          items: [
-            {
-              addedAt: "2026-01-01T00:00:00.000Z",
-              data: activityStub,
-              id: "activity-persisted",
-              type: "activity",
-            },
-          ],
+          items: [persistedActivity("activity-persisted")],
           maxItems: 3,
         },
         version: 0,

@@ -44,7 +44,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 - **Upstash Redis**: Serverless HTTP Redis for caching, sliding-window rate limiting, and deduplication keys
 - **Upstash QStash**: Webhook-driven background jobs with signature verification, Redis idempotency gates, and batch processing (memory sync, async tasks)
-- **Vercel Runtime Architecture**: Next.js 16 route handlers, Vercel CLI prebuilt promotion, and global CDN delivery for low-latency responses
+- **Vercel Runtime Architecture**: Next.js 16 route handlers, Vercel CLI prebuilt promotion, and deployment through Vercel's global network
 - **React Compiler**: Automatic memoization to reduce avoidable client rerenders
 
 ### Security & Compliance
@@ -199,8 +199,8 @@ production deploy authority.
 
 `scripts/verify-production-env.mjs` is the deploy-time source of truth. It
 validates core app origins, Supabase SSR/Vault, Upstash Redis/QStash, security
-secrets, BYOK health checks, and feature-aware provider groups for Stripe,
-Resend, Amadeus, Duffel, Expedia, analytics, and AI providers.
+secrets, BYOK health checks, feature-aware Stripe, Resend, and Amadeus groups,
+and AI demo provider readiness.
 
 For local setup, start from `.env.local.example`. For production, run
 `pnpm deploy:check-env` before `vercel build`.

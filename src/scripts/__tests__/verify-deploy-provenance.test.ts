@@ -27,6 +27,8 @@ function createGithubFetch({
   workflowRuns = [
     {
       conclusion: "success",
+      event: "push",
+      head_branch: "main",
       head_sha: candidateSha,
       id: 12345,
       status: "completed",
@@ -37,9 +39,11 @@ function createGithubFetch({
   workflowRuns?: unknown[];
 } = {}) {
   const requests: string[] = [];
-  const fetchImpl: typeof fetch = (input) => {
+  const requestSignals: Array<AbortSignal | null | undefined> = [];
+  const fetchImpl: typeof fetch = (input, init) => {
     const url = String(input);
     requests.push(url);
+    requestSignals.push(init?.signal);
     if (url.endsWith("/repos/BjornMelin/tripsage-ai")) {
       return Promise.resolve(jsonResponse({ default_branch: "main" }));
     }
@@ -51,7 +55,7 @@ function createGithubFetch({
     }
     return Promise.resolve(jsonResponse({ message: "Not found" }, 404));
   };
-  return { fetchImpl, requests };
+  return { fetchImpl, requestSignals, requests };
 }
 
 function productionInput(fetchImpl: typeof fetch) {
@@ -123,6 +127,8 @@ describe("verify-deploy-provenance", () => {
       workflowRuns: [
         {
           conclusion: "failure",
+          event: "push",
+          head_branch: "main",
           head_sha: candidateSha,
           id: 12345,
           status: "completed",
@@ -138,12 +144,16 @@ describe("verify-deploy-provenance", () => {
   it.each([
     {
       conclusion: "success",
+      event: "push",
+      head_branch: "main",
       head_sha: staleSha,
       id: 12345,
       status: "completed",
     },
     {
       conclusion: null,
+      event: "push",
+      head_branch: "main",
       head_sha: candidateSha,
       id: 12345,
       status: "in_progress",
@@ -156,8 +166,29 @@ describe("verify-deploy-provenance", () => {
     ).rejects.toMatchObject({ code: "ci_not_successful" });
   });
 
+  it.each([
+    { event: "pull_request", head_branch: "main" },
+    { event: "push", head_branch: "feature/unverified" },
+  ])("rejects a successful run outside a main-branch push", async (identity) => {
+    const { fetchImpl } = createGithubFetch({
+      workflowRuns: [
+        {
+          conclusion: "success",
+          head_sha: candidateSha,
+          id: 12345,
+          status: "completed",
+          ...identity,
+        },
+      ],
+    });
+
+    await expect(
+      verifyDeployProvenance(productionInput(fetchImpl))
+    ).rejects.toMatchObject({ code: "ci_not_successful" });
+  });
+
   it("accepts the live main head with a completed successful CI run", async () => {
-    const { fetchImpl, requests } = createGithubFetch();
+    const { fetchImpl, requestSignals, requests } = createGithubFetch();
 
     const result = await verifyDeployProvenance(productionInput(fetchImpl));
 
@@ -169,6 +200,9 @@ describe("verify-deploy-provenance", () => {
       workflow: "ci.yml",
     });
     expect(requests).toHaveLength(3);
+    expect(requests[2]).toContain("branch=main&event=push");
+    expect(requestSignals).toHaveLength(3);
+    expect(requestSignals.every((signal) => signal instanceof AbortSignal)).toBe(true);
   });
 
   it("wires provenance before secrets and immediately before production promotion", () => {
@@ -186,9 +220,9 @@ describe("verify-deploy-provenance", () => {
     const promoteStep = workflow.indexOf("- name: Promote production deployment");
     const stepsBetweenRecheckAndPromotion = workflow
       .slice(finalProvenanceStep + finalProvenanceMarker.length, promoteStep)
-      .match(/^\s+- name:/gm);
+      .match(/^ {6}-\s+\S/gm);
 
-    expect(workflow).toMatch(/permissions:\n\s+actions: read\n/);
+    expect(workflow).toMatch(/permissions:\n(?:\s+#.*\n)*\s+actions: read\n/);
     expect(workflow).toMatch(/CANDIDATE_SHA: \$\{\{ github\.sha \}\}/);
     expect(workflow.match(/node scripts\/verify-deploy-provenance\.mjs/g)).toHaveLength(
       2

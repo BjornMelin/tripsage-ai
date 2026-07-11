@@ -22,7 +22,7 @@ TripSage needs:
   2) External inbound webhooks (Supabase, QStash, provider callbacks)
   3) Public read APIs that are explicitly required (rare, versioned, documented)
   4) Browser authentication/session lifecycle endpoints that must update HTTP
-     cookies and synchronize the client auth store, such as `/auth/logout`
+     cookies and synchronize the client auth store, such as `/auth/logout`.
 
 Additionally:
 

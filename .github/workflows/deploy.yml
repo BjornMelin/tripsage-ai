@@ -19,6 +19,7 @@ on:
           - production
 
 permissions:
+  # Required by verify-deploy-provenance.mjs to inspect completed CI workflow runs.
   actions: read
   contents: read
   deployments: write

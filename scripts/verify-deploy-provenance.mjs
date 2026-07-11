@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 const FILENAME = fileURLToPath(import.meta.url);
 const EXPECTED_PRODUCTION_REF = "refs/heads/main";
 const CI_WORKFLOW_ID = "ci.yml";
+const GITHUB_REQUEST_TIMEOUT_MS = 15_000;
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 
 const isMainModule = (() => {
@@ -92,6 +93,7 @@ async function fetchGithubJson({ apiUrl, fetchImpl, route, token }) {
   headers.set("X-GitHub-Api-Version", "2022-11-28");
   const response = await fetchImpl(resolveApiUrl(apiUrl, route), {
     headers,
+    signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new DeployProvenanceError(
@@ -211,7 +213,8 @@ async function verifyDeployProvenance({
 
   const runsRoute =
     `/repos/${encodedOwner}/${encodedRepo}/actions/workflows/${CI_WORKFLOW_ID}/runs` +
-    `?head_sha=${encodeURIComponent(sha)}&status=completed&per_page=100`;
+    `?branch=${encodeURIComponent(defaultBranch)}&event=push` +
+    `&head_sha=${encodeURIComponent(sha)}&status=completed&per_page=100`;
   const runsData = await request(runsRoute);
   const workflowRuns =
     runsData &&
@@ -226,6 +229,10 @@ async function verifyDeployProvenance({
       typeof run === "object" &&
       "head_sha" in run &&
       run.head_sha === sha &&
+      "head_branch" in run &&
+      run.head_branch === defaultBranch &&
+      "event" in run &&
+      run.event === "push" &&
       "status" in run &&
       run.status === "completed" &&
       "conclusion" in run &&

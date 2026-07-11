@@ -78,9 +78,10 @@ async function clickUserMenuItemAndWaitForUrl(
 
     try {
       const navigation = page.waitForURL(url, { timeout: navigationTimeoutMs });
-      const click = menuItem
-        .click({ force: attempt > 0, timeout: navigationTimeoutMs })
-        .catch(() => undefined);
+      const click = menuItem.click({
+        force: attempt > 0,
+        timeout: navigationTimeoutMs,
+      });
       await Promise.all([click, navigation]);
       return;
     } catch (error) {

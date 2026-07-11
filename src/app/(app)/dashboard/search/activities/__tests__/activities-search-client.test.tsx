@@ -42,8 +42,9 @@ const { mockComparisonState, mockUseComparisonStore } = vi.hoisted(() => {
   const comparisonState = {
     addItem: vi.fn(),
     clearByType: vi.fn(),
-    getItemsByType: vi.fn((_type: "activity") => []),
+    getItemsByType: vi.fn((_type: "activity"): Array<{ id: string }> => []),
     hasItem: vi.fn(() => false),
+    itemCount: 0,
     maxItems: 3,
     removeItem: vi.fn(),
   };
@@ -157,6 +158,7 @@ describe("ActivitiesSearchClient", () => {
     mockComparisonState.getItemsByType.mockReturnValue([]);
     mockComparisonState.hasItem.mockReset();
     mockComparisonState.hasItem.mockReturnValue(false);
+    mockComparisonState.itemCount = 0;
     mockComparisonState.maxItems = 3;
     mockComparisonState.removeItem.mockReset();
     mockExecuteSearch.mockReset();
@@ -206,12 +208,43 @@ describe("ActivitiesSearchClient", () => {
       sampleActivity
     );
     expect(mockToast).toHaveBeenCalledWith({
-      description: "You can compare up to 5 activities at once",
+      description: "You can keep up to 5 items across all comparison types",
       title: "Comparison limit reached",
       variant: "destructive",
     });
     expect(mockToast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "Added to comparison" })
     );
+  });
+
+  it("displays the global comparison-slot count", () => {
+    mockComparisonState.getItemsByType.mockReturnValue([{ id: sampleActivity.id }]);
+    mockComparisonState.itemCount = 3;
+    mockComparisonState.maxItems = 5;
+    const onSubmitServer = vi.fn<(params: ActivitySearchParams) => Promise<never>>();
+
+    render(<ActivitiesSearchClient onSubmitServer={onSubmitServer} />);
+
+    expect(screen.getByText("3/5")).toBeInTheDocument();
+    expect(screen.getByText("Comparison slots used")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear activities" }));
+    expect(mockComparisonState.clearByType).toHaveBeenCalledWith("activity");
+    expect(mockToast).toHaveBeenCalledWith({
+      description: "Activity comparison list cleared",
+      title: "Activities cleared",
+    });
+  });
+
+  it("shows global slot usage without irrelevant activity controls", () => {
+    mockComparisonState.getItemsByType.mockReturnValue([]);
+    mockComparisonState.itemCount = 2;
+    mockComparisonState.maxItems = 5;
+    const onSubmitServer = vi.fn<(params: ActivitySearchParams) => Promise<never>>();
+
+    render(<ActivitiesSearchClient onSubmitServer={onSubmitServer} />);
+
+    expect(screen.getByText("2/5")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Compare Now" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear activities" })).toBeNull();
   });
 });
