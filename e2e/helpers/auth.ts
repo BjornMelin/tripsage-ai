@@ -59,7 +59,7 @@ export async function authenticateAsTestUser(page: Page): Promise<void> {
   const value = `base64-${encoded}`;
 
   const e2ePort = Number.parseInt(process.env.E2E_PORT ?? "3100", 10);
-  const baseUrl = `http://localhost:${e2ePort}`;
+  const baseUrl = `http://127.0.0.1:${e2ePort}`;
 
   await page.context().addCookies([
     {

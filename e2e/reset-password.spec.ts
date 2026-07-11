@@ -27,7 +27,9 @@ test.describe("Password reset", () => {
   });
 
   test("announces successful reset request feedback as status", async ({ page }) => {
+    let resetRequestCount = 0;
     await page.route("**/auth/password/reset-request**", async (route) => {
+      resetRequestCount += 1;
       await route.fulfill({
         body: JSON.stringify({
           message: "Password reset instructions have been sent to your email",
@@ -43,17 +45,12 @@ test.describe("Password reset", () => {
     await emailInput.fill("traveler@example.com");
     await expect(emailInput).toHaveValue("traveler@example.com");
 
-    await Promise.all([
-      page.waitForRequest((request) =>
-        request.url().includes("/auth/password/reset-request")
-      ),
-      page.getByRole("button", { name: /send reset instructions/i }).click(),
-    ]);
-
-    await expect(
-      page.getByRole("status").filter({
-        hasText: /password reset instructions have been sent to your email/i,
-      })
-    ).toBeVisible();
+    const submit = page.getByRole("button", { name: /send reset instructions/i });
+    const success = page.getByRole("status").filter({
+      hasText: /password reset instructions have been sent to your email/i,
+    });
+    await submit.click();
+    await expect(success).toBeVisible({ timeout: 15_000 });
+    expect(resetRequestCount).toBe(1);
   });
 });

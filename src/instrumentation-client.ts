@@ -3,7 +3,12 @@
  */
 
 import { patchPerformanceMeasureForPrerender } from "@/lib/performance/patch-performance-measure";
-import { ensureBotIdClientInitialized } from "@/lib/security/botid-client";
+import {
+  ensureBotIdClientInitialized,
+  shouldInitializeBotIdClientFromDocument,
+} from "@/lib/security/botid-client";
 
 patchPerformanceMeasureForPrerender();
-ensureBotIdClientInitialized();
+if (shouldInitializeBotIdClientFromDocument()) {
+  ensureBotIdClientInitialized();
+}

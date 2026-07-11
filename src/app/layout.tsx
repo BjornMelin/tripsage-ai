@@ -10,6 +10,7 @@ import type { Viewport } from "next";
 import { BotIdClientProvider } from "@/components/providers/botid-client";
 import { TelemetryProvider } from "@/components/providers/telemetry-provider";
 import { WebVitalsReporterLoader } from "@/components/providers/web-vitals-reporter-loader";
+import { isBotIdEnabledForCurrentEnvironment } from "@/lib/security/botid";
 import { getServerOrigin } from "@/lib/url/server-origin";
 
 /**
@@ -107,8 +108,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const botIdEnabled = isBotIdEnabledForCurrentEnvironment();
+
   return (
     <html
+      data-botid-enabled={botIdEnabled ? "true" : "false"}
       lang="en"
       suppressHydrationWarning
       className={`${GEIST_SANS.variable} ${GEIST_MONO.variable}`}
@@ -116,7 +120,7 @@ export default function RootLayout({
       <body className="font-sans antialiased min-h-screen">
         <TelemetryProvider />
         <WebVitalsReporterLoader />
-        <BotIdClientProvider />
+        {botIdEnabled ? <BotIdClientProvider /> : null}
         {children}
       </body>
     </html>

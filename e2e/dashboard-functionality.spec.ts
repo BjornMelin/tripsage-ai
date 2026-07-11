@@ -75,10 +75,13 @@ async function clickUserMenuItemAndWaitForUrl(
     const menuContent = await openUserMenu(page);
     const menuItem = menuContent.getByRole("menuitem", { name: itemName });
     await expect(menuItem).toBeVisible({ timeout: visibilityTimeoutMs });
-    await menuItem.click({ force: attempt > 0, timeout: navigationTimeoutMs });
 
     try {
-      await expect(page).toHaveURL(url, { timeout: navigationTimeoutMs });
+      const navigation = page.waitForURL(url, { timeout: navigationTimeoutMs });
+      const click = menuItem
+        .click({ force: attempt > 0, timeout: navigationTimeoutMs })
+        .catch(() => undefined);
+      await Promise.all([click, navigation]);
       return;
     } catch (error) {
       if (attempt === 2) throw error;

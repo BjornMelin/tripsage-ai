@@ -5,7 +5,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const e2ePort = Number.parseInt(process.env.E2E_PORT ?? "3100", 10);
-const baseURL = `http://localhost:${e2ePort}`;
+const e2eHost = "127.0.0.1";
+const baseURL = `http://${e2eHost}:${e2ePort}`;
 
 // Default to 1 worker for test stability (tests may share state via mocked APIs).
 // Set E2E_WORKERS=50% for CI parallel execution when tests are fully isolated.
@@ -42,13 +43,15 @@ export default defineConfig({
     command: "node scripts/e2e-webserver.mjs",
     env: {
       ...process.env,
+      APP_BASE_URL: baseURL,
       E2E: process.env.E2E ?? "1",
+      E2E_HOST: e2eHost,
       MFA_BACKUP_CODE_PEPPER:
         process.env.MFA_BACKUP_CODE_PEPPER ?? "e2e-mfa-backup-code-pepper",
-      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? baseURL,
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? baseURL,
-      NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ?? baseURL,
-      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? baseURL,
+      NEXT_PUBLIC_API_URL: baseURL,
+      NEXT_PUBLIC_APP_URL: baseURL,
+      NEXT_PUBLIC_BASE_URL: baseURL,
+      NEXT_PUBLIC_SITE_URL: baseURL,
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??

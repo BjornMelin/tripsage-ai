@@ -29,6 +29,18 @@ export function consumeBotIdClientInitFailure(): Error | null {
   return error;
 }
 
+/**
+ * Reads the server-rendered BotID decision before client hydration.
+ *
+ * The marker is not a security boundary; server-side BotID enforcement remains
+ * authoritative. It prevents client instrumentation from patching local requests when
+ * the canonical server environment predicate has disabled BotID.
+ */
+export function shouldInitializeBotIdClientFromDocument(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.dataset.botidEnabled === "true";
+}
+
 export function ensureBotIdClientInitialized(): void {
   // NOTE: We intentionally use `botid/client/core` rather than `botid/client`'s
   // `BotIdClient` React component because the component injects a large inline
