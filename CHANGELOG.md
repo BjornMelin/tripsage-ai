@@ -1,3 +1,9 @@
+## [1.36.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.1...v1.36.2) (2026-07-11)
+
+### Bug Fixes
+
+* harden flagship release gates ([7d3b79f](https://github.com/BjornMelin/tripsage-ai/commit/7d3b79fadc94119d8f65fb2bce098ec3d8985bce)), closes [#766](https://github.com/BjornMelin/tripsage-ai/issues/766) [#794](https://github.com/BjornMelin/tripsage-ai/issues/794)
+
 ## [1.36.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.0...v1.36.1) (2026-07-08)
 
 ### Bug Fixes
