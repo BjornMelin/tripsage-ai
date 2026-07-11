@@ -1,4 +1,6 @@
-/** @fileoverview Privacy-safe activation telemetry for durable trip mutations. */
+/**
+ * @fileoverview Privacy-safe activation telemetry for durable trip mutations.
+ */
 
 import "server-only";
 
