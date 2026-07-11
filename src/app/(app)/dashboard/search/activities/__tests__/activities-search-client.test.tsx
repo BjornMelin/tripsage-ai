@@ -42,8 +42,9 @@ const { mockComparisonState, mockUseComparisonStore } = vi.hoisted(() => {
   const comparisonState = {
     addItem: vi.fn(),
     clearByType: vi.fn(),
-    getItemsByType: vi.fn(() => []),
+    getItemsByType: vi.fn((_type: "activity") => []),
     hasItem: vi.fn(() => false),
+    maxItems: 3,
     removeItem: vi.fn(),
   };
   const useStore = <T,>(selector: (state: typeof comparisonState) => T): T =>
@@ -69,14 +70,21 @@ vi.mock("@/components/ui/use-toast", () => ({
 vi.mock("@/features/search/components/cards/activity-card", () => ({
   ActivityCard: ({
     activity,
+    onCompare,
     onSelect,
   }: {
     activity: Activity;
+    onCompare?: (activity: Activity) => void;
     onSelect?: (activity: Activity) => void;
   }) => (
-    <button type="button" onClick={() => onSelect?.(activity)}>
-      Select {activity.name}
-    </button>
+    <>
+      <button type="button" onClick={() => onSelect?.(activity)}>
+        Select {activity.name}
+      </button>
+      <button type="button" onClick={() => onCompare?.(activity)}>
+        Compare {activity.name}
+      </button>
+    </>
   ),
 }));
 
@@ -101,6 +109,8 @@ vi.mock("@/features/search/hooks/search/use-search-orchestration", () => ({
 }));
 
 vi.mock("@/features/search/store/comparison-store", () => ({
+  useComparisonItemsByType: (_type: "activity") =>
+    mockComparisonState.getItemsByType("activity"),
   useComparisonStore: mockUseComparisonStore,
 }));
 
@@ -141,11 +151,13 @@ import ActivitiesSearchClient from "../activities-search-client";
 describe("ActivitiesSearchClient", () => {
   beforeEach(() => {
     mockComparisonState.addItem.mockReset();
+    mockComparisonState.addItem.mockReturnValue(true);
     mockComparisonState.clearByType.mockReset();
     mockComparisonState.getItemsByType.mockReset();
     mockComparisonState.getItemsByType.mockReturnValue([]);
     mockComparisonState.hasItem.mockReset();
     mockComparisonState.hasItem.mockReturnValue(false);
+    mockComparisonState.maxItems = 3;
     mockComparisonState.removeItem.mockReset();
     mockExecuteSearch.mockReset();
     mockGetPlanningTrips.mockReset();
@@ -178,5 +190,28 @@ describe("ActivitiesSearchClient", () => {
       title: "Error",
       variant: "destructive",
     });
+  });
+
+  it("reports the store-enforced comparison limit without a success toast", () => {
+    mockComparisonState.maxItems = 5;
+    mockComparisonState.addItem.mockReturnValue(false);
+    const onSubmitServer = vi.fn<(params: ActivitySearchParams) => Promise<never>>();
+
+    render(<ActivitiesSearchClient onSubmitServer={onSubmitServer} />);
+    fireEvent.click(screen.getByRole("button", { name: "Compare Museum Tour" }));
+
+    expect(mockComparisonState.addItem).toHaveBeenCalledWith(
+      "activity",
+      sampleActivity.id,
+      sampleActivity
+    );
+    expect(mockToast).toHaveBeenCalledWith({
+      description: "You can compare up to 5 activities at once",
+      title: "Comparison limit reached",
+      variant: "destructive",
+    });
+    expect(mockToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Added to comparison" })
+    );
   });
 });

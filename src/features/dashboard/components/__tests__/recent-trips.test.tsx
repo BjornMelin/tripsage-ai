@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { renderWithProviders } from "@/test/test-utils";
@@ -104,6 +105,15 @@ describe("RecentTrips", () => {
     expect(screen.getAllByTestId("trip-skeleton").length).toBeGreaterThan(0);
   });
 
+  it("renders the loading shell for the server hydration snapshot", () => {
+    setTrips([], false);
+
+    const markup = renderToString(<RecentTrips />);
+
+    expect(markup).toContain('data-testid="trip-skeleton"');
+    expect(markup).not.toContain("No recent trips yet.");
+  });
+
   it("renders empty state when no trips exist", () => {
     setTrips([]);
     renderWithProviders(<RecentTrips />);
@@ -121,6 +131,16 @@ describe("RecentTrips", () => {
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
     expect(screen.getByText("European Tour")).toBeInTheDocument();
     expect(screen.getByText("Beach Getaway")).toBeInTheDocument();
+  });
+
+  it("does not reorder the query-owned trips array", () => {
+    const trips = [...MockTrips];
+    const originalOrder = trips.map((trip) => trip.id);
+    setTrips(trips);
+
+    renderWithProviders(<RecentTrips />);
+
+    expect(trips.map((trip) => trip.id)).toEqual(originalOrder);
   });
 
   describe("with fixed system time", () => {

@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useTrips } from "@/hooks/use-trips";
 import { DateUtils } from "@/lib/dates/unified-date-utils";
 import { nowIso } from "@/lib/security/random";
@@ -197,37 +198,10 @@ export function RecentTrips(props: RecentTripsProps) {
 }
 
 function RecentTripsImpl({ limit = 5, showEmpty }: RecentTripsVariantProps) {
+  const isHydrated = useHydrated();
   const { data: tripsResponse, isLoading } = useTrips();
 
-  // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
-  let tripsData: Trip[] = [];
-  if (Array.isArray(tripsResponse)) {
-    tripsData = tripsResponse;
-  } else if (tripsResponse && typeof tripsResponse === "object") {
-    const anyResp = tripsResponse as {
-      items?: Trip[];
-      data?: Trip[] | { items?: Trip[] };
-    };
-    if (Array.isArray(anyResp.items)) {
-      tripsData = anyResp.items;
-    } else if (anyResp.data) {
-      if (Array.isArray(anyResp.data)) tripsData = anyResp.data;
-      else if (Array.isArray(anyResp.data.items)) tripsData = anyResp.data.items;
-    }
-  }
-  const recentTrips = tripsData
-    .sort((a: Trip, b: Trip) => {
-      const dateA = DateUtils.parse(
-        a.updatedAt || a.createdAt || "1970-01-01T00:00:00Z"
-      );
-      const dateB = DateUtils.parse(
-        b.updatedAt || b.createdAt || "1970-01-01T00:00:00Z"
-      );
-      return dateB.getTime() - dateA.getTime();
-    })
-    .slice(0, limit);
-
-  if (isLoading) {
+  if (!isHydrated || isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -245,6 +219,34 @@ function RecentTripsImpl({ limit = 5, showEmpty }: RecentTripsVariantProps) {
       </Card>
     );
   }
+
+  // Extract trips without mutating arrays owned by the query cache.
+  let tripsData: Trip[] = [];
+  if (Array.isArray(tripsResponse)) {
+    tripsData = tripsResponse;
+  } else if (tripsResponse && typeof tripsResponse === "object") {
+    const anyResp = tripsResponse as {
+      items?: Trip[];
+      data?: Trip[] | { items?: Trip[] };
+    };
+    if (Array.isArray(anyResp.items)) {
+      tripsData = anyResp.items;
+    } else if (anyResp.data) {
+      if (Array.isArray(anyResp.data)) tripsData = anyResp.data;
+      else if (Array.isArray(anyResp.data.items)) tripsData = anyResp.data.items;
+    }
+  }
+  const recentTrips = tripsData
+    .toSorted((a: Trip, b: Trip) => {
+      const dateA = DateUtils.parse(
+        a.updatedAt || a.createdAt || "1970-01-01T00:00:00Z"
+      );
+      const dateB = DateUtils.parse(
+        b.updatedAt || b.createdAt || "1970-01-01T00:00:00Z"
+      );
+      return dateB.getTime() - dateA.getTime();
+    })
+    .slice(0, limit);
 
   return (
     <Card>

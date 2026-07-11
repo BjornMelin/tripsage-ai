@@ -60,38 +60,43 @@ interface ComputedState {
 }
 
 const DEFAULT_MAX_ITEMS = 3;
+const EMPTY_COMPARISON_ITEMS: ComparisonItem[] = [];
 
 const initialState = {
   items: [] as ComparisonItem[],
   maxItems: DEFAULT_MAX_ITEMS,
 };
 
+function computeComparisonState(
+  state: Pick<ComparisonState, "items" | "maxItems">
+): ComputedState {
+  const itemsByTypeMap = new Map<SearchType, ComparisonItem[]>();
+  const idsSet = new Set<string>();
+
+  for (const item of state.items) {
+    idsSet.add(item.id);
+    const existing = itemsByTypeMap.get(item.type);
+    if (existing) {
+      existing.push(item);
+    } else {
+      itemsByTypeMap.set(item.type, [item]);
+    }
+  }
+
+  return {
+    canAdd: state.items.length < state.maxItems,
+    idsSet,
+    itemCount: state.items.length,
+    itemsByTypeMap,
+  };
+}
+
 export const useComparisonStore = create<ComparisonState & ComputedState>()(
   devtools(
     persist(
       withComputed<ComparisonState & ComputedState>(
         {
-          compute: (state) => {
-            const itemsByTypeMap = new Map<SearchType, ComparisonItem[]>();
-            const idsSet = new Set<string>();
-
-            for (const item of state.items) {
-              idsSet.add(item.id);
-              const existing = itemsByTypeMap.get(item.type);
-              if (existing) {
-                existing.push(item);
-              } else {
-                itemsByTypeMap.set(item.type, [item]);
-              }
-            }
-
-            return {
-              canAdd: state.items.length < state.maxItems,
-              idsSet,
-              itemCount: state.items.length,
-              itemsByTypeMap,
-            };
-          },
+          compute: computeComparisonState,
         },
         (set, get) => ({
           ...initialState,
@@ -158,6 +163,21 @@ export const useComparisonStore = create<ComparisonState & ComputedState>()(
         })
       ),
       {
+        merge: (persistedState, currentState) => {
+          const restoredState = (persistedState ?? {}) as Partial<
+            Pick<ComparisonState, "items" | "maxItems">
+          >;
+          const mergedState = {
+            ...currentState,
+            items: restoredState.items ?? currentState.items,
+            maxItems: restoredState.maxItems ?? currentState.maxItems,
+          };
+
+          return {
+            ...mergedState,
+            ...computeComparisonState(mergedState),
+          };
+        },
         name: "comparison-storage",
         partialize: (state) => ({
           items: state.items,
@@ -178,7 +198,9 @@ export const useComparisonItemCount = () =>
 export const useCanAddComparison = () => useComparisonStore((state) => state.canAdd);
 
 export const useComparisonItemsByType = (type: SearchType) =>
-  useComparisonStore((state) => state.getItemsByType(type));
+  useComparisonStore(
+    (state) => state.itemsByTypeMap.get(type) ?? EMPTY_COMPARISON_ITEMS
+  );
 
 export const useHasComparisonItem = (id: string) =>
   useComparisonStore((state) => state.hasItem(id));
