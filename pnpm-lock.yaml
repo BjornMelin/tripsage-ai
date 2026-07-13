@@ -37,8 +37,8 @@ importers:
         specifier: 3.0.195
         version: 3.0.195(react@19.2.7)(zod@4.4.3)
       '@ai-sdk/togetherai':
-        specifier: 2.0.53
-        version: 2.0.53(zod@4.4.3)
+        specifier: 3.0.8
+        version: 3.0.8(zod@4.4.3)
       '@ai-sdk/xai':
         specifier: 3.0.93
         version: 3.0.93(zod@4.4.3)
@@ -409,6 +409,12 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/openai-compatible@3.0.7':
+    resolution: {integrity: sha512-y8RVpm8BZKNHDxlbNVt/GYmoBBqLx10m4d7bOzOnRD8V2aP3Cr6/g/bfubR4EkbW1ySrnPr62svZIeND2fdp3Q==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/openai@3.0.67':
     resolution: {integrity: sha512-oAiGC9eWG7IgtdsdS74bOCnAAHarAfTJhWN9x5INwnWPekL802AvF+0I5DvLzIF1MIRmNw4N8mPSL/GUVbX9Mw==}
     engines: {node: '>=18'}
@@ -421,9 +427,19 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/provider-utils@5.0.7':
+    resolution: {integrity: sha512-OSm5/5kdrHa11WIOo5LYgDKnxYWp5aB/wx5EXRHi0jpUGduMDeB6oht9U6p+UNNWIP3F/EqPpV8d7vdP/iRnqg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider@3.0.10':
     resolution: {integrity: sha512-Q3BZ27qfpYqnCYGvE3vt+Qi6LGOF9R5Nmzn+9JoM1lCRsD9mYaIhfJLkSunN48nfGXJ6n+XNV0J/XVpqGQl7Dw==}
     engines: {node: '>=18'}
+
+  '@ai-sdk/provider@4.0.3':
+    resolution: {integrity: sha512-e0CpNWJUY7OxAFAnCZkw+ri9QOHWwTs1tXP42782KFGCU07qt8NiXCrCVowyCB5dP2r5/Uls+g2oPd8kOJn9dw==}
+    engines: {node: '>=22'}
 
   '@ai-sdk/react@3.0.195':
     resolution: {integrity: sha512-+yIH84d4bBNzLKfaDDf4EocEH0XQKKNwNShxbrz5xAiJMNIPnWVWT9cyrSerYaGH3iNVS/g2io42PE4HNbc4RA==}
@@ -431,9 +447,9 @@ packages:
     peerDependencies:
       react: ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1
 
-  '@ai-sdk/togetherai@2.0.53':
-    resolution: {integrity: sha512-M/qsqM1HMlFpWHxHTEorENCLFmBefwxhGTB+XVsjUh77gfyt1io8eg96c/CyWZTxCPa5GxLfl9mhPxp8wjWATg==}
-    engines: {node: '>=18'}
+  '@ai-sdk/togetherai@3.0.8':
+    resolution: {integrity: sha512-Z1pioqTBQ27/ZoRHgrB397alftlqovdqBEDACvD29dNqWotkFaJPWBRjWzosvM0hrXDYIdw9IZHkDD3L5cKYPA==}
+    engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
@@ -2869,6 +2885,9 @@ packages:
   '@vue/shared@3.5.34':
     resolution: {integrity: sha512-24uqU4OIiX29ryC3MeWid/Xf2fa2EFRUVLb77nRhk+UrTVrh/XiGtFAFmJBAtBRbjwNdsPRP+jj/OL27Eg1NDA==}
 
+  '@workflow/serde@4.1.0':
+    resolution: {integrity: sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==}
+
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
@@ -3681,6 +3700,10 @@ packages:
 
   eventsource-parser@3.0.8:
     resolution: {integrity: sha512-70QWGkr4snxr0OXLRWsFLeRBIRPuQOvt4s8QYjmUlmlkyTZkRqS7EDVRZtzU3TiyDbXSzaOeF0XUKy8PchzukQ==}
+    engines: {node: '>=18.0.0'}
+
+  eventsource-parser@3.1.0:
+    resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
     engines: {node: '>=18.0.0'}
 
   execa@5.1.1:
@@ -6189,6 +6212,12 @@ snapshots:
       '@ai-sdk/provider-utils': 4.0.27(zod@4.4.3)
       zod: 4.4.3
 
+  '@ai-sdk/openai-compatible@3.0.7(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider-utils': 5.0.7(zod@4.4.3)
+      zod: 4.4.3
+
   '@ai-sdk/openai@3.0.67(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
@@ -6202,7 +6231,19 @@ snapshots:
       eventsource-parser: 3.0.8
       zod: 4.4.3
 
+  '@ai-sdk/provider-utils@5.0.7(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.3
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.1.0
+      zod: 4.4.3
+
   '@ai-sdk/provider@3.0.10':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@4.0.3':
     dependencies:
       json-schema: 0.4.0
 
@@ -6216,11 +6257,11 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@ai-sdk/togetherai@2.0.53(zod@4.4.3)':
+  '@ai-sdk/togetherai@3.0.8(zod@4.4.3)':
     dependencies:
-      '@ai-sdk/openai-compatible': 2.0.48(zod@4.4.3)
-      '@ai-sdk/provider': 3.0.10
-      '@ai-sdk/provider-utils': 4.0.27(zod@4.4.3)
+      '@ai-sdk/openai-compatible': 3.0.7(zod@4.4.3)
+      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider-utils': 5.0.7(zod@4.4.3)
       zod: 4.4.3
 
   '@ai-sdk/xai@3.0.93(zod@4.4.3)':
@@ -8466,6 +8507,8 @@ snapshots:
 
   '@vue/shared@3.5.34': {}
 
+  '@workflow/serde@4.1.0': {}
+
   '@xmldom/xmldom@0.8.13': {}
 
   acorn@8.16.0: {}
@@ -9272,6 +9315,8 @@ snapshots:
   esutils@2.0.3: {}
 
   eventsource-parser@3.0.8: {}
+
+  eventsource-parser@3.1.0: {}
 
   execa@5.1.1:
     dependencies:
