@@ -89,7 +89,7 @@
     "@ai-sdk/anthropic": "3.0.81",
     "@ai-sdk/openai": "3.0.67",
     "@ai-sdk/provider": "3.0.10",
-    "@ai-sdk/react": "3.0.195",
+    "@ai-sdk/react": "4.0.23",
     "@ai-sdk/togetherai": "2.0.53",
     "@ai-sdk/xai": "3.0.93",
     "@hookform/resolvers": "^5.4.0",
