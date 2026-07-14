@@ -1,6 +1,4 @@
-/**
- * @fileoverview Unit tests for UI image attachment validation.
- */
+/** @vitest-environment node */
 
 import type { UIMessage } from "ai";
 import { describe, expect, it } from "vitest";
