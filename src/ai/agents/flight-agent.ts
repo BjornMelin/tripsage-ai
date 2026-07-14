@@ -45,11 +45,11 @@ const FLIGHT_TOOLS = {
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated flight search request.
- * @returns Configured ToolLoopAgent for flight search.
+ * @returns Configured agent and canonical UI messages for flight search.
  *
  * @example
  * ```typescript
- * const { agent } = createFlightAgent(deps, config, {
+ * const { agent, uiMessages } = createFlightAgent(deps, config, {
  *   origin: "New York",
  *   destination: "Tokyo",
  *   departureDate: "2025-03-15",
@@ -57,7 +57,7 @@ const FLIGHT_TOOLS = {
  *   cabinClass: "economy",
  *   currency: "USD",
  * });
- * const stream = agent.stream({ prompt: "Find flights" });
+ * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```
  */
 export function createFlightAgent(

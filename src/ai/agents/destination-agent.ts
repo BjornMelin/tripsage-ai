@@ -39,7 +39,7 @@ const DESTINATION_TOOLS = {
 /**
  * Creates a destination research agent for travel research.
  *
- * Returns a reusable ToolLoopAgent with phased tool selection:
+ * Returns a reusable agent and canonical UI messages with phased tool selection:
  * - Phase 1: Initial search and context gathering
  * - Phase 2: Deep research via web crawling
  * - Phase 3: Weather and advisory checks
@@ -47,16 +47,16 @@ const DESTINATION_TOOLS = {
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated destination research request.
- * @returns Configured ToolLoopAgent for destination research.
+ * @returns Configured agent and canonical UI messages for destination research.
  *
  * @example
  * ```typescript
- * const { agent } = createDestinationAgent(deps, config, {
+ * const { agent, uiMessages } = createDestinationAgent(deps, config, {
  *   destination: "Kyoto, Japan",
  *   travelDates: "March 2025",
  *   specificInterests: ["temples", "cherry blossoms"],
  * });
- * const stream = agent.stream({ prompt: "Research this destination" });
+ * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```
  */
 export function createDestinationAgent(

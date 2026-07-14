@@ -27,7 +27,7 @@ import {
   streamText,
 } from "ai";
 import { z } from "zod";
-import { validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { normalizeAndValidateImageAttachments } from "@/app/api/_helpers/attachments";
 import { errorResponse, notFoundResponse } from "@/lib/api/route-helpers";
 import { isChatEphemeralEnabled } from "@/lib/chat/ephemeral";
 import { handleMemoryIntent } from "@/lib/memory/orchestrator";
@@ -1024,7 +1024,7 @@ export async function handleChat(
   }
   const toolCallSupabase = deps.toolCallSupabase ?? serverSupabase;
 
-  const attachmentValidation = validateImageAttachments(promptUiMessages);
+  const attachmentValidation = normalizeAndValidateImageAttachments(promptUiMessages);
   if (!attachmentValidation.valid) {
     return errorResponse({
       error: "invalid_attachment",
