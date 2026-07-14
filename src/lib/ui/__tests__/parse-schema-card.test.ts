@@ -16,6 +16,15 @@ describe("parseSchemaCard", () => {
     expect(result?.kind).toBe("flight");
   });
 
+  it("should reject the retired flight schema version", () => {
+    const result = parseSchemaCard(`{
+      "schemaVersion": "flight.v1",
+      "itineraries": []
+    }`);
+
+    expect(result).toBeNull();
+  });
+
   it("should parse plain JSON with stay schema", () => {
     const text = `{
       "schemaVersion": "stay.v1",

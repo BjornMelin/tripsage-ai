@@ -57,7 +57,7 @@ pnpm test
 
 The chat page detects assistant JSON with `schemaVersion` and renders cards:
 
-- `flight.v1` → FlightOfferCard
+- `flight.v2` → FlightOfferCard
 - `stay.v1` → StayCard
 - `budget.v1` → BudgetChart
 - `dest.v1` → DestinationCard

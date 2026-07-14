@@ -61,7 +61,6 @@ export function parseSchemaCard(text: string): ParsedSchemaCard | null {
   // Disambiguate by explicit schemaVersion to avoid false positives on schemas
   const obj = parsedJson as { schemaVersion?: string };
   switch (obj.schemaVersion) {
-    case "flight.v1":
     case "flight.v2": {
       const r = flightSearchResultSchema.safeParse(parsedJson);
       return r.success ? { data: r.data, kind: "flight" } : null;
