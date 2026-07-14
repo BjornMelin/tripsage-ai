@@ -23,7 +23,9 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
       if (p?.type === "file") {
         const mediaType: string | undefined = p.mediaType;
         if (!mediaType) return { reason: "missing_media_type", valid: false };
-        if (!mediaType.startsWith("image/"))
+        const normalizedMediaType = mediaType.trim().toLowerCase();
+        if (!normalizedMediaType) return { reason: "missing_media_type", valid: false };
+        if (!normalizedMediaType.startsWith("image/"))
           return { reason: "unsupported_media_type", valid: false };
       }
     }

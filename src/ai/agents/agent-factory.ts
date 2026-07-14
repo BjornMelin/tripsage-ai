@@ -46,14 +46,14 @@ const DEFAULT_TEMPERATURE = 0.3;
  *
  * Supports per-step tool selection and malformed tool-call repair.
  *
- * @template TTools - Tool set type for the agent.
+ * @typeParam TagentTools - Tool set type for the agent.
  * @param deps - Runtime model and request signal.
  * @param config - Agent configuration including tools and instructions.
  * @returns Configured ToolLoopAgent and its initial UI messages.
  *
  * @example
  * ```typescript
- * const { agent } = createTripSageAgent(deps, {
+ * const { agent, uiMessages } = createTripSageAgent(deps, {
  *   agentType: "budgetPlanning",
  *   name: "Budget Agent",
  *   instructions: buildBudgetPrompt(input),
@@ -66,9 +66,10 @@ const DEFAULT_TEMPERATURE = 0.3;
  *   uiMessages: [],
  * });
  *
- * // Stream the agent response
- * const stream = agent.stream({ prompt: userMessage });
+ * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```
+ *
+ * @see docs/architecture/decisions/adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md
  */
 export function createTripSageAgent<TagentTools extends ToolSet>(
   deps: AgentDependencies,

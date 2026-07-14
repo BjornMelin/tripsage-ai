@@ -725,6 +725,12 @@ type CreateAgentRouteOptions<
  *
  * Centralizes auth, request validation, agent config + provider resolution, and
  * AI SDK v6 streaming response creation so agent routes stay thin and consistent.
+ *
+ * @typeParam SchemaType - Zod schema used to validate request input.
+ * @typeParam Tools - Tool set exposed by the created agent.
+ * @param options - Route guards, schema, and agent factory configuration.
+ * @returns A request handler that streams the agent response.
+ * @see docs/architecture/decisions/adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md
  */
 export function createAgentRoute<
   SchemaType extends z.ZodType,

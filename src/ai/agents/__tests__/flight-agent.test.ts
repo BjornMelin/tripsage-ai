@@ -140,11 +140,26 @@ describe("createFlightAgent", () => {
     expect(phase2.activeTools).toContain("distanceMatrix");
   });
 
-  it("includes the JSON schema instruction in UI messages", () => {
+  it("builds canonical UI messages and clamps output tokens", () => {
     createFlightAgent(mockDeps, mockConfig, mockInput);
 
     const call = mockCreateTripSageAgent.mock.calls[0];
     const config = call[1];
+    expect(mockClampMaxTokens).toHaveBeenCalledWith(
+      [
+        {
+          content: "Search for flights from {origin} to {destination}",
+          role: "system",
+        },
+        {
+          content: expect.stringContaining('schemaVersion="flight.v1"'),
+          role: "user",
+        },
+      ],
+      2048,
+      "gpt-5.4-mini"
+    );
+    expect(config.maxOutputTokens).toBe(1024);
     expect(config.uiMessages).toBeDefined();
     expect(config.uiMessages[0].parts[0].text).toContain("schemaVersion");
   });
