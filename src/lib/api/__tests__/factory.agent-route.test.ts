@@ -116,7 +116,7 @@ describe("createAgentRoute", () => {
     const handler = createAgentRoute({
       agentFactory: async () => ({
         agent: unsafeCast<Agent>({}),
-        defaultMessages: [],
+        uiMessages: [],
       }),
       agentType: "memoryAgent",
       rateLimit: "agents:memory",

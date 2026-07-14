@@ -42,12 +42,12 @@ vi.mock("@ai/models/registry", () => ({
 }));
 
 // Mock budget agent
-vi.mock("@ai/agents", () => ({
+vi.mock("@ai/agents/budget-agent", () => ({
   createBudgetAgent: vi.fn(() => ({
     agent: {},
-    agentType: "budgetPlanning",
-    defaultMessages: [{ content: "schema", role: "user" }],
-    modelId: "gpt-5.5",
+    uiMessages: [
+      { id: "schema", parts: [{ text: "schema", type: "text" }], role: "user" },
+    ],
   })),
 }));
 

@@ -69,7 +69,7 @@ export function createItineraryAgent(
   const params = extractAgentParameters(config);
   const instructions = buildItineraryPrompt(input);
 
-  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
+  const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -104,16 +104,13 @@ export function createItineraryAgent(
 
   // Wrap tools that require userId for user-scoped operations
   // createTravelPlan and saveTravelPlan require userId in their input schema
-  const itineraryTools = wrapToolsWithUserId(
-    BASE_ITINERARY_TOOLS,
-    deps.userId,
-    ["createTravelPlan", "saveTravelPlan"],
-    deps.sessionId
-  );
+  const itineraryTools = wrapToolsWithUserId(BASE_ITINERARY_TOOLS, deps.userId, [
+    "createTravelPlan",
+    "saveTravelPlan",
+  ]);
 
   return createTripSageAgent<typeof BASE_ITINERARY_TOOLS>(deps, {
     agentType: "itineraryPlanning",
-    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Itinerary Planning Agent",
@@ -140,8 +137,6 @@ export function createItineraryAgent(
     temperature: params.temperature,
     tools: itineraryTools,
     topP: params.topP,
+    uiMessages,
   });
 }
-
-/** Exported type for the itinerary agent's tool set. */
-export type ItineraryAgentTools = typeof BASE_ITINERARY_TOOLS;

@@ -5,7 +5,7 @@
 import "server-only";
 
 import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
-import type { LanguageModel, StopCondition, SystemModelMessage, ToolSet } from "ai";
+import type { LanguageModel, ToolSet } from "ai";
 import {
   asSchema,
   generateText,
@@ -15,19 +15,11 @@ import {
   stepCountIs,
   ToolLoopAgent,
 } from "ai";
-import {
-  hasInjectionRisk,
-  isFilteredValue,
-  sanitizeWithInjectionDetection,
-} from "@/lib/security/prompt-sanitizer";
 import { secureUuid } from "@/lib/security/random";
 import { createServerLogger } from "@/lib/telemetry/logger";
-import { recordTelemetryEvent } from "@/lib/telemetry/span";
 
-import { normalizeInstructions } from "./instructions";
 import type {
   AgentDependencies,
-  StructuredOutput,
   TripSageAgentConfig,
   TripSageAgentResult,
 } from "./types";
@@ -39,9 +31,6 @@ const logger = createServerLogger("agent-factory");
  * Allows complex multi-tool workflows while preventing infinite loops.
  */
 const DEFAULT_STEP_LIMIT = 10;
-
-/** Maximum number of tool repair attempts to avoid runaway costs. */
-const MAX_TOOL_REPAIR_ATTEMPTS = 2;
 
 /**
  * Default temperature for agent generation.
@@ -55,60 +44,47 @@ const DEFAULT_TEMPERATURE = 0.3;
  * Instantiates a reusable agent for autonomous multi-step reasoning with tool calling.
  * Runs until a stop condition is met (default: stepCountIs(stepLimit)).
  *
- * Supports dynamic configuration via callOptionsSchema/prepareCall, per-step
- * tool/model selection via prepareStep, step-level telemetry via onStepFinish,
- * structured output, tool filtering, and custom stop conditions.
+ * Supports per-step tool selection and malformed tool-call repair.
  *
  * @template TTools - Tool set type for the agent.
- * @template CallOptionsType - Call options type from callOptionsSchema.
- * @template OutputType - Output type for structured results.
- * @param deps - Runtime dependencies including model and identifiers.
+ * @param deps - Runtime model and request signal.
  * @param config - Agent configuration including tools and instructions.
- * @returns Configured ToolLoopAgent instance with metadata.
+ * @returns Configured ToolLoopAgent and its initial UI messages.
  *
  * @example
  * ```typescript
- * const { agent, agentType, modelId } = createTripSageAgent(deps, {
+ * const { agent } = createTripSageAgent(deps, {
  *   agentType: "budgetPlanning",
  *   name: "Budget Agent",
  *   instructions: buildBudgetPrompt(input),
- *   tools: buildBudgetTools(deps.identifier),
+ *   tools: budgetTools,
  *   stepLimit: 10,
  *   prepareStep: async ({ stepNumber }) => {
  *     if (stepNumber <= 2) return { activeTools: ['webSearch'] };
  *     return {};
  *   },
+ *   uiMessages: [],
  * });
  *
  * // Stream the agent response
  * const stream = agent.stream({ prompt: userMessage });
  * ```
  */
-export function createTripSageAgent<
-  TagentTools extends ToolSet,
-  CallOptionsType = never,
-  OutputType = unknown,
->(
+export function createTripSageAgent<TagentTools extends ToolSet>(
   deps: AgentDependencies,
-  config: TripSageAgentConfig<TagentTools, CallOptionsType, OutputType>
-): TripSageAgentResult<TagentTools, CallOptionsType, OutputType> {
+  config: TripSageAgentConfig<TagentTools>
+): TripSageAgentResult<TagentTools> {
   const {
-    activeTools,
     agentType,
-    callOptionsSchema,
-    defaultMessages,
     instructions,
     maxOutputTokens,
     stepLimit = DEFAULT_STEP_LIMIT,
     name,
-    onStepFinish: configOnStepFinish,
-    output,
-    prepareCall,
     prepareStep,
-    stopWhen: customStopWhen,
     temperature = DEFAULT_TEMPERATURE,
     tools,
     topP,
+    uiMessages,
   } = config;
 
   const requestId = secureUuid();
@@ -120,150 +96,9 @@ export function createTripSageAgent<
     stepLimit,
   });
 
-  // Build stop conditions: combine default step count with custom conditions
-  const buildStopConditions = ():
-    | StopCondition<TagentTools>
-    | StopCondition<TagentTools>[] => {
-    const defaultCondition = stepCountIs(stepLimit);
-    if (!customStopWhen) {
-      return defaultCondition;
-    }
-    const customConditions = Array.isArray(customStopWhen)
-      ? customStopWhen
-      : [customStopWhen];
-    return [defaultCondition, ...customConditions];
-  };
-
-  // Wrap onStepFinish to add telemetry
-  const wrappedOnStepFinish: typeof configOnStepFinish = configOnStepFinish
-    ? (stepResult) => {
-        // Record telemetry event for step completion
-        recordTelemetryEvent("agent.step.finish", {
-          attributes: {
-            agentType,
-            hasToolCalls: stepResult.toolCalls.length > 0,
-            modelId: deps.modelId,
-            requestId,
-            toolCallCount: stepResult.toolCalls.length,
-          },
-        });
-        return configOnStepFinish(stepResult);
-      }
-    : undefined;
-
-  const agent = new ToolLoopAgent<
-    CallOptionsType,
-    TagentTools,
-    StructuredOutput<OutputType>
-  >({
-    // Call options schema for type-safe runtime configuration
-    ...(callOptionsSchema ? { callOptionsSchema } : {}),
-
-    // Prepare call function for dynamic configuration
-    // Note: prepareCall must return the full settings object, not partial
-    ...(prepareCall
-      ? {
-          prepareCall: async (params) => {
-            // Normalize instructions to handle potential array input
-            type InstructionValue = string | SystemModelMessage;
-            const normalizeInstructionInput = (
-              input: InstructionValue | Array<InstructionValue | undefined> | undefined
-            ): string => {
-              if (Array.isArray(input)) {
-                return input
-                  .map((instruction) => normalizeInstructions(instruction ?? ""))
-                  .join("\n");
-              }
-              return normalizeInstructions(input ?? "");
-            };
-
-            const hasParamsInstructions = Object.hasOwn(params, "instructions");
-
-            const normalizedInstructions = normalizeInstructionInput(
-              hasParamsInstructions
-                ? (params.instructions as
-                    | InstructionValue
-                    | InstructionValue[]
-                    | undefined)
-                : (instructions as InstructionValue | InstructionValue[] | undefined)
-            );
-
-            // Sanitize instructions to prevent prompt injection attacks
-            const sanitizedInstructions = sanitizeWithInjectionDetection(
-              normalizedInstructions,
-              5000 // Reasonable limit for agent instructions
-            );
-
-            // Security monitoring: log if injection patterns were detected
-            if (hasInjectionRisk(normalizedInstructions)) {
-              logger.warn("Prompt injection patterns detected in agent instructions", {
-                hasFilteredContent: isFilteredValue(sanitizedInstructions),
-                modelId: deps.modelId,
-              });
-              recordTelemetryEvent("security.prompt_injection_detected", {
-                attributes: {
-                  modelId: deps.modelId,
-                  wasFiltered: isFilteredValue(sanitizedInstructions),
-                },
-                level: "warning",
-              });
-            }
-
-            const result = await prepareCall({
-              instructions: sanitizedInstructions,
-              model: params.model ?? deps.model,
-              options: params.options as CallOptionsType,
-              tools: params.tools ?? tools,
-            });
-
-            const hasResultInstructions = Object.hasOwn(result, "instructions");
-            const resolvedInstructions = hasResultInstructions
-              ? normalizeInstructionInput(result.instructions ?? "")
-              : sanitizedInstructions;
-
-            const sanitizedResultInstructions = hasResultInstructions
-              ? sanitizeWithInjectionDetection(resolvedInstructions, 5000)
-              : sanitizedInstructions;
-
-            if (hasResultInstructions && hasInjectionRisk(resolvedInstructions)) {
-              logger.warn(
-                "Prompt injection patterns detected in prepareCall instructions",
-                {
-                  hasFilteredContent: isFilteredValue(sanitizedResultInstructions),
-                  modelId: deps.modelId,
-                }
-              );
-              recordTelemetryEvent("security.prompt_injection_detected", {
-                attributes: {
-                  modelId: deps.modelId,
-                  source: "prepare_call",
-                  wasFiltered: isFilteredValue(sanitizedResultInstructions),
-                },
-                level: "warning",
-              });
-            }
-
-            // Return merged settings - prepareCall can override any setting
-            return {
-              ...params,
-              instructions: sanitizedResultInstructions,
-              ...(result.model ? { model: result.model } : {}),
-              ...(result.tools ? { tools: result.tools } : {}),
-              ...(result.activeTools ? { activeTools: result.activeTools } : {}),
-              ...(result.toolChoice ? { toolChoice: result.toolChoice } : {}),
-            };
-          },
-        }
-      : {}),
-
+  const agent = new ToolLoopAgent<never, TagentTools>({
     // Prepare step function for per-step configuration
     ...(prepareStep ? { prepareStep } : {}),
-
-    // Step finish callback with telemetry
-    ...(wrappedOnStepFinish ? { onStepFinish: wrappedOnStepFinish } : {}),
-
-    // Active tools subset
-    ...(activeTools ? { activeTools } : {}),
 
     // Experimental: Automatic tool call repair for malformed inputs
     // biome-ignore lint/style/useNamingConvention: AI SDK property name
@@ -285,18 +120,6 @@ export function createTripSageAgent<
 
       // Only repair invalid input errors
       if (!InvalidToolInputError.isInstance(error)) {
-        return null;
-      }
-
-      const repairAttempts = Number(
-        (toolCall as { repairAttempts?: number }).repairAttempts ?? 0
-      );
-      if (repairAttempts >= MAX_TOOL_REPAIR_ATTEMPTS) {
-        logger.warn("Max repair attempts reached", {
-          agentType,
-          requestId,
-          toolName: toolCall.toolName,
-        });
         return null;
       }
 
@@ -400,25 +223,6 @@ export function createTripSageAgent<
             requestId,
             toolName: toolCall.toolName,
           });
-          if (deps.repairModel) {
-            try {
-              repairedArgs = await attemptModelRepair(
-                deps.repairModelId ?? "repair-model",
-                deps.repairModel
-              );
-            } catch (fallbackError) {
-              logger.warn("Fallback repair model failed", {
-                agentType,
-                error:
-                  fallbackError instanceof Error
-                    ? fallbackError.message
-                    : String(fallbackError),
-                modelId: deps.repairModelId ?? "repair-model",
-                requestId,
-                toolName: toolCall.toolName,
-              });
-            }
-          }
         }
 
         if (repairedArgs === undefined || repairedArgs === null) {
@@ -452,7 +256,6 @@ export function createTripSageAgent<
         return {
           ...toolCall,
           input: serializedInput,
-          repairAttempts: repairAttempts + 1,
         };
       } catch (repairError) {
         const normalizedError =
@@ -484,8 +287,7 @@ export function createTripSageAgent<
     // Generation parameters
     maxOutputTokens,
     model: deps.model,
-    output,
-    stopWhen: buildStopConditions(),
+    stopWhen: stepCountIs(stepLimit),
     temperature,
     toolChoice: "auto",
     tools,
@@ -494,21 +296,6 @@ export function createTripSageAgent<
 
   return {
     agent,
-    agentType,
-    defaultMessages,
-    modelId: deps.modelId,
-    output,
+    uiMessages,
   };
-}
-
-/**
- * Type guard to check if an error is a tool-related error.
- *
- * @param error - The error to check.
- * @returns True if the error is a NoSuchToolError or InvalidToolInputError.
- */
-export function isToolError(
-  error: unknown
-): error is NoSuchToolError | InvalidToolInputError {
-  return NoSuchToolError.isInstance(error) || InvalidToolInputError.isInstance(error);
 }

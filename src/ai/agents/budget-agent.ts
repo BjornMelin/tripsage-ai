@@ -62,7 +62,7 @@ export function createBudgetAgent(
   const params = extractAgentParameters(config);
   const instructions = buildBudgetPrompt(input);
 
-  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
+  const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -73,7 +73,6 @@ export function createBudgetAgent(
 
   return createTripSageAgent<typeof BUDGET_TOOLS>(deps, {
     agentType: "budgetPlanning",
-    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Budget Planning Agent",
@@ -99,8 +98,6 @@ export function createBudgetAgent(
     temperature: params.temperature,
     tools: BUDGET_TOOLS,
     topP: params.topP,
+    uiMessages,
   });
 }
-
-/** Exported type for the budget agent's tool set. */
-export type BudgetAgentTools = typeof BUDGET_TOOLS;

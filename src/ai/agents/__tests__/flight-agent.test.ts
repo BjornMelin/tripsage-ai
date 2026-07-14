@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 // Hoisted mocks per testing.md Pattern A
 const mockCreateTripSageAgent = vi.hoisted(() => vi.fn());
@@ -32,14 +33,12 @@ vi.mock("@ai/tools", () => ({
 import type { AgentConfig } from "@schemas/configuration";
 import type { FlightSearchRequest } from "@schemas/flights";
 import { createFlightAgent } from "../flight-agent";
-import type { AgentDependencies } from "../types";
+import type { AgentDependencies, TripSageAgentResult } from "../types";
 
 describe("createFlightAgent", () => {
   const mockDeps: AgentDependencies = {
-    identifier: "test-agent",
     model: { modelId: "gpt-5.4-mini" } as AgentDependencies["model"],
     modelId: "gpt-5.4-mini",
-    sessionId: "session-123",
     userId: "user-456",
   };
 
@@ -75,9 +74,12 @@ describe("createFlightAgent", () => {
       "Search for flights from {origin} to {destination}"
     );
     mockCreateTripSageAgent.mockReturnValue({
-      agent: { generate: vi.fn(), stream: vi.fn() },
-      metadata: { agentType: "flightSearch" },
-    });
+      agent: unsafeCast<TripSageAgentResult["agent"]>({
+        generate: vi.fn(),
+        stream: vi.fn(),
+      }),
+      uiMessages: [],
+    } satisfies TripSageAgentResult);
   });
 
   it("creates flight agent with correct configuration", () => {
@@ -100,21 +102,6 @@ describe("createFlightAgent", () => {
     createFlightAgent(mockDeps, mockConfig, mockInput);
 
     expect(mockBuildFlightPrompt).toHaveBeenCalledWith(mockInput);
-  });
-
-  it("clamps max tokens based on context messages", () => {
-    const contextMessages = [{ content: "Previous message", role: "user" as const }];
-
-    createFlightAgent(mockDeps, mockConfig, mockInput, contextMessages);
-
-    expect(mockClampMaxTokens).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ role: "system" }),
-        expect.objectContaining({ role: "user" }),
-      ]),
-      2048,
-      "gpt-5.4-mini"
-    );
   });
 
   it("includes flight tools in agent configuration", () => {
@@ -153,12 +140,12 @@ describe("createFlightAgent", () => {
     expect(phase2.activeTools).toContain("distanceMatrix");
   });
 
-  it("includes JSON schema instruction in default messages", () => {
+  it("includes the JSON schema instruction in UI messages", () => {
     createFlightAgent(mockDeps, mockConfig, mockInput);
 
     const call = mockCreateTripSageAgent.mock.calls[0];
     const config = call[1];
-    expect(config.defaultMessages).toBeDefined();
-    expect(config.defaultMessages[0].content).toContain("schemaVersion");
+    expect(config.uiMessages).toBeDefined();
+    expect(config.uiMessages[0].parts[0].text).toContain("schemaVersion");
   });
 });

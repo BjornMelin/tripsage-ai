@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createBudgetAgent } from "@ai/agents";
+import { createBudgetAgent } from "@ai/agents/budget-agent";
 import { agentSchemas } from "@schemas/agents";
 import { createAgentRoute } from "@/lib/api/factory";
 
