@@ -14,7 +14,6 @@ import {
 import type { AgentConfig } from "@schemas/configuration";
 import type { FlightSearchRequest } from "@schemas/flights";
 import type { ToolSet } from "ai";
-import type { ChatMessage } from "@/lib/tokens/budget";
 import { buildFlightPrompt } from "@/prompts/agents";
 
 import { createTripSageAgent } from "./agent-factory";
@@ -46,7 +45,6 @@ const FLIGHT_TOOLS = {
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated flight search request.
- * @param contextMessages - Optional context messages to include.
  * @returns Configured ToolLoopAgent for flight search.
  *
  * @example
@@ -65,14 +63,12 @@ const FLIGHT_TOOLS = {
 export function createFlightAgent(
   deps: AgentDependencies,
   config: AgentConfig,
-  input: FlightSearchRequest,
-  contextMessages: ChatMessage[] = []
+  input: FlightSearchRequest
 ): TripSageAgentResult<typeof FLIGHT_TOOLS> {
   const params = extractAgentParameters(config);
   const instructions = buildFlightPrompt(input);
 
-  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
-    contextMessages,
+  const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -83,7 +79,6 @@ export function createFlightAgent(
 
   return createTripSageAgent<typeof FLIGHT_TOOLS>(deps, {
     agentType: "flightSearch",
-    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Flight Search Agent",
@@ -104,8 +99,6 @@ export function createFlightAgent(
     temperature: params.temperature,
     tools: FLIGHT_TOOLS,
     topP: params.topP,
+    uiMessages,
   });
 }
-
-/** Exported type for the flight agent's tool set. */
-export type FlightAgentTools = typeof FLIGHT_TOOLS;

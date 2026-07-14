@@ -57,7 +57,7 @@ export function createAccommodationAgent(
     guests: input.guests,
   });
 
-  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
+  const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -68,7 +68,6 @@ export function createAccommodationAgent(
 
   return createTripSageAgent<typeof ACCOMMODATION_TOOLS>(deps, {
     agentType: "accommodationSearch",
-    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Accommodation Search Agent",
@@ -99,8 +98,6 @@ export function createAccommodationAgent(
     temperature: params.temperature,
     tools: ACCOMMODATION_TOOLS,
     topP: params.topP,
+    uiMessages,
   });
 }
-
-/** Exported type for the accommodation agent's tool set. */
-export type AccommodationAgentTools = typeof ACCOMMODATION_TOOLS;

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createFlightAgent } from "@ai/agents";
+import { createFlightAgent } from "@ai/agents/flight-agent";
 import { flightSearchRequestSchema } from "@schemas/flights";
 import { createAgentRoute } from "@/lib/api/factory";
 

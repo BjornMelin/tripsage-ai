@@ -68,12 +68,12 @@ vi.mock("@ai/models/registry", () => ({
 }));
 
 // Mock flight agent
-vi.mock("@ai/agents", () => ({
+vi.mock("@ai/agents/flight-agent", () => ({
   createFlightAgent: vi.fn(() => ({
     agent: {},
-    agentType: "flightAgent",
-    defaultMessages: [{ content: "schema", role: "user" }],
-    modelId: "gpt-5.5",
+    uiMessages: [
+      { id: "schema", parts: [{ text: "schema", type: "text" }], role: "user" },
+    ],
   })),
 }));
 

@@ -8,7 +8,7 @@ import type { AgentDependencies } from "@ai/agents/types";
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import type { AgentConfig, AgentType } from "@schemas/configuration";
 import type { User } from "@supabase/supabase-js";
-import type { Agent, ToolSet } from "ai";
+import type { Agent, ToolSet, UIMessage } from "ai";
 import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
@@ -695,40 +695,20 @@ export function withApiGuards<SchemaType extends z.ZodType>(
   };
 }
 
-/**
- * Represents the output specification for an AI SDK Agent.
- *
- * The AI SDK exports `Output` as a runtime namespace with a nested type. Use the
- * namespace-qualified type to match the SDK's internal `Output` interface.
- */
-type AgentOutput<
-  OutputType = unknown,
-  PartialType = unknown,
-  ElementType = unknown,
-> = import("ai").Output.Output<OutputType, PartialType, ElementType>;
-
-type AgentRouteFactoryResult<
-  CallOptions = never,
-  Tools extends ToolSet = Record<string, never>,
-  OutputType extends AgentOutput = AgentOutput,
-> = {
-  agent: Agent<CallOptions, Tools, OutputType>;
-  defaultMessages: unknown[];
+type AgentRouteFactoryResult<Tools extends ToolSet = Record<string, never>> = {
+  agent: Agent<never, Tools>;
+  uiMessages: UIMessage[];
 };
 
 type CreateAgentRouteOptions<
   SchemaType extends z.ZodType,
-  CallOptions = never,
   Tools extends ToolSet = Record<string, never>,
-  OutputType extends AgentOutput = AgentOutput,
 > = {
   agentFactory: (
     deps: AgentDependencies,
     agentConfig: AgentConfig,
     input: z.infer<SchemaType>
-  ) =>
-    | AgentRouteFactoryResult<CallOptions, Tools, OutputType>
-    | Promise<AgentRouteFactoryResult<CallOptions, Tools, OutputType>>;
+  ) => AgentRouteFactoryResult<Tools> | Promise<AgentRouteFactoryResult<Tools>>;
   agentType: AgentType;
   botId?: BotIdGuardConfig;
   getModelHint?: (params: {
@@ -748,11 +728,9 @@ type CreateAgentRouteOptions<
  */
 export function createAgentRoute<
   SchemaType extends z.ZodType,
-  CallOptions = never,
   Tools extends ToolSet = Record<string, never>,
-  OutputType extends AgentOutput = AgentOutput,
 >(
-  options: CreateAgentRouteOptions<SchemaType, CallOptions, Tools, OutputType>
+  options: CreateAgentRouteOptions<SchemaType, Tools>
 ): (req: NextRequest, routeContext: RouteParamsContext) => Promise<Response> {
   return withApiGuards({
     auth: true,
@@ -799,13 +777,12 @@ export function createAgentRoute<
 
         const deps = {
           abortSignal: req.signal,
-          identifier: userId,
           model,
           modelId,
           userId,
         } satisfies AgentDependencies;
 
-        const { agent, defaultMessages } = await options.agentFactory(
+        const { agent, uiMessages } = await options.agentFactory(
           deps,
           agentConfig,
           input
@@ -852,7 +829,7 @@ export function createAgentRoute<
           onError: createErrorHandler(),
           sendSources: true,
           timeout: timeoutConfig,
-          uiMessages: defaultMessages,
+          uiMessages,
         });
       }
     );

@@ -67,7 +67,7 @@ export function createDestinationAgent(
   const params = extractAgentParameters(config);
   const instructions = buildDestinationPrompt(input);
 
-  const { defaultMessages, maxOutputTokens } = prepareSchemaPrompt({
+  const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
@@ -83,7 +83,6 @@ export function createDestinationAgent(
 
   return createTripSageAgent<typeof DESTINATION_TOOLS>(deps, {
     agentType: "destinationResearch",
-    defaultMessages,
     instructions,
     maxOutputTokens,
     name: "Destination Research Agent",
@@ -115,8 +114,6 @@ export function createDestinationAgent(
     temperature: params.temperature,
     tools: DESTINATION_TOOLS,
     topP: params.topP,
+    uiMessages,
   });
 }
-
-/** Exported type for the destination agent's tool set. */
-export type DestinationAgentTools = typeof DESTINATION_TOOLS;

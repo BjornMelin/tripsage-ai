@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAccommodationAgent } from "@ai/agents";
+import { createAccommodationAgent } from "@ai/agents/accommodation-agent";
 import { agentSchemas } from "@schemas/agents";
 import { createAgentRoute } from "@/lib/api/factory";
 

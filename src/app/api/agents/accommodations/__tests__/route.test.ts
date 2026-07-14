@@ -43,12 +43,12 @@ vi.mock("@ai/models/registry", () => ({
 }));
 
 // Mock accommodation agent
-vi.mock("@ai/agents", () => ({
+vi.mock("@ai/agents/accommodation-agent", () => ({
   createAccommodationAgent: vi.fn(() => ({
     agent: {},
-    agentType: "accommodationSearch",
-    defaultMessages: [{ content: "schema", role: "user" }],
-    modelId: "gpt-5.5",
+    uiMessages: [
+      { id: "schema", parts: [{ text: "schema", type: "text" }], role: "user" },
+    ],
   })),
 }));
 

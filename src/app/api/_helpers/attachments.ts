@@ -2,7 +2,7 @@
  * @fileoverview Helpers for UI attachments mapping and validation.
  */
 
-import type { FileUIPart, UIMessage } from "ai";
+import type { UIMessage } from "ai";
 
 /**
  * Type representing the result of attachment validation.
@@ -29,42 +29,4 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
     }
   }
   return { valid: true } as const;
-}
-
-/**
- * Converts UI file parts to model file format for AI SDK compatibility.
- *
- * @param part - UI message part to convert.
- * @returns FilePart object for AI SDK or undefined if not convertible.
- */
-export function convertUiFilePartToImage(part: FileUIPart) {
-  if (part?.type === "file") {
-    const mediaType: string | undefined = part.mediaType;
-    if (mediaType?.startsWith("image/")) {
-      return {
-        image: part.url,
-        mimeType: mediaType,
-        type: "image" as const,
-      };
-    }
-  }
-  return null;
-}
-
-/**
- * Extracts text content from UI messages for token budgeting purposes.
- *
- * @param messages - Array of UI messages to extract text from.
- * @returns Array of text strings found in the messages.
- */
-export function extractTexts(messages: UIMessage[]): string[] {
-  const texts: string[] = [];
-  for (const m of messages) {
-    const parts = m.parts;
-    if (!Array.isArray(parts)) continue;
-    for (const p of parts) {
-      if (p?.type === "text" && typeof p.text === "string") texts.push(p.text);
-    }
-  }
-  return texts;
 }

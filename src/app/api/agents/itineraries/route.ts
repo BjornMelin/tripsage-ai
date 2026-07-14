@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createItineraryAgent } from "@ai/agents";
+import { createItineraryAgent } from "@ai/agents/itinerary-agent";
 import { agentSchemas } from "@schemas/agents";
 import { createAgentRoute } from "@/lib/api/factory";
 
