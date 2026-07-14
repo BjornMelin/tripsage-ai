@@ -72,7 +72,7 @@ export function createFlightAgent(
     instructions,
     maxOutputTokens: params.maxOutputTokens,
     modelId: deps.modelId,
-    userPrompt: `Find flight offers and summarize. Always return JSON with schemaVersion="flight.v1" and sources[]. Parameters: ${JSON.stringify(
+    userPrompt: `Find flight offers and summarize. Always return JSON with schemaVersion="flight.v2" and sources[]. Parameters: ${JSON.stringify(
       input
     )}`,
   });

@@ -152,7 +152,7 @@ describe("createFlightAgent", () => {
           role: "system",
         },
         {
-          content: expect.stringContaining('schemaVersion="flight.v1"'),
+          content: expect.stringContaining('schemaVersion="flight.v2"'),
           role: "user",
         },
       ],

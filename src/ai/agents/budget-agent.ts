@@ -47,9 +47,11 @@ const BUDGET_TOOLS = {
  * @example
  * ```typescript
  * const { agent, uiMessages } = createBudgetAgent(deps, config, {
+ *   budgetCap: 2500,
  *   destination: "Tokyo, Japan",
  *   durationDays: 7,
- *   travelStyle: "mid-range",
+ *   preferredCurrency: "USD",
+ *   travelers: 2,
  * });
  * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```

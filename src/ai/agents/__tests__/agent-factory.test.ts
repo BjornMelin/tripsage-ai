@@ -198,13 +198,13 @@ describe("prepareSchemaPrompt", () => {
       instructions: "Return a flight search response.",
       maxOutputTokens: 1024,
       modelId: "gpt-5.4-mini",
-      userPrompt: 'Return schemaVersion="flight.v1".',
+      userPrompt: 'Return schemaVersion="flight.v2".',
     });
 
     expect(result.uiMessages).toEqual([
       {
         id: expect.any(String),
-        parts: [{ text: 'Return schemaVersion="flight.v1".', type: "text" }],
+        parts: [{ text: 'Return schemaVersion="flight.v2".', type: "text" }],
         role: "user",
       },
     ]);
