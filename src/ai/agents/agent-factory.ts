@@ -49,7 +49,7 @@ const DEFAULT_TEMPERATURE = 0.3;
  * @typeParam TagentTools - Tool set type for the agent.
  * @param deps - Runtime model and request signal.
  * @param config - Agent configuration including tools and instructions.
- * @returns Configured ToolLoopAgent and its initial UI messages.
+ * @returns Configured agent and the canonical UI messages that start its stream.
  *
  * @example
  * ```typescript

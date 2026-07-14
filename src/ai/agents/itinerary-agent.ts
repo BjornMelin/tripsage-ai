@@ -49,16 +49,16 @@ const BASE_ITINERARY_TOOLS = {
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated itinerary plan request.
- * @returns Configured ToolLoopAgent for itinerary planning.
+ * @returns Configured agent and canonical UI messages for itinerary planning.
  *
  * @example
  * ```typescript
- * const { agent } = createItineraryAgent(deps, config, {
+ * const { agent, uiMessages } = createItineraryAgent(deps, config, {
  *   destination: "Rome, Italy",
  *   durationDays: 5,
  *   interests: ["history", "food", "art"],
  * });
- * const stream = agent.stream({ prompt: "Plan my trip" });
+ * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```
  */
 export function createItineraryAgent(

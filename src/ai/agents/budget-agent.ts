@@ -42,16 +42,16 @@ const BUDGET_TOOLS = {
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
  * @param input - Validated budget plan request.
- * @returns Configured ToolLoopAgent for budget planning.
+ * @returns Configured agent and canonical UI messages for budget planning.
  *
  * @example
  * ```typescript
- * const { agent } = createBudgetAgent(deps, config, {
+ * const { agent, uiMessages } = createBudgetAgent(deps, config, {
  *   destination: "Tokyo, Japan",
  *   durationDays: 7,
  *   travelStyle: "mid-range",
  * });
- * return agent.stream({ prompt: "Plan my budget" });
+ * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```
  */
 export function createBudgetAgent(

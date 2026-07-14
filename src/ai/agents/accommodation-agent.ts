@@ -42,7 +42,7 @@ const ACCOMMODATION_TOOLS = {
  * @param deps - Runtime dependencies (model, identifiers).
  * @param config - Agent configuration from database.
  * @param input - Accommodation search request (destination, dates, guests).
- * @returns Configured ToolLoopAgent for accommodation search.
+ * @returns Configured agent and canonical UI messages for accommodation search.
  */
 export function createAccommodationAgent(
   deps: AgentDependencies,

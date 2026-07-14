@@ -1,8 +1,8 @@
 /** @vitest-environment node */
 
-import type { UIMessage } from "ai";
+import { convertToModelMessages, type UIMessage } from "ai";
 import { describe, expect, it } from "vitest";
-import { validateImageAttachments } from "@/app/api/_helpers/attachments";
+import { normalizeAndValidateImageAttachments } from "@/app/api/_helpers/attachments";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 function messageWithFile(mediaType: string): UIMessage {
@@ -19,15 +19,32 @@ function messageWithFile(mediaType: string): UIMessage {
   };
 }
 
-describe("validateImageAttachments", () => {
-  it("accepts image media types case-insensitively", () => {
-    expect(validateImageAttachments([messageWithFile(" IMAGE/PNG ")])).toEqual({
+describe("normalizeAndValidateImageAttachments", () => {
+  it("normalizes image media types before model-message conversion", async () => {
+    const message = messageWithFile(" IMAGE/PNG ");
+
+    expect(normalizeAndValidateImageAttachments([message])).toEqual({
       valid: true,
     });
+    await expect(convertToModelMessages([message])).resolves.toEqual([
+      {
+        content: [
+          {
+            data: "data:image/png;base64,AA==",
+            filename: undefined,
+            mediaType: "image/png",
+            type: "file",
+          },
+        ],
+        role: "user",
+      },
+    ]);
   });
 
   it("rejects non-image media types", () => {
-    expect(validateImageAttachments([messageWithFile("text/plain")])).toEqual({
+    expect(
+      normalizeAndValidateImageAttachments([messageWithFile("text/plain")])
+    ).toEqual({
       reason: "unsupported_media_type",
       valid: false,
     });
@@ -40,7 +57,7 @@ describe("validateImageAttachments", () => {
       role: "user",
     });
 
-    expect(validateImageAttachments([message])).toEqual({
+    expect(normalizeAndValidateImageAttachments([message])).toEqual({
       reason: "missing_media_type",
       valid: false,
     });

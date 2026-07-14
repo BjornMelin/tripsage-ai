@@ -10,12 +10,14 @@ import type { UIMessage } from "ai";
 export type Validation = { valid: true } | { valid: false; reason: string };
 
 /**
- * Validates that any file parts are image/* and contain a media type.
+ * Normalizes and validates that any file parts are image/* and contain a media type.
  *
  * @param messages - Array of UI messages to validate for attachments.
  * @returns Validation result indicating success or failure with reason.
  */
-export function validateImageAttachments(messages: UIMessage[]): Validation {
+export function normalizeAndValidateImageAttachments(
+  messages: UIMessage[]
+): Validation {
   for (const m of messages) {
     const parts = m.parts;
     if (!Array.isArray(parts)) continue;
@@ -27,6 +29,7 @@ export function validateImageAttachments(messages: UIMessage[]): Validation {
         if (!normalizedMediaType) return { reason: "missing_media_type", valid: false };
         if (!normalizedMediaType.startsWith("image/"))
           return { reason: "unsupported_media_type", valid: false };
+        p.mediaType = normalizedMediaType;
       }
     }
   }
