@@ -52,7 +52,13 @@ interface AgentParameters {
   stepLimit: number;
 }
 
-/** Extracts typed agent parameters from a persisted agent configuration. */
+/**
+ * Extracts typed agent parameters from a persisted agent configuration.
+ *
+ * @param config - Persisted configuration for an agent workflow.
+ * @returns Normalized generation and step-limit parameters.
+ * @see docs/architecture/decisions/adr-0052-agent-configuration-backend.md
+ */
 export function extractAgentParameters(config: AgentConfig): AgentParameters {
   const params = config.parameters;
   return {
@@ -72,7 +78,13 @@ export function extractAgentParameters(config: AgentConfig): AgentParameters {
   };
 }
 
-/** Builds a valid UI message and computes its safe output-token budget. */
+/**
+ * Builds a valid UI message and computes its safe output-token budget.
+ *
+ * @param options - Instructions, model, prompt, and requested output-token limit.
+ * @returns Canonical UI messages and the clamped output-token budget.
+ * @see docs/specs/active/0103-spec-chat-and-agents.md
+ */
 export function prepareSchemaPrompt(options: {
   instructions: string;
   maxOutputTokens: number;
