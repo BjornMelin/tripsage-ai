@@ -1,3 +1,11 @@
+## [1.36.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.2...v1.36.3) (2026-07-15)
+
+### Bug Fixes
+
+* **ai:** align flight schema contract ([d6b0fb6](https://github.com/BjornMelin/tripsage-ai/commit/d6b0fb6ffc625f3aab6e31675a8481fd379b52b5))
+* **ai:** canonicalize attachment stream inputs ([c37a7b0](https://github.com/BjornMelin/tripsage-ai/commit/c37a7b03fea4221e6e429327e56f05b2261f7379))
+* **ai:** tighten agent contracts and attachment validation ([b02a265](https://github.com/BjornMelin/tripsage-ai/commit/b02a265237b62efa771a7ba39522059653141129))
+
 ## [1.36.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.1...v1.36.2) (2026-07-11)
 
 ### Bug Fixes
