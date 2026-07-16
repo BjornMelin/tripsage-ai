@@ -11,7 +11,7 @@ This is the canonical entry point for Architecture Decision Records (ADRs).
 - [ADR-0063: Zod v4 boundary validation and schema organization](adr-0063-zod-v4-boundary-validation-and-schema-organization.md)
 - [ADR-0064: Caching (`use cache`) and consistency rules](adr-0064-caching-use-cache-and-consistency-rules.md)
 - [ADR-0065: Supabase SSR auth and RLS-first data access](adr-0065-supabase-ssr-auth-and-rls-first-data-access.md)
-- [ADR-0066: AI SDK v6 agents, MCP, and message persistence](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md)
+- [ADR-0066: AI SDK v6 agents, MCP, and message persistence](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md) (superseded by ADR-0074)
 - [ADR-0067: Upstash Redis/QStash rate limits and jobs](adr-0067-upstash-redis-qstash-rate-limit-and-jobs.md)
 - [ADR-0068: Security headers, CSP, BotID, and abuse controls](adr-0068-security-headers-csp-botid-and-abuse-controls.md)
 - [ADR-0069: Repo structure (feature-first) and server-only boundaries](adr-0069-repo-structure-feature-first-and-server-only-boundaries.md)
@@ -22,6 +22,10 @@ This is the canonical entry point for Architecture Decision Records (ADRs).
 - [ADR-0071: Unknown thrown values and client error boundary policy](adr-0071-unknown-errors-and-client-error-boundaries.md)
 - [ADR-0072: Dependency upgrade batch (2026-01-19)](adr-0072-2026-01-19-dependency-upgrade-batch.md)
 - [ADR-0073: Streamdown v2 canonical markdown renderer (security profiles + plugins)](adr-0073-streamdown-v2-markdown-renderer.md)
+
+## AI SDK v7 hard cut (2026-07-15)
+
+- [ADR-0074: Adopt AI SDK v7 Provider V4 and stateless streams](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 
 ## Historical ADR log
 

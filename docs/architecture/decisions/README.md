@@ -38,20 +38,20 @@ architectural decision made along with its context and consequences.
 | [ADR-0016](adr-0016-tailwind-css-v4-migration-css-first-config.md) | Tailwind CSS v4 migration (CSS-first config) | Accepted | 2025-10-23 |
 | [ADR-0017](adr-0017-adopt-node-js-v24-lts-baseline.md) | Adopt Node.js v24 LTS baseline | Accepted | 2025-10-23 |
 | [ADR-0018](adr-0018-centralize-supabase-typed-helpers-for-crud.md) | Centralize Supabase typed helpers for CRUD | Accepted | 2025-10-23 |
-| [ADR-0023](adr-0023-adopt-ai-sdk-v6-foundations.md) | Adopt AI SDK v6 Foundations (Next.js App Router) | Accepted | 2025-11-01 |
+| [ADR-0023](adr-0023-adopt-ai-sdk-v6-foundations.md) | Adopt AI SDK v6 Foundations (Next.js App Router) | Superseded by ADR-0074 | 2025-11-01 |
 | [ADR-0024](adr-0024-byok-routes-and-security.md) | BYOK Routes and Security (Next.js + Supabase Vault) | Accepted | 2025-11-01 |
 | [ADR-0026](adr-0026-adopt-ai-elements-ui-chat.md) | Adopt AI Elements UI Chat | Accepted | 2025-11-01 |
 | [ADR-0027](adr-027-token-budgeting-and-limits.md) | Token Budgeting & Limits (Counting + Clamping) | Accepted | 2025-11-01 |
 | [ADR-0028](adr-0028-provider-registry.md) | Provider Registry & Resolution | Accepted | 2025-11-01 |
 | [ADR-0029](adr-0029-di-route-handlers-and-testing.md) | DI Route Handlers and Testing | Accepted | 2025-11-02 |
-| [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md) | Next.js Chat API AI SDK v6 | Accepted | 2025-11-02 |
+| [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md) | Next.js Chat API AI SDK v6 | AI runtime superseded by ADR-0074 | 2025-11-02 |
 | [ADR-0032](adr-0032-centralized-rate-limiting.md) | Centralized Rate Limiting | Accepted | 2025-11-02 |
-| [ADR-0033](adr-0033-rag-advanced-v6.md) | RAG advanced (hybrid retrieval + Upstash caching + Together reranking) | Accepted | 2026-01-19 |
+| [ADR-0033](adr-0033-rag-advanced-v6.md) | RAG advanced (hybrid retrieval + Upstash caching + Together reranking) | AI runtime superseded by ADR-0074 | 2026-01-19 |
 | [ADR-0034](adr-0034-structured-outputs-object-generation.md) | Structured Outputs Object Generation | Accepted | 2025-11-02 |
 | [ADR-0035](adr-0035-react-compiler-and-component-declarations.md) | React Compiler and Component Declarations | Accepted | 2025-11-04 |
 | [ADR-0036](adr-0036-ai-elements-response-and-sources.md) | AI Elements Response and Sources | Accepted | 2025-11-04 |
 | [ADR-0037](adr-0037-reasoning-tool-codeblock-phased-adoption.md) | Reasoning/Tool/CodeBlock Phased Adoption | Accepted | 2025-11-04 |
-| [ADR-0044](adr-0044-tool-registry-ts.md) | AI SDK v6 Tool Registry and MCP Integration | Accepted | 2025-11-11 |
+| [ADR-0044](adr-0044-tool-registry-ts.md) | AI SDK v6 Tool Registry and MCP Integration | AI runtime superseded by ADR-0074 | 2025-11-11 |
 | [ADR-0038](adr-0038-hybrid-frontend-agents.md) | Frontend Hybrid Agents for Destination Research & Itineraries | Accepted | 2025-11-12 |
 | [ADR-0039](adr-0039-frontend-agent-modernization.md) | Framework-First Frontend Agent Modernization | Accepted | 2025-11-12 |
 | [ADR-0040](adr-0040-consolidate-supabase-edge-to-vercel-webhooks.md) | Consolidate Supabase Edge (Deno) to Vercel Route Handlers + Database Webhooks | Accepted | 2025-11-13 |
@@ -68,6 +68,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0048](adr-0048-qstash-retries-and-idempotency.md) | QStash Retries and Idempotency for Webhooks/Tasks | Proposed | 2025-11-20 |
 | [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | Superseded | 2025-11-20 |
 | [ADR-0050](adr-0050-amadeus-google-places-stripe-hybrid.md) | Replace Expedia Rapid with Amadeus + Google Places + Stripe | Accepted | 2025-11-20 |
+| [ADR-0051](adr-0051-agent-router-workflows.md) | TripSage Agent Router and Workflow HTTP API | AI runtime superseded by ADR-0074 | 2025-11-21 |
 | [ADR-0053](adr-0053-activity-search-google-places-integration.md) | Activity Search & Booking via Google Places API (Hybrid + Web Fallback) | Proposed | 2025-11-24 |
 | [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | Superseded | 2025-12-10 |
 | [ADR-0059](adr-0059-botid-chat-and-agents.md) | BotID Integration for Chat and Agent Endpoints | Accepted | 2025-12-11 |
@@ -77,7 +78,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0063](adr-0063-zod-v4-boundary-validation-and-schema-organization.md) | Zod v4 boundary validation and schema organization | Accepted | 2026-01-05 |
 | [ADR-0064](adr-0064-caching-use-cache-and-consistency-rules.md) | Caching (`use cache`) and consistency rules | Accepted | 2026-01-05 |
 | [ADR-0065](adr-0065-supabase-ssr-auth-and-rls-first-data-access.md) | Supabase SSR auth and RLS-first data access | Accepted | 2026-01-05 |
-| [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md) | AI SDK v6 agents, MCP, and message persistence | Accepted | 2026-01-05 |
+| [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md) | AI SDK v6 agents, MCP, and message persistence | Superseded by ADR-0074 | 2026-01-05 |
 | [ADR-0067](adr-0067-upstash-redis-qstash-rate-limit-and-jobs.md) | Upstash Redis/QStash rate limits and jobs | Accepted | 2026-01-05 |
 | [ADR-0068](adr-0068-security-headers-csp-botid-and-abuse-controls.md) | Security headers, CSP, BotID, and abuse controls | Accepted | 2026-01-05 |
 | [ADR-0069](adr-0069-repo-structure-feature-first-and-server-only-boundaries.md) | Repo structure (feature-first) and server-only boundaries | Accepted | 2026-01-05 |
@@ -85,6 +86,7 @@ architectural decision made along with its context and consequences.
 | [ADR-0071](adr-0071-unknown-errors-and-client-error-boundaries.md) | Unknown thrown values and client error boundary policy | Accepted | 2026-01-19 |
 | [ADR-0072](adr-0072-2026-01-19-dependency-upgrade-batch.md) | Dependency upgrade batch (2026-01-19) | Accepted | 2026-01-19 |
 | [ADR-0073](adr-0073-streamdown-v2-markdown-renderer.md) | Streamdown v2 canonical markdown renderer (security profiles + plugins) | Accepted | 2026-01-19 |
+| [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md) | Adopt AI SDK v7 Provider V4 and stateless streams | Accepted | 2026-07-15 |
 
 ## Superseded ADRs
 
@@ -100,6 +102,7 @@ The following ADRs have been superseded by newer decisions:
 | [ADR-0010](superseded/adr-0010-memory-facade-final.md) | Memory Facade Final | - | 2025-10-21 |
 | [ADR-0011](superseded/adr-0011-tenacity-only-resilience.md) | Tenacity-only Resilience | ADR-0032 | 2025-10-21 |
 | [ADR-0015](superseded/adr-0015-upgrade-ai-sdk-to-v5-ai-sdk-react-and-usechat-redesign.md) | Upgrade AI SDK to v5 (@ai-sdk/react) and useChat redesign | ADR-0023 | 2025-10-23 |
+| [ADR-0023](adr-0023-adopt-ai-sdk-v6-foundations.md) | Adopt AI SDK v6 Foundations (Next.js App Router) | ADR-0074 | 2025-11-01 |
 | [ADR-0012](superseded/adr-0012-flights-canonical-dto.md) | Canonical Flights DTOs (Python) | ADR-0045 | 2025-10-21 |
 | [ADR-0019](superseded/adr-0019-canonicalize-chat-service-fastapi.md) | Canonicalize chat service via FastAPI backend | ADR-0031 | 2025-10-24 |
 | [ADR-0020](superseded/adr-0020-rate-limiting-strategy.md) | Rate limiting strategy (Next + SlowAPI) | ADR-0032 | 2025-10-24 |
@@ -108,6 +111,7 @@ The following ADRs have been superseded by newer decisions:
 | [ADR-0043](superseded/adr-0043-expedia-rapid-integration.md) | Expedia Rapid API Integration for Lodging Search/Booking | ADR-0050 | 2025-11-20 |
 | [ADR-0049](superseded/adr-0049-expedia-rapid.md) | Expedia Rapid Integration Research | ADR-0050 | 2025-11-20 |
 | [ADR-0058](superseded/adr-0058-vercel-blob-attachments.md) | Vercel Blob for Chat Attachments Storage | ADR-0060 | 2025-12-10 |
+| [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md) | AI SDK v6 agents, MCP, and message persistence | ADR-0074 | 2026-01-05 |
 
 ## By Category
 
@@ -155,6 +159,7 @@ The following ADRs have been superseded by newer decisions:
 - ADR-0041: Webhook Notifications via QStash and Resend
 - ADR-0047: Runtime Policy for AI SDK Routes (Edge vs Node)
 - ADR-0046: OTEL Tracing for Next.js 16 Route Handlers
+- ADR-0074: Adopt AI SDK v7 Provider V4 and stateless streams
 
 ### Security
 

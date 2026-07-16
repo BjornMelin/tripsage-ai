@@ -15,7 +15,7 @@ Canonical path to get TripSage running locally, with the minimal commands and th
 - **Frontend:** Next.js 16, React 19
 - **Database:** Supabase Postgres + pgvector
 - **Cache/Jobs:** Upstash Redis + QStash
-- **AI:** Vercel AI SDK v6 (Gateway preferred; BYOK OpenAI/Anthropic/xAI/OpenRouter)
+- **AI:** Vercel AI SDK v7 and Provider V4 (Gateway preferred; BYOK OpenAI/Anthropic/xAI/OpenRouter)
 - **Auth:** Supabase JWT
 - **State:** TanStack Query + Zustand
 - **Testing:** Vitest (multi-project), Playwright E2E
@@ -104,7 +104,7 @@ XAI_API_KEY=your-xai-key
 OPENROUTER_API_KEY=your-openrouter-key
 
 # RAG reranking (optional; if unset, reranking degrades to no-op)
-TOGETHER_AI_API_KEY=your-togetherai-key
+TOGETHER_API_KEY=your-togetherai-key
 
 # Embeddings note:
 # - If AI_GATEWAY_API_KEY or OPENAI_API_KEY is set, RAG/memory use real embeddings (`openai/text-embedding-3-small`, 1536-d).

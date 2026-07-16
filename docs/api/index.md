@@ -216,7 +216,7 @@ All schemas use Zod v4 APIs exclusively. See [Zod Schemas](../development/standa
 
 ## Streaming Endpoints
 
-Endpoints under `/agents/*` except `/agents/router`, plus `/chat`, return Server-Sent Events (SSE) streams using AI SDK v6 UI message format.
+Endpoints under `/agents/*` except `/agents/router`, plus `/chat`, return Server-Sent Events (SSE) streams using the AI SDK v7 UI message format.
 
 ### JavaScript/TypeScript
 

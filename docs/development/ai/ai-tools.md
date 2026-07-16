@@ -1,12 +1,12 @@
-# AI SDK v6 Tool Creation
+# AI SDK v7 tool creation
 
-Patterns for creating AI SDK v6 tools with guardrails (caching, rate-limiting, telemetry) in TripSage AI.
+Patterns for creating AI SDK v7 tools with guardrails for caching, rate limiting, and telemetry in TripSage AI.
 
 ## Overview
 
 TripSage tools use the `createAiTool` factory from `@ai/lib/tool-factory`:
 
-- **Type-safe tool creation** compatible with AI SDK v6 `Tool<InputValue, OutputValue>` types
+- **Type-safe tool creation** compatible with AI SDK v7 `Tool<InputValue, OutputValue>` types
 - **Built-in guardrails**: caching, rate-limiting, and telemetry
 - **Consistent error handling** via `createToolError` utilities
 - **Workflow-specific telemetry** for agent-level observability
@@ -281,7 +281,7 @@ function buildMyAgentTools(identifier: string): ToolSet {
 
 ## Tool Input Schemas
 
-Tool input schemas must follow AI SDK v6 patterns. See [Zod Schema Guide](../standards/zod-schema-guide.md) for full details.
+Tool input schemas must follow AI SDK v7 patterns. See [Zod Schema Guide](../standards/zod-schema-guide.md) for full details.
 
 **Requirements:**
 
@@ -309,7 +309,7 @@ export const myTool = tool({
 });
 ```
 
-### After (AI SDK v6)
+### After (`createAiTool`)
 
 ```typescript
 export const myTool = createAiTool({
@@ -535,4 +535,4 @@ See [Activities Developer Guide](../frontend/activities.md) for a complete imple
 - Tool Factory tests: `src/ai/lib/__tests__/tool-factory.test.ts`
 - Tool Registry: `src/ai/tools/index.ts`
 - Error Codes: `src/ai/tools/server/errors.ts`
-- AI SDK v6 Documentation: <https://sdk.vercel.ai/docs>
+- AI SDK v7 documentation: <https://ai-sdk.dev/docs>

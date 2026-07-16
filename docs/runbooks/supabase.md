@@ -71,10 +71,10 @@ Notes:
 - Seeding requires `SUPABASE_SERVICE_ROLE_KEY` because it uses `supabase.auth.admin.*` to create confirmed users.
 - Seed data is designed to be **idempotent**: rerunning should converge to the same dataset without needing a full reset.
 - Seed fixtures live in `scripts/seed/fixtures/` and are uploaded into Supabase Storage buckets (`avatars`, `attachments`) as part of seeding.
-- RAG/memory embedding generation uses AI SDK v6:
+- RAG/memory embedding generation uses AI SDK v7:
   - If `AI_GATEWAY_API_KEY` or `OPENAI_API_KEY` is configured, real embeddings are generated (`openai/text-embedding-3-small`, 1536 dims).
   - If no embedding provider is configured, seeding falls back to a deterministic local embedding model for offline/dev/test. This preserves end-to-end flows but does **not** provide real semantic relevance.
-- RAG reranking uses Together.ai via AI SDK v6 `rerank()` when `TOGETHER_AI_API_KEY` is set; otherwise reranking degrades to a no-op reranker.
+- RAG reranking uses Together.ai via AI SDK v7 `rerank()` when `TOGETHER_API_KEY` is set; otherwise reranking degrades to a no-op reranker.
 
 ## Local auth email confirmations (Inbucket / Mailpit)
 

@@ -68,7 +68,7 @@ Expected:
 
 - If `AI_GATEWAY_API_KEY` **or** `OPENAI_API_KEY` is set, embeddings are real (`openai/text-embedding-3-small`, 1536-d).
 - If no embedding provider key is set, the app uses a deterministic 1536-d fallback (non-semantic; do not use it to judge relevance).
-- If `TOGETHER_AI_API_KEY` is set, reranking is enabled; otherwise it’s a no-op reranker.
+- If `TOGETHER_API_KEY` is set, reranking is enabled; otherwise it’s a no-op reranker.
 
 ## 6) Verify / build / test
 

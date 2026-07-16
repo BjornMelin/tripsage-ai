@@ -95,7 +95,7 @@ const activity = await response.json(); // Activity object
 
 **Authentication**: Optional (anonymous searches allowed)
 
-### AI SDK v6 Tools
+### AI SDK v7 tools
 
 **File**: `src/ai/tools/server/activities.ts`
 

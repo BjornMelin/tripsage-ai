@@ -1,10 +1,11 @@
 # ADR-0066: AI SDK v6 agents, MCP, and message persistence
 
-**Version**: 1.1.0
-**Status**: Accepted
+**Version**: 1.2.0
+**Status**: Superseded by ADR-0074
 **Date**: 2026-01-05
 **Category**: AI + fullstack
 **Domain**: AI SDK, agent workflows, tools, persistence
+**Superseded By**: [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 
 ## Context
 

@@ -35,8 +35,8 @@ specific features or components.
 | [SPEC-0100](active/0100-spec-application-architecture.md) | Application architecture (Next.js RSC + TanStack Query) | Final | 2026-01-05 |
 | [SPEC-0101](active/0101-spec-auth-and-session.md) | Auth and session | Final | 2026-01-05 |
 | [SPEC-0102](active/0102-spec-trips-domain.md) | Trips domain | Final | 2026-01-05 |
-| [SPEC-0103](active/0103-spec-chat-and-agents.md) | Chat and agents (AI SDK v6) | Final | 2026-01-05 |
-| [SPEC-0104](active/0104-spec-memory-and-rag.md) | Memory and RAG | Final | 2026-01-05 |
+| [SPEC-0103](active/0103-spec-chat-and-agents.md) | Chat and agents (AI SDK v7) | Final | 2026-07-15 |
+| [SPEC-0104](active/0104-spec-memory-and-rag.md) | Memory and RAG | Final | 2026-07-15 |
 | [SPEC-0105](active/0105-spec-attachments.md) | Attachments (Supabase Storage + ingestion pipeline) | Final | 2026-01-05 |
 | [SPEC-0106](active/0106-spec-search-and-places.md) | Search and places | Final | 2026-01-05 |
 | [SPEC-0107](active/0107-spec-jobs-and-webhooks.md) | Jobs and webhooks | Final | 2026-01-05 |

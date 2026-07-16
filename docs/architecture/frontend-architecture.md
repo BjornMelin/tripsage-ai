@@ -6,7 +6,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 
 - Next.js 16 with React 19, App Router, RSC-first; React Compiler enabled via `next.config.ts`.
 - TypeScript 6, strict mode; lint/format via Biome (`pnpm biome:check`); tests via Vitest/Playwright.
-- AI SDK v6 is the only LLM transport (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson)).
+- AI SDK v7 is the only LLM transport (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson)).
 - Supabase for auth, database, Realtime, Storage, and Vault (BYOK keys).
 - Upstash Redis/Ratelimit for cache and throttling; Upstash QStash for async jobs.
 - UI stack: Radix primitives, Tailwind CSS v4, shadcn/ui compositions, Motion (`motion` package).
@@ -19,7 +19,7 @@ Audience: frontend engineers working on the Next.js application. Content is impl
 > Keep this list high-level to avoid docs drift; use `package.json` as the source of truth for exact semver ranges.
 
 - **Framework:** Next.js, React, TypeScript (see `package.json`)
-- **AI SDK v6:** core + providers (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson))
+- **AI SDK v7:** core + Provider V4 packages (see [Stack Versions](system-overview.md#stack-versions-source-of-truth-packagejson))
 - **Data/Auth:** Supabase SSR + browser client
 - **State:** Zustand, TanStack Query
 - **Caching/Jobs:** Upstash Redis/Ratelimit/QStash
@@ -58,7 +58,7 @@ Avoid new barrels; import concrete modules.
 
 ## Feature Highlights
 
-- Streaming chat with AI SDK v6 (`/api/chat`) using shared schemas for deterministic tool and output handling.
+- Streaming chat with AI SDK v7 (`/api/chat`) using shared schemas for deterministic tool and output handling.
 - Agent endpoints under `/api/agents/*` (flights, accommodations, destinations, itineraries, budget, memory) with domain-specific tool registries.
 - BYOK + Gateway provider resolution with request-scoped registry in `src/ai/models/registry.ts`.
 - Realtime presence/broadcast via `use-realtime-channel` wrappers; no LLM tokens over Realtime.
@@ -227,15 +227,15 @@ See also: [Cache Versioned Keys](../development/backend/cache-versioned-keys.md#
 
 ## Workflow Examples
 
-- **Chat streaming**: Client `useChat` (DefaultChatTransport) → `/api/chat` → provider resolved via registry → `streamText` with tools → `toUIMessageStreamResponse()` UI stream to client → UI renders progressive tokens.
-- **Flight search agent**: Client sends message tagged for flights → `/api/agents/flights` handler → Supabase auth + rate limit + schema validation → AI SDK call with flight tools → structured flight offers streamed back; optional Realtime broadcast for collaboration.
+- **Chat streaming**: Client `useChat` (DefaultChatTransport) → `/api/chat` → provider resolved via registry → `streamText` with tools → stateless `toUIMessageStream()` conversion → `createUIMessageStreamResponse()` → UI renders progressive tokens.
+- **Flight search agent**: Client sends message tagged for flights → `/api/agents/flights` handler → Supabase auth + rate limit + schema validation → `ToolLoopAgent` with flight tools → `createAgentUIStreamResponse()` → structured flight offers streamed back; optional Realtime broadcast for collaboration.
 - **Memory sync job**: Chat UI enqueues QStash job → `/api/jobs/memory-sync` verifies Upstash signature + Redis idempotency → caps batch to 50 conversation messages → inserts memories + updates `chat_sessions` in Supabase → returns `{ ok: true, memoriesStored, contextUpdated }`.
 - **Attachment upload/use**: Client uploads to `attachments` bucket (signed URL) → Postgres row stores path/MIME/owner → API routes include signed URLs in responses; AI tools may fetch via signed URL for processing.
 - **BYOK flow**: User sets keys in Supabase Vault. Provider resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`; keys never reach client and BYOK routes import `"server-only"`.
 
 ## Dependency Roles (cheat sheet)
 
-- **Next.js + React Compiler**: App Router, RSC-first rendering, edge-friendly API routes.
+- **Next.js + React Compiler**: App Router, RSC-first rendering, and Node.js Route Handlers.
 - **AI SDK stack**: Single LLM transport, tool execution, structured outputs—no custom streaming needed.
 - **Supabase (Auth/DB/Realtime/Storage/Vault)**: Auth/session source, pgvector DB, presence/broadcast, signed-url storage, BYOK secret vault.
 - **Upstash (Redis/Ratelimit/QStash)**: Throttling, short-lived caches/dedup keys, webhook-driven jobs.
@@ -264,7 +264,7 @@ flowchart LR
     STG["Supabase Storage<br/>signed URLs"]
     QS["Upstash QStash jobs"]
     RT["Supabase Realtime<br/>broadcast/presence"]
-    LLM["AI SDK v6<br/>models + tools"]
+    LLM["AI SDK v7<br/>Provider V4 models + tools"]
     OBS["Telemetry (OTel)"]
 
     UI -->|HTTP/SSE| API
@@ -280,7 +280,10 @@ flowchart LR
 
 ## AI Routes & Tools
 
-- Chat and agent endpoints live under `/api/chat/*` and `/api/agents/*`; they exclusively use AI SDK v6 and return `toUIMessageStreamResponse()` for streaming.
+- Chat and agent endpoints live under `/api/chat/*` and `/api/agents/*`. Core
+  `streamText` routes use `toUIMessageStream()` plus
+  `createUIMessageStreamResponse()`; `ToolLoopAgent` routes use
+  `createAgentUIStreamResponse()`.
 - Tools are defined with `createAiTool` factory inside server modules (`src/ai/tools/**`) and validated with Zod schemas. Raw `tool()` usage in `src/ai/tools/server/**` is blocked by `pnpm ai-tools:check`. Keep tool registration centralized via `src/ai/tools/index.ts` (no ad-hoc exports).
 - Attachments flow: uploads go to Supabase Storage (bucket `attachments`), metadata persisted in Postgres rows with size/MIME/owner; signed URLs issued per-request.
 - Validation flow: request body parsed with shared schemas from `@schemas/*`; handler rejects on Zod failure before provider resolution.

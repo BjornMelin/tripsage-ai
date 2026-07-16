@@ -1,8 +1,8 @@
-# SPEC-0103: Chat and agents (AI SDK v6)
+# SPEC-0103: Chat and agents (AI SDK v7)
 
-**Version**: 1.0.0  
+**Version**: 2.0.0
 **Status**: Final  
-**Date**: 2026-05-11
+**Date**: 2026-07-15
 
 ## Goals
 
@@ -35,15 +35,25 @@ Tool constraints:
 - All tool inputs are Zod-validated.
 - Tools enforce authorization via userId and RLS.
 - Tool execution approval is supported in UI where needed.
+- Agents use Provider V4 models and stable AI SDK v7 Core settings: `instructions`, `repairToolCall`, `onEnd`, and `onStepEnd`. Agent instructions are static and server-owned; validated request parameters remain in user messages. The `useChat` hook keeps its native `onFinish` callback.
+- xAI BYOK resolution uses `.chat()` explicitly; OpenAI uses `.responses()`, OpenRouter uses `.chat()`, and Anthropic uses `.languageModel()`.
 
 ## Endpoint strategy
 
 - Streaming Route Handler:
   - POST /api/chat
-  - Uses AI SDK v6 `streamText` and returns `toUIMessageStreamResponse()` with
-    `originalMessages` to avoid duplicate assistant messages
+  - Uses AI SDK v7 `streamText`, converts `result.stream` with `toUIMessageStream()`, and returns `createUIMessageStreamResponse()`
+  - Passes `originalMessages` to the stateless converter to avoid duplicate assistant messages
   - `convertToModelMessages()` is awaited when transforming UI messages to model messages
 - Server Actions for non-stream mutations (rename chat, delete chat)
+
+## Persistence and reasoning files
+
+- Persist non-tool UI message parts in `chat_messages.content`; keep tool lifecycle state in `chat_tool_calls`.
+- Keep a `reasoning-file` part only when its media type and URL pass validation.
+- Accept `http`, `https`, or a valid base64 data URL whose declared media type matches the part.
+- Render reasoning files through the safe attachment path. Never render a data URL directly.
+- Token budgeting counts `[reasoning-file:<mediaType>]`, not the file URL or base64 body.
 
 ## UI flows
 

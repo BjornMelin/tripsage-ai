@@ -4,7 +4,7 @@ Chat sessions, messaging, and attachments.
 
 ## `POST /api/chat`
 
-Streaming chat completion using the AI SDK v6 **UI message stream protocol**.
+Streaming chat completion using the AI SDK v7 UI message stream protocol.
 
 **Authentication**: Required (JWT via `sb-access-token` cookie or `Authorization: Bearer <token>` header)
 **Rate Limit Key**: `chat:stream`
@@ -25,6 +25,8 @@ Streaming chat completion using the AI SDK v6 **UI message stream protocol**.
 
 - header `x-tripsage-session-id` (resolved/created session id)
 - assistant message metadata includes `sessionId` on the `start` part
+- resumed `reasoning-file` parts retain only validated `mediaType` and `url`; unsafe parts are dropped
+- data URLs in reasoning files render as attachment metadata, never inline content
 
 ### Errors
 

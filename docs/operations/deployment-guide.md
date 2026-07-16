@@ -1,7 +1,7 @@
-# TripSage Deployment Guide (Next.js + AI SDK v6)
+# Deploy TripSage with Next.js and AI SDK v7
 
 This guide replaces the legacy FastAPI backend material. TripSage now runs as a
-server-first Next.js 16 app with AI SDK v6 route handlers.
+server-first Next.js 16 app with AI SDK v7 route handlers.
 
 For the authoritative production deployment procedure, use
 [Deployment Runbook: Vercel + Supabase + Upstash](../runbooks/deployment-vercel.md).
@@ -32,6 +32,8 @@ Copy the root `.env.example` to the target environment and fill the values (see 
 - **Travel APIs**: `DUFFEL_ACCESS_TOKEN`, `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`, `AMADEUS_ENV` (`AMADEUS_*` required as a complete group when Amadeus is enabled)
 
 Keep root `.env.test.example` aligned for CI.
+
+Live provider and deployment verification remains an operator task in [issue #766](https://github.com/BjornMelin/tripsage-ai/issues/766). Do not add code fallbacks or commit credentials when an environment variable is missing.
 
 > Tip: keep runtime-only secrets (service role, gateway keys) server-side; never expose them via `NEXT_PUBLIC_*`.
 

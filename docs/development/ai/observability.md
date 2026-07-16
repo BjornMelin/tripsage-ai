@@ -14,14 +14,16 @@ For the canonical repo-wide standards (server + client), see:
   - `recordTelemetryEvent()` for lightweight events
 - Keep attributes **low-cardinality** and **PII-safe** (no emails, raw user IDs, raw message content).
 
-## AI SDK v6 telemetry
+## AI SDK v7 telemetry
 
-AI SDK calls should use `experimental_telemetry` with a stable `functionId`:
+`src/instrumentation.ts` registers `@ai-sdk/otel` after `@vercel/otel`. AI SDK calls use `telemetry` with a stable `functionId`:
 
 - Use consistent `functionId` values for routing, tools, and agent workflows.
-- Put only low-cardinality values in `metadata` (counts, booleans, enum-like strings).
+- Put low-cardinality values in `runtimeContext` and opt in each emitted key through `telemetry.includeRuntimeContext`.
+- Never include prompts, outputs, headers, secrets, raw identifiers, request IDs, model hints, or namespaces.
+- Keep `recordInputs: false` and `recordOutputs: false` for embedding telemetry.
 
-The current `functionId` catalog lives in [Observability](../backend/observability.md#ai-sdk-telemetry-experimental_telemetry).
+The current `functionId` catalog lives in [Observability](../backend/observability.md#ai-sdk-telemetry).
 
 ## Tool telemetry (`createAiTool`)
 

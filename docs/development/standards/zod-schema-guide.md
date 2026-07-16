@@ -11,7 +11,7 @@ Zod v4 schemas for TripSage AI validation. Provides compile-time types and runti
 ## Organization
 
 **Domain Schemas** (`src/domain/schemas/`): Core business entities independent of AI
-**AI Tool Schemas** (`src/ai/tools/schemas/`): Vercel AI SDK v6 tool input/output contracts
+**AI Tool Schemas** (`src/ai/tools/schemas/`): Vercel AI SDK v7 tool input/output contracts
 **Registry** (`src/domain/schemas/registry.ts`): Shared primitives and transforms
 
 ### Canonical Type Sources
@@ -287,7 +287,7 @@ export const step3Schema = tripSchema.pick({ budget: true, travelers: true });
 
 ## AI Tool Schemas
 
-Vercel AI SDK v6 tool schemas require specific patterns for reliable LLM function calling.
+Vercel AI SDK v7 tool schemas require specific patterns for reliable LLM function calling.
 
 For tool creation patterns with guardrails (caching, rate limiting, telemetry), see [AI Tools Guide](../ai/ai-tools.md).
 
@@ -344,7 +344,7 @@ if (!result.success) {
 }
 ```
 
-## AI SDK v6 & Zod v4 Patterns
+## AI SDK v7 and Zod v4 patterns
 
 ### Tool Definition
 

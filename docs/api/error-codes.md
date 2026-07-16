@@ -212,7 +212,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 **Troubleshooting:**
 
 ```javascript
-// 1. Validate airport codes (use frontend AI SDK v6 agents)
+// 1. Validate airport codes (use AI SDK v7 agents)
 // const validCodes = await fetch("/api/agents/destinations", { method: "POST", body: JSON.stringify({ destination: "NYC" }) });
 
 // 2. Check date format and future dates

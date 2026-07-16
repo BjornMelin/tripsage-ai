@@ -1,6 +1,6 @@
 # Frontend Agent Operations (Full Cutover)
 
-This runbook covers operating the frontend-only agents implemented with Vercel AI SDK v6. This deployment performs a full cutover (no feature flags/waves).
+This runbook covers frontend-only agents implemented with Vercel AI SDK v7 and Provider V4. The deployment uses one runtime contract without compatibility flags.
 
 ## Endpoints
 
@@ -12,7 +12,11 @@ This runbook covers operating the frontend-only agents implemented with Vercel A
 - `POST /api/agents/itineraries` – Itinerary planning (streaming)
 - `POST /api/agents/router` – Router classification (JSON)
 
-All streaming endpoints return UI-compatible responses via `toUIMessageStreamResponse()`.
+The flights, accommodations, budget, destinations, and itineraries endpoints
+use the shared `createAgentRoute()` factory, which returns
+`createAgentUIStreamResponse()`. The memory endpoint is a core `streamText`
+route that converts `result.stream` with `toUIMessageStream()` and returns
+`createUIMessageStreamResponse()`.
 
 ## Required Environment
 
@@ -28,7 +32,9 @@ All streaming endpoints return UI-compatible responses via `toUIMessageStreamRes
 - Google Maps: server key `GOOGLE_MAPS_SERVER_API_KEY`; browser key `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY`
 - Weather (optional): `OPENWEATHERMAP_API_KEY`
 
-Temperatures are hard-coded per agent (default 0.3). Adjust via code near each agent orchestrator.
+`ToolLoopAgent` workflows read `parameters.temperature` from resolved agent
+configuration and default to `0.3`. Memory falls back to `0.1`, and router
+classification is fixed at `0.1`.
 
 ## Guardrails (Always On)
 
