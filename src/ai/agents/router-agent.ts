@@ -49,6 +49,7 @@ export class InvalidPatternsError extends Error {
  * @param userMessage User message to classify.
  * @returns Promise resolving to router classification result.
  * @throws Error if userMessage is invalid or classification fails.
+ * @see docs/specs/active/0103-spec-chat-and-agents.md
  */
 export async function classifyUserMessage(
   deps: RouterAgentDeps,

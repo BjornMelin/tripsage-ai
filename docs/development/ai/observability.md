@@ -21,7 +21,8 @@ For the canonical repo-wide standards (server + client), see:
 - Use consistent `functionId` values for routing, tools, and agent workflows.
 - Put low-cardinality values in `runtimeContext` and opt in each emitted key through `telemetry.includeRuntimeContext`.
 - Never include prompts, outputs, headers, secrets, raw identifiers, request IDs, model hints, or namespaces.
-- Keep `recordInputs: false` and `recordOutputs: false` for embedding telemetry.
+- Keep `recordInputs: false` and `recordOutputs: false` on every AI SDK call,
+  including core generation, embedding, and `ToolLoopAgent` operations.
 
 The current `functionId` catalog lives in [Observability](../backend/observability.md#ai-sdk-telemetry).
 

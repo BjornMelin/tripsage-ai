@@ -75,6 +75,15 @@ Rejected. Official Provider V4 factories already return compatible models and pr
 
 ## References
 
+- [ADR-0023: Adopt AI SDK v6 foundations](adr-0023-adopt-ai-sdk-v6-foundations.md)
+- [ADR-0024: BYOK routes and security](adr-0024-byok-routes-and-security.md)
+- [ADR-0028: Provider registry](adr-0028-provider-registry.md)
+- [ADR-0031: Next.js chat API and AI SDK v6](adr-0031-nextjs-chat-api-ai-sdk-v6.md)
+- [ADR-0033: RAG advanced v6](adr-0033-rag-advanced-v6.md)
+- [ADR-0044: Tool registry](adr-0044-tool-registry-ts.md)
+- [ADR-0046: OpenTelemetry tracing](adr-0046-otel-tracing-frontend.md)
+- [ADR-0051: Agent router workflows](adr-0051-agent-router-workflows.md)
+- [ADR-0066: AI SDK v6 agents, MCP, and message persistence](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md)
 - [AI SDK 7 migration guide](https://ai-sdk.dev/docs/migration-guides/migration-guide-7-0)
 - [AI SDK telemetry](https://ai-sdk.dev/docs/ai-sdk-core/telemetry)
 - [AI SDK streamText reference](https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text)

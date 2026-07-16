@@ -35,6 +35,7 @@ export const MAX_MEMORY_RECORDS_PER_REQUEST = 25;
  * @param deps Language model, model identifier, and request-scoped utilities.
  * @param input Validated memory update request.
  * @returns AI SDK stream result for UI consumption.
+ * @see docs/specs/active/0104-spec-memory-and-rag.md
  */
 export function runMemoryAgent(
   deps: {
