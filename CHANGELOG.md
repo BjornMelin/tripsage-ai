@@ -1,3 +1,13 @@
+## [1.37.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.3...v1.37.0) (2026-07-16)
+
+### Features
+
+* **ai:** hard cut to AI SDK v7 ([948fa18](https://github.com/BjornMelin/tripsage-ai/commit/948fa1805054daa5e876ce7bd51328efda9b7d8e))
+
+### Bug Fixes
+
+* **ai:** address v7 review findings ([242be1c](https://github.com/BjornMelin/tripsage-ai/commit/242be1c10af53314e52579e5146b398cd7a4cb82))
+
 ## [1.36.3](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.2...v1.36.3) (2026-07-15)
 
 ### Bug Fixes
