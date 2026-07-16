@@ -153,7 +153,7 @@ function parseServerEnv(): ServerEnv {
     );
     deleteIfInvalidNonProd("OPENROUTER_API_KEY", (value) => value.length < 20);
     deleteIfInvalidNonProd("XAI_API_KEY", (value) => value.length < 20);
-    deleteIfInvalidNonProd("TOGETHER_AI_API_KEY", (value) => value.length < 20);
+    deleteIfInvalidNonProd("TOGETHER_API_KEY", (value) => value.length < 20);
     deleteIfInvalidNonProd("UPSTASH_REDIS_REST_URL", (value) => {
       try {
         const url = new URL(value);

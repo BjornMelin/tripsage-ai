@@ -59,10 +59,10 @@ describe("classifyUserMessage", () => {
     });
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({
+        instructions: "System prompt for routing",
         model: mockModel,
         output: outputObjectResult,
         prompt: "Find me flights from NYC to LA",
-        system: "System prompt for routing",
         temperature: 0.1,
         timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
       })
@@ -75,7 +75,7 @@ describe("classifyUserMessage", () => {
     );
   });
 
-  it("does not include identifier in provider telemetry metadata", async () => {
+  it("does not include identifier in provider telemetry context", async () => {
     await classifyUserMessage(
       { identifier: "user-123", model: mockModel, modelId: "gpt-5.4-mini" },
       "Find flights"
@@ -83,22 +83,27 @@ describe("classifyUserMessage", () => {
 
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({
-        experimental_telemetry: expect.objectContaining({
+        runtimeContext: {
+          modelId: "gpt-5.4-mini",
+        },
+        telemetry: expect.objectContaining({
           functionId: "router.classifyUserMessage",
-          isEnabled: true,
-          metadata: expect.objectContaining({
-            modelId: "gpt-5.4-mini",
+          includeRuntimeContext: expect.objectContaining({
+            modelId: true,
           }),
+          recordInputs: false,
+          recordOutputs: false,
         }),
       })
     );
-    const experimentalTelemetry = mockGenerateText.mock.calls[0]?.[0]
-      ?.experimental_telemetry as { metadata?: unknown } | undefined;
-    const metadata = experimentalTelemetry?.metadata as
+    const telemetry = mockGenerateText.mock.calls[0]?.[0]?.telemetry as
+      | { includeRuntimeContext?: unknown }
+      | undefined;
+    const includedContext = telemetry?.includeRuntimeContext as
       | Record<string, unknown>
       | undefined;
-    expect(metadata).toBeDefined();
-    expect(metadata).not.toHaveProperty("identifier");
+    expect(includedContext).toBeDefined();
+    expect(includedContext).not.toHaveProperty("identifier");
   });
 
   it("passes abort signal to generateText", async () => {

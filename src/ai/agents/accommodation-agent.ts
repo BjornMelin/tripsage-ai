@@ -50,12 +50,7 @@ export function createAccommodationAgent(
   input: AccommodationSearchRequest
 ): TripSageAgentResult<typeof ACCOMMODATION_TOOLS> {
   const params = extractAgentParameters(config);
-  const instructions = buildAccommodationPrompt({
-    checkIn: input.checkIn,
-    checkOut: input.checkOut,
-    destination: input.destination,
-    guests: input.guests,
-  });
+  const instructions = buildAccommodationPrompt();
 
   const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,

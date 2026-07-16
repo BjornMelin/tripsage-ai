@@ -1,10 +1,11 @@
 /**
- * @fileoverview Memory update agent using AI SDK v6 streaming.
+ * @fileoverview Memory update agent using AI SDK v7 streaming.
  */
 
 import "server-only";
 
 import { createAiTool } from "@ai/lib/tool-factory";
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
 import { toolRegistry } from "@ai/tools";
 import { TOOL_ERROR_CODES } from "@ai/tools/server/errors";
@@ -26,7 +27,7 @@ import { clampMaxTokens } from "@/lib/tokens/budget";
 export const MAX_MEMORY_RECORDS_PER_REQUEST = 25;
 
 /**
- * Execute the memory agent with AI SDK v6 streaming.
+ * Execute the memory agent with AI SDK v7 streaming.
  *
  * Builds system instructions and messages, wraps core tools with guardrails,
  * and streams a model-guided confirmation message for memory writes.
@@ -155,21 +156,21 @@ async function persistAndSummarize(
 
   return streamText({
     abortSignal: options?.abortSignal,
-    // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
-    experimental_telemetry: {
-      functionId: "agent.memory.summarize",
-      isEnabled: true,
-      metadata: {
-        modelId: deps.modelId,
-        recordCount: input.records?.length ?? 0,
-      },
-    },
+    instructions: systemPrompt,
     maxOutputTokens,
-    messages: [
-      { content: systemPrompt, role: "system" },
-      { content: userPrompt, role: "user" },
-    ],
+    messages: [{ content: userPrompt, role: "user" }],
     model: deps.model,
+    runtimeContext: {
+      modelId: deps.modelId,
+      recordCount: input.records?.length ?? 0,
+    },
+    telemetry: createAiTelemetry({
+      functionId: "agent.memory.summarize",
+      includeRuntimeContext: {
+        modelId: true,
+        recordCount: true,
+      },
+    }),
     temperature: config.parameters.temperature ?? 0.1,
     timeout: timeoutConfig,
     topP: config.parameters.topP,
@@ -256,6 +257,7 @@ export async function persistMemoryRecords(
           content: record.content,
         };
         const res = await guardrailedExecute(payload, {
+          context: undefined,
           messages: [],
           toolCallId: `memory-add-${index}`,
         });

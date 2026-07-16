@@ -36,13 +36,6 @@ vi.mock("@ai/models/registry", () => ({
   resolveProvider: vi.fn(async () => ({ model: {} })),
 }));
 
-// Mock budget agent
-vi.mock("@/lib/agents/budget-agent", () => ({
-  runBudgetAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-  })),
-}));
-
 // Mock Redis
 vi.mock("@/lib/redis", () => ({
   getRedis: vi.fn(() => Promise.resolve({})),

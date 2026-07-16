@@ -4,7 +4,7 @@
  */
 
 import { performance } from "node:perf_hooks";
-import { createGateway, generateText, Output, stepCountIs, tool } from "ai";
+import { createGateway, generateText, isStepCount, Output, tool } from "ai";
 import { z } from "zod";
 
 const DEFAULT_MODELS = ["openai/gpt-5.4-mini", "openai/gpt-5.4-nano", "openai/gpt-5.5"];
@@ -158,7 +158,7 @@ async function runModelSmoke(gateway, modelId) {
       providerOptions: {
         gateway: { tags: ["tripsage:model-smoke", "tool"] },
       },
-      stopWhen: stepCountIs(2),
+      stopWhen: isStepCount(2),
       temperature: 0,
       toolChoice: { toolName: "selectTripIntent", type: "tool" },
       tools: {

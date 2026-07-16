@@ -30,7 +30,10 @@ describe("normalizeAndValidateImageAttachments", () => {
       {
         content: [
           {
-            data: "data:image/png;base64,AA==",
+            data: {
+              type: "url",
+              url: new URL("data:image/png;base64,AA=="),
+            },
             filename: undefined,
             mediaType: "image/png",
             type: "file",

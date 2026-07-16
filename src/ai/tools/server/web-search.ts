@@ -18,7 +18,6 @@ import {
   extractFirecrawlSearchResults,
   normalizeWebSearchResults,
 } from "@ai/tools/server/web-search-normalize";
-import type { ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import { hashInputForCache } from "@/lib/cache/hash";
 import { canonicalizeParamsForCache } from "@/lib/cache/keys";
@@ -43,7 +42,7 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
     "Search the web via Firecrawl v2.5 and return normalized results. " +
     "Supports sources (web/news/images), categories (github/research/pdf), " +
     "time filters (tbs), location/country targeting, and optional content scraping.",
-  execute: async (params, callOptions) => runWebSearch(params, callOptions),
+  execute: runWebSearch,
   guardrails: {
     cache: {
       deserialize: (payload) => {
@@ -105,10 +104,7 @@ export const webSearch = createAiTool<WebSearchInput, WebSearchResult>({
   validateOutput: true,
 });
 
-async function runWebSearch(
-  params: WebSearchInput,
-  _callOptions?: ToolExecutionOptions
-): Promise<WebSearchResult> {
+async function runWebSearch(params: WebSearchInput): Promise<WebSearchResult> {
   try {
     const apiKey = resolveFirecrawlApiKey();
     const startedAt = performance.now();

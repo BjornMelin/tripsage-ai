@@ -40,7 +40,7 @@ const FLIGHT_TOOLS = {
  * - Phase 2: Search flights and compute distances
  *
  * @remarks
- * SPEC-0008 documents the AI SDK v6 foundations used by this agent.
+ * SPEC-0103 and ADR-0074 document this agent's current AI SDK v7 contract.
  *
  * @param deps - Runtime dependencies including model and identifiers.
  * @param config - Agent configuration from database.
@@ -66,7 +66,7 @@ export function createFlightAgent(
   input: FlightSearchRequest
 ): TripSageAgentResult<typeof FLIGHT_TOOLS> {
   const params = extractAgentParameters(config);
-  const instructions = buildFlightPrompt(input);
+  const instructions = buildFlightPrompt();
 
   const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,

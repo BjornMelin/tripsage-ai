@@ -265,13 +265,12 @@ describe("indexDocuments", () => {
 
     expect(embedMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        experimental_telemetry: expect.objectContaining({
+        maxParallelCalls: 2,
+        telemetry: expect.objectContaining({
           functionId: "rag.indexer.embed_many",
-          isEnabled: true,
           recordInputs: false,
           recordOutputs: false,
         }),
-        maxParallelCalls: 2,
       })
     );
     expect(spanSetAttributeMock).toHaveBeenCalledWith(

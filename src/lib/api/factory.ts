@@ -724,13 +724,13 @@ type CreateAgentRouteOptions<
  * Creates a standardized POST route handler for AI ToolLoopAgent endpoints.
  *
  * Centralizes auth, request validation, agent config + provider resolution, and
- * AI SDK v6 streaming response creation so agent routes stay thin and consistent.
+ * AI SDK v7 streaming response creation so agent routes stay thin and consistent.
  *
  * @typeParam SchemaType - Zod schema used to validate request input.
  * @typeParam Tools - Tool set exposed by the created agent.
  * @param options - Route guards, schema, and agent factory configuration.
  * @returns A request handler that streams the agent response.
- * @see docs/architecture/decisions/adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md
+ * @see docs/architecture/decisions/adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md
  */
 export function createAgentRoute<
   SchemaType extends z.ZodType,

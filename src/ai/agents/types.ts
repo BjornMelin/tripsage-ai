@@ -8,9 +8,9 @@ import type { AgentWorkflowKind } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import type {
   LanguageModel,
-  PrepareStepFunction,
   SystemModelMessage,
   ToolLoopAgent,
+  ToolLoopAgentSettings,
   ToolSet,
   UIMessage,
 } from "ai";
@@ -25,23 +25,45 @@ export interface AgentDependencies {
   abortSignal?: AbortSignal;
 }
 
-/** Configuration shared by the five ToolLoopAgent workflows. */
-export interface TripSageAgentConfig<ToolsType extends ToolSet = ToolSet> {
+/** Low-cardinality context explicitly selected for AI SDK telemetry. */
+export interface AgentRuntimeContext extends Record<string, unknown> {
   agentType: AgentWorkflowKind;
-  name: string;
-  instructions: string | SystemModelMessage;
-  tools: ToolsType;
-  uiMessages: UIMessage[];
-  stepLimit?: number;
-  maxOutputTokens?: number;
-  temperature?: number;
-  topP?: number;
-  prepareStep?: PrepareStepFunction<ToolsType>;
+  modelId: string;
 }
+
+type FactoryManagedAgentSetting =
+  | "experimental_repairToolCall"
+  | "experimental_telemetry"
+  | "id"
+  | "model"
+  | "repairToolCall"
+  | "runtimeContext"
+  | "stopWhen"
+  | "telemetry"
+  | "toolChoice";
+
+type ConfigurableAgentSettings<ToolsType extends ToolSet> = Omit<
+  ToolLoopAgentSettings<never, ToolsType, AgentRuntimeContext>,
+  FactoryManagedAgentSetting
+>;
+
+/** Configuration shared by the five ToolLoopAgent workflows. */
+export type TripSageAgentConfig<ToolsType extends ToolSet = ToolSet> =
+  ConfigurableAgentSettings<ToolsType> & {
+    agentType: AgentWorkflowKind;
+    name: string;
+    instructions: string | SystemModelMessage;
+    tools: ToolsType;
+    uiMessages: UIMessage[];
+    stepLimit?: number;
+    maxOutputTokens?: number;
+    temperature?: number;
+    topP?: number;
+  };
 
 /** Configured agent and the canonical UI messages used to start its stream. */
 export interface TripSageAgentResult<ToolsType extends ToolSet = ToolSet> {
-  agent: ToolLoopAgent<never, ToolsType>;
+  agent: ToolLoopAgent<never, ToolsType, AgentRuntimeContext>;
   uiMessages: UIMessage[];
 }
 

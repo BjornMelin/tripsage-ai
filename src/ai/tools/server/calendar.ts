@@ -1,5 +1,5 @@
 /**
- * @fileoverview Calendar tools for AI SDK v6.
+ * @fileoverview Calendar tools for AI SDK v7.
  */
 
 import "server-only";

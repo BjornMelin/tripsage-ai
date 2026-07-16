@@ -1,12 +1,18 @@
 /**
- * @fileoverview Demo streaming route using AI SDK v6. Returns a UI Message Stream suitable for AI Elements and AI SDK UI readers.
+ * @fileoverview Demo streaming route using AI SDK v7. Returns a UI Message Stream suitable for AI Elements and AI SDK UI readers.
  */
 
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfigFromSeconds } from "@ai/timeout";
-import { consumeStream, streamText } from "ai";
+import {
+  consumeStream,
+  createUIMessageStreamResponse,
+  streamText,
+  toUIMessageStream,
+} from "ai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { type RouteParamsContext, withApiGuards } from "@/lib/api/factory";
@@ -25,7 +31,7 @@ const STREAM_BODY_SCHEMA = z.strictObject({
     .array(
       z.strictObject({
         content: z.string().max(2000),
-        role: z.enum(["assistant", "system", "user"]),
+        role: z.enum(["assistant", "user"]),
       })
     )
     .max(16)
@@ -34,8 +40,8 @@ const STREAM_BODY_SCHEMA = z.strictObject({
   prompt: z
     .string()
     .max(4000)
-    .default("Hello from AI SDK v6")
-    .transform((value) => (value.length ? value : "Hello from AI SDK v6")),
+    .default("Hello from AI SDK v7")
+    .transform((value) => (value.length ? value : "Hello from AI SDK v7")),
 });
 
 // Allow streaming responses up to 30 seconds
@@ -110,24 +116,31 @@ const guardedPOST = withApiGuards({
 
   const result = streamText({
     abortSignal: req.signal,
-    experimental_telemetry: {
-      functionId: "ai.stream.demo",
-      isEnabled: true,
-      metadata: {
-        hasMessages: Boolean(messages?.length),
-        modelId: resolved.modelId,
-        provider: resolved.provider,
-        ...(typeof modelHint === "string" ? { modelHint } : {}),
-      },
-    },
     maxOutputTokens,
     messages: finalMessages,
     model: resolved.model,
+    runtimeContext: {
+      hasMessages: Boolean(messages?.length),
+      modelId: resolved.modelId,
+      provider: resolved.provider,
+    },
+    telemetry: createAiTelemetry({
+      functionId: "ai.stream.demo",
+      includeRuntimeContext: {
+        hasMessages: true,
+        modelId: true,
+        provider: true,
+      },
+    }),
     timeout: buildTimeoutConfigFromSeconds(STREAM_TIMEOUT_SECONDS),
   });
 
   // Return a UI Message Stream response suitable for AI Elements consumers
-  return result.toUIMessageStreamResponse({ consumeSseStream: consumeStream });
+  const stream = toUIMessageStream({ stream: result.stream });
+  return createUIMessageStreamResponse({
+    consumeSseStream: consumeStream,
+    stream,
+  });
 });
 
 /**

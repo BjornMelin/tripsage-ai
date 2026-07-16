@@ -57,6 +57,7 @@ let webSearch: typeof import("@ai/tools/server/web-search").webSearch;
 import { withTelemetrySpan } from "@/lib/telemetry/span";
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

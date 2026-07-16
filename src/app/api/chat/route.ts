@@ -1,5 +1,5 @@
 /**
- * @fileoverview Canonical streaming chat route (AI SDK v6 UI stream protocol).
+ * @fileoverview Canonical streaming chat route (AI SDK v7 UI stream protocol).
  */
 
 import "server-only";

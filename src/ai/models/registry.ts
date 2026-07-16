@@ -1,5 +1,5 @@
 /**
- * @fileoverview Provider registry and model resolution for AI SDK v6. Centralizes BYOK key lookup via Supabase RPC and returns a ready LanguageModel for downstream routes (no client-side secrets).
+ * @fileoverview AI SDK v7 provider registry and server-side BYOK resolution.
  */
 
 import "server-only";
@@ -134,28 +134,6 @@ const DEFAULT_MODEL_MAPPER: ModelMapper = (
   return stripProviderPrefix(provider, trimmedHint);
 };
 
-/**
- * Type-asserts and validates that a resolved model is a valid LanguageModel.
- *
- * @param model - The resolved model object from a provider client.
- * @param provider - The provider identifier for error reporting.
- * @param modelId - The model identifier for error reporting.
- * @returns The validated LanguageModel instance.
- * @throws Error if the model is not a valid LanguageModel.
- */
-function toLanguageModel(
-  model: unknown,
-  provider: ProviderId,
-  modelId: string
-): import("ai").LanguageModel {
-  if (!model || (typeof model !== "function" && typeof model !== "object")) {
-    throw new Error(
-      `Resolved model for ${provider}:${modelId} is not a language model`
-    );
-  }
-  return model as import("ai").LanguageModel;
-}
-
 function createByokLanguageModel(
   provider: ProviderId,
   apiKey: string,
@@ -171,9 +149,9 @@ function createByokLanguageModel(
         baseURL: "https://openrouter.ai/api/v1",
       }).chat(modelId);
     case "anthropic":
-      return createAnthropic({ apiKey })(modelId);
+      return createAnthropic({ apiKey }).languageModel(modelId);
     case "xai":
-      return createXai({ apiKey })(modelId);
+      return createXai({ apiKey }).chat(modelId);
     default: {
       const _exhaustiveCheck: never = provider;
       throw new Error(`Unsupported provider: ${provider}`);
@@ -207,11 +185,7 @@ async function resolveByokProvider(
     { attributes: { modelId, path: "user-provider", provider } },
     async () => ({
       credentialSource: "user-provider",
-      model: toLanguageModel(
-        createByokLanguageModel(provider, apiKey, modelId),
-        provider,
-        modelId
-      ),
+      model: createByokLanguageModel(provider, apiKey, modelId),
       modelId,
       provider,
     })
@@ -274,7 +248,7 @@ export async function resolveProvider(
       },
       async () => ({
         credentialSource: "user-gateway",
-        model: toLanguageModel(client(modelId), "openai", modelId),
+        model: client(modelId),
         modelId,
         provider: "openai",
       })
@@ -353,7 +327,7 @@ export async function resolveProvider(
         },
         async () => ({
           credentialSource: "team-gateway",
-          model: toLanguageModel(gateway(modelId), "openai", modelId),
+          model: gateway(modelId),
           modelId,
           provider: "openai",
         })

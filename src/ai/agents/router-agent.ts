@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import type { RouterClassification } from "@schemas/agents";
 import { routerClassificationSchema } from "@schemas/agents";
@@ -42,7 +43,7 @@ export class InvalidPatternsError extends Error {
 /**
  * Classify a user message into an agent workflow.
  *
- * Uses AI SDK v6 generateText with Output.object() for structured output.
+ * Uses AI SDK v7 generateText with Output.object() for structured output.
  *
  * @param deps Language model and optional telemetry identifiers.
  * @param userMessage User message to classify.
@@ -80,21 +81,22 @@ export async function classifyUserMessage(
   try {
     const result = await generateText({
       abortSignal: deps.abortSignal,
-      // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
-      experimental_telemetry: {
-        functionId: "router.classifyUserMessage",
-        isEnabled: true,
-        metadata: {
-          ...(deps.modelId ? { modelId: deps.modelId } : {}),
-        },
-      },
+      instructions: systemPrompt,
       model: deps.model,
-      // Output.object() is the v6 unified API for structured output
+      // Output.object() is the unified API for structured output
       output: Output.object({
         schema: routerClassificationSchema,
       }),
       prompt: sanitizedMessage,
-      system: systemPrompt,
+      runtimeContext: {
+        modelId: deps.modelId,
+      },
+      telemetry: createAiTelemetry({
+        functionId: "router.classifyUserMessage",
+        includeRuntimeContext: {
+          modelId: true,
+        },
+      }),
       // Low temperature for consistent classification
       temperature: 0.1,
       timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),

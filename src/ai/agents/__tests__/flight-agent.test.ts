@@ -98,10 +98,12 @@ describe("createFlightAgent", () => {
     expect(result.agent).toBeDefined();
   });
 
-  it("builds prompt with flight search input", () => {
+  it("keeps request input out of trusted instructions", () => {
     createFlightAgent(mockDeps, mockConfig, mockInput);
 
-    expect(mockBuildFlightPrompt).toHaveBeenCalledWith(mockInput);
+    expect(mockBuildFlightPrompt).toHaveBeenCalledWith();
+    const config = mockCreateTripSageAgent.mock.calls[0][1];
+    expect(config.instructions).not.toContain(mockInput.destination);
   });
 
   it("includes flight tools in agent configuration", () => {
@@ -162,5 +164,6 @@ describe("createFlightAgent", () => {
     expect(config.maxOutputTokens).toBe(1024);
     expect(config.uiMessages).toBeDefined();
     expect(config.uiMessages[0].parts[0].text).toContain("schemaVersion");
+    expect(config.uiMessages[0].parts[0].text).toContain(JSON.stringify(mockInput));
   });
 });

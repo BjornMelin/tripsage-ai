@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import type { RagSearchResponse, RagSearchResult, RetrieverConfig } from "@schemas/rag";
 import { retrieverConfigSchema } from "@schemas/rag";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -91,6 +92,7 @@ export async function retrieveDocuments(
       const { embedding } = await embed({
         abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
         model: getTextEmbeddingModel(),
+        telemetry: createAiTelemetry({ functionId: "rag.retriever.embed" }),
         value: query,
       });
 
@@ -202,6 +204,7 @@ export async function semanticSearch(params: {
   const { embedding } = await embed({
     abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     model: getTextEmbeddingModel(),
+    telemetry: createAiTelemetry({ functionId: "rag.semantic_search.embed" }),
     value: query,
   });
 

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Client chat shell using AI SDK v6 useChat hook for real streaming.
+ * @fileoverview Client chat shell using AI SDK v7 useChat hook for real streaming.
  */
 
 "use client";
@@ -101,7 +101,7 @@ function reportChatClientError(error: unknown, action: string): void {
 }
 
 /**
- * Client-side chat container using AI SDK v6 useChat hook.
+ * Client-side chat container using AI SDK v7 useChat hook.
  * Connects to /api/chat for real-time UI message streaming responses.
  */
 export function ChatClient(): ReactElement {

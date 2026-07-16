@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import {
   embeddingsRequestSchema,
   type PersistableEmbeddingsProperty,
@@ -155,11 +156,12 @@ export const POST = withApiGuards({
     });
   }
 
-  // Generate embedding via AI SDK v6 using Gateway/OpenAI when configured,
+  // Generate embedding via AI SDK v7 using Gateway/OpenAI when configured,
   // otherwise deterministic local embeddings (1536-d).
   const { embedding, usage } = await embed({
     abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     model: getTextEmbeddingModel(),
+    telemetry: createAiTelemetry({ functionId: "embeddings.generate" }),
     value: text,
   });
   if (!Array.isArray(embedding) || embedding.length !== TEXT_EMBEDDING_DIMENSIONS) {

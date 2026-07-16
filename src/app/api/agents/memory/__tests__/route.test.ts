@@ -12,6 +12,20 @@ import {
   getMockCookiesForTest,
 } from "@/test/helpers/route";
 
+const createUIMessageStreamResponseMock = vi.hoisted(() =>
+  vi.fn(() => new Response("ok", { status: 200 }))
+);
+const runMemoryAgentMock = vi.hoisted(() =>
+  vi.fn(() => ({ stream: new ReadableStream() }))
+);
+const toUIMessageStreamMock = vi.hoisted(() => vi.fn(() => new ReadableStream()));
+
+vi.mock("ai", () => ({
+  consumeStream: vi.fn(),
+  createUIMessageStreamResponse: createUIMessageStreamResponseMock,
+  toUIMessageStream: toUIMessageStreamMock,
+}));
+
 vi.mock("@/lib/agents/config-resolver", () => ({
   resolveAgentConfig: vi.fn(async () => ({ config: { model: "gpt-5.5" } })),
 }));
@@ -36,14 +50,12 @@ vi.mock("@/lib/supabase/server", () => ({
 
 // Mock provider registry
 vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({ model: {} })),
+  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "openai/gpt-5.5" })),
 }));
 
 // Mock memory agent
 vi.mock("@ai/agents/memory-agent", () => ({
-  runMemoryAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-  })),
+  runMemoryAgent: runMemoryAgentMock,
 }));
 
 // Mock Redis
@@ -97,5 +109,29 @@ describe("/api/agents/memory route", () => {
     });
     const res = await mod.POST(req, createRouteParamsContext());
     expect(res.status).toBe(200);
+    expect(runMemoryAgentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identifier: TEST_USER_ID,
+        modelId: "openai/gpt-5.5",
+      }),
+      expect.any(Object),
+      expect.objectContaining({
+        records: [
+          expect.objectContaining({
+            category: "user_preference",
+            content: "User prefers window seats",
+          }),
+        ],
+      }),
+      { abortSignal: req.signal }
+    );
+    expect(toUIMessageStreamMock).toHaveBeenCalledWith({
+      onError: expect.any(Function),
+      stream: expect.any(ReadableStream),
+    });
+    expect(createUIMessageStreamResponseMock).toHaveBeenCalledWith({
+      consumeSseStream: expect.any(Function),
+      stream: expect.any(ReadableStream),
+    });
   });
 });

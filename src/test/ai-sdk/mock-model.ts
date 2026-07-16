@@ -1,8 +1,8 @@
 /**
- * @fileoverview AI SDK test utilities using official MockLanguageModelV3.
+ * @fileoverview AI SDK test utilities using the official MockLanguageModelV4.
  *
- * Provides utilities for testing AI SDK v6 flows with accurate model behavior.
- * Uses official MockLanguageModelV3 from ai/test and simulateReadableStream from ai.
+ * Provides utilities for testing AI SDK v7 flows with accurate model behavior.
+ * Uses MockLanguageModelV4 from ai/test and simulateReadableStream from ai.
  *
  * @example
  * ```typescript
@@ -25,14 +25,22 @@
  * ```
  */
 
+import type {
+  LanguageModelV4CallOptions,
+  LanguageModelV4FinishReason,
+  LanguageModelV4GenerateResult,
+  LanguageModelV4StreamPart,
+  LanguageModelV4StreamResult,
+  LanguageModelV4Usage,
+  SharedV4Warning,
+} from "@ai-sdk/provider";
 import { simulateReadableStream } from "ai";
-import { MockLanguageModelV3 } from "ai/test";
-import { unsafeCast } from "@/test/helpers/unsafe-cast";
+import { MockLanguageModelV4 } from "ai/test";
 
 /**
- * Creates a usage object compatible with LanguageModelV3Usage.
+ * Creates a usage object compatible with LanguageModelV4Usage.
  */
-function createUsage(input: number, output: number) {
+function createUsage(input: number, output: number): LanguageModelV4Usage {
   return {
     inputTokens: {
       cacheRead: undefined,
@@ -49,14 +57,14 @@ function createUsage(input: number, output: number) {
 }
 
 /** Finish reason type for mock model */
-type FinishReason =
-  | "stop"
-  | "length"
-  | "content-filter"
-  | "tool-calls"
-  | "error"
-  | "other"
-  | "unknown";
+type FinishReason = LanguageModelV4FinishReason["unified"] | "unknown";
+
+function createFinishReason(reason: FinishReason): LanguageModelV4FinishReason {
+  return {
+    raw: reason,
+    unified: reason === "unknown" ? "other" : reason,
+  };
+}
 
 /**
  * Options for creating a mock language model.
@@ -72,27 +80,11 @@ export interface MockModelOptions {
     outputTokens?: number;
   };
   /** Warnings to include */
-  warnings?: Array<{ type: string; message: string }>;
-}
-
-// Internal type for doGenerate result - mirrors LanguageModelV3GenerateResult
-interface MockGenerateResult {
-  content: Array<
-    | { type: "text"; text: string }
-    | { type: "tool-call"; toolCallId: string; toolName: string; input: string }
-  >;
-  finishReason: FinishReason;
-  usage: ReturnType<typeof createUsage>;
-  warnings: never[];
-}
-
-// Internal type for doStream result - mirrors LanguageModelV3StreamResult
-interface MockStreamResult {
-  stream: ReadableStream<unknown>;
+  warnings?: SharedV4Warning[];
 }
 
 /**
- * Creates a mock language model using AI SDK's official MockLanguageModelV3.
+ * Creates a mock language model using AI SDK's official MockLanguageModelV4.
  *
  * This provides accurate simulation of AI SDK behavior for testing.
  *
@@ -118,16 +110,15 @@ export function createMockModel(options: MockModelOptions = {}) {
   const inputTokens = usage.inputTokens ?? 10;
   const outputTokens = usage.outputTokens ?? 20;
 
-  const result: MockGenerateResult = {
+  const result: LanguageModelV4GenerateResult = {
     content: [{ text, type: "text" }],
-    finishReason,
+    finishReason: createFinishReason(finishReason),
     usage: createUsage(inputTokens, outputTokens),
-    warnings: warnings as never[],
+    warnings,
   };
 
-  // Use unsafeCast for test mock - third-party types are complex to model exactly
-  return new MockLanguageModelV3({
-    doGenerate: unsafeCast(result),
+  return new MockLanguageModelV4({
+    doGenerate: result,
   });
 }
 
@@ -139,7 +130,7 @@ export function createMockModel(options: MockModelOptions = {}) {
  * @see https://sdk.vercel.ai/docs
  */
 export function createMockModelWithTracking(options: MockModelOptions = {}) {
-  const calls: Array<{ input: unknown }> = [];
+  const calls: Array<{ input: LanguageModelV4CallOptions }> = [];
   const {
     text = "Mock AI response",
     finishReason = "stop",
@@ -150,17 +141,17 @@ export function createMockModelWithTracking(options: MockModelOptions = {}) {
   const inputTokens = usage.inputTokens ?? 10;
   const outputTokens = usage.outputTokens ?? 20;
 
-  const result: MockGenerateResult = {
+  const result: LanguageModelV4GenerateResult = {
     content: [{ text, type: "text" }],
-    finishReason,
+    finishReason: createFinishReason(finishReason),
     usage: createUsage(inputTokens, outputTokens),
-    warnings: warnings as never[],
+    warnings,
   };
 
-  const model = new MockLanguageModelV3({
+  const model = new MockLanguageModelV4({
     doGenerate: (input) => {
       calls.push({ input });
-      return unsafeCast(result);
+      return Promise.resolve(result);
     },
   });
 
@@ -200,7 +191,7 @@ export function createMockToolModel(
 
   const finishReason: FinishReason = toolCalls.length > 0 ? "tool-calls" : "stop";
 
-  const result: MockGenerateResult = {
+  const result: LanguageModelV4GenerateResult = {
     content: [
       ...(text ? [{ text, type: "text" as const }] : []),
       ...toolCalls.map((call) => ({
@@ -210,13 +201,13 @@ export function createMockToolModel(
         type: "tool-call" as const,
       })),
     ],
-    finishReason,
+    finishReason: createFinishReason(finishReason),
     usage: createUsage(10, 20),
-    warnings: [] as never[],
+    warnings: [],
   };
 
-  return new MockLanguageModelV3({
-    doGenerate: unsafeCast(result),
+  return new MockLanguageModelV4({
+    doGenerate: result,
   });
 }
 
@@ -264,27 +255,27 @@ export function createStreamingMockModel(options: StreamingMockModelOptions) {
   const inputTokens = usage.inputTokens ?? 10;
   const outputTokens = usage.outputTokens ?? 20;
 
-  const result: MockStreamResult = {
-    stream: simulateReadableStream({
-      chunks: [
-        { id: "text-1", type: "text-start" },
-        ...chunks.map((delta) => ({
-          delta,
-          id: "text-1",
-          type: "text-delta",
-        })),
-        { id: "text-1", type: "text-end" },
-        {
-          finishReason,
-          type: "finish",
-          usage: createUsage(inputTokens, outputTokens),
-        },
-      ],
-    }),
+  const streamParts: LanguageModelV4StreamPart[] = [
+    { type: "stream-start", warnings: [] },
+    { id: "text-1", type: "text-start" },
+    ...chunks.map((delta) => ({
+      delta,
+      id: "text-1",
+      type: "text-delta" as const,
+    })),
+    { id: "text-1", type: "text-end" },
+    {
+      finishReason: createFinishReason(finishReason),
+      type: "finish",
+      usage: createUsage(inputTokens, outputTokens),
+    },
+  ];
+  const result: LanguageModelV4StreamResult = {
+    stream: simulateReadableStream({ chunks: streamParts }),
   };
 
-  return new MockLanguageModelV3({
-    doStream: unsafeCast(result),
+  return new MockLanguageModelV4({
+    doStream: result,
   });
 }
 
@@ -306,8 +297,8 @@ export interface StreamingToolMockModelOptions {
   finishReason?: "stop" | "tool-calls" | null;
   /** Optional token usage to surface */
   usage?: {
-    completionTokens?: number;
-    promptTokens?: number;
+    inputTokens?: number;
+    outputTokens?: number;
     totalTokens?: number;
   };
 }
@@ -316,7 +307,7 @@ export interface StreamingToolMockModelOptions {
  * Creates a streaming mock model with tool calls.
  *
  * Use for testing streaming agents that make tool calls.
- * Uses AI SDK v6 stream part types (tool-input-start, tool-input-delta, tool-input-end).
+ * Uses native V4 tool-input and completed tool-call stream parts.
  *
  * @param options - Configuration for tool calls
  * @returns Configured streaming mock model with tool support
@@ -342,26 +333,14 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
     );
   }
 
-  const inputTokens = usage?.promptTokens ?? 10;
-  const outputTokens = usage?.completionTokens ?? 20;
+  const inputTokens = usage?.inputTokens ?? 10;
+  const outputTokens = usage?.outputTokens ?? 20;
   const resolvedFinishReason: FinishReason =
     finishReason === "stop" ? "stop" : "tool-calls";
 
-  // Build stream chunks
-  type StreamChunk =
-    | { type: "text-start"; id: string }
-    | { type: "text-delta"; id: string; delta: string }
-    | { type: "text-end"; id: string }
-    | { type: "tool-input-start"; id: string; toolName: string }
-    | { type: "tool-input-delta"; id: string; delta: string }
-    | { type: "tool-input-end"; id: string }
-    | {
-        type: "finish";
-        finishReason: FinishReason;
-        usage: ReturnType<typeof createUsage>;
-      };
-
-  const streamChunks: StreamChunk[] = [];
+  const streamChunks: LanguageModelV4StreamPart[] = [
+    { type: "stream-start", warnings: [] },
+  ];
 
   // Add text before if present
   if (textBefore) {
@@ -370,19 +349,26 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
     streamChunks.push({ id: "text-1", type: "text-end" });
   }
 
-  // Add tool calls using v6 tool-input-* types
+  // Add tool calls using V4 tool-input-* stream parts.
   for (const call of toolCalls) {
+    const input = JSON.stringify(call.args);
     streamChunks.push({
       id: call.toolCallId,
       toolName: call.toolName,
       type: "tool-input-start",
     });
     streamChunks.push({
-      delta: JSON.stringify(call.args),
+      delta: input,
       id: call.toolCallId,
       type: "tool-input-delta",
     });
     streamChunks.push({ id: call.toolCallId, type: "tool-input-end" });
+    streamChunks.push({
+      input,
+      toolCallId: call.toolCallId,
+      toolName: call.toolName,
+      type: "tool-call",
+    });
   }
 
   // Add text after if present
@@ -393,17 +379,17 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
   }
 
   streamChunks.push({
-    finishReason: resolvedFinishReason,
+    finishReason: createFinishReason(resolvedFinishReason),
     type: "finish",
     usage: createUsage(inputTokens, outputTokens),
   });
 
-  const result: MockStreamResult = {
+  const result: LanguageModelV4StreamResult = {
     stream: simulateReadableStream({ chunks: streamChunks }),
   };
 
-  return new MockLanguageModelV3({
-    doStream: unsafeCast(result),
+  return new MockLanguageModelV4({
+    doStream: result,
   });
 }
 
@@ -430,15 +416,15 @@ export function createStreamingToolMockModel(options: StreamingToolMockModelOpti
  * ```
  */
 export function createMockObjectModel<T>(jsonObject: T) {
-  const result: MockGenerateResult = {
+  const result: LanguageModelV4GenerateResult = {
     content: [{ text: JSON.stringify(jsonObject), type: "text" }],
-    finishReason: "stop",
+    finishReason: createFinishReason("stop"),
     usage: createUsage(10, 20),
-    warnings: [] as never[],
+    warnings: [],
   };
 
-  return new MockLanguageModelV3({
-    doGenerate: unsafeCast(result),
+  return new MockLanguageModelV4({
+    doGenerate: result,
   });
 }
 
@@ -460,27 +446,27 @@ export function createStreamingObjectMockModel<T>(jsonObject: T) {
     chunks.push(jsonString.slice(i, i + chunkSize));
   }
 
-  const result: MockStreamResult = {
-    stream: simulateReadableStream({
-      chunks: [
-        { id: "text-1", type: "text-start" },
-        ...chunks.map((delta) => ({
-          delta,
-          id: "text-1",
-          type: "text-delta",
-        })),
-        { id: "text-1", type: "text-end" },
-        {
-          finishReason: "stop" as const,
-          type: "finish",
-          usage: createUsage(10, 20),
-        },
-      ],
-    }),
+  const streamParts: LanguageModelV4StreamPart[] = [
+    { type: "stream-start", warnings: [] },
+    { id: "text-1", type: "text-start" },
+    ...chunks.map((delta) => ({
+      delta,
+      id: "text-1",
+      type: "text-delta" as const,
+    })),
+    { id: "text-1", type: "text-end" },
+    {
+      finishReason: createFinishReason("stop"),
+      type: "finish",
+      usage: createUsage(10, 20),
+    },
+  ];
+  const result: LanguageModelV4StreamResult = {
+    stream: simulateReadableStream({ chunks: streamParts }),
   };
 
-  return new MockLanguageModelV3({
-    doStream: unsafeCast(result),
+  return new MockLanguageModelV4({
+    doStream: result,
   });
 }
 

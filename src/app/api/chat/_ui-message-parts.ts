@@ -3,9 +3,32 @@
  */
 
 import type { UIMessage } from "ai";
+import { z } from "zod";
 import type { ServerLogger } from "@/lib/telemetry/logger";
 
 type UiParts = UIMessage["parts"];
+
+const MEDIA_TYPE_PATTERN =
+  /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+(?:\/[!#$%&'*+\-.^_`|~0-9A-Za-z]+)?$/;
+const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+const openAiItemMetadataSchema = z.object({
+  itemId: z.string().min(1),
+});
+const openAiReasoningMetadataSchema = z
+  .object({
+    itemId: z.string().min(1).optional(),
+    reasoningEncryptedContent: z.string().min(1).nullable().optional(),
+  })
+  .refine(
+    (metadata) =>
+      metadata.itemId !== undefined ||
+      typeof metadata.reasoningEncryptedContent === "string"
+  );
+const openAiCompactionMetadataSchema = z.object({
+  encryptedContent: z.string().min(1).optional(),
+  itemId: z.string().min(1),
+  type: z.literal("compaction"),
+});
 
 type ToolCallRow = {
   // biome-ignore lint/style/useNamingConvention: Database field name
@@ -25,6 +48,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function getOpenAiMetadata(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.openai)) return undefined;
+  return value.openai;
+}
+
+function sanitizeOpenAiItemMetadata(value: unknown) {
+  const parsed = openAiItemMetadataSchema.safeParse(getOpenAiMetadata(value));
+  return parsed.success ? { openai: parsed.data } : undefined;
+}
+
+function sanitizeOpenAiReasoningMetadata(value: unknown) {
+  const parsed = openAiReasoningMetadataSchema.safeParse(getOpenAiMetadata(value));
+  return parsed.success ? { openai: parsed.data } : undefined;
+}
+
+function sanitizeOpenAiCompactionMetadata(value: unknown) {
+  const parsed = openAiCompactionMetadataSchema.safeParse(getOpenAiMetadata(value));
+  return parsed.success ? { openai: parsed.data } : undefined;
+}
+
 function isPersistedToolPartType(type: string): boolean {
   return (
     type === "dynamic-tool" ||
@@ -38,6 +81,49 @@ function getStaticToolPartType(toolName: string): `tool-${string}` {
   return `tool-${toolName}`;
 }
 
+function sanitizeFileFields(part: Record<string, unknown>): {
+  mediaType: string;
+  url: string;
+} | null {
+  const rawMediaType =
+    typeof part.mediaType === "string"
+      ? part.mediaType
+      : typeof part.mimeType === "string"
+        ? part.mimeType
+        : undefined;
+  if (typeof part.url !== "string" || !rawMediaType) return null;
+
+  const mediaType = rawMediaType.trim().toLowerCase();
+  const url = part.url.trim();
+  if (
+    !MEDIA_TYPE_PATTERN.test(mediaType) ||
+    (part.type === "reasoning-file" &&
+      (!mediaType.includes("/") || mediaType.endsWith("/*"))) ||
+    !url
+  ) {
+    return null;
+  }
+
+  let protocol: string;
+  try {
+    protocol = new URL(url).protocol;
+  } catch {
+    return null;
+  }
+
+  if (protocol === "http:" || protocol === "https:") return { mediaType, url };
+  if (protocol !== "data:") return null;
+
+  const prefix = `data:${mediaType};base64,`;
+  if (url.slice(0, prefix.length).toLowerCase() !== prefix) return null;
+  const data = url.slice(prefix.length);
+  if (data.length === 0 || data.length % 4 !== 0 || !BASE64_PATTERN.test(data)) {
+    return null;
+  }
+
+  return { mediaType, url };
+}
+
 function sanitizePersistedPart(part: unknown): UiParts[number] | null {
   if (!isRecord(part)) return null;
   const type = part.type;
@@ -47,25 +133,45 @@ function sanitizePersistedPart(part: unknown): UiParts[number] | null {
 
   if (type === "text") {
     const text = part.text;
-    return typeof text === "string" ? { text, type: "text" } : null;
+    if (typeof text !== "string") return null;
+    const providerMetadata = sanitizeOpenAiItemMetadata(part.providerMetadata);
+    return {
+      ...(providerMetadata ? { providerMetadata } : {}),
+      text,
+      type: "text",
+    };
   }
 
   if (type === "reasoning") {
     const text = part.text;
-    return typeof text === "string" ? { text, type: "reasoning" } : null;
+    if (typeof text !== "string") return null;
+    const providerMetadata = sanitizeOpenAiReasoningMetadata(part.providerMetadata);
+    return {
+      ...(providerMetadata ? { providerMetadata } : {}),
+      text,
+      type: "reasoning",
+    };
   }
 
-  if (type === "file") {
-    const url = part.url;
-    const mediaType =
-      typeof part.mediaType === "string"
-        ? part.mediaType
-        : typeof part.mimeType === "string"
-          ? part.mimeType
-          : undefined;
-    if (typeof url !== "string" || typeof mediaType !== "string") return null;
+  if (type === "custom" && part.kind === "openai.compaction") {
+    const providerMetadata = sanitizeOpenAiCompactionMetadata(part.providerMetadata);
+    return providerMetadata
+      ? {
+          kind: "openai.compaction",
+          providerMetadata,
+          type: "custom",
+        }
+      : null;
+  }
+
+  if (type === "file" || type === "reasoning-file") {
+    const fields = sanitizeFileFields(part);
+    if (!fields) return null;
+    if (type === "reasoning-file") {
+      return { ...fields, type: "reasoning-file" };
+    }
     const filename = typeof part.filename === "string" ? part.filename : undefined;
-    return { filename, mediaType, type: "file", url };
+    return { filename, ...fields, type: "file" };
   }
 
   if (type === "source-url") {
@@ -109,6 +215,25 @@ function sanitizePersistedPart(part: unknown): UiParts[number] | null {
 }
 
 /**
+ * Keep only canonical, non-tool UI message parts that are safe to persist.
+ *
+ * Tool lifecycle state is stored separately in `chat_tool_calls`; unsupported or
+ * malformed parts are dropped at the persistence boundary.
+ */
+export function sanitizePersistableUiParts(
+  parts: readonly unknown[] | undefined
+): UiParts {
+  if (!Array.isArray(parts)) return [];
+
+  const sanitized: UiParts = [];
+  for (const part of parts) {
+    const safe = sanitizePersistedPart(part);
+    if (safe) sanitized.push(safe);
+  }
+  return sanitized;
+}
+
+/**
  * Parses persisted UI message parts from stored JSON content.
  *
  * Accepts a JSON string (or non-string) and returns sanitized UI parts using
@@ -132,12 +257,7 @@ export function parsePersistedUiParts(options: {
       return [{ text: trimmed, type: "text" }];
     }
 
-    const sanitized: UiParts = [];
-    for (const part of parsed) {
-      const safe = sanitizePersistedPart(part);
-      if (safe) sanitized.push(safe);
-    }
-    return sanitized;
+    return sanitizePersistableUiParts(parsed);
   } catch (error) {
     logger?.warn?.("chat:stored_parts_parse_failed", {
       contentLength: trimmed.length,
@@ -150,7 +270,7 @@ export function parsePersistedUiParts(options: {
 }
 
 /**
- * Rehydrates tool invocation rows into AI SDK v6 static tool UI parts.
+ * Rehydrates tool invocation rows into AI SDK v7 static tool UI parts.
  *
  * Expects `toolRows` with fields like `tool_name`, `tool_id`, `arguments`,
  * `status` ("completed" | "failed"), `provider_executed`, `result`, and
@@ -160,7 +280,7 @@ export function parsePersistedUiParts(options: {
  * lifecycle store; persisted message content must not own tool state.
  *
  * @param toolRows - Persisted `chat_tool_calls` rows to rehydrate.
- * @returns AI SDK v6 static tool UI parts for the assistant message.
+ * @returns AI SDK v7 static tool UI parts for the assistant message.
  */
 export function rehydrateToolInvocations(toolRows: ToolCallRow[]): UiParts {
   const parts: UiParts = [];

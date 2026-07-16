@@ -75,7 +75,7 @@ export async function resolveExecuteResult<T>(value: ToolExecuteResult<T>): Prom
 
 type WebSearchExecute = (
   input: WebSearchToolInput,
-  options: ToolExecutionOptions
+  options: ToolExecutionOptions<unknown>
 ) => ToolExecuteResult<WebSearchToolOutput> | undefined;
 
 export function createWebSearchFallback(
@@ -84,7 +84,11 @@ export function createWebSearchFallback(
   if (!execute) return undefined;
 
   return async ({ limit, query, toolCallId, userId }) => {
-    const callOptions = { messages: [], toolCallId } satisfies ToolExecutionOptions;
+    const callOptions = {
+      context: undefined,
+      messages: [],
+      toolCallId,
+    } satisfies ToolExecutionOptions<unknown>;
     const executed = execute(
       {
         categories: null,

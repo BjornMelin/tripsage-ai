@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import type { MemoryContextResponse } from "@schemas/chat";
 import { jsonSchema } from "@schemas/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -74,6 +75,7 @@ async function handleSemanticFetchContext(
     const { embedding } = await embed({
       abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
       model: getTextEmbeddingModel(),
+      telemetry: createAiTelemetry({ functionId: "memory.semantic_query.embed" }),
       value: intent.query,
     });
 

@@ -111,7 +111,7 @@ function toJsonValue(value: unknown): JSONValue {
  */
 type ToolExecute<InputValue, OutputValue> = (
   params: InputValue,
-  callOptions: ToolExecutionOptions
+  callOptions: ToolExecutionOptions<unknown>
 ) => Promise<OutputValue>;
 
 type ToolOutputValue<T> = [T] extends [never] ? unknown : T;
@@ -148,18 +148,18 @@ export type ToolOptions<InputValue, OutputValue> = {
  */
 export type LifecycleHooks<InputValue> = {
   /** Called when tool input streaming starts. */
-  onInputStart?: (options: ToolExecutionOptions) => void | PromiseLike<void>;
+  onInputStart?: (options: ToolExecutionOptions<unknown>) => void | PromiseLike<void>;
   /** Called for each chunk of streamed input text. */
   onInputDelta?: (
     options: {
       inputTextDelta: string;
-    } & ToolExecutionOptions
+    } & ToolExecutionOptions<unknown>
   ) => void | PromiseLike<void>;
   /** Called when complete input is available and validated. */
   onInputAvailable?: (
     options: {
       input: [InputValue] extends [never] ? unknown : InputValue;
-    } & ToolExecutionOptions
+    } & ToolExecutionOptions<unknown>
   ) => void | PromiseLike<void>;
 };
 
@@ -205,7 +205,7 @@ export type RateLimitOptions<InputValue> = {
   /** Optional identifier override using params and/or ToolExecutionOptions. */
   identifier?: (
     params: InputValue,
-    callOptions?: ToolExecutionOptions
+    callOptions?: ToolExecutionOptions<unknown>
   ) => string | undefined | null;
   /** Sliding window limit. */
   limit: number;
@@ -271,7 +271,7 @@ function buildLifecycleHooks<InputValue>(
 }
 
 /**
- * Creates an AI SDK v6 tool with optional guardrails (caching, rate limiting, telemetry).
+ * Creates an AI SDK v7 tool with optional guardrails (caching, rate limiting, telemetry).
  *
  * @template InputValue - Input schema type for the tool.
  * @template OutputValue - Output type returned by the tool.
@@ -280,7 +280,7 @@ function buildLifecycleHooks<InputValue>(
  */
 export function createAiTool<InputValue, OutputValue>(
   options: CreateAiToolOptions<InputValue, OutputValue>
-): Tool<InputValue, ToolOutputValue<OutputValue>> {
+): Tool<InputValue, ToolOutputValue<OutputValue>, unknown> {
   const { guardrails } = options;
   const telemetryName = guardrails?.telemetry?.name ?? options.name;
   const toModelOutput = options.toModelOutput;
@@ -291,9 +291,9 @@ export function createAiTool<InputValue, OutputValue>(
       ? buildOutputValidator(options.outputSchema, options.name)
       : null;
 
-  const toolDefinition: Tool<InputValue, ToolOutputValue<OutputValue>> = {
+  const toolDefinition: Tool<InputValue, ToolOutputValue<OutputValue>, unknown> = {
     description: options.description,
-    execute: (params: InputValue, callOptions: ToolExecutionOptions) => {
+    execute: (params: InputValue, callOptions: ToolExecutionOptions<unknown>) => {
       const startedAt = performance.now();
       return withTelemetrySpan(
         `tool.${telemetryName}`,
@@ -371,7 +371,7 @@ export function createAiTool<InputValue, OutputValue>(
           }),
         }
       : {}),
-    // Lifecycle hooks for streaming tool input progress (AI SDK v6)
+    // Lifecycle hooks for streaming tool input progress (AI SDK v7)
     ...buildLifecycleHooks(options.lifecycle),
   };
 
@@ -602,7 +602,7 @@ async function enforceRateLimit<InputValue>(
   config: RateLimitOptions<InputValue>,
   toolName: string,
   params: InputValue,
-  callOptions: ToolExecutionOptions,
+  callOptions: ToolExecutionOptions<unknown>,
   span: Span
 ): Promise<void> {
   const override = sanitizeRateLimitIdentifier(

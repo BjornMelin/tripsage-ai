@@ -5,6 +5,7 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -295,18 +296,20 @@ export async function personalizeHotels(
       try {
         response = await generateText({
           abortSignal: options?.abortSignal,
-          // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
-          experimental_telemetry: {
-            functionId: "hotel.personalize",
-            isEnabled: true,
-            metadata: {
-              hotelCount: hotels.length,
-              modelId,
-            },
-          },
           model,
           output: Output.object({ schema: personalizationResponseSchema }),
           prompt,
+          runtimeContext: {
+            hotelCount: hotels.length,
+            modelId,
+          },
+          telemetry: createAiTelemetry({
+            functionId: "hotel.personalize",
+            includeRuntimeContext: {
+              hotelCount: true,
+              modelId: true,
+            },
+          }),
           timeout: buildTimeoutConfig(options?.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS),
         });
       } catch (error) {

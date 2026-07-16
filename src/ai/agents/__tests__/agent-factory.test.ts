@@ -2,6 +2,7 @@
  * @vitest-environment node
  */
 
+import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
@@ -42,7 +43,7 @@ vi.mock("@/lib/security/random", () => {
   };
 });
 
-import { type LanguageModel, safeValidateUIMessages } from "ai";
+import { safeValidateUIMessages } from "ai";
 import { createTripSageAgent } from "../agent-factory";
 import type { AgentDependencies, TripSageAgentConfig } from "../types";
 import { extractAgentParameters, prepareSchemaPrompt } from "../types";
@@ -50,28 +51,10 @@ import { extractAgentParameters, prepareSchemaPrompt } from "../types";
 /**
  * Creates a mock LanguageModel for testing.
  */
-function createMockModel(): LanguageModel {
-  return unsafeCast<LanguageModel>({
-    defaultObjectGenerationMode: "json",
-    doGenerate: vi.fn(async () => ({
-      finishReason: "stop",
-      rawCall: { rawPrompt: null, rawSettings: {} },
-      response: {
-        id: "test-response-id",
-        modelId: "test-model",
-        timestamp: new Date(),
-      },
-      text: "Test response",
-      usage: { completionTokens: 10, promptTokens: 10 },
-    })),
-    doStream: vi.fn(async () => ({
-      rawCall: { rawPrompt: null, rawSettings: {} },
-      stream: new ReadableStream(),
-    })),
+function createMockModel(): MockLanguageModelV4 {
+  return new MockLanguageModelV4({
     modelId: "test-model",
     provider: "test-provider",
-    specificationVersion: "V3",
-    supportsStructuredOutputs: true,
   });
 }
 
@@ -106,12 +89,34 @@ describe("createTripSageAgent", () => {
 
     // Verify agent has expected properties from config
     expect(result.agent.id).toContain("tripsage-budgetPlanning");
+    const { config: agentSettings } = unsafeCast<{
+      config: Record<string, unknown>;
+    }>(result.agent);
+    expect(agentSettings).toMatchObject({
+      repairToolCall: expect.any(Function),
+      runtimeContext: {
+        agentType: "budgetPlanning",
+        modelId: "gpt-5.4-mini",
+      },
+      telemetry: {
+        functionId: "agent.budgetPlanning",
+        includeRuntimeContext: {
+          agentType: true,
+          modelId: true,
+        },
+        recordInputs: false,
+        recordOutputs: false,
+      },
+    });
+    expect(agentSettings).not.toHaveProperty("experimental_repairToolCall");
+    expect(agentSettings).not.toHaveProperty("experimental_telemetry");
   });
 
   it("should create an agent with optional parameters", () => {
     const deps = createTestDeps();
     const config: TripSageAgentConfig = {
       agentType: "flightSearch",
+      headers: { "x-agent-test": "forwarded" },
       instructions: "You are a flight search assistant.",
       maxOutputTokens: 2048,
       name: "Flight Agent",
@@ -126,6 +131,18 @@ describe("createTripSageAgent", () => {
 
     expect(result).toBeDefined();
     expect(result.uiMessages).toEqual(config.uiMessages);
+    const { config: agentSettings } = unsafeCast<{
+      config: Record<string, unknown>;
+    }>(result.agent);
+    expect(agentSettings).toMatchObject({
+      headers: { "x-agent-test": "forwarded" },
+      maxOutputTokens: 2048,
+      topP: 0.9,
+    });
+    expect(agentSettings).not.toHaveProperty("agentType");
+    expect(agentSettings).not.toHaveProperty("name");
+    expect(agentSettings).not.toHaveProperty("stepLimit");
+    expect(agentSettings).not.toHaveProperty("uiMessages");
   });
 
   it("should use default values when optional parameters not provided", () => {
