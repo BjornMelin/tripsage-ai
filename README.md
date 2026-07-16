@@ -1,7 +1,7 @@
 # 🌟 TripSage AI
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![AI SDK v6](https://img.shields.io/badge/Vercel%20AI%20SDK-v6-blue.svg)](https://ai-sdk.dev)
+[![AI SDK v7](https://img.shields.io/badge/Vercel%20AI%20SDK-v7-blue.svg)](https://ai-sdk.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-SSR-3fcf8e?logo=supabase)](https://supabase.com)
 [![Upstash](https://img.shields.io/badge/Upstash-Redis%20%7C%20QStash-00E9A3?logo=upstash)](https://upstash.com)
@@ -21,14 +21,14 @@
 ---
 
 TripSage AI is a travel planning platform that combines the power of modern
-AI agents with rich AI SDK v6 tools and all-in-one travel services.
+AI agents with rich AI SDK v7 tools and all-in-one travel services.
 
 ## ✨ Key Features
 
 ### AI & Intelligence
 
 - **AI Gateway + BYOK Routing**: Vercel AI Gateway for app-owned OpenAI profiles, direct user BYOK for OpenAI/OpenRouter/Anthropic/xAI, and encrypted key storage
-- **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v6 with Zod validation—flights (Duffel), accommodations, weather, maps, planning, and memory
+- **Agentic Tool Orchestration**: 15+ production-ready tools via AI SDK v7 with Zod validation for flights (Duffel), accommodations, weather, maps, planning, and memory
 - **Hybrid RAG Pipeline**: Vector similarity search with Supabase pgvector + keyword fusion, with Together.ai and Mixedbread reranking for retrieval accuracy
 - **Structured Outputs**: Schema-first LLM responses with `generateText` + `Output.object` for deterministic parsing and type-safe validation
 - **Streaming Intelligence**: Real-time SSE streaming with interleaved tool calls and generative UI components
@@ -59,7 +59,7 @@ AI agents with rich AI SDK v6 tools and all-in-one travel services.
 
 - **Next.js 16 + React 19**: App Router with RSC-first architecture, Server Components by default, React Compiler enabled
 - **TypeScript 6**: Strict mode with end-to-end type safety, Zod schemas as single source of truth
-- **AI SDK v6 Native**: TypeScript-native provider resolution, streaming, tool calling, and structured outputs
+- **AI SDK v7 Native**: Provider V4 resolution, stateless streaming, tool calling, and structured outputs
 
 ## Quick Start
 
@@ -95,9 +95,9 @@ open http://localhost:3000
 
 ## Architecture
 
-Single-runtime, server-first stack optimized for edge deployment:
+Single-runtime, server-first stack optimized for Vercel's Node.js runtime:
 
-- **Backend & UI**: Next.js 16 App Router (React 19) with Vercel AI SDK v6 RSC/actions and React Compiler
+- **Backend & UI**: Next.js 16 App Router (React 19), AI SDK v7 route handlers, and React Compiler
 - **AI Routing**: Vercel AI Gateway for app-owned OpenAI profiles with opt-in team fallback, plus BYOK support via Supabase Vault
 - **Database & Auth**: Supabase PostgreSQL with pgvector (HNSW indexes), SSR clients (`@supabase/ssr`), Realtime channels, Storage buckets
 - **Cache & Rate Limiting**: Upstash Redis (HTTP) for serverless caching and Upstash Ratelimit for sliding-window throttling
@@ -158,7 +158,7 @@ Run `pnpm biome:fix` before committing. CI runs `pnpm biome:fix` and then checks
 
 ```text
 tripsage-ai/
-├── src/             # Next.js 16 + AI SDK v6 source code
+├── src/             # Next.js 16 + AI SDK v7 source code
 ├── public/          # Static assets
 ├── e2e/             # Playwright E2E tests
 ├── supabase/        # Supabase migrations/config
@@ -170,7 +170,11 @@ tripsage-ai/
 
 ## Conventions
 
-- Server-first: Route handlers and Server Actions own data fetching and AI calls. Use `convertToModelMessages`, `streamText`, `toUIMessageStreamResponse`, and Zod v4 validation.
+- Server-first: Route Handlers own AI calls. Core `streamText` routes use
+  `convertToModelMessages()`, `toUIMessageStream()`, and
+  `createUIMessageStreamResponse()`. `ToolLoopAgent` endpoints return
+  `createAgentUIStreamResponse()` through `createAgentRoute()`. Validate inputs
+  with Zod v4.
 - Auth/DB: `@supabase/ssr` only; no auth-helpers.
 - Cache/jobs: Upstash HTTP clients only (`Redis.fromEnv`, QStash SDK).
 - Logging: OTEL exporters; no `console.log` in server code.
@@ -213,7 +217,7 @@ For local setup, start from `.env.local.example`. For production, run
 
 ```bash
 GET  /api/health                  # Public runtime health
-POST /api/chat                    # AI SDK v6 UI message stream
+POST /api/chat                    # AI SDK v7 UI message stream
 POST /api/flights/search          # Flight search
 GET  /api/trips/suggestions       # AI-powered trip suggestions
 POST /api/keys/validate           # BYOK provider validation
@@ -250,7 +254,7 @@ TripSage AI includes performance-oriented runtime building blocks:
 
 - **Caching**: Upstash Redis HTTP caching and request deduplication
 - **Vector Search**: Supabase pgvector with HNSW indexes for semantic retrieval
-- **Streaming**: Real-time SSE with AI SDK v6, interleaved tool calls, and progressive UI rendering
+- **Streaming**: Real-time SSE with AI SDK v7, interleaved tool calls, and progressive UI rendering
 - **Background Processing**: Upstash QStash handles signed async jobs for memory sync and batch operations
 
 ### Performance validation

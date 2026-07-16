@@ -34,7 +34,7 @@ Complete technical documentation for TripSage AI, an AI-powered travel planning 
 - **[Standards](development/standards/standards.md)** - Code style, import paths, schemas, stores
 - **[Zod Schema Guide](development/standards/zod-schema-guide.md)** - Zod v4 schema patterns, validation, and AI SDK tool schemas
 - **[Testing](development/testing/testing.md)** - Strategy, patterns, and templates
-- **[AI Integration](development/ai/ai-integration.md)** - Gateway/BYOK options for Vercel AI SDK v6
+- **[AI Integration](development/ai/ai-integration.md)** - Gateway/BYOK options for Vercel AI SDK v7
 - **[AI Tools Guide](development/ai/ai-tools.md)** - createAiTool factory with caching, rate limiting, and telemetry guardrails
 - **[Maintenance](maintenance.md)** - Development maintenance checklist
 
@@ -91,7 +91,7 @@ TripSage uses a modern, unified architecture:
 - **Cache**: Upstash Redis (HTTP) for serverless caching
 - **Frontend**: Next.js 16 with React 19 and TypeScript
 - **Real-Time**: Supabase Realtime with private channels
-- **AI**: Vercel AI SDK v6 with streaming chat and agent tool calling
+- **AI**: Vercel AI SDK v7 with Provider V4 routing, streaming chat, and agent tool calling
 
 ## Support & Community
 

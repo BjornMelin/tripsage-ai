@@ -102,7 +102,7 @@ beforeEach(() => {
 Order matters:
 
 1. **Network:** MSW only; never mock `fetch` directly. Handlers in `src/test/msw/handlers/*`.
-2. **AI SDK:** `MockLanguageModelV3`, `simulateReadableStream`, `createMockModelWithTracking` from `src/test/ai-sdk/*`.
+2. **AI SDK:** `MockLanguageModelV4`, `simulateReadableStream`, `createMockModelWithTracking` from `src/test/ai-sdk/*`.
 3. **React Query:** `createMockQueryClient`, `createControlledQuery/Mutation` from `@/test/helpers/query`.
 4. **Supabase:** `@/test/mocks/supabase`; prefer MSW for REST/RPC.
 5. **Timers:** `withFakeTimers` or `createFakeTimersContext`; never global.
@@ -132,7 +132,7 @@ Organize handlers by domain; compose with `composeHandlers`. Cover success + err
 - **Emulator:** `UPSTASH_USE_EMULATOR=1` + `UPSTASH_REDIS_REST_URL` (Redis REST emulator) + `UPSTASH_QSTASH_DEV_URL`; helper in `@/test/upstash/emulator.ts`.
 - **Smoke:** `pnpm test:upstash:smoke` with `UPSTASH_SMOKE=1`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `QSTASH_TOKEN`, and a disposable `UPSTASH_QSTASH_SMOKE_TARGET_URL`.
 
-## AI SDK v6 Tests
+## AI SDK v7 tests
 
 ```ts
 import { z } from "zod";
@@ -142,7 +142,7 @@ import { createMockModelWithTracking } from "@/test/ai-sdk/mock-model";
 const { model, calls } = createMockModelWithTracking();
 const tools = {
   enrich: {
-    parameters: z.strictObject({ id: z.string() }),
+    inputSchema: z.strictObject({ id: z.string() }),
     execute: ({ id }: { id: string }) => `ok:${id}`,
   },
 };

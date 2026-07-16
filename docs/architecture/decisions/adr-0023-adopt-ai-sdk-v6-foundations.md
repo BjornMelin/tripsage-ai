@@ -2,7 +2,7 @@
 
 **Version**: 1.0.0
 **Status**: Superseded
-**Superseded By**: [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md), [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md)
+**Superseded By**: [ADR-0031](adr-0031-nextjs-chat-api-ai-sdk-v6.md), [ADR-0066](adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md), [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 **Date**: 2025-11-01
 **Category**: frontend
 **Domain**: AI SDK / Next.js App Router
@@ -20,9 +20,8 @@
 
 ## Current Runtime Note
 
-The current AI SDK v6 runtime is owned by ADR-0031 and ADR-0066. Active paths are
-`src/app/api/ai/stream/route.ts`, `src/app/api/chat/_handler.ts`, and
-`src/app/(marketing)/ai-demo/page.tsx`.
+ADR-0074 owns the current AI SDK v7 runtime. This document preserves the
+historical foundation decision only.
 
 ## Options Considered
 

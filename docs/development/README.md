@@ -52,7 +52,7 @@ pnpm check:zod-v4:full && pnpm check:api-route-errors:full
 ## Architecture
 
 - **Framework**: Next.js 16 (TypeScript) — server route handlers + React Server Components
-- **AI**: Vercel AI SDK v6 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson))
+- **AI**: Vercel AI SDK v7 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson))
 - **Database**: Supabase PostgreSQL with pgvector, RLS, Realtime
 - **Cache**: Upstash Redis (HTTP REST API) + QStash for async jobs
 - **State**: Zustand (client) + TanStack Query (server)

@@ -1,8 +1,8 @@
 # SPEC-0104: Memory and RAG (Supabase pgvector + embeddings + reranking)
 
-**Version**: 1.1.0  
+**Version**: 1.2.0
 **Status**: Final  
-**Date**: 2026-01-19
+**Date**: 2026-07-15
 
 ## Goals
 
@@ -71,9 +71,9 @@ Agent tool:
 
 ## Retrieval behavior
 
-### Embeddings (AI SDK v6)
+### Embeddings (AI SDK v7)
 
-- Embeddings are generated via AI SDK v6 `embed()` / `embedMany()` and stored as `vector(1536)` in Postgres.
+- Embeddings are generated via AI SDK v7 `embed()` / `embedMany()` and stored as `vector(1536)` in Postgres.
 - The embedding model selection is server-only and deterministic:
   - If `AI_GATEWAY_API_KEY` is set, use string model id `openai/text-embedding-3-small`.
   - Else if `OPENAI_API_KEY` is set, use `openai.embeddingModel("text-embedding-3-small")`.
@@ -94,12 +94,12 @@ Implementation:
 - Pure semantic search uses `match_rag_documents` (vector only).
 - Default `threshold` is `0.0` so that deterministic fallback embeddings can still return non-empty results in local dev/CI. Production deployments should tune `threshold` upward to reduce noise.
 
-### Reranking (AI SDK v6)
+### Reranking (AI SDK v7)
 
-- Reranking is optional (`useReranking`) and uses AI SDK v6 `rerank()` via Together.ai:
+- Reranking is optional (`useReranking`) and uses AI SDK v7 `rerank()` via Together.ai:
   - Model: `mixedbread-ai/Mxbai-Rerank-Large-V2`
   - Timeout: ~700ms (configurable)
-- If `TOGETHER_AI_API_KEY` is unset, reranking degrades to a no-op reranker (results are returned by hybrid ranking only).
+- If `TOGETHER_API_KEY` is unset, reranking degrades to a no-op reranker (results are returned by hybrid ranking only).
 
 ## Caching
 
@@ -151,7 +151,7 @@ Seed implementation: `scripts/seed/supabase-local.ts` (+ fixtures in `scripts/se
   - `AI_GATEWAY_API_KEY` (preferred for team fallback), or
   - `OPENAI_API_KEY` (direct)
 - For reranking, configure:
-  - `TOGETHER_AI_API_KEY` (optional; reranking is otherwise a no-op)
+  - `TOGETHER_API_KEY` (optional; reranking is otherwise a no-op)
 
 ## Safety
 

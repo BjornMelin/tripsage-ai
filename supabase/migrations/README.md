@@ -9,6 +9,7 @@ A small number of **incremental** migrations are included for targeted fixes tha
 - `supabase/migrations/20260120000000_base_schema.sql` — baseline schema (tables, RLS, RPCs, indexes, Storage + Realtime policies).
 - `supabase/migrations/20260126000000_rls_chat_auth_uid_select.sql` — RLS performance patch (chat policies).
 - `supabase/migrations/20260202000000_rls_auth_uid_select.sql` — RLS performance patch (non-chat policies).
+- `supabase/migrations/20260716000000_correct_legacy_tool_execution_ownership.sql` — one-time AI SDK v6 tool-execution ownership repair; apply before the AI SDK v7 application release.
 - `supabase/migrations/archive/` — historical split migrations (read-only, not applied by the Supabase CLI).
 
 ## Local workflow (recommended)

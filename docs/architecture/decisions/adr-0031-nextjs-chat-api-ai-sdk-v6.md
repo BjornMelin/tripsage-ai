@@ -1,6 +1,7 @@
 # ADR-0031: Next.js Chat API (AI SDK UI stream) with AI SDK v6
 
 **Status**: Accepted
+**AI SDK Runtime Superseded By**: [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 **Date**: 2025-11-02
 **Category**: frontend
 **Domain**: Chat API / Streaming

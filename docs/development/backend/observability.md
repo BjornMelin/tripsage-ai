@@ -69,19 +69,28 @@ const result = await withTelemetrySpan(
 
 Use `withTelemetrySpanSync` for synchronous operations (e.g., client initialization).
 
-## AI SDK telemetry (`experimental_telemetry`)
+## AI SDK telemetry
 
-AI SDK v6 calls should set `experimental_telemetry` with a stable `functionId`. Keep `metadata` low-cardinality and avoid PII (no email/name/raw user IDs; prefer counts and booleans).
+`src/instrumentation.ts` registers `@ai-sdk/otel` after `@vercel/otel`. AI SDK v7 calls set `telemetry.functionId`, put safe low-cardinality values in `runtimeContext`, and select emitted keys through `telemetry.includeRuntimeContext`. Do not record prompts, outputs, headers, secrets, raw identifiers, request IDs, model hints, or namespaces.
 
 Current `functionId` values in this codebase:
 
 | Function ID | Location | Notes |
 | :--- | :--- | :--- |
 | `agent.{agentType}` | `src/ai/agents/agent-factory.ts` | ToolLoopAgent instances |
+| `agent.tool_repair` | `src/ai/agents/agent-factory.ts` | Tool input repair |
 | `router.classifyUserMessage` | `src/ai/agents/router-agent.ts` | Message classification |
 | `agent.memory.summarize` | `src/ai/agents/memory-agent.ts` | Memory write summary |
+| `hotel.personalize` | `src/ai/services/hotel-personalization.ts` | Hotel personalization |
 | `memory.insights.generate` | `src/app/api/memory/[intent]/[userId]/route.ts` | Insights generation (`intent="insights"`) |
 | `ai.stream.demo` | `src/app/api/ai/stream/route.ts` | Demo streaming route (requires `ENABLE_AI_DEMO="true"`) |
+| `embeddings.generate` | `src/app/api/embeddings/route.ts` | Public embedding route |
+| `trips.suggestions.generate` | `src/app/api/trips/suggestions/_handler.ts` | Trip suggestion generation |
+| `memory.semantic_query.embed` | `src/lib/memory/supabase-adapter.ts` | Semantic memory query embedding |
+| `rag.indexer.embed_many` | `src/lib/rag/indexer.ts` | Batched embeddings; inputs and outputs disabled |
+| `rag.reranker.together` | `src/lib/rag/reranker.ts` | Together.ai reranking |
+| `rag.retriever.embed` | `src/lib/rag/retriever.ts` | Retrieval query embedding |
+| `rag.semantic_search.embed` | `src/lib/rag/retriever.ts` | Semantic-search query embedding |
 
 ## Telemetry-safe identifiers
 

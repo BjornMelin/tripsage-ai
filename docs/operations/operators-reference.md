@@ -1,6 +1,6 @@
 # TripSage Operators Reference (frontend-only)
 
-All runtime is Next.js 16 with AI SDK v6 route handlers.
+All runtime is Next.js 16 with AI SDK v7 route handlers on Node.js 24.
 
 ## Prerequisites
 
@@ -8,6 +8,8 @@ All runtime is Next.js 16 with AI SDK v6 route handlers.
 - Supabase project (URL, public key, service role key, JWT secret)
 - Upstash Redis + QStash
 - Model provider keys or Vercel AI Gateway
+
+Complete the external secret and live-provider checklist in [issue #766](https://github.com/BjornMelin/tripsage-ai/issues/766) before treating a deployment as verified. Missing credentials are an operator boundary, not a code fallback condition.
 
 ## Environment Variables
 

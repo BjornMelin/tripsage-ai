@@ -85,7 +85,10 @@ TripSage development maintenance checklist and procedures.
 - [ ] Implement AI operations in API route handlers, not client slices
 - [ ] Use `convertToModelMessages()` for message transformation
 - [ ] Use `streamText()`/`generateText()` for completions
-- [ ] Return `toUIMessageStreamResponse()` for streaming responses
+- [ ] For core `streamText()` routes, convert `result.stream` with
+      `toUIMessageStream()` and return `createUIMessageStreamResponse()`
+- [ ] For `ToolLoopAgent` routes, use `createAgentRoute()` and its native
+      `createAgentUIStreamResponse()` path
 - [ ] Client-side: Use `@/lib/chat/api-client.ts` for AI API calls
 - [ ] Construct `UIMessage` with `parts` array (not `content` property)
 - [ ] Parse SSE streams for `text-delta` chunks on client

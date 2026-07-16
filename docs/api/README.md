@@ -30,7 +30,7 @@ curl http://localhost:3000/api/health
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
 | **Framework** | Next.js 16 | Server route handlers, React Server Components |
-| **AI** | AI SDK v6 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson)) | `streamText`, `generateText` + `Output.object`, tool calling, streaming |
+| **AI** | AI SDK v7 (see [Stack Versions](../architecture/system-overview.md#stack-versions-source-of-truth-packagejson)) | Provider V4, `streamText`, `generateText` + `Output.object`, tool calling, streaming |
 | **Database** | Supabase (`@supabase/ssr@^0.12.0`) | PostgreSQL, Row Level Security, SSR cookie handling |
 | **Cache/Rate Limiting** | Upstash (`@upstash/redis`, `@upstash/ratelimit`) | Redis caching, sliding window rate limits |
 | **State Management** | TanStack Query (`@tanstack/react-query@5.x`) | Client-side data fetching, caching, mutations |
@@ -53,13 +53,19 @@ export const POST = withApiGuards({
 });
 ```
 
-### AI Agent Architecture
+### AI SDK Stream Architecture
 
-AI agents use Vercel AI SDK v6 with BYOK (Bring Your Own Key) provider resolution:
+Core `streamText` routes use Vercel AI SDK v7 with Bring Your Own Key (BYOK)
+Provider V4 resolution:
 
 ```typescript
 import { resolveProvider } from "@ai/models/registry";
-import { convertToModelMessages, streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  streamText,
+  toUIMessageStream,
+} from "ai";
 
 // Resolve user's preferred AI provider (OpenAI, Anthropic, xAI, etc.)
 const { model } = await resolveProvider(userId, modelHint);
@@ -71,8 +77,17 @@ const result = streamText({
   messages: await convertToModelMessages(messages),
 });
 
-return result.toUIMessageStreamResponse({ originalMessages: messages });
+const stream = toUIMessageStream({
+  stream: result.stream,
+  originalMessages: messages,
+});
+
+return createUIMessageStreamResponse({ stream });
 ```
+
+`ToolLoopAgent` endpoints under `/api/agents` use the shared
+`createAgentRoute()` factory, which returns `createAgentUIStreamResponse()`.
+The memory endpoint uses the core stream helper pair shown above.
 
 ## API Reference
 

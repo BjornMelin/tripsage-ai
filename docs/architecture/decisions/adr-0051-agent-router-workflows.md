@@ -1,6 +1,7 @@
 # ADR-0051: TripSage Agent Router and Workflow HTTP API
 
 Status: Accepted  
+AI SDK Runtime Superseded By: [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 Date: 2025-11-21
 Category: Architecture
 Domain: AI Orchestration / Frontend

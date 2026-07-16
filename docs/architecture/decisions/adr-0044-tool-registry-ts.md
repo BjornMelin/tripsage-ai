@@ -2,6 +2,7 @@
 
 **Date:** 2025-11-11
 **Status:** Accepted
+**AI SDK Runtime Superseded By:** [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 **Version:** 1.0.0
 **Category:** frontend
 **Domain:** AI SDK v6

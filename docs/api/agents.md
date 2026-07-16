@@ -1,10 +1,10 @@
 # AI Agents
 
-Agent workflow endpoints return Server-Sent Events (SSE) streams using AI SDK v6 UI message format. `/api/agents/router` is the exception: it returns a JSON intent-classification result.
+Agent workflow endpoints return Server-Sent Events (SSE) streams using the AI SDK v7 UI message format. `/api/agents/router` is the exception: it returns a JSON intent-classification result.
 
 ## Streaming Overview
 
-Agent workflow endpoints use Server-Sent Events (SSE) for streaming responses. The stream contains AI SDK v6 UI messages that can be consumed using `ReadableStream` or `EventSource` in JavaScript.
+Agent workflow endpoints use Server-Sent Events (SSE) for streaming responses. JavaScript clients consume the AI SDK v7 UI message stream from a `fetch()` response with `ReadableStream`.
 
 **Authentication Note**: All agent endpoints require authentication. Use the `sb-access-token` cookie (Supabase default cookie name) or pass the JWT token via `Authorization: Bearer <token>` header.
 
@@ -375,9 +375,12 @@ Generic AI streaming endpoint for testing and demo purposes. Disabled by default
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `prompt` | string | No | Prompt to send when `messages` is omitted (max 4000 chars) |
-| `messages` | array | No | Message array (max 16) with `{ role: one of system, user, assistant; content: string (max 2000 chars) }` |
+| `messages` | array | No | Message array (max 16) with `{ role: one of user, assistant; content: string (max 2000 chars) }` |
 | `model` | string | No | Compact provider model identifier such as `gpt-5.5` or `openai/gpt-5.5` (defaults are owned by `@ai/models/defaults`) |
 | `desiredMaxTokens` | number | No | Desired output token budget (1–4096, default: 512) |
+
+`system` messages are intentionally rejected. Trusted instructions are owned by the
+server and cannot be supplied through this endpoint.
 
 ### Response
 

@@ -167,11 +167,18 @@ if (error instanceof GoogleCalendarApiError) {
 throw error; // Let withApiGuards handle unknown errors
 ```
 
-### 5.2 AI SDK v6 usage
+### 5.2 AI SDK v7 usage
 
-- Use AI SDK v6 primitives only; no custom streaming/tool-calling.
-- Chat/streaming: `convertToModelMessages()` → `streamText(tools, outputs)` → `result.toUIMessageStreamResponse()`.
+- Use AI SDK v7 and Provider V4 primitives only. AI SDK packages require Node.js 22 or newer and ESM imports.
+- Pass trusted server prompts through `instructions`; do not put user-controlled system messages in `messages`.
+- Keep agent `instructions` static. Put validated request parameters only in the canonical user message; never interpolate request values into privileged instructions.
+- Reconstruct client-authored user parts from approved text/file fields before persistence or conversion. Never accept client `providerReference`, provider metadata/options, reasoning, source, data, or tool parts.
+- Keep retrieved memory out of `instructions`; encode bounded memory as an untrusted user-role `memoryContext` message immediately before the latest user request.
+- Use stable Core and agent names (`repairToolCall`, `onEnd`, `onStepEnd`) without v6 aliases. `useChat` keeps its native `onFinish` callback.
+- Core `streamText` routes: `convertToModelMessages()` → `streamText()` → `toUIMessageStream({ stream: result.stream })` → `createUIMessageStreamResponse()`.
+- `ToolLoopAgent` routes: use the shared `createAgentRoute()` factory, which returns `createAgentUIStreamResponse()`.
 - Structured JSON: use `generateText`/`streamText` with `Output.object({ schema })` and Zod schemas from `@schemas/*`.
+- Telemetry: use `telemetry`, `runtimeContext`, and explicit `includeRuntimeContext` keys. Never record prompts, outputs, headers, secrets, or raw identifiers.
 
 ### 5.2.1 Markdown rendering (Streamdown v2)
 
@@ -225,7 +232,7 @@ throw error; // Let withApiGuards handle unknown errors
 - **MSW-first:** Network mocking via MSW only; never `vi.mock("fetch")`. Handlers in `src/test/msw/handlers/*`.
 - **Mock order:** Mock `next/headers` BEFORE importing modules that read cookies. Use `vi.hoisted()` for spies.
 - **Timers:** No global `vi.useFakeTimers()`; use `withFakeTimers` wrapper from `@/test/utils/with-fake-timers`.
-- **AI SDK tests:** Use `MockLanguageModelV3`, `createMockModelWithTracking` from `@/test/ai-sdk/*`.
+- **AI SDK tests:** Use `MockLanguageModelV4`, `createMockModelWithTracking` from `@/test/ai-sdk/*`.
 - **Coverage:** ≥85% overall; meet `vitest.config.ts` thresholds.
 - **Details:** See `docs/development/testing/testing.md`.
 

@@ -6,39 +6,40 @@ Audience: technical contributors who need an up-to-date, implementation-focused 
 
 ```mermaid
 graph TD
-    FE["Next.js 16 (React 19)<br/>App Router · RSC-first · Client islands"] -->|"Route Handlers"| API["/api/*<br/>AI SDK v6 · Zod validation · BYOK/ Gateway"]
+    FE["Next.js 16 (React 19)<br/>App Router · RSC-first · Client islands"] -->|"Route Handlers"| API["/api/*<br/>AI SDK v7 · Zod validation · BYOK/ Gateway"]
     API -->|"Auth + DB"| DB["Supabase PostgreSQL<br/>RLS · Vault · pgvector · Realtime"]
     API -->|"Cache / Limits"| REDIS["Upstash Redis<br/>HTTP API · sliding window"]
     API -->|"Background jobs"| QSTASH["Upstash QStash<br/>webhook tasks"]
     API -->|"Storage"| STORAGE["Supabase Storage<br/>signed URLs"]
-    API -->|"Telemetry"| OTEL["OpenTelemetry via @vercel/otel"]
+    API -->|"Telemetry"| OTEL["OpenTelemetry via @vercel/otel + @ai-sdk/otel"]
     API -->|"External providers"| PROVIDERS["Vercel AI Gateway / OpenAI / Anthropic / xAI<br/>Google Maps · Stripe · Resend"]
     FE --> RT["Supabase Realtime<br/>broadcast · presence"]
 ```
 
 ## Stack Versions (source of truth: package.json)
 
-- ai: 6.0.191
-- @ai-sdk/react: 3.0.193
-- @ai-sdk/openai: 3.0.65
-- @ai-sdk/anthropic: 3.0.79
-- @ai-sdk/xai: 3.0.92
-- @ai-sdk/togetherai: 2.0.53
-- @ai-sdk/provider: 3.0.10
+- ai: 7.0.28
+- @ai-sdk/react: 4.0.30
+- @ai-sdk/openai: 4.0.14
+- @ai-sdk/anthropic: 4.0.15
+- @ai-sdk/xai: 4.0.13
+- @ai-sdk/togetherai: 3.0.11
+- @ai-sdk/provider: 4.0.3
+- @ai-sdk/otel: 1.0.28
 - zod: 4.4.3
 
 ## Stack Snapshot (high level)
 
 - Framework: Next.js App Router + React 19 + TypeScript
-- AI: AI SDK v6 with Gateway/BYOK provider routing
+- AI: AI SDK v7 with Gateway/BYOK Provider V4 routing
 - Data: Supabase Postgres (RLS-first), Realtime, Storage, Vault
 - Cache/Jobs: Upstash Redis/Ratelimit/QStash
 - UI: Radix primitives + Tailwind CSS v4 + Motion
-- Observability: OpenTelemetry via `@vercel/otel`
+- Observability: OpenTelemetry via `@vercel/otel` and `@ai-sdk/otel`
 
 ## Key Capabilities
 
-- Streaming chat and tool calling via AI SDK v6 using shared Zod schemas in `src/domain/schemas` via `@schemas/*`.
+- Streaming chat and tool calling via AI SDK v7 using shared Zod schemas in `src/domain/schemas` via `@schemas/*`.
 - Agent routes for flights, accommodations, destinations, itineraries, budget, and memory (`/api/agents/*`) with domain-specific tool sets.
 - BYOK + Vercel AI Gateway routing; provider resolution order is owned by `docs/operations/runbooks/byok-gateway-operator.md`.
 - Memory pipeline backed by Supabase Postgres + pgvector; QStash jobs cap inserts to 50 messages per batch and enforce idempotency.
@@ -52,7 +53,10 @@ graph TD
 
 - App Router with RSC-first rendering; client components only where interactivity is required.
 - Route handlers live in `src/app/api/**/route.ts`. They parse input (Zod), create request-scoped collaborators (Supabase, rate limiter, providers), and delegate to pure handlers. No module-scope state.
-- AI SDK v6 is the only LLM transport (`streamText`, `generateText` + `Output.object`); structured outputs use Zod schemas under `src/domain/schemas` via `@schemas/*`.
+- AI SDK v7 is the only AI model transport (`streamText`, `ToolLoopAgent`,
+  `generateText` + `Output.object`, `embed`/`embedMany`, and `rerank`);
+  structured outputs use Zod schemas under `src/domain/schemas` via
+  `@schemas/*`.
 - Caching and rate limiting use per-request Upstash Redis/RateLimit instances. Auth-dependent routes remain dynamic (no cache).
 - Background/async work uses QStash webhooks; handlers are stateless and idempotent.
 
@@ -77,7 +81,7 @@ graph TD
 
 - Use `withTelemetrySpan` / `withTelemetrySpanSync`, `recordTelemetryEvent`, and `createServerLogger` (see `src/lib/telemetry` and [Observability](../development/backend/observability.md#approved-telemetry--logging-entrypoints)). Console logging is reserved for tests/client-only code.
 - OpenTelemetry exporters are wired through `@vercel/otel`; spans wrap API handlers and external calls.
-- Automatic tracing is registered in `src/instrumentation.ts` via `registerOTel({ serviceName: "tripsage-frontend" })`.
+- `src/instrumentation.ts` registers `@vercel/otel`, then the native `@ai-sdk/otel` integration with explicit runtime-context selection.
 - Critical-path failures should emit `emitOperationalAlert` for downstream alerting (see `src/lib/telemetry/alerts.ts`).
 
 ### External Integrations (present in repo)
@@ -90,7 +94,7 @@ graph TD
 ## Representative Workflows
 
 - **Chat + tool calling**: `POST /api/chat` → Zod validation → Supabase auth → Upstash rate limit → provider resolution → `streamText` with tools → AI SDK UI message stream to UI → telemetry span with provider/tool attributes.
-- **Flight or accommodation search**: `POST /api/agents/flights|accommodations` → same guard pipeline → domain tools (external API or MCP adapters) → structured results streamed back; attachments handled via signed URLs when present.
+- **Flight or accommodation search**: `POST /api/agents/flights|accommodations` → same guard pipeline → `ToolLoopAgent` with domain tools (external API or MCP adapters) → `createAgentUIStreamResponse()` → structured results streamed back; attachments handled via signed URLs when present.
 - **Memory sync job (QStash)**: Frontend enqueues job → QStash webhook calls `/api/jobs/memory-sync` with Upstash signature → signature verify + Redis idempotency key → payload validated → batch limited to 50 messages → Supabase inserts/updates chat session + memories → telemetry recorded; duplicates short-circuit with `{ duplicate: true }`.
 - **Realtime collaboration**: Clients subscribe via `use-realtime-channel` to `session:{id}` / `trip:{id}` topics for presence/broadcast; server never emits LLM tokens over Realtime.
 - **Attachments**: Client uploads to Supabase Storage (`attachments` bucket); server issues signed URLs; Postgres rows track ownership and metadata.
@@ -116,7 +120,7 @@ sequenceDiagram
     RH->>REG: resolve provider (gateway/BYOK)
     RH->>LLM: streamText({ messages, tools, schema })
     LLM-->>RH: stream parts (text/tool calls)
-    RH-->>UI: UI message stream (toUIMessageStreamResponse)
+    RH-->>UI: UI message stream (toUIMessageStream + createUIMessageStreamResponse)
     RH->>OBS: span + attrs (provider, tool, latency)
 ```
 
@@ -175,5 +179,5 @@ sequenceDiagram
 ## Invariants
 
 - Single Next.js codebase; legacy Python/FastAPI services are removed and unsupported.
-- No custom streaming frameworks—AI SDK v6 is the sole LLM transport.
+- No custom streaming frameworks. AI SDK v7 UI message stream helpers are the only LLM streaming transport.
 - Remove deprecated paths when new implementations land (final-only policy).

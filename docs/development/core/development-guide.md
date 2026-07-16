@@ -13,7 +13,7 @@ TripSage development patterns and architecture overview. This document provides 
 | **Framework** | Next.js 16 | Server route handlers, React Server Components |
 | **React** | React 19 | UI with concurrent features |
 | **Language** | TypeScript 6 | Strict mode, full type safety |
-| **AI** | AI SDK v6 (`ai` package version from `package.json`) | `streamText`, `generateText` + `Output.object`, tool calling |
+| **AI** | AI SDK v7 (`ai` package version from `package.json`) | Provider V4, `streamText`, `generateText` + `Output.object`, tool calling |
 | **Database** | Supabase PostgreSQL | RLS, pgvector, Realtime |
 | **Cache** | Upstash Redis | HTTP REST API, rate limiting |
 | **Auth** | Supabase SSR | Cookie-based sessions |
@@ -121,27 +121,26 @@ Rate limits are configured in `src/lib/ratelimit/routes.ts`. See [Standards](../
 
 ### AI Agents
 
-Frontend-only AI agents use Vercel AI SDK v6:
+Frontend-only AI agents use Vercel AI SDK v7 through the shared route factory:
 
 ```typescript
-// app/api/agents/flights/route.ts
 import "server-only";
-import type { NextRequest } from "next/server";
-import { runFlightAgent } from "@/lib/agents/flight-agent";
-import { resolveProvider } from "@ai/models/registry";
-import { createServerSupabase } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+import { createFlightAgent } from "@ai/agents/flight-agent";
+import { flightSearchRequestSchema } from "@schemas/flights";
+import { createAgentRoute } from "@/lib/api/factory";
 
-export async function POST(req: NextRequest): Promise<Response> {
-  const supabase = await createServerSupabase();
-  const user = (await supabase.auth.getUser()).data.user;
-  const body = await req.json();
-  const { model } = await resolveProvider(user?.id ?? "anon");
-  const result = runFlightAgent({ identifier: user?.id, model }, body);
-  return result.toUIMessageStreamResponse();
-}
+export const POST = createAgentRoute({
+  agentFactory: createFlightAgent,
+  agentType: "flightAgent",
+  rateLimit: "agents:flight",
+  schema: flightSearchRequestSchema,
+  telemetry: "agent.flightSearch",
+});
 ```
+
+`createAgentRoute()` resolves the Provider V4 model and returns the agent stream
+with AI SDK v7's native `createAgentUIStreamResponse()` helper.
 
 See [AI Integration](../ai/ai-integration.md) for provider configuration and [AI Tools](../ai/ai-tools.md) for tool creation.
 

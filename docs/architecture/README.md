@@ -38,7 +38,7 @@ implementation details.
 - **[System Overview](system-overview.md)** - Complete system architecture
   with component interactions, data flow, and technology stack
 - **[Frontend Architecture](frontend-architecture.md)** - Next.js
-  application structure, AI SDK v6 integration, component organization,
+  application structure, AI SDK v7 integration, component organization,
   and data flows
 
 ### Database & Storage Architecture
@@ -101,7 +101,7 @@ tripsage-ai/
 
 Next.js 16 application with App Router and React 19. See
 [Frontend Architecture](frontend-architecture.md) for detailed
-structure, AI SDK v6 integration, and component organization.
+structure, AI SDK v7 integration, and component organization.
 
 #### Tests
 
@@ -127,7 +127,7 @@ Playwright, critical-flow, and live-smoke lanes.
 - Next.js 16 + React 19 application at repository root.
 - Supabase SSR/Auth/Vault/Realtime and pgvector as the data plane.
 - Upstash Redis/QStash/Ratelimit as the cache, rate-limit, and job plane.
-- AI SDK v6 with Vercel AI Gateway and BYOK provider resolution.
+- AI SDK v7 with Provider V4 Vercel AI Gateway and BYOK resolution.
 - Vercel CLI prebuilt deploys with smoke-before-promote.
 
 ---

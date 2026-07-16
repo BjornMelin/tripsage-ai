@@ -2,6 +2,7 @@
 
 **Version**: 1.0.0  
 **Status**: Accepted  
+**AI SDK Runtime Superseded By**: [ADR-0074](adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md)
 **Date**: 2026-01-19  
 **Category**: Architecture  
 **Domain**: Memory + RAG  
@@ -40,8 +41,8 @@ We will:
 
    - Reranking provider: Together.ai via `@ai-sdk/togetherai`.
    - Model: `mixedbread-ai/Mxbai-Rerank-Large-V2`.
-   - Controlled by `useReranking` and the presence of `TOGETHER_AI_API_KEY`.
-   - If `TOGETHER_AI_API_KEY` is unset, reranking degrades to a no-op reranker (no repeated provider errors; no extra cost).
+   - Controlled by `useReranking` and the presence of `TOGETHER_API_KEY`.
+   - If `TOGETHER_API_KEY` is unset, reranking degrades to a no-op reranker (no repeated provider errors; no extra cost).
 
    This is implemented in `src/lib/rag/reranker.ts`.
 

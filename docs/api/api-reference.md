@@ -13,7 +13,7 @@ Conventions
 - **Internal key**: Some privileged endpoints require `x-internal-key` and are disabled unless explicitly enabled via env.
 - **Rate limit**: Per-route keys (e.g., `trips:list`, `places:search`); 429 on exceed.
 - **Errors**: `{ "error": "<code>", "reason": "<human text>", "issues"?: [...] }`
-- **Streaming**: “SSE stream” returns Server-Sent Events (AI SDK v6 UI stream).
+- **Streaming**: “SSE stream” returns Server-Sent Events (AI SDK v7 UI stream).
 
 Quick trip examples
 
@@ -81,7 +81,7 @@ Example (details)
 curl "$BASE/places/details/ChIJN1t_tDeuEmsRUsoyG83frY4"
 ```
 
-### Agents (AI SDK v6, Auth)
+### Agents (AI SDK v7, Auth)
 
 - `POST /agents/flights` — Streaming flight search.
 - `POST /agents/accommodations` — Streaming accommodation search.

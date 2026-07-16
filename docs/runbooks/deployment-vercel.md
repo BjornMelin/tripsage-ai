@@ -11,6 +11,8 @@ Issue #733 supersedes the broad placeholder direction in #233 for the web app
 deployment path. Keep #233 only for remaining infrastructure work that is not
 covered by this Vercel CLI runbook.
 
+[Issue #766](https://github.com/BjornMelin/tripsage-ai/issues/766) tracks the operator-managed secrets and live provider checks that cannot be completed from repository code. Do not bypass missing variables, commit secret values, or report a deployment as verified before those checks pass.
+
 ## Production provenance gate
 
 Before reading deployment secrets, production runs execute

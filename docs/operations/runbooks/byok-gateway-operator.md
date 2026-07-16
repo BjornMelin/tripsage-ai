@@ -85,6 +85,8 @@ curl -X POST https://<project>.supabase.co/rest/v1/rpc/get_user_allow_gateway_fa
 
 All resolution happens server-side (`@ai/models/registry`); keys are never exposed to the client.
 
+AI SDK v7 returns Provider V4 models directly. Gateway models need no local adapter. Direct OpenAI uses `.responses()`, OpenRouter uses `.chat()`, Anthropic uses `.languageModel()`, and xAI uses `.chat()` explicitly to preserve chat-completions behavior.
+
 ## App Endpoints to Exercise
 
 - `POST /api/keys` — insert BYOK or Gateway key (`service:"gateway"` optional `baseUrl`).
@@ -106,6 +108,7 @@ All resolution happens server-side (`@ai/models/registry`); keys are never expos
 - **No fallback despite team key**: ensure `allowGatewayFallback=true` for user and `AI_GATEWAY_API_KEY` set.
 - **High latency resolving provider**: check Vault availability; reduce repeated lookups or cache consent in request scope.
 - **RPC denied**: verify migrations applied and functions marked SECURITY DEFINER; call with service role token.
+- **Provider smoke blocked by missing secrets**: complete [issue #766](https://github.com/BjornMelin/tripsage-ai/issues/766). Do not add fallback credentials or weaken provider validation.
 
 ## Change Management Checklist
 
