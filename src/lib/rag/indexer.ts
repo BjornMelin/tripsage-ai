@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import type {
   IndexerConfig,
   RagDocument,
@@ -471,20 +472,11 @@ async function indexBatch(params: IndexBatchParams): Promise<IndexBatchResult> {
       abortSignal: AbortSignal.timeout(
         getEmbedTimeoutMs(allChunks.length, config.maxParallelCalls)
       ),
-      // biome-ignore lint/style/useNamingConvention: AI SDK option name.
-      experimental_telemetry: {
-        functionId: "rag.indexer.embed_many",
-        isEnabled: true,
-        metadata: {
-          batchStartIndex,
-          chunkCount: allChunks.length,
-          namespace: config.namespace,
-        },
-        recordInputs: false,
-        recordOutputs: false,
-      },
       maxParallelCalls: config.maxParallelCalls,
       model: getTextEmbeddingModel(),
+      telemetry: createAiTelemetry({
+        functionId: "rag.indexer.embed_many",
+      }),
       values: allChunks.map((c) => c.chunk),
     });
   } catch (error) {

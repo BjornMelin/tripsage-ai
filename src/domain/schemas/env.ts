@@ -230,7 +230,7 @@ const aiServiceEnvSchema = z.object({
   RESEND_FROM_EMAIL: z.email().optional(),
   RESEND_FROM_NAME: z.string().optional(),
   // Together.ai (used for reranking)
-  TOGETHER_AI_API_KEY: apiKeySchema("TOGETHER_AI_API_KEY"),
+  TOGETHER_API_KEY: apiKeySchema("TOGETHER_API_KEY"),
   // xAI API key (server-side fallback)
   XAI_API_KEY: apiKeySchema("XAI_API_KEY"),
 });

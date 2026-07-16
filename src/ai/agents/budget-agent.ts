@@ -1,5 +1,5 @@
 /**
- * @fileoverview Budget planning agent using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Budget planning agent using AI SDK v7 ToolLoopAgent.
  */
 
 import "server-only";
@@ -33,7 +33,7 @@ const BUDGET_TOOLS = {
 } satisfies ToolSet;
 
 /**
- * Creates a budget planning agent using AI SDK v6 ToolLoopAgent.
+ * Creates a budget planning agent using AI SDK v7 ToolLoopAgent.
  *
  * Autonomously researches destinations, gathers pricing data, and generates
  * structured budget allocations through phased tool calling (research → pricing → allocation).
@@ -62,7 +62,7 @@ export function createBudgetAgent(
   input: BudgetPlanRequest
 ): TripSageAgentResult<typeof BUDGET_TOOLS> {
   const params = extractAgentParameters(config);
-  const instructions = buildBudgetPrompt(input);
+  const instructions = buildBudgetPrompt();
 
   const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,

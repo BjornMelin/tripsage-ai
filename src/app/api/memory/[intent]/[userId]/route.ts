@@ -5,6 +5,7 @@
 import "server-only";
 
 import { resolveProvider } from "@ai/models/registry";
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
 import { addConversationMemory } from "@ai/tools";
 import type { MemoryContextResponse } from "@schemas/chat";
@@ -204,6 +205,7 @@ const postPreferences = withApiGuards({
               content: entry.content,
             },
             {
+              context: undefined,
               messages: [],
               toolCallId: `memory-pref-${secureUuid()}`,
             }
@@ -226,13 +228,13 @@ const postPreferences = withApiGuards({
       const preferencesResponse = Object.fromEntries(
         preferenceEntries.map(({ key }, index) => {
           const result = results[index];
-          if (!result || result.status !== "fulfilled") return [key, null] as const;
+          if (result?.status !== "fulfilled") return [key, null] as const;
           return [key, result.value] as const;
         })
       );
       const failedKeys = preferenceEntries
         .map(({ key }, index) => ({ key, result: results[index] }))
-        .filter(({ result }) => !result || result.status !== "fulfilled")
+        .filter(({ result }) => result?.status !== "fulfilled")
         .map(({ key }) => key);
 
       const updated = results.filter((result) => result.status === "fulfilled").length;
@@ -328,17 +330,20 @@ const getInsights = withApiGuards({
 
       const result = await generateText({
         abortSignal: req.signal,
-        experimental_telemetry: {
-          functionId: "memory.insights.generate",
-          isEnabled: true,
-          metadata: {
-            contextItemCount: limitedContext.length,
-            modelId,
-          },
-        },
         model,
         output: Output.object({ schema: MEMORY_INSIGHTS_RESPONSE_SCHEMA }),
         prompt,
+        runtimeContext: {
+          contextItemCount: limitedContext.length,
+          modelId,
+        },
+        telemetry: createAiTelemetry({
+          functionId: "memory.insights.generate",
+          includeRuntimeContext: {
+            contextItemCount: true,
+            modelId: true,
+          },
+        }),
         temperature: 0.3,
         timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
       });

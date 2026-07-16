@@ -29,6 +29,7 @@ vi.mock("@domain/activities/service", () => ({
 }));
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

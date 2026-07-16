@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { buildUpstashCacheMock } from "@/test/mocks/cache";
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

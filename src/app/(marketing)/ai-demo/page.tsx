@@ -1,5 +1,5 @@
 /**
- * @fileoverview Minimal AI SDK v6 demo page rendering a conversation area and a PromptInput from AI Elements, wired to the demo streaming route.
+ * @fileoverview Minimal AI SDK v7 demo page rendering a conversation area and a PromptInput from AI Elements, wired to the demo streaming route.
  */
 
 "use client";
@@ -21,7 +21,7 @@ import { Response } from "@/components/ai-elements/response";
 import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 
 /**
- * Render the AI SDK v6 demo page.
+ * Render the AI SDK v7 demo page.
  *
  * Submits user input to `/api/ai/stream` and appends streamed chunks to
  * a preview area. This page intentionally keeps logic minimal for foundations.
@@ -76,6 +76,7 @@ export default function AiDemoPage() {
 
         const decoder = new TextDecoder();
         let buffer = "";
+        let hasTerminalMarker = false;
         let shouldStop = false;
         // Parse UI Message Stream events and append text parts
         while (true) {
@@ -93,24 +94,45 @@ export default function AiDemoPage() {
               const data = trimmed.slice(5).trim();
               if (!data) continue;
               if (data === "[DONE]") {
+                hasTerminalMarker = true;
                 shouldStop = true;
                 break;
               }
+              let payload: unknown;
               try {
-                const payload = JSON.parse(data) as { type?: string; delta?: string };
-                if (
-                  payload.type === "text-delta" &&
-                  typeof payload.delta === "string"
-                ) {
-                  setOutput((prev) => prev + payload.delta);
-                }
+                payload = JSON.parse(data);
               } catch {
                 // Ignore malformed chunks
+                continue;
+              }
+              if (!payload || typeof payload !== "object") continue;
+              const chunk = payload as Record<string, unknown>;
+              if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
+                setOutput((prev) => prev + chunk.delta);
+              } else if (chunk.type === "finish") {
+                hasTerminalMarker = true;
+              } else if (chunk.type === "abort") {
+                reader.cancel().catch(() => {
+                  // Preserve the generic abort error.
+                });
+                throw new Error("AI stream was interrupted");
+              } else if (chunk.type === "error") {
+                reader.cancel().catch(() => {
+                  // Preserve the server-provided stream error.
+                });
+                throw new Error(
+                  typeof chunk.errorText === "string" && chunk.errorText.trim()
+                    ? chunk.errorText
+                    : "AI stream failed"
+                );
               }
             }
             if (shouldStop) break;
           }
           if (shouldStop) break;
+        }
+        if (!hasTerminalMarker) {
+          throw new Error("AI stream ended unexpectedly");
         }
         logTelemetry("success");
       } catch (err) {
@@ -149,7 +171,7 @@ export default function AiDemoPage() {
         >
           <PromptInputBody>
             <PromptInputTextarea
-              placeholder="Say hello to AI SDK v6"
+              placeholder="Say hello to AI SDK v7"
               disabled={isLoading}
             />
           </PromptInputBody>

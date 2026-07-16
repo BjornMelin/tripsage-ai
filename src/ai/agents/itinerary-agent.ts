@@ -67,7 +67,7 @@ export function createItineraryAgent(
   input: ItineraryPlanRequest
 ): TripSageAgentResult<typeof BASE_ITINERARY_TOOLS> {
   const params = extractAgentParameters(config);
-  const instructions = buildItineraryPrompt(input);
+  const instructions = buildItineraryPrompt();
 
   const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,

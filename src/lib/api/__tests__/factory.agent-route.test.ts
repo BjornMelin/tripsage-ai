@@ -143,7 +143,17 @@ describe("createAgentRoute", () => {
     expect(opts.timeout).toEqual(buildTimeoutConfigFromSeconds(42, 10_000));
     expect(opts.sendSources).toBe(true);
 
-    const usage = { completionTokens: 2, promptTokens: 1, totalTokens: 3 };
+    const usage = {
+      inputTokenDetails: {
+        cacheReadTokens: undefined,
+        cacheWriteTokens: undefined,
+        noCacheTokens: 1,
+      },
+      inputTokens: 1,
+      outputTokenDetails: { reasoningTokens: undefined, textTokens: 2 },
+      outputTokens: 2,
+      totalTokens: 3,
+    };
     const startMetadata = opts.messageMetadata?.({ part: { type: "start" } }) as {
       agentType?: string;
       modelId?: string;

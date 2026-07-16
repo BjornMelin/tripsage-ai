@@ -182,7 +182,7 @@ export class StateDepartmentProvider implements AdvisoryProvider {
    * @returns Promise resolving to safety result or null if not found.
    */
   async getCountryAdvisory(countryCode: string): Promise<SafetyResult | null> {
-    if (!countryCode || countryCode.length !== 2) {
+    if (countryCode?.length !== 2) {
       return null;
     }
 

@@ -19,7 +19,7 @@ export const anthropicModelsHandler = http.get(ANTHROPIC_MODELS_URL, () =>
  * Default AI provider handlers providing happy-path responses.
  *
  * Note: These are placeholder handlers. Actual AI SDK streaming
- * should be mocked using official AI SDK test utilities (MockLanguageModelV3).
+ * should be mocked using official AI SDK test utilities (MockLanguageModelV4).
  */
 export const aiProviderHandlers: HttpHandler[] = [
   anthropicModelsHandler,

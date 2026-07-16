@@ -217,6 +217,7 @@ const postConversations = withApiGuards({
         content,
       },
       {
+        context: undefined,
         messages: [],
         toolCallId: `memory-${secureUuid()}`,
       }

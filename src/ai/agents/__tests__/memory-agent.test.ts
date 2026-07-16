@@ -1,8 +1,27 @@
 /** @vitest-environment node */
 
 import type { MemoryUpdateRequest } from "@schemas/agents";
+import type { AgentConfig } from "@schemas/configuration";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { createMockModel } from "@/test/ai-sdk/mock-model";
+
+const clampMaxTokensMock = vi.hoisted(() =>
+  vi.fn(() => ({ maxOutputTokens: 256, reasons: [] }))
+);
+const streamTextMock = vi.hoisted(() =>
+  vi.fn(() => ({ stream: new ReadableStream() }))
+);
+
+vi.mock("ai", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("ai")>()),
+  streamText: streamTextMock,
+}));
+
+vi.mock("@/lib/tokens/budget", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/tokens/budget")>()),
+  clampMaxTokens: clampMaxTokensMock,
+}));
 
 const createAiToolMock = vi.hoisted(() =>
   vi
@@ -40,14 +59,19 @@ vi.mock("@ai/tools", () => ({
 }));
 
 let persistMemoryRecords: typeof import("@ai/agents/memory-agent").persistMemoryRecords;
+let runMemoryAgent: typeof import("@ai/agents/memory-agent").runMemoryAgent;
 
 describe("persistMemoryRecords", () => {
   beforeAll(async () => {
-    ({ persistMemoryRecords } = await import("@ai/agents/memory-agent"));
+    ({ persistMemoryRecords, runMemoryAgent } = await import(
+      "@ai/agents/memory-agent"
+    ));
   });
   beforeEach(() => {
     createAiToolMock.mockClear();
+    clampMaxTokensMock.mockClear();
     hoisted.executeSpy.mockClear();
+    streamTextMock.mockClear();
   });
 
   it("writes one call per record with correct payloads", async () => {
@@ -100,6 +124,48 @@ describe("persistMemoryRecords", () => {
     };
     await expect(persistMemoryRecords("user-1", big)).rejects.toThrow(
       /too_many_records/
+    );
+  });
+
+  it("budgets trusted instructions but sends only the user summary message", async () => {
+    const config: AgentConfig = {
+      agentType: "memoryAgent",
+      createdAt: "2026-07-15T00:00:00.000Z",
+      id: "v1_deadbeef",
+      model: "gpt-5.5",
+      parameters: {},
+      scope: "global",
+      updatedAt: "2026-07-15T00:00:00.000Z",
+    };
+    const input: MemoryUpdateRequest = {
+      records: [{ content: "I prefer window seats" }],
+    };
+
+    await runMemoryAgent(
+      {
+        identifier: "user-123",
+        model: createMockModel(),
+        modelId: "gpt-5.5",
+      },
+      config,
+      input
+    );
+
+    const instructions =
+      "You are a concise memory assistant. A batch of user memories was written. Summarize results briefly without echoing private content.";
+    expect(clampMaxTokensMock).toHaveBeenCalledWith(
+      [
+        { content: instructions, role: "system" },
+        { content: expect.stringContaining("Results:"), role: "user" },
+      ],
+      512,
+      "gpt-5.5"
+    );
+    expect(streamTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions,
+        messages: [{ content: expect.stringContaining("Results:"), role: "user" }],
+      })
     );
   });
 });

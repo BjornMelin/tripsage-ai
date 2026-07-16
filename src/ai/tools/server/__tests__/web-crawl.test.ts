@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { server } from "@/test/msw/server";
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

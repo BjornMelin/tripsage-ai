@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import { togetherai } from "@ai-sdk/togetherai";
 import type { RagSearchResult, RerankerConfig } from "@schemas/rag";
 import { rerankerConfigSchema } from "@schemas/rag";
@@ -38,7 +39,7 @@ export interface Reranker {
  * Together.ai reranker using Mixedbread mxbai-rerank-large-v2.
  *
  * Features:
- * - Native AI SDK v6 support via @ai-sdk/togetherai
+ * - Native AI SDK v7 support via @ai-sdk/togetherai
  * - 100+ languages, 8K context, code/SQL support
  */
 export class TogetherReranker implements Reranker {
@@ -77,6 +78,7 @@ export class TogetherReranker implements Reranker {
             maxRetries: this.config.maxRetries,
             model: togetherai.reranking("mixedbread-ai/Mxbai-Rerank-Large-V2"),
             query,
+            telemetry: createAiTelemetry({ functionId: "rag.reranker.together" }),
             topN: effectiveTopN,
           });
 
@@ -151,7 +153,7 @@ export function createReranker(config: Partial<RerankerConfig> = {}): Reranker {
     case "together":
       // If Together isn't configured, degrade to no-op reranking to avoid
       // repeated provider errors and unnecessary latency/cost.
-      if (!getServerEnvVarWithFallback("TOGETHER_AI_API_KEY", undefined)) {
+      if (!getServerEnvVarWithFallback("TOGETHER_API_KEY", undefined)) {
         logger.warn("together_reranking_disabled_missing_key");
         return new NoOpReranker();
       }

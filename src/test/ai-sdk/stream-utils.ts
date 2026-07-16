@@ -1,5 +1,5 @@
 /**
- * @fileoverview Stream testing utilities for AI SDK v6.
+ * @fileoverview Stream testing utilities for AI SDK v7.
  *
  * Provides utilities for testing streaming AI responses and UI message streams.
  * Complements mock-model.ts for higher-level stream testing scenarios.
@@ -17,6 +17,12 @@
  * });
  * ```
  */
+
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type FinishReason,
+} from "ai";
 
 /**
  * Options for creating a mock streaming response.
@@ -179,7 +185,7 @@ export async function collectStreamChunksArray(
 /**
  * Creates a mock UI message stream response for testing route handlers.
  *
- * Simulates the format returned by toUIMessageStreamResponse().
+ * Simulates a response created from an AI SDK UI message stream.
  *
  * @param options Configuration for the stream
  * @returns Response object with streaming body
@@ -195,11 +201,11 @@ export async function collectStreamChunksArray(
 export function createMockUiMessageStreamResponse(options: {
   textChunks: string[];
   messageId?: string;
-  finishReason?: "stop" | "length" | "tool-calls" | "error";
+  finishReason?: FinishReason;
   toolCalls?: Array<{
     toolCallId: string;
     toolName: string;
-    args: unknown;
+    input: unknown;
   }>;
 }): Response {
   const {
@@ -209,74 +215,48 @@ export function createMockUiMessageStreamResponse(options: {
     toolCalls = [],
   } = options;
 
-  const events: string[] = [];
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      writer.write({ type: "start" });
 
-  // Start event
-  events.push(`data: ${JSON.stringify({ messageId, type: "start" })}\n\n`);
-
-  // Text content
-  if (textChunks.length > 0) {
-    events.push(`data: ${JSON.stringify({ id: "text-1", type: "text-start" })}\n\n`);
-    for (const chunk of textChunks) {
-      events.push(
-        `data: ${JSON.stringify({ delta: chunk, id: "text-1", type: "text-delta" })}\n\n`
-      );
-    }
-    events.push(`data: ${JSON.stringify({ id: "text-1", type: "text-end" })}\n\n`);
-  }
-
-  // Tool calls
-  for (const call of toolCalls) {
-    // Build events as objects and stringify once to ensure proper JSON encoding
-    const startEvent = {
-      id: call.toolCallId,
-      toolName: call.toolName,
-      type: "tool-call-start",
-    };
-    events.push(`data: ${JSON.stringify(startEvent)}\n\n`);
-
-    const argsText = JSON.stringify(call.args);
-    const chunkCount = Math.max(1, Math.ceil(argsText.length / 50));
-    const chunkSize = Math.ceil(argsText.length / chunkCount);
-    for (let idx = 0; idx < argsText.length; idx += chunkSize) {
-      const deltaEvent = {
-        argsTextDelta: argsText.slice(idx, idx + chunkSize),
-        id: call.toolCallId,
-        type: "tool-call-delta",
-      };
-      events.push(`data: ${JSON.stringify(deltaEvent)}\n\n`);
-    }
-
-    const endEvent = { id: call.toolCallId, type: "tool-call-end" };
-    events.push(`data: ${JSON.stringify(endEvent)}\n\n`);
-  }
-
-  // Finish event
-  events.push(`data: ${JSON.stringify({ finishReason, type: "finish" })}\n\n`);
-  events.push("data: [DONE]\n\n");
-
-  const encoder = new TextEncoder();
-
-  // Response bodies in Node expect bytes (Uint8Array), not strings.
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      for (let index = 0; index < events.length; index++) {
-        controller.enqueue(encoder.encode(events[index]));
-        if (index < events.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 5));
+      if (textChunks.length > 0) {
+        writer.write({ id: "text-1", type: "text-start" });
+        for (const chunk of textChunks) {
+          writer.write({ delta: chunk, id: "text-1", type: "text-delta" });
         }
+        writer.write({ id: "text-1", type: "text-end" });
       }
-      controller.close();
+
+      for (const call of toolCalls) {
+        const input = call.input ?? null;
+        writer.write({
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          type: "tool-input-start",
+        });
+        writer.write({
+          inputTextDelta: JSON.stringify(input),
+          toolCallId: call.toolCallId,
+          type: "tool-input-delta",
+        });
+        writer.write({
+          input,
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          type: "tool-input-available",
+        });
+      }
+
+      writer.write({ finishReason, type: "finish" });
     },
+    generateId: () => messageId,
   });
 
-  return new Response(stream, {
+  return createUIMessageStreamResponse({
     headers: {
       "Cache-Control": "no-cache",
-      // biome-ignore lint/style/useNamingConvention: HTTP header name
-      Connection: "keep-alive",
-      "Content-Type": "text/event-stream",
     },
+    stream,
   });
 }
 

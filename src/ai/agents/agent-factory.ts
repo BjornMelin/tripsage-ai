@@ -1,18 +1,26 @@
 /**
- * @fileoverview Factory for creating TripSage agents using AI SDK v6 ToolLoopAgent.
+ * @fileoverview Factory for creating TripSage agents using AI SDK v7 ToolLoopAgent.
  */
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfig, DEFAULT_AI_TIMEOUT_MS } from "@ai/timeout";
-import type { LanguageModel, ToolSet } from "ai";
+import type {
+  LanguageModel,
+  StopCondition,
+  TelemetryOptions,
+  ToolCallRepairFunction,
+  ToolLoopAgentSettings,
+  ToolSet,
+} from "ai";
 import {
   asSchema,
   generateText,
   InvalidToolInputError,
+  isStepCount,
   NoSuchToolError,
   Output,
-  stepCountIs,
   ToolLoopAgent,
 } from "ai";
 import { secureUuid } from "@/lib/security/random";
@@ -20,6 +28,7 @@ import { createServerLogger } from "@/lib/telemetry/logger";
 
 import type {
   AgentDependencies,
+  AgentRuntimeContext,
   TripSageAgentConfig,
   TripSageAgentResult,
 } from "./types";
@@ -39,10 +48,10 @@ const DEFAULT_STEP_LIMIT = 10;
 const DEFAULT_TEMPERATURE = 0.3;
 
 /**
- * Creates a TripSage agent using AI SDK v6 ToolLoopAgent.
+ * Creates a TripSage agent using AI SDK v7 ToolLoopAgent.
  *
  * Instantiates a reusable agent for autonomous multi-step reasoning with tool calling.
- * Runs until a stop condition is met (default: stepCountIs(stepLimit)).
+ * Runs until a stop condition is met (default: isStepCount(stepLimit)).
  *
  * Supports per-step tool selection and malformed tool-call repair.
  *
@@ -56,7 +65,7 @@ const DEFAULT_TEMPERATURE = 0.3;
  * const { agent, uiMessages } = createTripSageAgent(deps, {
  *   agentType: "budgetPlanning",
  *   name: "Budget Agent",
- *   instructions: buildBudgetPrompt(input),
+ *   instructions: buildBudgetPrompt(),
  *   tools: budgetTools,
  *   stepLimit: 10,
  *   prepareStep: async ({ stepNumber }) => {
@@ -69,23 +78,35 @@ const DEFAULT_TEMPERATURE = 0.3;
  * return createAgentUIStreamResponse({ agent, uiMessages });
  * ```
  *
- * @see docs/architecture/decisions/adr-0066-ai-sdk-v6-agents-mcp-and-message-persistence.md
+ * @see docs/architecture/decisions/adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md
  */
 export function createTripSageAgent<TagentTools extends ToolSet>(
   deps: AgentDependencies,
   config: TripSageAgentConfig<TagentTools>
 ): TripSageAgentResult<TagentTools> {
+  type RepairToolCallOptions = Parameters<ToolCallRepairFunction<TagentTools>>[0];
+  type NativeAgentSettings = ToolLoopAgentSettings<
+    never,
+    TagentTools,
+    AgentRuntimeContext
+  >;
+  type ManagedAgentSettings = {
+    id: string;
+    model: LanguageModel;
+    repairToolCall: ToolCallRepairFunction<TagentTools>;
+    runtimeContext: AgentRuntimeContext;
+    stopWhen: StopCondition<TagentTools, AgentRuntimeContext>;
+    telemetry: TelemetryOptions<AgentRuntimeContext, TagentTools>;
+    temperature: number;
+    toolChoice: "auto";
+  };
+
   const {
     agentType,
-    instructions,
-    maxOutputTokens,
     stepLimit = DEFAULT_STEP_LIMIT,
     name,
-    prepareStep,
-    temperature = DEFAULT_TEMPERATURE,
-    tools,
-    topP,
     uiMessages,
+    ...nativeSettings
   } = config;
 
   const requestId = secureUuid();
@@ -97,18 +118,18 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
     stepLimit,
   });
 
-  const agent = new ToolLoopAgent<never, TagentTools>({
-    // Prepare step function for per-step configuration
-    ...(prepareStep ? { prepareStep } : {}),
-
-    // Experimental: Automatic tool call repair for malformed inputs
-    // biome-ignore lint/style/useNamingConvention: AI SDK property name
-    experimental_repairToolCall: async ({
+  const configuredSettings = {
+    ...nativeSettings,
+    // Core configuration
+    id: `tripsage-${agentType}-${requestId}`,
+    model: deps.model,
+    // Automatic tool call repair for malformed inputs
+    repairToolCall: async ({
       error,
       inputSchema,
       toolCall,
       tools: agentTools,
-    }) => {
+    }: RepairToolCallOptions) => {
       // Don't attempt to fix invalid tool names
       if (NoSuchToolError.isInstance(error)) {
         logger.info("Tool not found, cannot repair", {
@@ -181,20 +202,22 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
         const attemptModelRepair = async (modelId: string, model: LanguageModel) => {
           const { output: repaired } = await generateText({
             abortSignal: deps.abortSignal,
-            // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
-            experimental_telemetry: {
-              functionId: "agent.tool_repair",
-              isEnabled: true,
-              metadata: {
-                agentType,
-                modelId,
-                requestId,
-                toolName: toolCall.toolName,
-              },
-            },
             model,
             output: Output.object({ schema: tool.inputSchema }),
             prompt,
+            runtimeContext: {
+              agentType,
+              modelId,
+              toolName: toolCall.toolName,
+            },
+            telemetry: createAiTelemetry({
+              functionId: "agent.tool_repair",
+              includeRuntimeContext: {
+                agentType: true,
+                modelId: true,
+                toolName: true,
+              },
+            }),
             timeout: buildTimeoutConfig(DEFAULT_AI_TIMEOUT_MS),
           });
           const schema = asSchema(tool.inputSchema);
@@ -270,30 +293,29 @@ export function createTripSageAgent<TagentTools extends ToolSet>(
         throw normalizedError;
       }
     },
+    runtimeContext: {
+      agentType,
+      modelId: deps.modelId,
+    },
+    stopWhen: isStepCount(stepLimit),
 
     // Telemetry settings
-    // biome-ignore lint/style/useNamingConvention: AI SDK API uses snake_case
-    experimental_telemetry: {
+    telemetry: createAiTelemetry({
       functionId: `agent.${agentType}`,
-      isEnabled: true,
-      metadata: {
-        agentType,
-        modelId: deps.modelId,
+      includeRuntimeContext: {
+        agentType: true,
+        modelId: true,
       },
-    },
-    // Core configuration
-    id: `tripsage-${agentType}-${requestId}`,
-    instructions,
-
-    // Generation parameters
-    maxOutputTokens,
-    model: deps.model,
-    stopWhen: stepCountIs(stepLimit),
-    temperature,
+    }),
+    temperature: config.temperature ?? DEFAULT_TEMPERATURE,
     toolChoice: "auto",
-    tools,
-    topP,
-  });
+  } satisfies typeof nativeSettings & ManagedAgentSettings;
+  // AI SDK v7 also uses a constructor-boundary assertion when forwarding generic
+  // settings: TypeScript cannot reduce its conditional ToolsContextParameter here.
+  // TripSageAgentConfig enforces the conditional toolsContext contract at call sites.
+  const agent = new ToolLoopAgent<never, TagentTools, AgentRuntimeContext>(
+    configuredSettings as typeof configuredSettings & NativeAgentSettings
+  );
 
   return {
     agent,

@@ -176,7 +176,8 @@ describe("createAiTool", () => {
     });
 
     // Test tool execution directly (unit test)
-    const callOptions: ToolExecutionOptions = {
+    const callOptions: ToolExecutionOptions<unknown> = {
+      context: undefined,
       messages: [],
       toolCallId: "test-call-1",
     };
@@ -244,7 +245,8 @@ describe("createAiTool", () => {
         name: "limitedTool",
       });
 
-      const callOptions: ToolExecutionOptions = {
+      const callOptions: ToolExecutionOptions<unknown> = {
+        context: undefined,
         messages: [],
         toolCallId: "test-call-limited",
       };
@@ -262,11 +264,10 @@ describe("createAiTool", () => {
   );
 
   test("passes ToolExecutionOptions to execute function", async () => {
-    let capturedCallOptions: ToolExecutionOptions | null = null;
-    const executeSpy = vi.fn((_params: unknown, callOptions: ToolExecutionOptions) => {
-      capturedCallOptions = callOptions;
-      return Promise.resolve({ result: "ok" });
-    });
+    const executeSpy = vi.fn(
+      (_params: unknown, _callOptions: ToolExecutionOptions<unknown>) =>
+        Promise.resolve({ result: "ok" })
+    );
 
     const toolWithContext = createAiTool({
       description: "tool that uses context",
@@ -289,7 +290,8 @@ describe("createAiTool", () => {
       name: "contextTool",
     });
 
-    const callOptions: ToolExecutionOptions = {
+    const callOptions: ToolExecutionOptions<unknown> = {
+      context: undefined,
       messages: [{ content: "test message", role: "user" }],
       toolCallId: "call-ctx-test",
     };
@@ -298,10 +300,9 @@ describe("createAiTool", () => {
     await toolWithContext.execute?.({ query: "test" }, callOptions);
 
     expect(executeSpy).toHaveBeenCalled();
-    expect(capturedCallOptions).toBeDefined();
-    expect(capturedCallOptions).toHaveProperty("toolCallId", "call-ctx-test");
-    expect(capturedCallOptions).toHaveProperty("messages");
-    const options = capturedCallOptions as ToolExecutionOptions | null;
+    const options = executeSpy.mock.calls[0]?.[1];
+    expect(options).toHaveProperty("toolCallId", "call-ctx-test");
+    expect(options).toHaveProperty("messages");
     expect(options?.messages).toHaveLength(1);
   });
 
@@ -325,7 +326,10 @@ describe("createAiTool", () => {
       name: "headerTool",
     });
 
-    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-1" });
+    await tool.execute?.(
+      { payload: "demo" },
+      { context: undefined, messages: [], toolCallId: "call-1" }
+    );
     expect(recordedRateLimitIdentifiers).toContain(
       "user:291fd0e83dac217f4e5bd62d007d2c754e061a92f76b0d7468be3544f95c28cd"
     );
@@ -350,7 +354,10 @@ describe("createAiTool", () => {
       name: "headerToolFallback",
     });
 
-    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-2" });
+    await tool.execute?.(
+      { payload: "demo" },
+      { context: undefined, messages: [], toolCallId: "call-2" }
+    );
     expect(recordedRateLimitIdentifiers).toContain(
       "ip:725adbffa67a0230fdf009da59ec27b10093cc3b2cb5b9fe72868c0d571b7ad8"
     );
@@ -373,7 +380,10 @@ describe("createAiTool", () => {
       name: "headerToolUnknown",
     });
 
-    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-3" });
+    await tool.execute?.(
+      { payload: "demo" },
+      { context: undefined, messages: [], toolCallId: "call-3" }
+    );
     expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
 
@@ -397,7 +407,10 @@ describe("createAiTool", () => {
     });
 
     // Should fall back to "unknown" when IP is invalid
-    await tool.execute?.({ payload: "demo" }, { messages: [], toolCallId: "call-4" });
+    await tool.execute?.(
+      { payload: "demo" },
+      { context: undefined, messages: [], toolCallId: "call-4" }
+    );
     expect(recordedRateLimitIdentifiers).toContain("ip:unknown");
   });
 
@@ -411,7 +424,10 @@ describe("createAiTool", () => {
       validateOutput: true,
     });
 
-    const result = await tool.execute?.({}, { messages: [], toolCallId: "call-5" });
+    const result = await tool.execute?.(
+      {},
+      { context: undefined, messages: [], toolCallId: "call-5" }
+    );
     expect(result).toEqual({ status: "ok" });
   });
 
@@ -426,7 +442,7 @@ describe("createAiTool", () => {
     });
 
     await expect(
-      tool.execute?.({}, { messages: [], toolCallId: "call-6" })
+      tool.execute?.({}, { context: undefined, messages: [], toolCallId: "call-6" })
     ).rejects.toMatchObject({ code: TOOL_ERROR_CODES.invalidOutput });
   });
 

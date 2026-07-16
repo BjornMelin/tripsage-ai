@@ -2,7 +2,7 @@
  * @fileoverview Shared helpers for AI SDK timeout configuration.
  */
 
-import type { TimeoutConfiguration } from "ai";
+import type { TimeoutConfiguration, ToolSet } from "ai";
 
 const MIN_TIMEOUT_MS = 5_000;
 const DEFAULT_STEP_TIMEOUT_MS = parseTimeoutEnv("AI_DEFAULT_STEP_TIMEOUT_MS", 20_000);
@@ -36,7 +36,7 @@ function normalizeTimeoutMs(value: number): number {
 export function buildTimeoutConfig(
   totalMs?: number,
   stepMs?: number
-): TimeoutConfiguration | undefined {
+): TimeoutConfiguration<ToolSet> | undefined {
   if (typeof totalMs !== "number" || !Number.isFinite(totalMs) || totalMs <= 0) {
     return undefined;
   }
@@ -61,7 +61,7 @@ export function buildTimeoutConfig(
 export function buildTimeoutConfigFromSeconds(
   timeoutSeconds?: number,
   stepMs?: number
-): TimeoutConfiguration | undefined {
+): TimeoutConfiguration<ToolSet> | undefined {
   if (
     typeof timeoutSeconds !== "number" ||
     !Number.isFinite(timeoutSeconds) ||

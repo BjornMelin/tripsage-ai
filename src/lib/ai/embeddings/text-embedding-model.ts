@@ -5,7 +5,7 @@
 import "server-only";
 
 import { openai } from "@ai-sdk/openai";
-import type { EmbeddingModelV3, EmbeddingModelV3Result } from "@ai-sdk/provider";
+import type { EmbeddingModelV4, EmbeddingModelV4Result } from "@ai-sdk/provider";
 import type { EmbeddingModel } from "ai";
 import { getServerEnvVarWithFallback } from "@/lib/env/server";
 import {
@@ -17,9 +17,9 @@ import {
 export const TEXT_EMBEDDING_DIMENSIONS = 1536;
 export const TEXT_EMBEDDING_MODEL_ID = "openai/text-embedding-3-small" as const;
 
-function createDeterministicEmbeddingModel(): EmbeddingModelV3 {
+function createDeterministicEmbeddingModel(): EmbeddingModelV4 {
   return {
-    doEmbed: (options): PromiseLike<EmbeddingModelV3Result> => {
+    doEmbed: (options): PromiseLike<EmbeddingModelV4Result> => {
       const embeddings = options.values.map((value) =>
         deterministicTextEmbedding(value)
       );
@@ -38,7 +38,7 @@ function createDeterministicEmbeddingModel(): EmbeddingModelV3 {
     maxEmbeddingsPerCall: Infinity,
     modelId: DETERMINISTIC_TEXT_EMBEDDING_MODEL_ID,
     provider: "tripsage",
-    specificationVersion: "v3",
+    specificationVersion: "v4",
     supportsParallelCalls: true,
   };
 }

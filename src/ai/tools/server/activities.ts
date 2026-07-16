@@ -1,5 +1,5 @@
 /**
- * @fileoverview AI SDK v6 tools for activity search and details.
+ * @fileoverview AI SDK v7 tools for activity search and details.
  */
 
 import "server-only";

@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 describe("getTextEmbeddingModel", () => {
-  it("returns deterministic EmbeddingModelV3 when no provider keys are configured", async () => {
+  it("returns deterministic EmbeddingModelV4 when no provider keys are configured", async () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "");
     const {
@@ -28,6 +28,7 @@ describe("getTextEmbeddingModel", () => {
 
     const model = getTextEmbeddingModel();
     expect(typeof model).not.toBe("string");
+    expect(model).toMatchObject({ specificationVersion: "v4" });
     expect(getTextEmbeddingModelId()).toBe("tripsage/deterministic-embedding-1536-v1");
 
     const { embedding: e1 } = await embed({ model, value: "hello world" });

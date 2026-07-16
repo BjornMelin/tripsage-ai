@@ -47,8 +47,10 @@ vi.mock("@ai-sdk/openai", () => ({
 
 vi.mock("@ai-sdk/anthropic", () => ({
   anthropic: (id: string) => makeModel(`anthropic::${id}`),
-  createAnthropic: (opts: { apiKey?: string }) => (id: string) =>
-    makeModel(`anthropic::${opts.apiKey ? "key" : "no-key"}::${id}`),
+  createAnthropic: (opts: { apiKey?: string }) => ({
+    languageModel: (id: string) =>
+      makeModel(`anthropic::${opts.apiKey ? "key" : "no-key"}::${id}`),
+  }),
 }));
 
 // OpenRouter now uses OpenAI-compatible provider with baseURL pointing to OpenRouter.
@@ -61,8 +63,9 @@ vi.mock("ai", () => ({
 }));
 
 vi.mock("@ai-sdk/xai", () => ({
-  createXai: (opts: { apiKey?: string }) => (id: string) =>
-    makeModel(`xai::${opts.apiKey ? "key" : "no-key"}::${id}`),
+  createXai: (opts: { apiKey?: string }) => ({
+    chat: (id: string) => makeModel(`xai::${opts.apiKey ? "key" : "no-key"}::${id}`),
+  }),
 }));
 
 describe("resolveProvider", () => {

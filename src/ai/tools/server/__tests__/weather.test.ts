@@ -26,6 +26,7 @@ vi.mock("@/lib/telemetry/span", () => ({
 }));
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

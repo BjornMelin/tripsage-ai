@@ -13,6 +13,12 @@ import {
 } from "@/test/helpers/route";
 import { createMockSupabaseClient } from "@/test/mocks/supabase";
 
+vi.mock("ai", () => ({
+  consumeStream: vi.fn(),
+  createUIMessageStreamResponse: vi.fn(),
+  toUIMessageStream: vi.fn(),
+}));
+
 // Mock next/headers cookies() before any imports that use it
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() =>
@@ -33,14 +39,12 @@ vi.mock("@/lib/supabase/server", () => ({
 
 // Mock provider registry
 vi.mock("@ai/models/registry", () => ({
-  resolveProvider: vi.fn(async () => ({ model: {} })),
+  resolveProvider: vi.fn(async () => ({ model: {}, modelId: "openai/gpt-5.5" })),
 }));
 
 // Mock memory agent
-vi.mock("@/lib/agents/memory-agent", () => ({
-  runMemoryAgent: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("ok", { status: 200 }),
-  })),
+vi.mock("@ai/agents/memory-agent", () => ({
+  runMemoryAgent: vi.fn(() => ({ stream: new ReadableStream() })),
 }));
 
 // Mock Redis

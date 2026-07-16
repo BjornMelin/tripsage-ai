@@ -89,4 +89,25 @@ describe("ChatMessageItem file parts", () => {
     expect(screen.getByText("vector.svg")).toBeInTheDocument();
     expect(screen.getByText("image/svg+xml")).toBeInTheDocument();
   });
+
+  it("renders reasoning-file data URLs as metadata without exposing base64", () => {
+    const message = unsafeCast<UIMessage>({
+      id: "m5",
+      parts: [
+        {
+          mediaType: "image/png",
+          type: "reasoning-file",
+          url: "data:image/png;base64,aGVsbG8=",
+        },
+      ],
+      role: "assistant",
+    });
+
+    const { container } = render(<ChatMessageItem message={message} />);
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("Attachment")).toBeInTheDocument();
+    expect(screen.getByText("image/png")).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("aGVsbG8=");
+  });
 });

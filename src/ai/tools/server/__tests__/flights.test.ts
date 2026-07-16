@@ -9,6 +9,7 @@ import type { buildUpstashCacheMock } from "@/test/mocks/cache";
 import { server } from "@/test/msw/server";
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

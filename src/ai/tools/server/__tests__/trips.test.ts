@@ -4,6 +4,7 @@ import { savePlaceToTrip } from "@ai/tools";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockContext = {
+  context: undefined,
   messages: [],
   toolCallId: "test-call-id",
 };

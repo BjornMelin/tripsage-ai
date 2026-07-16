@@ -99,7 +99,10 @@ async function enforceBatchRateLimit(userId: string): Promise<void> {
 export const webSearchBatch = createAiTool({
   description:
     "Run multiple web searches in a single call, reusing per-query cache and rate limits.",
-  execute: async ({ queries, userId, ...rest }, callOptions: ToolExecutionOptions) => {
+  execute: async (
+    { queries, userId, ...rest },
+    callOptions: ToolExecutionOptions<unknown>
+  ) => {
     const started = performance.now();
     // Optional top-level rate limiting (in addition to per-query limits)
     try {

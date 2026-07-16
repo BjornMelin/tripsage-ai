@@ -79,7 +79,7 @@ export {
 };
 
 /**
- * Typed tool registry for AI SDK v6 generateText/streamText.
+ * Typed tool registry for AI SDK v7 generateText/streamText.
  * Satisfies ToolSet for compile-time validation; includes only executable tools.
  */
 export const toolRegistry = {

@@ -4,6 +4,7 @@
 
 import "server-only";
 
+import { createAiTelemetry } from "@ai/telemetry";
 import { buildTimeoutConfig } from "@ai/timeout";
 import type { ProviderResolution } from "@schemas/providers";
 import type { TripSuggestion } from "@schemas/trips";
@@ -168,6 +169,7 @@ async function generateSuggestionsWithCache(
       model,
       output: Output.object({ schema: responseSchema }),
       prompt,
+      telemetry: createAiTelemetry({ functionId: "trips.suggestions.generate" }),
       timeout: timeoutConfig,
     });
   } catch (error) {

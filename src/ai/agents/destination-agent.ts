@@ -65,7 +65,7 @@ export function createDestinationAgent(
   input: DestinationResearchRequest
 ): TripSageAgentResult<typeof DESTINATION_TOOLS> {
   const params = extractAgentParameters(config);
-  const instructions = buildDestinationPrompt(input);
+  const instructions = buildDestinationPrompt();
 
   const { maxOutputTokens, uiMessages } = prepareSchemaPrompt({
     instructions,

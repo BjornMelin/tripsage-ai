@@ -301,7 +301,7 @@ function PartKey(messageId: string, part: unknown): string {
   if (partType === "source-url") {
     return `${messageId}-source-url-${HashKey(String(record.url ?? ""))}`;
   }
-  if (partType === "file") {
+  if (partType === "file" || partType === "reasoning-file") {
     return `${messageId}-file-${HashKey(
       `${String(record.url ?? "")}|${String(record.data ?? "")}|${String(record.name ?? record.filename ?? "")}`
     )}`;
@@ -602,8 +602,8 @@ export function ChatMessageItem({
               );
             }
 
-            // File attachment part (includes images in AI SDK v6)
-            if (partType === "file") {
+            // File attachment parts (including AI SDK v7 reasoning files)
+            if (partType === "file" || partType === "reasoning-file") {
               const filePart = AsRecord(part);
               if (!filePart) return null;
               const name =

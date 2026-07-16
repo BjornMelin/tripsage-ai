@@ -1,5 +1,5 @@
 /**
- * @fileoverview Memory agent route handler (frontend-only). - Supabase SSR auth → userId - Provider resolution (BYOK/Gateway) - Guardrails (rate limiting, telemetry) - AI SDK v6 streaming summary response
+ * @fileoverview Memory agent route handler for AI SDK v7 streaming summaries.
  */
 
 import "server-only";
@@ -7,7 +7,7 @@ import "server-only";
 import { runMemoryAgent } from "@ai/agents/memory-agent";
 import { resolveProvider } from "@ai/models/registry";
 import { agentSchemas } from "@schemas/agents";
-import { consumeStream } from "ai";
+import { consumeStream, createUIMessageStreamResponse, toUIMessageStream } from "ai";
 import type { NextRequest } from "next/server";
 import { resolveAgentConfig } from "@/lib/agents/config-resolver";
 import { createErrorHandler } from "@/lib/agents/error-recovery";
@@ -51,8 +51,12 @@ export const POST = withApiGuards({
     body,
     { abortSignal: req.signal }
   );
-  return result.toUIMessageStreamResponse({
-    consumeSseStream: consumeStream,
+  const stream = toUIMessageStream({
     onError: createErrorHandler(),
+    stream: result.stream,
+  });
+  return createUIMessageStreamResponse({
+    consumeSseStream: consumeStream,
+    stream,
   });
 });

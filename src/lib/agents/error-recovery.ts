@@ -73,13 +73,13 @@ function detectErrorType(message: string): AgentErrorCode | null {
  * Map error to user-friendly message.
  *
  * Analyzes error message and type to determine appropriate user-facing
- * message. Handles AI SDK v6 specific errors (NoSuchToolError, InvalidToolInputError).
+ * message. Handles AI SDK v7 specific errors (NoSuchToolError, InvalidToolInputError).
  *
  * @param error Error instance or message string.
  * @returns User-friendly error message.
  */
 export function mapErrorToMessage(error: unknown): string {
-  // Handle AI SDK v6 specific errors first
+  // Handle AI SDK v7 specific errors first
   if (NoSuchToolError.isInstance(error)) {
     return "The assistant tried to use an unavailable tool. Please try rephrasing your request.";
   }
@@ -137,13 +137,13 @@ export function classifyError(error: unknown): AgentErrorCode {
 }
 
 /**
- * Create error handler for AI SDK v6 streaming responses.
+ * Create error handler for AI SDK v7 streaming responses.
  *
  * Returns a function that maps errors to user-friendly messages for
  * display in the UI. Handles AI SDK specific errors (NoSuchToolError,
  * InvalidToolInputError) as well as common HTTP/network errors.
  *
- * @returns Error handler function for use with toUIMessageStreamResponse.
+ * @returns Error handler function for use with toUIMessageStream.
  *
  * @example
  * ```typescript
@@ -153,9 +153,11 @@ export function classifyError(error: unknown): AgentErrorCode {
  *   tools: myTools,
  * });
  *
- * return result.toUIMessageStreamResponse({
+ * const stream = toUIMessageStream({
  *   onError: createErrorHandler(),
+ *   stream: result.stream,
  * });
+ * return createUIMessageStreamResponse({ stream });
  * ```
  */
 export function createErrorHandler(): (error: unknown) => string {
@@ -172,11 +174,13 @@ export function createErrorHandler(): (error: unknown) => string {
  *
  * @example
  * ```typescript
- * return result.toUIMessageStreamResponse({
+ * const stream = toUIMessageStream({
  *   onError: createErrorHandlerWithTelemetry((error, code) => {
  *     logger.error('Stream error', { code, error: String(error) });
  *   }),
+ *   stream: result.stream,
  * });
+ * return createUIMessageStreamResponse({ stream });
  * ```
  */
 export function createErrorHandlerWithTelemetry(
