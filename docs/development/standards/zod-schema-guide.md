@@ -287,15 +287,17 @@ export const step3Schema = tripSchema.pick({ budget: true, travelers: true });
 
 ## AI Tool Schemas
 
-Vercel AI SDK v7 tool schemas require specific patterns for reliable LLM function calling.
+AI SDK v7 accepts Zod and JSON Schema tool inputs in general. TripSage uses the
+following stricter convention so repository tools remain compatible with OpenAI
+strict-mode function calling.
 
 For tool creation patterns with guardrails (caching, rate limiting, telemetry), see [AI Tools Guide](../ai/ai-tools.md).
 
-**Requirements:**
+**TripSage tool-schema requirements:**
 
 - `z.strictObject()` for tool inputs
 - `.describe()` on all fields for LLM comprehension
-- `.nullable()` instead of `.optional()` for OpenAI strict mode
+- `.nullable()` instead of `.optional()` for fields exposed to OpenAI strict mode
 
 ```typescript
 // Tool Input Schema

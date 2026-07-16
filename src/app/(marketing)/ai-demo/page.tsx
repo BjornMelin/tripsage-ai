@@ -35,17 +35,13 @@ export default function AiDemoPage() {
   const submitStatus = error ? "error" : isLoading ? "submitted" : undefined;
 
   const logTelemetry = useCallback((status: "success" | "error", detail?: string) => {
-    (async () => {
-      try {
-        await fetch("/api/telemetry/ai-demo", {
-          body: JSON.stringify({ detail, status }),
-          headers: { "content-type": "application/json" },
-          method: "POST",
-        });
-      } catch {
-        // Ignore telemetry failures
-      }
-    })();
+    fetch("/api/telemetry/ai-demo", {
+      body: JSON.stringify({ detail, status }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    }).catch(() => {
+      // Ignore telemetry failures
+    });
   }, []);
 
   /**
@@ -102,8 +98,7 @@ export default function AiDemoPage() {
               try {
                 payload = JSON.parse(data);
               } catch {
-                // Ignore malformed chunks
-                continue;
+                throw new Error("AI stream returned invalid data");
               }
               if (!payload || typeof payload !== "object") continue;
               const chunk = payload as Record<string, unknown>;
@@ -171,12 +166,13 @@ export default function AiDemoPage() {
         >
           <PromptInputBody>
             <PromptInputTextarea
+              aria-label="Message"
               placeholder="Say hello to AI SDK v7"
               disabled={isLoading}
             />
           </PromptInputBody>
           <PromptInputFooter>
-            <PromptInputSubmit status={submitStatus} />
+            <PromptInputSubmit disabled={isLoading} status={submitStatus} />
           </PromptInputFooter>
         </PromptInput>
       </div>

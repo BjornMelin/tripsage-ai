@@ -143,7 +143,7 @@ const toolErrorSchema = z.looseObject({
 const pendingUiToolPartSchema = z.looseObject({
   input: z.unknown(),
   providerExecuted: z.boolean().optional(),
-  state: z.literal("input-available"),
+  state: z.enum(["input-available", "input-streaming"]),
   toolCallId: z.string().trim().min(1),
   toolName: z.string().trim().min(1).optional(),
   type: z.string(),
@@ -289,7 +289,8 @@ function sanitizeClientUserMessage(message: ChatUiMessage): ChatUiMessage {
 
   for (const part of message.parts) {
     if (part.type === "text") {
-      parts.push({ text: part.text, type: "text" });
+      const text = part.text.trim();
+      if (text) parts.push({ text, type: "text" });
       continue;
     }
 
@@ -344,24 +345,9 @@ function buildToolResultPersistence(
 
   const providerExecuted = outcome.value.providerExecuted ?? pendingProviderExecuted;
   if (outcome.kind === "error") {
-    const rawError = outcome.value.error;
-    let errorMessage = "Tool execution failed";
-    if (rawError instanceof Error && rawError.message) {
-      errorMessage = rawError.message;
-    } else if (typeof rawError === "string" && rawError.trim()) {
-      errorMessage = rawError;
-    } else {
-      try {
-        const serialized = JSON.stringify(rawError);
-        if (serialized) errorMessage = serialized;
-      } catch {
-        // Keep the generic error message for non-serializable values.
-      }
-    }
-
     return {
       completedAt,
-      errorMessage,
+      errorMessage: "Tool execution failed",
       providerExecuted,
       result: null,
       status: "failed",
@@ -1332,7 +1318,8 @@ export async function handleChat(
   ): Promise<void> => {
     providerExecutedByToolCallId.set(
       toolCall.toolCallId,
-      toolCall.providerExecuted ?? false
+      providerExecutedByToolCallId.get(toolCall.toolCallId) === true ||
+        toolCall.providerExecuted === true
     );
     if (!canPersistAssistantMessage || persistedToolCallIds.has(toolCall.toolCallId)) {
       return;
@@ -1421,6 +1408,13 @@ export async function handleChat(
           for (const part of content ?? []) {
             const parsed = parseToolError(part);
             if (parsed) {
+              deps.logger?.warn?.("chat:tool_execution_failed", {
+                error: parsed.error,
+                requestId,
+                toolCallId: parsed.toolCallId,
+                toolName: parsed.toolName,
+                ...buildChatLogIdentifiers({ sessionId, userId }),
+              });
               outcomesById.set(parsed.toolCallId, {
                 kind: "error",
                 value: parsed,

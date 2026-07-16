@@ -219,6 +219,10 @@ function sanitizePersistedPart(part: unknown): UiParts[number] | null {
  *
  * Tool lifecycle state is stored separately in `chat_tool_calls`; unsupported or
  * malformed parts are dropped at the persistence boundary.
+ *
+ * @param parts UI message parts from a stream or persistence boundary.
+ * @returns Canonical non-tool parts that are safe to persist.
+ * @see docs/architecture/decisions/adr-0074-ai-sdk-v7-provider-v4-and-stateless-streams.md
  */
 export function sanitizePersistableUiParts(
   parts: readonly unknown[] | undefined

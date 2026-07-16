@@ -93,6 +93,9 @@ import {
   toUIMessageStream,
 } from "ai";
 import type { UIMessage } from "ai";
+import { createServerLogger } from "@/lib/telemetry/logger";
+
+const logger = createServerLogger("api.ai.stream");
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
@@ -105,7 +108,10 @@ export async function POST(req: Request) {
   const stream = toUIMessageStream({
     stream: result.stream,
     originalMessages: messages,
-    onError: (error) => (error instanceof Error ? error.message : "unknown_error"),
+    onError: (error) => {
+      logger.error("AI stream failed", { error });
+      return "The AI stream failed.";
+    },
     messageMetadata: ({ part }) => {
       if (part.type === "start") return { sessionId: "server-session-id" };
       if (part.type === "finish") return { tokens: part.totalUsage?.totalTokens ?? 0 };

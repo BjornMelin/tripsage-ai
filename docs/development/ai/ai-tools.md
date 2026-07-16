@@ -281,13 +281,15 @@ function buildMyAgentTools(identifier: string): ToolSet {
 
 ## Tool Input Schemas
 
-Tool input schemas must follow AI SDK v7 patterns. See [Zod Schema Guide](../standards/zod-schema-guide.md) for full details.
+AI SDK v7 accepts Zod and JSON Schema inputs. TripSage tool inputs follow a
+stricter OpenAI-compatible convention; see the [Zod Schema Guide](../standards/zod-schema-guide.md)
+for full details.
 
-**Requirements:**
+**TripSage tool-schema requirements:**
 
 - `z.strictObject()` for tool inputs
 - `.describe()` on all fields for LLM comprehension
-- `.nullable()` instead of `.optional()` for OpenAI strict mode
+- `.nullable()` instead of `.optional()` for fields exposed to OpenAI strict mode
 
 ```typescript
 export const toolInputSchema = z.strictObject({

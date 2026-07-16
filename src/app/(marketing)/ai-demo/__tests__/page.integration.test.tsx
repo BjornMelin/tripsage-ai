@@ -13,7 +13,7 @@ describe("AI Demo Page", () => {
 
   it("renders prompt input and conversation area", () => {
     render(<Page />);
-    expect(screen.getByPlaceholderText(/say hello to ai sdk v7/i)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /message/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
   });
 
@@ -55,6 +55,7 @@ describe("AI Demo Page", () => {
       fireEvent.change(textarea, { target: { value: "Test input" } });
       fireEvent.click(submit);
     });
+    expect(submit).toBeDisabled();
 
     await waitFor(
       () => {
@@ -62,6 +63,44 @@ describe("AI Demo Page", () => {
       },
       { timeout: 2000 }
     );
+  });
+
+  it("fails when the stream contains malformed event data", {
+    timeout: 10000,
+  }, async () => {
+    const telemetryPayload = vi.fn();
+    server.use(
+      http.post("/api/ai/stream", () => {
+        return new HttpResponse("data: not-json\n\ndata: [DONE]\n\n", {
+          headers: { "Content-Type": "text/event-stream" },
+          status: 200,
+        });
+      }),
+      http.post("/api/telemetry/ai-demo", async ({ request }) => {
+        telemetryPayload(await request.json());
+        return HttpResponse.json({ ok: true });
+      })
+    );
+
+    render(<Page />);
+    const textarea = screen.getByRole("textbox", { name: /message/i });
+
+    act(() => {
+      fireEvent.change(textarea, { target: { value: "Test input" } });
+      fireEvent.click(screen.getByRole("button", { name: /submit/i }));
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/failed to stream response: ai stream returned invalid data/i)
+      ).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(telemetryPayload).toHaveBeenCalledWith({
+        detail: "AI stream returned invalid data",
+        status: "error",
+      });
+    });
   });
 
   it("fails when the stream reaches EOF without a terminal marker", {

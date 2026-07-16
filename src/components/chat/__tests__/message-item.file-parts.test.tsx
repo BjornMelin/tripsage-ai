@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import type { UIMessage } from "ai";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ChatMessageItem } from "@/components/chat/message-item";
 import { unsafeCast } from "@/test/helpers/unsafe-cast";
 import { fireEvent, render, screen } from "@/test/test-utils";
@@ -109,5 +109,38 @@ describe("ChatMessageItem file parts", () => {
     expect(screen.getByText("Attachment")).toBeInTheDocument();
     expect(screen.getByText("image/png")).toBeInTheDocument();
     expect(container).not.toHaveTextContent("aGVsbG8=");
+  });
+
+  it("uses distinct keys for identical file and reasoning-file parts", () => {
+    const message = unsafeCast<UIMessage>({
+      id: "m6",
+      parts: [
+        {
+          mediaType: "application/pdf",
+          type: "file",
+          url: "https://example.com/shared.pdf",
+        },
+        {
+          mediaType: "application/pdf",
+          type: "reasoning-file",
+          url: "https://example.com/shared.pdf",
+        },
+      ],
+      role: "assistant",
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
+      // Capture duplicate-key warnings without writing to stderr.
+    });
+
+    try {
+      render(<ChatMessageItem message={message} />);
+
+      expect(screen.getAllByText("Attachment")).toHaveLength(2);
+      expect(consoleError.mock.calls.flat().join(" ")).not.toContain(
+        "Encountered two children with the same key"
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

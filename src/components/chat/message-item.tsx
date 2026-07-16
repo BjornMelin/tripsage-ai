@@ -302,7 +302,7 @@ function PartKey(messageId: string, part: unknown): string {
     return `${messageId}-source-url-${HashKey(String(record.url ?? ""))}`;
   }
   if (partType === "file" || partType === "reasoning-file") {
-    return `${messageId}-file-${HashKey(
+    return `${messageId}-${partType}-${HashKey(
       `${String(record.url ?? "")}|${String(record.data ?? "")}|${String(record.name ?? record.filename ?? "")}`
     )}`;
   }
