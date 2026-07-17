@@ -28,8 +28,8 @@ importers:
         specifier: 4.0.15
         version: 4.0.15(zod@4.4.3)
       '@ai-sdk/openai':
-        specifier: 4.0.14
-        version: 4.0.14(zod@4.4.3)
+        specifier: 4.0.15
+        version: 4.0.15(zod@4.4.3)
       '@ai-sdk/otel':
         specifier: 1.0.28
         version: 1.0.28(zod@4.4.3)
@@ -40,8 +40,8 @@ importers:
         specifier: 4.0.30
         version: 4.0.30(react@19.2.7)(zod@4.4.3)
       '@ai-sdk/togetherai':
-        specifier: 3.0.11
-        version: 3.0.11(zod@4.4.3)
+        specifier: 3.0.12
+        version: 3.0.12(zod@4.4.3)
       '@ai-sdk/xai':
         specifier: 4.0.13
         version: 4.0.13(zod@4.4.3)
@@ -146,7 +146,7 @@ importers:
         version: 1.0.2(react@19.2.7)
       '@supabase/ssr':
         specifier: ^0.12.0
-        version: 0.12.0(@supabase/supabase-js@2.110.1)
+        version: 0.12.3(@supabase/supabase-js@2.110.1)
       '@supabase/supabase-js':
         specifier: ^2.110.1
         version: 2.110.1
@@ -155,7 +155,7 @@ importers:
         version: 5.101.2(react@19.2.7)
       '@upstash/qstash':
         specifier: ^2.11.1
-        version: 2.11.1
+        version: 2.11.2
       '@upstash/ratelimit':
         specifier: 2.0.8
         version: 2.0.8(@upstash/redis@1.38.0)
@@ -418,8 +418,14 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@4.0.14':
-    resolution: {integrity: sha512-MnwhHrPOyFYvnOV5p0Iwxwuxnn0/hQbG3rXAyRAsYqfFTrzHJRU2p7BQtKX2PZWH+59iBYBFA2n4GFYC3KEK+g==}
+  '@ai-sdk/openai-compatible@3.0.11':
+    resolution: {integrity: sha512-PKLyt5PfjV2maWJPZpm3W29vCc+BbyqSPAcghXhl+iIxzFNjpGPa6UD/8J0b9l7w/lJCZKuhcef9q+Gp5WqUvw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai@4.0.15':
+    resolution: {integrity: sha512-JpTLQp5RUbRcs5nOyPEu5NRdxZLUnD/uCyT3qzy26D+iunCeL7KJV58ER9kwisAKnTjWravfNblaQNiWr20M9A==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -444,8 +450,8 @@ packages:
     peerDependencies:
       react: ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1
 
-  '@ai-sdk/togetherai@3.0.11':
-    resolution: {integrity: sha512-mwAy5kdZbfR0LUOUVtXfJPbwTmOIA5IvEaDyJY8RJYS50vmMWxRmDYfJFX5+px8t3ETF79513V6Hwx5Z10Sl2A==}
+  '@ai-sdk/togetherai@3.0.12':
+    resolution: {integrity: sha512-1as1wmjlhbeibj48P52NjcF2frvkgoCelVx9Jy5eHlmhVCbwzqqbfv+LYvFgwPX6HPwXrBAAsbhmwRp+kJ8piQ==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -2408,10 +2414,10 @@ packages:
     resolution: {integrity: sha512-JmWCpMoe2iJPNrXIdHqIvf2Mie6NfSuWHS9Ve6YCmLkn1mNl3vrK3a67IukJ5lPjgmAzB+jFagyMz2oSIX+Xnw==}
     engines: {node: '>=22.0.0'}
 
-  '@supabase/ssr@0.12.0':
-    resolution: {integrity: sha512-d9XV5XzJvzzZbeAIM7fWTCUYxQJZ2Ru6ny3dJHmHGp/LIrJ+o9FpD7N9Rf/UhhWEvHXSoDe8SI32Z2ouOdMjBg==}
+  '@supabase/ssr@0.12.3':
+    resolution: {integrity: sha512-qWXJ/dI7CiYDKyTgIPqJ4Qkh8y5edh2LdF/nkN48z47mmEVzAO2OE+YErYeQ/UemVfonn/F4kFz+lhLqoVMdpw==}
     peerDependencies:
-      '@supabase/supabase-js': ^2.108.0
+      '@supabase/supabase-js': ^2.110.5
 
   '@supabase/storage-js@2.110.1':
     resolution: {integrity: sha512-UqJGzhFMiIRBe8vT7a6ZtrN2U5YufH4Tk9nyc9KKfa2TUtV11BkSg/v3lyy/c4A8SbekVH3UywTF0s42zpF4zw==}
@@ -2787,8 +2793,8 @@ packages:
     resolution: {integrity: sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==}
     engines: {node: '>=16.0.0'}
 
-  '@upstash/qstash@2.11.1':
-    resolution: {integrity: sha512-rq8e/40lgWThlfMZUsOUtABW6gZ+dzrl+CjESmHE8oL6l7hUp2kK1bni1auNBjxz5cpHqPheFlVqufNXbK+cVg==}
+  '@upstash/qstash@2.11.2':
+    resolution: {integrity: sha512-1QC31jK3BPbZejJOHufO9DAJ3q0cXAzfmpgQv/OSqnCQjAC+0+7m/sVSIP6iUGfkljZUMVYO982peITSLQdwrw==}
 
   '@upstash/ratelimit@2.0.8':
     resolution: {integrity: sha512-YSTMBJ1YIxsoPkUMX/P4DDks/xV5YYCswWMamU8ZIfK9ly6ppjRnVOyBhMDXBmzjODm4UQKcxsJPvaeFAijp5w==}
@@ -6219,7 +6225,13 @@ snapshots:
       '@ai-sdk/provider-utils': 5.0.10(zod@4.4.3)
       zod: 4.4.3
 
-  '@ai-sdk/openai@4.0.14(zod@4.4.3)':
+  '@ai-sdk/openai-compatible@3.0.11(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider-utils': 5.0.10(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/openai@4.0.15(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
       '@ai-sdk/provider-utils': 5.0.10(zod@4.4.3)
@@ -6257,9 +6269,9 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@ai-sdk/togetherai@3.0.11(zod@4.4.3)':
+  '@ai-sdk/togetherai@3.0.12(zod@4.4.3)':
     dependencies:
-      '@ai-sdk/openai-compatible': 3.0.10(zod@4.4.3)
+      '@ai-sdk/openai-compatible': 3.0.11(zod@4.4.3)
       '@ai-sdk/provider': 4.0.3
       '@ai-sdk/provider-utils': 5.0.10(zod@4.4.3)
       zod: 4.4.3
@@ -7983,7 +7995,7 @@ snapshots:
       '@supabase/phoenix': 0.4.4
       tslib: 2.8.1
 
-  '@supabase/ssr@0.12.0(@supabase/supabase-js@2.110.1)':
+  '@supabase/ssr@0.12.3(@supabase/supabase-js@2.110.1)':
     dependencies:
       '@supabase/supabase-js': 2.110.1
       cookie: 1.1.1
@@ -8378,7 +8390,7 @@ snapshots:
     dependencies:
       '@upstash/redis': 1.38.0
 
-  '@upstash/qstash@2.11.1':
+  '@upstash/qstash@2.11.2':
     dependencies:
       crypto-js: 4.2.0
       jose: 5.10.0
