@@ -27,7 +27,7 @@ export default {
       {
         assets: ["CHANGELOG.md"],
         // biome-ignore lint/suspicious/noTemplateCurlyInString: semantic-release interpolates this placeholder.
-        message: "chore(release): ${nextRelease.version} [skip ci]",
+        message: "chore(release): ${nextRelease.version}",
       },
     ],
     [
