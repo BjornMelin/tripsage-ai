@@ -237,14 +237,15 @@ describe("PredictionBadge", () => {
     { confidence: 85, expectedText: "Book Now (85%)", priceAlert: "buy_now" as const },
     { confidence: 70, expectedText: "Wait (70%)", priceAlert: "wait" as const },
     { confidence: 50, expectedText: "Monitor (50%)", priceAlert: "neutral" as const },
-  ])("renders $expectedText for $priceAlert alert", ({
-    priceAlert,
-    confidence,
-    expectedText,
-  }) => {
-    render(<PredictionBadge prediction={{ confidence, priceAlert, reason: "test" }} />);
-    expect(screen.getByText(expectedText)).toBeInTheDocument();
-  });
+  ])(
+    "renders $expectedText for $priceAlert alert",
+    ({ priceAlert, confidence, expectedText }) => {
+      render(
+        <PredictionBadge prediction={{ confidence, priceAlert, reason: "test" }} />
+      );
+      expect(screen.getByText(expectedText)).toBeInTheDocument();
+    }
+  );
 });
 
 describe("FLIGHT_COLORS", () => {

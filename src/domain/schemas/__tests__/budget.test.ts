@@ -371,22 +371,21 @@ describe("budget schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it.concurrent.each([
-      "threshold",
-      "category",
-      "daily",
-    ])("validates alert type: %s", (type) => {
-      const result = budgetAlertSchema.safeParse({
-        budgetId: "123e4567-e89b-12d3-a456-426614174001",
-        createdAt: "2024-01-01T00:00:00Z",
-        id: "123e4567-e89b-12d3-a456-426614174000",
-        isRead: false,
-        message: "Budget alert",
-        threshold: 80,
-        type,
-      });
-      expect(result.success).toBe(true);
-    });
+    it.concurrent.each(["threshold", "category", "daily"])(
+      "validates alert type: %s",
+      (type) => {
+        const result = budgetAlertSchema.safeParse({
+          budgetId: "123e4567-e89b-12d3-a456-426614174001",
+          createdAt: "2024-01-01T00:00:00Z",
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          isRead: false,
+          message: "Budget alert",
+          threshold: 80,
+          type,
+        });
+        expect(result.success).toBe(true);
+      }
+    );
   });
 
   describe("createBudgetRequestSchema", () => {

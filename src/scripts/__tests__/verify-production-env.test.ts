@@ -296,25 +296,23 @@ describe("verify-production-env", () => {
     );
   });
 
-  it.each([
-    " false ",
-    "FALSE",
-    "1",
-    "*",
-  ])("rejects non-canonical AI demo flag %j", (value) => {
-    const result = runVerifier({ ENABLE_AI_DEMO: value });
+  it.each([" false ", "FALSE", "1", "*"])(
+    "rejects non-canonical AI demo flag %j",
+    (value) => {
+      const result = runVerifier({ ENABLE_AI_DEMO: value });
 
-    expect(result.status).toBe(1);
-    expect(check(result.summary, "ai_demo_flag_contract")).toMatchObject({
-      details: {
-        invalid: [expect.objectContaining({ name: "ENABLE_AI_DEMO" })],
-      },
-      status: "failed",
-    });
-    expect(check(result.summary, "ai_demo_telemetry_contract").details.enabled).toBe(
-      false
-    );
-  });
+      expect(result.status).toBe(1);
+      expect(check(result.summary, "ai_demo_flag_contract")).toMatchObject({
+        details: {
+          invalid: [expect.objectContaining({ name: "ENABLE_AI_DEMO" })],
+        },
+        status: "failed",
+      });
+      expect(check(result.summary, "ai_demo_telemetry_contract").details.enabled).toBe(
+        false
+      );
+    }
+  );
 
   it("requires a dedicated MFA backup-code pepper", () => {
     const result = runVerifier({ MFA_BACKUP_CODE_PEPPER: undefined });

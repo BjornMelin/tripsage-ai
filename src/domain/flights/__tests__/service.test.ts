@@ -156,25 +156,23 @@ describe("searchFlightsService", () => {
   });
 
   describe("cabin class options", () => {
-    it.each([
-      "economy",
-      "premium_economy",
-      "business",
-      "first",
-    ] as const)("accepts %s cabin class", async (cabinClass) => {
-      const request = {
-        ...validRequest,
-        cabinClass,
-      };
-
-      await searchFlightsService(request);
-
-      expect(mockFetchDuffelOffers).toHaveBeenCalledWith(
-        expect.objectContaining({
+    it.each(["economy", "premium_economy", "business", "first"] as const)(
+      "accepts %s cabin class",
+      async (cabinClass) => {
+        const request = {
+          ...validRequest,
           cabinClass,
-        })
-      );
-    });
+        };
+
+        await searchFlightsService(request);
+
+        expect(mockFetchDuffelOffers).toHaveBeenCalledWith(
+          expect.objectContaining({
+            cabinClass,
+          })
+        );
+      }
+    );
   });
 
   describe("input validation", () => {

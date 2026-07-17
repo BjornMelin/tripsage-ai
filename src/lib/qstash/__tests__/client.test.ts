@@ -183,25 +183,25 @@ describe("enqueueJob", () => {
     expect(mockSpan.setAttribute).toHaveBeenCalledWith("qstash.missing_origin", true);
   });
 
-  it.each([
-    "https://evil.example/api/jobs/test",
-    "//evil.example/api/jobs/test",
-  ])("rejects off-origin job path %s", async (path) => {
-    const { enqueueJob, setQStashClientFactoryForTests } = await import(
-      "@/lib/qstash/client"
-    );
-    setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
+  it.each(["https://evil.example/api/jobs/test", "//evil.example/api/jobs/test"])(
+    "rejects off-origin job path %s",
+    async (path) => {
+      const { enqueueJob, setQStashClientFactoryForTests } = await import(
+        "@/lib/qstash/client"
+      );
+      setQStashClientFactoryForTests(() => new qstash.Client({ token: "test" }));
 
-    await expect(
-      enqueueJob("test-job", { ok: true }, path, {
-        deduplicationId: "test-job:invalid-path",
-        label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
-      })
-    ).rejects.toThrow("QStash job path must be a same-origin absolute path");
+      await expect(
+        enqueueJob("test-job", { ok: true }, path, {
+          deduplicationId: "test-job:invalid-path",
+          label: QSTASH_JOB_LABELS.NOTIFY_COLLABORATORS,
+        })
+      ).rejects.toThrow("QStash job path must be a same-origin absolute path");
 
-    expect(qstash.__getMessages()).toHaveLength(0);
-    expect(mockSpan.setAttribute).toHaveBeenCalledWith("qstash.invalid_path", true);
-  });
+      expect(qstash.__getMessages()).toHaveLength(0);
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("qstash.invalid_path", true);
+    }
+  );
 
   it("rejects publishes without a deterministic deduplication id", async () => {
     const { enqueueJob, setQStashClientFactoryForTests } = await import(
