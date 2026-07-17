@@ -257,12 +257,7 @@ TripSage AI includes performance-oriented runtime building blocks:
 - **Streaming**: Real-time SSE with AI SDK v7, interleaved tool calls, and progressive UI rendering
 - **Background Processing**: Upstash QStash handles signed async jobs for memory sync and batch operations
 
-### Performance validation
-
-`pnpm test:benchmark` measures Vitest suite duration for regression detection. It
-does not establish production latency, throughput, or vector-search performance.
-Publish runtime performance claims only with a dated, reproducible environment,
-dataset, command, and raw result artifact.
+See [performance validation](docs/performance.md) for reproducible measurement and claim requirements.
 
 ---
 

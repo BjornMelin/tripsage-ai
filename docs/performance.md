@@ -1,28 +1,19 @@
-# Performance Benchmarks
+# Validate performance
 
-TripSage performance metrics and regression tracking.
+TripSage treats performance claims as measured evidence, not fixed repository constants. Results vary with the runner, cache state, dataset, and deployment.
 
-## Current Benchmarks
+## Monitor performance
 
-### Build Performance
+Measure application behavior and development workflow costs under controlled conditions.
 
-| Metric | Value |
-|--------|-------|
-| Build time | ~31s |
-| TypeScript check | ~14.6s |
-| Bundle size | ~50MB |
-| Static generation | 1572ms |
+### Key indicators
 
-## Performance Monitoring
+- Build and type-check duration
+- Route and upstream API latency
+- Client bundle size and Core Web Vitals
+- Search, streaming, and vector-query throughput
 
-### Key Indicators
-
-- Build time regressions (>5% increase)
-- TypeScript check slowdowns (>2s increase)
-- Bundle size growth (>10% increase)
-- API response time degradation (>20% slower)
-
-### Automated Checks
+### Measure locally
 
 ```bash
 # Build performance
@@ -32,48 +23,23 @@ time pnpm build
 time pnpm type-check
 
 # Bundle analysis
-pnpm build && du -sh .next/
+pnpm build:analyze
 ```
 
-## Optimization Patterns
+Record the commit, command, environment, dataset, cache state, and raw output with every result. Do not compare measurements collected under different conditions as if they shared a baseline.
 
-### API Routes
+## Regression prevention
 
-- Factory pattern eliminates auth/rate-limit duplication
-- Centralized error handling reduces response time variance
-- Consistent telemetry improves monitoring accuracy
+Use CI for deterministic quality checks. Use controlled workloads for application performance measurements.
 
-### State Management
+### Current quality gates
 
-- Slice composition reduces bundle size
-- Centralized helpers minimize code duplication
-- Optimized re-renders improve UI responsiveness
+- Production build and type checking
+- Affected tests on pull requests
+- Full sharded coverage on `main`
+- Critical browser and Content Security Policy smoke tests when relevant
+- Operation-level schema performance assertions in `pnpm test:schemas`
 
-### Testing
+CI does not currently enforce a synthetic application-performance budget. The test-suite wall clock is not an application performance metric and is not used as one. Add a blocking budget only after a purpose-built workload establishes a stable baseline. Collect enough comparable samples to measure variance first.
 
-- Centralized test utilities reduce setup time
-- Shared fixtures improve test reliability
-- Parallel execution improves CI speed
-
-## Regression Prevention
-
-### Quality Gates
-
-- Track build time for regressions
-- Track TypeScript check duration
-- Monitor bundle size changes
-- Record test suite execution time
-
-### Monitoring Setup
-
-Performance metrics are recorded alongside validation runs and should be
-updated whenever build or testing workflows change.
-
-## Architecture Notes
-
-### Current Architecture
-
-- **API**: Next.js route handlers with factory pattern
-- **Database**: Supabase PostgreSQL with connection pooling
-- **Cache**: Upstash Redis (HTTP-based)
-- **Frontend**: Next.js with static generation
+Publish runtime performance claims only with a dated, reproducible environment, dataset, command, and raw result artifact.
