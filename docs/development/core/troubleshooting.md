@@ -66,7 +66,7 @@ git push origin feat/new-feature
 # Create PR to develop, then PR from develop -> main when ready
 
 # Release process (automated)
-# Merge to main triggers semantic-release:
+# A successful push CI run on main triggers semantic-release:
 # - computes next version (feat/minor, fix/patch, breaking->minor while pre-stable)
 # - updates CHANGELOG.md
 # - tags and publishes a GitHub Release

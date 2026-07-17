@@ -35,9 +35,11 @@ before promotion. If main advances while a candidate builds or is tested, the
 second check fails closed and the stale candidate is not promoted.
 
 Configure the GitHub `Production` environment deployment branch policy for
-selected branches with `main` as the only allowed branch. If a release-only
-commit becomes the new main head without a CI run, dispatch CI on that exact
-main SHA before retrying production deployment.
+selected branches with `main` as the only allowed branch. Release-only
+`CHANGELOG.md` commits do not use a skip marker, and every push to `main` runs
+CI, so the exact tagged head receives a CI run automatically. Do not deploy a
+historical or imported main head that lacks a qualifying push CI run; advance
+`main` through the normal reviewed change flow so the new head receives one.
 
 ## Required GitHub Environment Secrets
 

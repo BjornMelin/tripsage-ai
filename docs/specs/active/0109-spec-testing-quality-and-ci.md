@@ -31,6 +31,8 @@ Coverage:
   change.
 - Production deploy validation runs separately through the Vercel CLI deploy
   workflow and `scripts/vercel-deploy-smoke.mjs`.
+- Release automation runs only after CI succeeds for a push to `main`; its
+  generated changelog commit must then receive its own successful push CI run.
 - The active workflows are:
   - CI (`.github/workflows/ci.yml`)
   - Deploy (`.github/workflows/deploy.yml`)
@@ -66,7 +68,8 @@ Recommended stages:
   - run `pnpm check:zod-v4` (diff-based)
   - run `pnpm check:api-route-errors` (diff-based)
   - run `pnpm deps:audit`
-- Main branch / merge CI:
+- Main branch / merge CI (runs for every push so release eligibility never
+  depends on a path filter):
   - run the full suite (`pnpm test:ci`) + E2E (`pnpm test:e2e` or `pnpm test:e2e:chromium`)
 - Deployment smoke:
   - run `pnpm deploy:check-env`
