@@ -711,6 +711,12 @@ const commandMap: Record<string, Command> = {
 
 async function main(): Promise<void> {
   const [, , ...args] = process.argv;
+
+  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+    printUsage();
+    return;
+  }
+
   const firstFlagIndex = args.findIndex((arg) => arg.startsWith("--"));
   const commandArgs = firstFlagIndex === -1 ? args : args.slice(0, firstFlagIndex);
   const key = commandArgs.join(":");
