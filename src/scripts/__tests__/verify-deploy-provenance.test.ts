@@ -72,20 +72,20 @@ function productionInput(fetchImpl: typeof fetch) {
 }
 
 describe("verify-deploy-provenance", () => {
-  it.each([
-    "development",
-    "staging",
-  ])("skips GitHub reads for %s deployments", async (environment) => {
-    const { fetchImpl, requests } = createGithubFetch();
+  it.each(["development", "staging"])(
+    "skips GitHub reads for %s deployments",
+    async (environment) => {
+      const { fetchImpl, requests } = createGithubFetch();
 
-    const result = await verifyDeployProvenance({
-      ...productionInput(fetchImpl),
-      environment,
-    });
+      const result = await verifyDeployProvenance({
+        ...productionInput(fetchImpl),
+        environment,
+      });
 
-    expect(result).toMatchObject({ environment, status: "skipped" });
-    expect(requests).toEqual([]);
-  });
+      expect(result).toMatchObject({ environment, status: "skipped" });
+      expect(requests).toEqual([]);
+    }
+  );
 
   it("requires the production workflow ref to be main", async () => {
     const { fetchImpl, requests } = createGithubFetch();

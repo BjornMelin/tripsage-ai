@@ -406,31 +406,34 @@ describe("/api/keys/validate route", () => {
   it.each([
     ["TimeoutError", new DOMException("Timeout", "TimeoutError")],
     ["AbortError", Object.assign(new Error("Abort"), { name: "AbortError" })],
-  ] as const)("returns REQUEST_TIMEOUT when provider validation times out (%s)", async (_label, error) => {
-    const fetchMock = vi.fn<FetchLike>().mockRejectedValue(error);
-    mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
+  ] as const)(
+    "returns REQUEST_TIMEOUT when provider validation times out (%s)",
+    async (_label, error) => {
+      const fetchMock = vi.fn<FetchLike>().mockRejectedValue(error);
+      mockCreateOpenAI.mockImplementation(() => buildProvider(fetchMock));
 
-    const { POST } = await import("../route");
-    const req = createMockNextRequest({
-      body: { apiKey: "sk-test", service: "openai" },
-      method: "POST",
-      url: "http://localhost/api/keys/validate",
-    });
+      const { POST } = await import("../route");
+      const req = createMockNextRequest({
+        body: { apiKey: "sk-test", service: "openai" },
+        method: "POST",
+        url: "http://localhost/api/keys/validate",
+      });
 
-    const res = await POST(req, createRouteParamsContext());
-    const body = await res.json();
+      const res = await POST(req, createRouteParamsContext());
+      const body = await res.json();
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://provider.test/models",
-      expect.objectContaining({
-        headers: { Authorization: "Bearer test" },
-        method: "GET",
-        signal: expect.any(AbortSignal),
-      })
-    );
-    expect(body).toEqual({ isValid: false, reason: "REQUEST_TIMEOUT" });
-    expect(res.status).toBe(200);
-  });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://provider.test/models",
+        expect.objectContaining({
+          headers: { Authorization: "Bearer test" },
+          method: "GET",
+          signal: expect.any(AbortSignal),
+        })
+      );
+      expect(body).toEqual({ isValid: false, reason: "REQUEST_TIMEOUT" });
+      expect(res.status).toBe(200);
+    }
+  );
 
   it("returns INVALID_KEY for non-429 provider 4xx responses", async () => {
     const fetchMock = vi

@@ -77,16 +77,17 @@ describe("env/server", () => {
       expect(() => getServerEnv()).toThrow("Environment validation failed");
     });
 
-    it.each(
-      exactBooleanEnvFlags
-    )("parses %s only from exact boolean strings", (flag) => {
-      vi.stubEnv(flag, "true");
-      expect(getServerEnv()[flag]).toBe(true);
+    it.each(exactBooleanEnvFlags)(
+      "parses %s only from exact boolean strings",
+      (flag) => {
+        vi.stubEnv(flag, "true");
+        expect(getServerEnv()[flag]).toBe(true);
 
-      vi.stubEnv(flag, "false");
-      __resetServerEnvCacheForTest();
-      expect(getServerEnv()[flag]).toBe(false);
-    });
+        vi.stubEnv(flag, "false");
+        __resetServerEnvCacheForTest();
+        expect(getServerEnv()[flag]).toBe(false);
+      }
+    );
 
     it.each(exactBooleanEnvFlags)("rejects invalid %s values", (flag) => {
       vi.stubEnv(flag, "yes");
@@ -100,16 +101,14 @@ describe("env/server", () => {
       expect(getServerEnv()[flag]).toBe(false);
     });
 
-    it.each([
-      " false ",
-      "FALSE",
-      "1",
-      "*",
-    ])("rejects non-canonical ENABLE_AI_DEMO=%j", (value) => {
-      vi.stubEnv("ENABLE_AI_DEMO", value);
+    it.each([" false ", "FALSE", "1", "*"])(
+      "rejects non-canonical ENABLE_AI_DEMO=%j",
+      (value) => {
+        vi.stubEnv("ENABLE_AI_DEMO", value);
 
-      expect(() => getServerEnv()).toThrow("Environment validation failed");
-    });
+        expect(() => getServerEnv()).toThrow("Environment validation failed");
+      }
+    );
 
     it("requires a dedicated MFA backup-code pepper in production", () => {
       stubRequiredProductionEnv();
