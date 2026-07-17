@@ -48,6 +48,7 @@ const DESTINATION_TOOLS = {
  * @param config - Agent configuration from database.
  * @param input - Validated destination research request.
  * @returns Configured agent and canonical UI messages for destination research.
+ * @see docs/specs/active/0103-spec-chat-and-agents.md
  *
  * @example
  * ```typescript

@@ -3,6 +3,7 @@
 import type { DestinationResearchRequest } from "@schemas/agents";
 import type { AgentConfig } from "@schemas/configuration";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unsafeCast } from "@/test/helpers/unsafe-cast";
 
 const mockCreateTripSageAgent = vi.hoisted(() => vi.fn());
 const mockClampMaxTokens = vi.hoisted(() => vi.fn());
@@ -36,7 +37,7 @@ import { createDestinationAgent } from "../destination-agent";
 import type { AgentDependencies } from "../types";
 
 const mockDeps: AgentDependencies = {
-  model: { modelId: "gpt-5.4-mini" } as AgentDependencies["model"],
+  model: unsafeCast<AgentDependencies["model"]>({ modelId: "gpt-5.4-mini" }),
   modelId: "gpt-5.4-mini",
   userId: "user-456",
 };
