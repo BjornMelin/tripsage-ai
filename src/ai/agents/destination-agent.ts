@@ -78,8 +78,10 @@ export function createDestinationAgent(
 
   // Destination research may need more steps for gathering
   const stepLimit = Math.max(params.stepLimit, 15);
-  const phase1End = Math.max(4, Math.floor(stepLimit * 0.33));
-  const phase2End = Math.max(phase1End + 1, Math.floor(stepLimit * 0.66));
+  // AI SDK stepNumber is zero-based. Convert cumulative phase counts to
+  // inclusive end indices so exact percentage boundaries do not gain a step.
+  const phase1End = Math.max(4, Math.ceil(stepLimit * 0.33) - 1);
+  const phase2End = Math.max(phase1End + 1, Math.ceil(stepLimit * 0.66) - 1);
 
   return createTripSageAgent<typeof DESTINATION_TOOLS>(deps, {
     agentType: "destinationResearch",

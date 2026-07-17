@@ -93,8 +93,11 @@ export function createItineraryAgent(
   const SaveTools: ToolName[] = ["saveTravelPlan", "createTravelPlan"];
 
   // Compute phase boundaries from stepLimit (40% research, 33% planning, 27% save)
-  const phase1End = Math.floor(stepLimit * 0.4);
-  const phase2End = Math.floor(stepLimit * 0.73);
+  // AI SDK stepNumber is zero-based, so convert cumulative phase counts to
+  // inclusive end indices. Ceil keeps each phase from receiving less than its
+  // intended share when stepLimit does not divide cleanly.
+  const phase1End = Math.ceil(stepLimit * 0.4) - 1;
+  const phase2End = Math.ceil(stepLimit * 0.73) - 1;
 
   if (!deps.userId) {
     throw new Error(
