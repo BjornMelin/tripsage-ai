@@ -1,3 +1,11 @@
+## [1.37.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.37.0...v1.37.1) (2026-07-17)
+
+### Bug Fixes
+
+* address PR review findings ([a1edf76](https://github.com/BjornMelin/tripsage-ai/commit/a1edf7659ff312fa6e4e55d7a00ffdee3181b774))
+* **ai:** correct planning agent phase boundaries ([f6207c5](https://github.com/BjornMelin/tripsage-ai/commit/f6207c53e22c839d8607247961cf7b76ad198c25))
+* **ci:** restore release provenance ([3442f71](https://github.com/BjornMelin/tripsage-ai/commit/3442f71310004bad53c3c16277ccacf270eee3c7))
+
 ## [1.37.0](https://github.com/BjornMelin/tripsage-ai/compare/v1.36.3...v1.37.0) (2026-07-16)
 
 ### Features
