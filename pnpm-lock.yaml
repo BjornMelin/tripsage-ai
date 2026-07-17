@@ -205,8 +205,8 @@ importers:
         specifier: ^0.17.0
         version: 0.17.0
       lucide-react:
-        specifier: ^1.23.0
-        version: 1.23.0(react@19.2.7)
+        specifier: ^1.24.0
+        version: 1.24.0(react@19.2.7)
       mammoth:
         specifier: ^1.12.0
         version: 1.12.0
@@ -235,8 +235,8 @@ importers:
         specifier: 8.0.1
         version: 8.0.1
       resend:
-        specifier: ^6.17.1
-        version: 6.17.1
+        specifier: ^6.17.2
+        version: 6.17.2
       shiki:
         specifier: ^4.3.1
         version: 4.3.1
@@ -247,8 +247,8 @@ importers:
         specifier: ^2.5.0
         version: 2.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       stripe:
-        specifier: 22.3.0
-        version: 22.3.0(@types/node@24.13.3)
+        specifier: 22.3.2
+        version: 22.3.2(@types/node@24.13.3)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -4426,8 +4426,8 @@ packages:
     resolution: {integrity: sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A==}
     engines: {node: 20 || >=22}
 
-  lucide-react@1.23.0:
-    resolution: {integrity: sha512-38BpJcD0JhFosxHApP/BYsBetLpQFRoTRzEzstM/XCc3jsAG7wqaY1lgVwxiUe3xqYE+lNxo2PkCmYwXWrwwIw==}
+  lucide-react@1.24.0:
+    resolution: {integrity: sha512-YT6mBD8lGKkg4nM39enlm94/sfJIiW0YKUT60fBy4YK8tai31ylg1VhGNWxkpSKHo9UagfnZqwIff3HTDQwXeA==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -5307,8 +5307,8 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  resend@6.17.1:
-    resolution: {integrity: sha512-QhHHIRPPM9Tq2uilWmNF8C8kd6nLkUmiFgDQCt1v4eR4o+6p86qrK+Vn12jnAs0jR8Gf6ABdxI18/90LGQ7GVA==}
+  resend@6.17.2:
+    resolution: {integrity: sha512-hbaXEORFIFfT2Bh03NsA/akTTTKkD1hiuJ88ke64c5dWVV6DyoLxzFve3OiZqVOQ+JKLJ5uVkPR6hlUslpJFoA==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -5594,8 +5594,8 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
-  stripe@22.3.0:
-    resolution: {integrity: sha512-ypO6xjVrMWs9SmIMeHr8naCx3dAQ0clxMdUTxn7Ejd7hmY9meBGfE+N4pVHkf9sUNebAHp6uJo6mV3GxDIc2cA==}
+  stripe@22.3.2:
+    resolution: {integrity: sha512-O13QOvgEIQvDlTy6Ubb5kB980wpbhmoZNsgCXKILjCMZS67f+bW+6w99k3gnSi/N1lkryoj1WYdpGT5Wc5edjg==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/node': '>=18'
@@ -10077,7 +10077,7 @@ snapshots:
 
   lru-cache@11.5.1: {}
 
-  lucide-react@1.23.0(react@19.2.7):
+  lucide-react@1.24.0(react@19.2.7):
     dependencies:
       react: 19.2.7
 
@@ -11250,7 +11250,7 @@ snapshots:
 
   requirejs@2.3.8: {}
 
-  resend@6.17.1:
+  resend@6.17.2:
     dependencies:
       postal-mime: 2.7.4
       standardwebhooks: 1.0.0
@@ -11622,7 +11622,7 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stripe@22.3.0(@types/node@24.13.3):
+  stripe@22.3.2(@types/node@24.13.3):
     optionalDependencies:
       '@types/node': 24.13.3
 
