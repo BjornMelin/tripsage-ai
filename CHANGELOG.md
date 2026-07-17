@@ -1,3 +1,9 @@
+## [1.37.2](https://github.com/BjornMelin/tripsage-ai/compare/v1.37.1...v1.37.2) (2026-07-17)
+
+### Bug Fixes
+
+* **ops:** make CLI help exit successfully ([7085d72](https://github.com/BjornMelin/tripsage-ai/commit/7085d72012ae7a21c162724bf1dcd420da61bfd0))
+
 ## [1.37.1](https://github.com/BjornMelin/tripsage-ai/compare/v1.37.0...v1.37.1) (2026-07-17)
 
 ### Bug Fixes
