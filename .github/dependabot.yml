@@ -153,6 +153,10 @@ updates:
       # Node runtime major changes are planned platform migrations, not automated dependency PRs.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # v10 render functions are incompatible with release-notes-generator's writer v8;
+      # re-enable after the acceptance criteria in #810 pass.
+      - dependency-name: "conventional-changelog-conventionalcommits"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
