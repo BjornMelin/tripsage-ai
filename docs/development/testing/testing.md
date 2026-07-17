@@ -340,14 +340,6 @@ describe("createTripAction", () => {
 
 Use `@/test/factories/*` for schema-valid fixtures. Reset counters when determinism required.
 
-## Performance Benchmarks
-
-- Command: `pnpm test:benchmark`
-- Thresholds: suite <20s; per-file fail >3.5s, warn >500ms
-- Override via env: `BENCHMARK_SUITE_THRESHOLD_MS`, `BENCHMARK_FILE_FAIL_MS`, `BENCHMARK_FILE_WARNING_MS`
-- Artifacts: `.vitest-reports/vitest-report.json`, `benchmark-summary.json`
-- Silence telemetry: `TELEMETRY_SILENT=1`
-
 ## Running and Debugging
 
 ```bash
