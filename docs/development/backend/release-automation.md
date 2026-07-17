@@ -8,7 +8,7 @@ This repository uses semantic-release to automate versioning, changelog updates,
 - Action: `.github/workflows/release.yml`.
 - Steps: checkout the tested CI head without persisted credentials (full
   history) → validate tag ancestry → set up Node from `.nvmrc` → install pnpm
-  and dependencies → run `pnpm exec semantic-release --extends release.config.mjs`.
+  and dependencies → run `pnpm exec semantic-release --extends ./release.config.mjs`.
 - Secret: `RELEASE_BOT_TOKEN`. Only the semantic-release step receives this
   token so the generated release commit triggers CI. The workflow fails closed
   when the secret is absent; `github.token` is intentionally not a fallback.

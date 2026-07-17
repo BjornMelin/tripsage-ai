@@ -50,6 +50,7 @@ const BASE_ITINERARY_TOOLS = {
  * @param config - Agent configuration from database.
  * @param input - Validated itinerary plan request.
  * @returns Configured agent and canonical UI messages for itinerary planning.
+ * @see docs/specs/active/0103-spec-chat-and-agents.md
  *
  * @example
  * ```typescript
