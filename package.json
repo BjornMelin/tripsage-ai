@@ -194,7 +194,7 @@
     "knip": "6.27.0",
     "madge": "^8.0.0",
     "msw": "^2.15.0",
-    "postcss": "8.5.19",
+    "postcss": "8.5.20",
     "semantic-release": "^25.0.7",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.3.2",
